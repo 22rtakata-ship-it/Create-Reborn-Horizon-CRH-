@@ -6,6 +6,7 @@ fn create_depot_can_place(
     containers: &crate::game::machines::Containers<'_>,
     view: &crate::game::machines::View,
     slot: usize,
+    stack: &crate::items::ItemStack,
 ) -> std::ops::ControlFlow<bool> {
     let Some((pos, local)) = view.locate(slot) else {
         return std::ops::ControlFlow::Continue(());
@@ -13,6 +14,11 @@ fn create_depot_can_place(
     if let Some(crate::containers::BlockEntity::Mod(entity)) =
         containers.world.block_entities.get(&pos)
     {
+        if entity.id == "create:millstone" {
+            return std::ops::ControlFlow::Break(
+                local == 0 && crate::game::create_port_millstone::automation_accepts(stack),
+            );
+        }
         if entity.id == "create:depot" {
             return std::ops::ControlFlow::Break(
                 local == 0 && entity.items.iter().all(Option::is_none),

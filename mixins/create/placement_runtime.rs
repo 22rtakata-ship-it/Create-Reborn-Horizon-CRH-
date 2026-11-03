@@ -52,6 +52,8 @@ pub(super) fn state(
     if !matches!(
         block,
         "create:speedometer"
+            | "create:encased_fan"
+            | "create:mechanical_drill"
             | "create:stressometer"
             | "create:water_wheel"
             | "create:large_water_wheel"
@@ -67,7 +69,17 @@ pub(super) fn state(
             state = s;
         }
     };
-    if block.ends_with("ometer") {
+    if matches!(block, "create:encased_fan" | "create:mechanical_drill") {
+        let preferred = placement::preferred(ports).unwrap_or(look);
+        set(
+            "facing",
+            if ctx.sneaking {
+                preferred.name()
+            } else {
+                preferred.opposite().name()
+            },
+        );
+    } else if block.ends_with("ometer") {
         let attached = ports[Direction::ALL
             .iter()
             .position(|d| *d == face.opposite())
@@ -312,13 +324,22 @@ fn level_ports(game: &GameLevel<'_>, pos: [i32; 3]) -> [bool; 6] {
         if name == "create:gearbox" {
             return level_axis(game, p) != d.axis();
         }
-        if matches!(name, "create:creative_motor" | "create:hand_crank") {
+        if name == "create:millstone" {
+            return d == Direction::Up;
+        }
+        if matches!(
+            name,
+            "create:creative_motor"
+                | "create:hand_crank"
+                | "create:encased_fan"
+                | "create:mechanical_drill"
+        ) {
             let facing = state
                 .properties
                 .get("facing")
                 .and_then(|v| Direction::ALL.into_iter().find(|f| f.name() == v))
                 .unwrap_or(Direction::Up);
-            return if name == "create:hand_crank" {
+            return if name != "create:creative_motor" {
                 facing == d
             } else {
                 facing == d.opposite()

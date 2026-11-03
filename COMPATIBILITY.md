@@ -18,6 +18,9 @@ implementing each feature, and test save/reload inside Horizon.
 | `create:clutch`, `create:gearshift` | corresponding block ID | `axis`, `powered` |
 | `create:hand_crank` | `create:hand_crank` | `facing`, `waterlogged`; `InUse` int, `Backwards` byte |
 | `create:andesite_encased_shaft`, `create:brass_encased_shaft` | `create:encased_shaft` | `axis` |
+| `create:millstone` | `create:millstone` | no block-state properties; `Timer` int, `InputInventory`, `OutputInventory` |
+| `create:encased_fan` | `create:encased_fan` | six-way `facing`, original default `down`; common kinetic `Speed` |
+| `create:mechanical_drill` | `create:drill` | six-way `facing`, `waterlogged`; defaults `down`, false; `Progress`, `NextTick`, `Breaking` |
 
 Static casings/storage blocks and alloy/metal/wrench items retain their upstream
 `create:*` IDs. Encased shafts unwrap to and drop `create:shaft`.
@@ -95,3 +98,76 @@ currents come from Horizon's vanilla sampler; Create's extra water-spread restri
 above wheel axes is not yet ported. Collision/selection shapes still include
 conservative template approximations. This release adds generators, not moving
 contraptions or fluid-handling machinery.
+
+## 0.5 data and behavior boundary
+
+The public catalog contains 24 block items and 15 standalone items: 39 creative-tab
+entries, plus the internal water-wheel structural block. New item IDs are
+`create:propeller`, `create:wheat_flour` and `create:dough`. The exported set has
+123 source recipes and 35 tags. Processing includes 47 `create:milling`, ten
+`create:splashing` and 19 `create:haunting` recipes with implemented Create or
+vanilla inputs/results. Cooking uses Minecraft's real smelting, smoking and
+blasting lookup; the exported dough-to-bread recipes remain
+`minecraft:smelting` and `minecraft:smoking`, not invented Create recipe types.
+
+The millstone has a fixed Y rotation axis, a shaft connection only underneath,
+and the source small-cog connection behavior. Its source collision consists of a
+16×6×16 base and a 12×10×12 centered upper part. One input slot and nine output
+slots retain the original inventory names; Horizon also stores its generic
+container representation and `create_horizon:millstone` bridge snapshot. Empty
+hand collection takes output first, or input if no output exists. Recipe-filtered
+automation, landed items, per-item probability rolls and timer handling are
+implemented; native integration and save/reload coverage are recorded separately
+in `VALIDATION.md`.
+
+The fan's shaft is opposite `facing`; both directions and all six orientations
+are represented. Airflow range, push/pull choice, processing segments, partial
+obstacle sampling, propeller speed and stack-dependent processing timers are
+source-derived. The implemented targets are dropped item entities and depot-held
+stacks. Water washes, lit ordinary fire/campfires smoke, soul fire/campfires haunt,
+and lava blasts. Blasting can destroy items, including smokeable food, according
+to the source policy; it is not a general-purpose way to cook food.
+The current blasting adapter reads the item's default fire resistance. Per-stack
+fire/damage-resistance component overrides are not yet used for that decision;
+the native destruction tests cover ordinary item definitions.
+
+`create:fan_transparent` and block/fluid `fan_processing_catalysts/*` retain the
+supported source entries; unavailable Create blocks are omitted. Until the API
+exposes fluid-tag queries, the adapter recognizes vanilla water/lava IDs and
+waterlogged blocks explicitly. This is not arbitrary mod-fluid compatibility.
+Recipe caches refresh when server data loads or reloads.
+
+Depot-held progress uses `HeldItem.FanProcessingType` and
+`HeldItem.FanProcessingTime`. Dropped-item progress now uses the original
+`NeoForgeData.CreateData.Processing.Type` and `Time` entity NBT fields, retained
+through Horizon's existing persistent unknown-field storage. Native save/reload
+tests verify the exact remaining timer, preserved unknown sibling keys and
+one-time conversion. Item stack components are not used to
+disguise entity state, and no additional raw hook is needed. Airflow on players
+and mobs is not implemented. Fan particles, soundscape,
+all collision/media edge cases and the complete native 0.5 validation remain
+separate work; no complete fan parity is claimed.
+
+The stationary mechanical drill uses the source rear shaft, six orientations and
+12-pixel directional casing collision. Its front target, progress and retry timing
+follow `DrillBlockEntity`/`BlockBreakingKineticBlockEntity`; ordinary block loot is
+used rather than creative-mode drops. Its new crafting recipe uses the existing
+alloy/casing/iron ingredients. Contraption movement, entity damage and automatic
+target placement are outside this increment.
+The native destruction path also leaves Create's cobblestone-generator shortcut,
+ice-specific melting and custom zero-motion drop spawning for a later increment.
+
+## Behavioral parity strategy
+
+Rust organization follows the native runtime and may combine several Java
+classes into cached data and small functions. Acceptance depends on observable
+behavior, not a class-for-class translation. The existing AST-based oracles
+compare selected unchanged Java method bodies against Rust with restricted
+development contexts; they do not run the full original mod.
+
+A future end-to-end comparison will build equivalent schematic test fixtures in
+original Create and Horizon, apply the same inputs/actions, and compare output
+counts/components, timing, rotation, stopping conditions and saved state. That
+cross-runtime fixture runner is planned, not implemented in 0.5. It does not
+change the explicit exclusion of cross-version world interchange or imply a
+working schematic-import feature.

@@ -2,6 +2,22 @@
   "reference": "ac0c444d9828da3453ae8cc65338e8de063286fb",
   "license": "MIT recipe data; original definitions of vanilla convention tags",
   "recipes": {
+    "create/recipe/crafting/appliances/dough.json": {
+      "type": "minecraft:crafting_shapeless",
+      "category": "misc",
+      "ingredients": [
+        {
+          "tag": "c:flours/wheat"
+        },
+        {
+          "item": "minecraft:water_bucket"
+        }
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:dough"
+      }
+    },
     "create/recipe/crafting/kinetics/clutch.json": {
       "type": "minecraft:crafting_shapeless",
       "category": "misc",
@@ -51,6 +67,30 @@
       "result": {
         "count": 1,
         "id": "create:depot"
+      }
+    },
+    "create/recipe/crafting/kinetics/encased_fan.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "A": {
+          "item": "create:andesite_casing"
+        },
+        "P": {
+          "item": "create:propeller"
+        },
+        "S": {
+          "item": "create:shaft"
+        }
+      },
+      "pattern": [
+        "S",
+        "A",
+        "P"
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:encased_fan"
       }
     },
     "create/recipe/crafting/kinetics/gearbox.json": {
@@ -205,6 +245,30 @@
         "id": "create:large_water_wheel"
       }
     },
+    "create/recipe/crafting/kinetics/mechanical_drill.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "A": {
+          "item": "create:andesite_alloy"
+        },
+        "C": {
+          "item": "create:andesite_casing"
+        },
+        "I": {
+          "tag": "c:ingots/iron"
+        }
+      },
+      "pattern": [
+        " A ",
+        "AIA",
+        " C "
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:mechanical_drill"
+      }
+    },
     "create/recipe/crafting/kinetics/mechanical_press.json": {
       "type": "minecraft:crafting_shaped",
       "category": "misc",
@@ -227,6 +291,51 @@
       "result": {
         "count": 1,
         "id": "create:mechanical_press"
+      }
+    },
+    "create/recipe/crafting/kinetics/millstone.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "C": {
+          "item": "create:cogwheel"
+        },
+        "I": {
+          "tag": "c:stones"
+        },
+        "S": {
+          "item": "create:andesite_casing"
+        }
+      },
+      "pattern": [
+        "C",
+        "S",
+        "I"
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:millstone"
+      }
+    },
+    "create/recipe/crafting/kinetics/propeller.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "C": {
+          "item": "create:andesite_alloy"
+        },
+        "S": {
+          "tag": "c:plates/iron"
+        }
+      },
+      "pattern": [
+        " S ",
+        "SCS",
+        " S "
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:propeller"
       }
     },
     "create/recipe/crafting/kinetics/shaft.json": {
@@ -566,6 +675,258 @@
         "id": "create:zinc_nugget"
       }
     },
+    "create/recipe/haunting/blackstone.json": {
+      "type": "create:haunting",
+      "ingredients": [
+        {
+          "tag": "c:cobblestones"
+        }
+      ],
+      "results": [
+        {
+          "id": "minecraft:blackstone"
+        }
+      ]
+    },
+    "create/recipe/haunting/crimson_fungus.json": {
+      "type": "create:haunting",
+      "ingredients": [
+        {
+          "item": "minecraft:red_mushroom"
+        }
+      ],
+      "results": [
+        {
+          "id": "minecraft:crimson_fungus"
+        }
+      ]
+    },
+    "create/recipe/haunting/glow_berries.json": {
+      "type": "create:haunting",
+      "ingredients": [
+        {
+          "item": "minecraft:sweet_berries"
+        }
+      ],
+      "results": [
+        {
+          "id": "minecraft:glow_berries"
+        }
+      ]
+    },
+    "create/recipe/haunting/glow_ink_sac.json": {
+      "type": "create:haunting",
+      "ingredients": [
+        {
+          "item": "minecraft:ink_sac"
+        }
+      ],
+      "results": [
+        {
+          "id": "minecraft:glow_ink_sac"
+        }
+      ]
+    },
+    "create/recipe/haunting/infested_chiseled_stone_bricks.json": {
+      "type": "create:haunting",
+      "ingredients": [
+        {
+          "item": "minecraft:chiseled_stone_bricks"
+        }
+      ],
+      "results": [
+        {
+          "id": "minecraft:infested_chiseled_stone_bricks"
+        }
+      ]
+    },
+    "create/recipe/haunting/infested_cracked_stone_bricks.json": {
+      "type": "create:haunting",
+      "ingredients": [
+        {
+          "item": "minecraft:cracked_stone_bricks"
+        }
+      ],
+      "results": [
+        {
+          "id": "minecraft:infested_cracked_stone_bricks"
+        }
+      ]
+    },
+    "create/recipe/haunting/infested_deepslate.json": {
+      "type": "create:haunting",
+      "ingredients": [
+        {
+          "item": "minecraft:deepslate"
+        }
+      ],
+      "results": [
+        {
+          "id": "minecraft:infested_deepslate"
+        }
+      ]
+    },
+    "create/recipe/haunting/infested_mossy_stone_bricks.json": {
+      "type": "create:haunting",
+      "ingredients": [
+        {
+          "item": "minecraft:mossy_stone_bricks"
+        }
+      ],
+      "results": [
+        {
+          "id": "minecraft:infested_mossy_stone_bricks"
+        }
+      ]
+    },
+    "create/recipe/haunting/infested_stone.json": {
+      "type": "create:haunting",
+      "ingredients": [
+        {
+          "item": "minecraft:stone"
+        }
+      ],
+      "results": [
+        {
+          "id": "minecraft:infested_stone"
+        }
+      ]
+    },
+    "create/recipe/haunting/infested_stone_bricks.json": {
+      "type": "create:haunting",
+      "ingredients": [
+        {
+          "item": "minecraft:stone_bricks"
+        }
+      ],
+      "results": [
+        {
+          "id": "minecraft:infested_stone_bricks"
+        }
+      ]
+    },
+    "create/recipe/haunting/lapis_recycling.json": {
+      "type": "create:haunting",
+      "ingredients": [
+        {
+          "tag": "c:gems/lapis"
+        }
+      ],
+      "results": [
+        {
+          "chance": 0.75,
+          "id": "minecraft:prismarine_shard"
+        },
+        {
+          "chance": 0.125,
+          "id": "minecraft:prismarine_crystals"
+        }
+      ]
+    },
+    "create/recipe/haunting/nether_brick.json": {
+      "type": "create:haunting",
+      "ingredients": [
+        {
+          "item": "minecraft:brick"
+        }
+      ],
+      "results": [
+        {
+          "id": "minecraft:nether_brick"
+        }
+      ]
+    },
+    "create/recipe/haunting/poisonous_potato.json": {
+      "type": "create:haunting",
+      "ingredients": [
+        {
+          "item": "minecraft:potato"
+        }
+      ],
+      "results": [
+        {
+          "id": "minecraft:poisonous_potato"
+        }
+      ]
+    },
+    "create/recipe/haunting/soul_campfire.json": {
+      "type": "create:haunting",
+      "ingredients": [
+        {
+          "item": "minecraft:campfire"
+        }
+      ],
+      "results": [
+        {
+          "id": "minecraft:soul_campfire"
+        }
+      ]
+    },
+    "create/recipe/haunting/soul_lantern.json": {
+      "type": "create:haunting",
+      "ingredients": [
+        {
+          "item": "minecraft:lantern"
+        }
+      ],
+      "results": [
+        {
+          "id": "minecraft:soul_lantern"
+        }
+      ]
+    },
+    "create/recipe/haunting/soul_sand.json": {
+      "type": "create:haunting",
+      "ingredients": [
+        {
+          "tag": "minecraft:sand"
+        }
+      ],
+      "results": [
+        {
+          "id": "minecraft:soul_sand"
+        }
+      ]
+    },
+    "create/recipe/haunting/soul_soil.json": {
+      "type": "create:haunting",
+      "ingredients": [
+        {
+          "tag": "minecraft:dirt"
+        }
+      ],
+      "results": [
+        {
+          "id": "minecraft:soul_soil"
+        }
+      ]
+    },
+    "create/recipe/haunting/soul_torch.json": {
+      "type": "create:haunting",
+      "ingredients": [
+        {
+          "item": "minecraft:torch"
+        }
+      ],
+      "results": [
+        {
+          "id": "minecraft:soul_torch"
+        }
+      ]
+    },
+    "create/recipe/haunting/warped_fungus.json": {
+      "type": "create:haunting",
+      "ingredients": [
+        {
+          "item": "minecraft:brown_mushroom"
+        }
+      ],
+      "results": [
+        {
+          "id": "minecraft:warped_fungus"
+        }
+      ]
+    },
     "create/recipe/item_application/andesite_casing_from_log.json": {
       "type": "create:item_application",
       "ingredients": [
@@ -630,6 +991,884 @@
         }
       ]
     },
+    "create/recipe/milling/allium.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:allium"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "count": 2,
+          "id": "minecraft:magenta_dye"
+        },
+        {
+          "chance": 0.1,
+          "count": 2,
+          "id": "minecraft:purple_dye"
+        },
+        {
+          "chance": 0.1,
+          "id": "minecraft:pink_dye"
+        }
+      ]
+    },
+    "create/recipe/milling/andesite.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:andesite"
+        }
+      ],
+      "processing_time": 200,
+      "results": [
+        {
+          "id": "minecraft:cobblestone"
+        }
+      ]
+    },
+    "create/recipe/milling/azure_bluet.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:azure_bluet"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "count": 2,
+          "id": "minecraft:light_gray_dye"
+        },
+        {
+          "chance": 0.1,
+          "count": 2,
+          "id": "minecraft:white_dye"
+        }
+      ]
+    },
+    "create/recipe/milling/beetroot.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:beetroot"
+        }
+      ],
+      "processing_time": 70,
+      "results": [
+        {
+          "count": 2,
+          "id": "minecraft:red_dye"
+        },
+        {
+          "chance": 0.1,
+          "id": "minecraft:beetroot_seeds"
+        }
+      ]
+    },
+    "create/recipe/milling/blue_orchid.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:blue_orchid"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "count": 2,
+          "id": "minecraft:light_blue_dye"
+        },
+        {
+          "chance": 0.05,
+          "id": "minecraft:light_gray_dye"
+        }
+      ]
+    },
+    "create/recipe/milling/bone.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:bone"
+        }
+      ],
+      "processing_time": 100,
+      "results": [
+        {
+          "count": 3,
+          "id": "minecraft:bone_meal"
+        },
+        {
+          "chance": 0.25,
+          "id": "minecraft:white_dye"
+        },
+        {
+          "chance": 0.25,
+          "count": 3,
+          "id": "minecraft:bone_meal"
+        }
+      ]
+    },
+    "create/recipe/milling/bone_meal.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:bone_meal"
+        }
+      ],
+      "processing_time": 70,
+      "results": [
+        {
+          "count": 2,
+          "id": "minecraft:white_dye"
+        },
+        {
+          "chance": 0.1,
+          "id": "minecraft:light_gray_dye"
+        }
+      ]
+    },
+    "create/recipe/milling/cactus.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:cactus"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "count": 2,
+          "id": "minecraft:green_dye"
+        },
+        {
+          "chance": 0.1,
+          "id": "minecraft:green_dye"
+        }
+      ]
+    },
+    "create/recipe/milling/calcite.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:calcite"
+        }
+      ],
+      "processing_time": 250,
+      "results": [
+        {
+          "chance": 0.75,
+          "id": "minecraft:bone_meal"
+        }
+      ]
+    },
+    "create/recipe/milling/charcoal.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:charcoal"
+        }
+      ],
+      "processing_time": 100,
+      "results": [
+        {
+          "id": "minecraft:black_dye"
+        },
+        {
+          "chance": 0.1,
+          "count": 2,
+          "id": "minecraft:gray_dye"
+        }
+      ]
+    },
+    "create/recipe/milling/clay.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:clay"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "count": 4,
+          "id": "minecraft:clay_ball"
+        }
+      ]
+    },
+    "create/recipe/milling/coal.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:coal"
+        }
+      ],
+      "processing_time": 100,
+      "results": [
+        {
+          "count": 2,
+          "id": "minecraft:black_dye"
+        },
+        {
+          "chance": 0.1,
+          "id": "minecraft:gray_dye"
+        }
+      ]
+    },
+    "create/recipe/milling/cobblestone.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:cobblestone"
+        }
+      ],
+      "processing_time": 250,
+      "results": [
+        {
+          "id": "minecraft:gravel"
+        }
+      ]
+    },
+    "create/recipe/milling/cocoa_beans.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:cocoa_beans"
+        }
+      ],
+      "processing_time": 70,
+      "results": [
+        {
+          "count": 2,
+          "id": "minecraft:brown_dye"
+        },
+        {
+          "chance": 0.1,
+          "id": "minecraft:brown_dye"
+        }
+      ]
+    },
+    "create/recipe/milling/cornflower.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:cornflower"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "count": 2,
+          "id": "minecraft:blue_dye"
+        }
+      ]
+    },
+    "create/recipe/milling/dandelion.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:dandelion"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "count": 2,
+          "id": "minecraft:yellow_dye"
+        },
+        {
+          "chance": 0.05,
+          "id": "minecraft:yellow_dye"
+        }
+      ]
+    },
+    "create/recipe/milling/dripstone_block.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:dripstone_block"
+        }
+      ],
+      "processing_time": 250,
+      "results": [
+        {
+          "id": "minecraft:clay_ball"
+        }
+      ]
+    },
+    "create/recipe/milling/fern.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:fern"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:green_dye"
+        },
+        {
+          "chance": 0.1,
+          "id": "minecraft:wheat_seeds"
+        }
+      ]
+    },
+    "create/recipe/milling/granite.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:granite"
+        }
+      ],
+      "processing_time": 200,
+      "results": [
+        {
+          "id": "minecraft:red_sand"
+        }
+      ]
+    },
+    "create/recipe/milling/gravel.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:gravel"
+        }
+      ],
+      "processing_time": 250,
+      "results": [
+        {
+          "id": "minecraft:flint"
+        }
+      ]
+    },
+    "create/recipe/milling/ink_sac.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:ink_sac"
+        }
+      ],
+      "processing_time": 100,
+      "results": [
+        {
+          "count": 2,
+          "id": "minecraft:black_dye"
+        },
+        {
+          "chance": 0.1,
+          "id": "minecraft:gray_dye"
+        }
+      ]
+    },
+    "create/recipe/milling/lapis_lazuli.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:lapis_lazuli"
+        }
+      ],
+      "processing_time": 100,
+      "results": [
+        {
+          "count": 2,
+          "id": "minecraft:blue_dye"
+        },
+        {
+          "chance": 0.1,
+          "id": "minecraft:blue_dye"
+        }
+      ]
+    },
+    "create/recipe/milling/large_fern.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:large_fern"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "count": 2,
+          "id": "minecraft:green_dye"
+        },
+        {
+          "chance": 0.5,
+          "id": "minecraft:green_dye"
+        },
+        {
+          "chance": 0.1,
+          "id": "minecraft:wheat_seeds"
+        }
+      ]
+    },
+    "create/recipe/milling/lilac.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:lilac"
+        }
+      ],
+      "processing_time": 100,
+      "results": [
+        {
+          "count": 3,
+          "id": "minecraft:magenta_dye"
+        },
+        {
+          "chance": 0.25,
+          "id": "minecraft:magenta_dye"
+        },
+        {
+          "chance": 0.25,
+          "id": "minecraft:purple_dye"
+        }
+      ]
+    },
+    "create/recipe/milling/lily_of_the_valley.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:lily_of_the_valley"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "count": 2,
+          "id": "minecraft:white_dye"
+        },
+        {
+          "chance": 0.1,
+          "id": "minecraft:lime_dye"
+        },
+        {
+          "chance": 0.1,
+          "id": "minecraft:white_dye"
+        }
+      ]
+    },
+    "create/recipe/milling/orange_tulip.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:orange_tulip"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "count": 2,
+          "id": "minecraft:orange_dye"
+        },
+        {
+          "chance": 0.1,
+          "id": "minecraft:lime_dye"
+        }
+      ]
+    },
+    "create/recipe/milling/oxeye_daisy.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:oxeye_daisy"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "count": 2,
+          "id": "minecraft:light_gray_dye"
+        },
+        {
+          "chance": 0.2,
+          "id": "minecraft:white_dye"
+        },
+        {
+          "chance": 0.05,
+          "id": "minecraft:yellow_dye"
+        }
+      ]
+    },
+    "create/recipe/milling/peony.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:peony"
+        }
+      ],
+      "processing_time": 100,
+      "results": [
+        {
+          "count": 3,
+          "id": "minecraft:pink_dye"
+        },
+        {
+          "chance": 0.25,
+          "id": "minecraft:magenta_dye"
+        },
+        {
+          "chance": 0.25,
+          "id": "minecraft:pink_dye"
+        }
+      ]
+    },
+    "create/recipe/milling/pink_petals.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:pink_petals"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "count": 2,
+          "id": "minecraft:pink_dye"
+        },
+        {
+          "chance": 0.1,
+          "id": "minecraft:lime_dye"
+        }
+      ]
+    },
+    "create/recipe/milling/pink_tulip.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:pink_tulip"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "count": 2,
+          "id": "minecraft:pink_dye"
+        },
+        {
+          "chance": 0.1,
+          "id": "minecraft:lime_dye"
+        }
+      ]
+    },
+    "create/recipe/milling/pitcher_plant.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:pitcher_plant"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "count": 4,
+          "id": "minecraft:cyan_dye"
+        },
+        {
+          "chance": 0.1,
+          "id": "minecraft:purple_dye"
+        }
+      ]
+    },
+    "create/recipe/milling/poppy.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:poppy"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "count": 2,
+          "id": "minecraft:red_dye"
+        },
+        {
+          "chance": 0.05,
+          "id": "minecraft:green_dye"
+        }
+      ]
+    },
+    "create/recipe/milling/red_tulip.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:red_tulip"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "count": 2,
+          "id": "minecraft:red_dye"
+        },
+        {
+          "chance": 0.1,
+          "id": "minecraft:lime_dye"
+        }
+      ]
+    },
+    "create/recipe/milling/rose_bush.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:rose_bush"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "count": 3,
+          "id": "minecraft:red_dye"
+        },
+        {
+          "chance": 0.05,
+          "count": 2,
+          "id": "minecraft:green_dye"
+        },
+        {
+          "chance": 0.25,
+          "count": 2,
+          "id": "minecraft:red_dye"
+        }
+      ]
+    },
+    "create/recipe/milling/saddle.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:saddle"
+        }
+      ],
+      "processing_time": 200,
+      "results": [
+        {
+          "count": 2,
+          "id": "minecraft:leather"
+        },
+        {
+          "chance": 0.5,
+          "count": 2,
+          "id": "minecraft:leather"
+        }
+      ]
+    },
+    "create/recipe/milling/sandstone.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:sandstone"
+        }
+      ],
+      "processing_time": 150,
+      "results": [
+        {
+          "id": "minecraft:sand"
+        }
+      ]
+    },
+    "create/recipe/milling/sea_pickle.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:sea_pickle"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "count": 2,
+          "id": "minecraft:lime_dye"
+        },
+        {
+          "chance": 0.1,
+          "id": "minecraft:green_dye"
+        }
+      ]
+    },
+    "create/recipe/milling/short_grass.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:short_grass"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "chance": 0.25,
+          "id": "minecraft:wheat_seeds"
+        }
+      ]
+    },
+    "create/recipe/milling/sugar_cane.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:sugar_cane"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "count": 2,
+          "id": "minecraft:sugar"
+        },
+        {
+          "chance": 0.1,
+          "id": "minecraft:sugar"
+        }
+      ]
+    },
+    "create/recipe/milling/sunflower.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:sunflower"
+        }
+      ],
+      "processing_time": 100,
+      "results": [
+        {
+          "count": 3,
+          "id": "minecraft:yellow_dye"
+        },
+        {
+          "chance": 0.25,
+          "id": "minecraft:orange_dye"
+        },
+        {
+          "chance": 0.25,
+          "id": "minecraft:yellow_dye"
+        }
+      ]
+    },
+    "create/recipe/milling/tall_grass.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:tall_grass"
+        }
+      ],
+      "processing_time": 100,
+      "results": [
+        {
+          "chance": 0.5,
+          "id": "minecraft:wheat_seeds"
+        }
+      ]
+    },
+    "create/recipe/milling/terracotta.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:terracotta"
+        }
+      ],
+      "processing_time": 200,
+      "results": [
+        {
+          "id": "minecraft:red_sand"
+        }
+      ]
+    },
+    "create/recipe/milling/torchflower.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:torchflower"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "count": 2,
+          "id": "minecraft:orange_dye"
+        },
+        {
+          "chance": 0.1,
+          "id": "minecraft:green_dye"
+        }
+      ]
+    },
+    "create/recipe/milling/wheat.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:wheat"
+        }
+      ],
+      "processing_time": 150,
+      "results": [
+        {
+          "id": "create:wheat_flour"
+        },
+        {
+          "chance": 0.25,
+          "count": 2,
+          "id": "create:wheat_flour"
+        },
+        {
+          "chance": 0.25,
+          "id": "minecraft:wheat_seeds"
+        }
+      ]
+    },
+    "create/recipe/milling/white_tulip.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:white_tulip"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "count": 2,
+          "id": "minecraft:white_dye"
+        },
+        {
+          "chance": 0.1,
+          "id": "minecraft:lime_dye"
+        }
+      ]
+    },
+    "create/recipe/milling/wither_rose.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "item": "minecraft:wither_rose"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "count": 2,
+          "id": "minecraft:black_dye"
+        },
+        {
+          "chance": 0.1,
+          "id": "minecraft:black_dye"
+        }
+      ]
+    },
+    "create/recipe/milling/wool.json": {
+      "type": "create:milling",
+      "ingredients": [
+        {
+          "tag": "minecraft:wool"
+        }
+      ],
+      "processing_time": 100,
+      "results": [
+        {
+          "id": "minecraft:string"
+        }
+      ]
+    },
     "create/recipe/pressing/brass_ingot.json": {
       "type": "create:pressing",
       "ingredients": [
@@ -681,9 +1920,249 @@
           "id": "create:iron_sheet"
         }
       ]
+    },
+    "create/recipe/smelting/bread.json": {
+      "type": "minecraft:smelting",
+      "category": "food",
+      "cookingtime": 200,
+      "experience": 0.0,
+      "ingredient": {
+        "item": "create:dough"
+      },
+      "result": {
+        "count": 1,
+        "id": "minecraft:bread"
+      }
+    },
+    "create/recipe/smoking/bread.json": {
+      "type": "minecraft:smoking",
+      "category": "food",
+      "cookingtime": 100,
+      "experience": 0.0,
+      "ingredient": {
+        "item": "create:dough"
+      },
+      "result": {
+        "count": 1,
+        "id": "minecraft:bread"
+      }
+    },
+    "create/recipe/splashing/gravel.json": {
+      "type": "create:splashing",
+      "ingredients": [
+        {
+          "item": "minecraft:gravel"
+        }
+      ],
+      "results": [
+        {
+          "chance": 0.25,
+          "id": "minecraft:flint"
+        },
+        {
+          "chance": 0.125,
+          "id": "minecraft:iron_nugget"
+        }
+      ]
+    },
+    "create/recipe/splashing/ice.json": {
+      "type": "create:splashing",
+      "ingredients": [
+        {
+          "item": "minecraft:ice"
+        }
+      ],
+      "results": [
+        {
+          "id": "minecraft:packed_ice"
+        }
+      ]
+    },
+    "create/recipe/splashing/magma_block.json": {
+      "type": "create:splashing",
+      "ingredients": [
+        {
+          "item": "minecraft:magma_block"
+        }
+      ],
+      "results": [
+        {
+          "id": "minecraft:obsidian"
+        }
+      ]
+    },
+    "create/recipe/splashing/red_sand.json": {
+      "type": "create:splashing",
+      "ingredients": [
+        {
+          "item": "minecraft:red_sand"
+        }
+      ],
+      "results": [
+        {
+          "chance": 0.125,
+          "count": 3,
+          "id": "minecraft:gold_nugget"
+        },
+        {
+          "chance": 0.05,
+          "id": "minecraft:dead_bush"
+        }
+      ]
+    },
+    "create/recipe/splashing/sand.json": {
+      "type": "create:splashing",
+      "ingredients": [
+        {
+          "item": "minecraft:sand"
+        }
+      ],
+      "results": [
+        {
+          "chance": 0.25,
+          "id": "minecraft:clay_ball"
+        }
+      ]
+    },
+    "create/recipe/splashing/soul_sand.json": {
+      "type": "create:splashing",
+      "ingredients": [
+        {
+          "item": "minecraft:soul_sand"
+        }
+      ],
+      "results": [
+        {
+          "chance": 0.125,
+          "count": 4,
+          "id": "minecraft:quartz"
+        },
+        {
+          "chance": 0.02,
+          "id": "minecraft:gold_nugget"
+        }
+      ]
+    },
+    "create/recipe/splashing/stained_glass.json": {
+      "type": "create:splashing",
+      "ingredients": [
+        {
+          "tag": "c:glass_blocks"
+        }
+      ],
+      "results": [
+        {
+          "id": "minecraft:glass"
+        }
+      ]
+    },
+    "create/recipe/splashing/stained_glass_pane.json": {
+      "type": "create:splashing",
+      "ingredients": [
+        {
+          "tag": "c:glass_panes"
+        }
+      ],
+      "results": [
+        {
+          "id": "minecraft:glass_pane"
+        }
+      ]
+    },
+    "create/recipe/splashing/wheat_flour.json": {
+      "type": "create:splashing",
+      "ingredients": [
+        {
+          "tag": "c:flours/wheat"
+        }
+      ],
+      "results": [
+        {
+          "id": "create:dough"
+        }
+      ]
+    },
+    "create/recipe/splashing/wool.json": {
+      "type": "create:splashing",
+      "ingredients": [
+        {
+          "tag": "minecraft:wool"
+        }
+      ],
+      "results": [
+        {
+          "id": "minecraft:white_wool"
+        }
+      ]
     }
   },
   "tags": {
+    "c/tags/item/flours/wheat.json": {
+      "values": [
+        "create:wheat_flour"
+      ]
+    },
+    "c/tags/item/glass_panes.json": {
+      "values": [
+        "create:tiled_glass_pane",
+        "create:framed_glass_pane",
+        "create:horizontal_framed_glass_pane",
+        "create:vertical_framed_glass_pane",
+        "create:oak_window_pane",
+        "create:spruce_window_pane",
+        "create:birch_window_pane",
+        "create:jungle_window_pane",
+        "create:acacia_window_pane",
+        "create:dark_oak_window_pane",
+        "create:mangrove_window_pane",
+        "create:crimson_window_pane",
+        "create:warped_window_pane",
+        "create:cherry_window_pane",
+        "create:bamboo_window_pane",
+        "create:ornate_iron_window_pane",
+        "create:industrial_iron_window_pane",
+        "create:weathered_iron_window_pane",
+        "minecraft:glass_pane",
+        "minecraft:white_stained_glass_pane",
+        "minecraft:orange_stained_glass_pane",
+        "minecraft:magenta_stained_glass_pane",
+        "minecraft:light_blue_stained_glass_pane",
+        "minecraft:yellow_stained_glass_pane",
+        "minecraft:lime_stained_glass_pane",
+        "minecraft:pink_stained_glass_pane",
+        "minecraft:gray_stained_glass_pane",
+        "minecraft:light_gray_stained_glass_pane",
+        "minecraft:cyan_stained_glass_pane",
+        "minecraft:purple_stained_glass_pane",
+        "minecraft:blue_stained_glass_pane",
+        "minecraft:brown_stained_glass_pane",
+        "minecraft:green_stained_glass_pane",
+        "minecraft:red_stained_glass_pane",
+        "minecraft:black_stained_glass_pane"
+      ]
+    },
+    "c/tags/item/glass_blocks.json": {
+      "values": [
+        "minecraft:glass",
+        "minecraft:tinted_glass",
+        "minecraft:white_stained_glass",
+        "minecraft:orange_stained_glass",
+        "minecraft:magenta_stained_glass",
+        "minecraft:light_blue_stained_glass",
+        "minecraft:yellow_stained_glass",
+        "minecraft:lime_stained_glass",
+        "minecraft:pink_stained_glass",
+        "minecraft:gray_stained_glass",
+        "minecraft:light_gray_stained_glass",
+        "minecraft:cyan_stained_glass",
+        "minecraft:purple_stained_glass",
+        "minecraft:blue_stained_glass",
+        "minecraft:brown_stained_glass",
+        "minecraft:green_stained_glass",
+        "minecraft:red_stained_glass",
+        "minecraft:black_stained_glass"
+      ]
+    },
     "c/tags/item/ingots/iron.json": {
       "values": [
         "minecraft:iron_ingot"
@@ -728,6 +2207,18 @@
         "minecraft:stripped_cherry_log"
       ]
     },
+    "c/tags/item/gems/lapis.json": {
+      "values": [
+        "minecraft:lapis_lazuli"
+      ]
+    },
+    "c/tags/item/cobblestones.json": {
+      "values": [
+        "minecraft:cobblestone",
+        "minecraft:mossy_cobblestone",
+        "minecraft:cobbled_deepslate"
+      ]
+    },
     "c/tags/item/ingots/zinc.json": {
       "values": [
         "create:zinc_ingot"
@@ -768,6 +2259,21 @@
         "create:golden_sheet"
       ]
     },
+    "c/tags/item/plates/iron.json": {
+      "values": [
+        "create:iron_sheet"
+      ]
+    },
+    "c/tags/item/stones.json": {
+      "values": [
+        "minecraft:stone",
+        "minecraft:granite",
+        "minecraft:diorite",
+        "minecraft:andesite",
+        "minecraft:deepslate",
+        "minecraft:tuff"
+      ]
+    },
     "c/tags/item/storage_blocks/iron.json": {
       "values": [
         "minecraft:iron_block"
@@ -778,31 +2284,24 @@
         "minecraft:string"
       ]
     },
-    "c/tags/item/glass_blocks.json": {
-      "values": [
-        "minecraft:glass",
-        "minecraft:tinted_glass",
-        "minecraft:white_stained_glass",
-        "minecraft:orange_stained_glass",
-        "minecraft:magenta_stained_glass",
-        "minecraft:light_blue_stained_glass",
-        "minecraft:yellow_stained_glass",
-        "minecraft:lime_stained_glass",
-        "minecraft:pink_stained_glass",
-        "minecraft:gray_stained_glass",
-        "minecraft:light_gray_stained_glass",
-        "minecraft:cyan_stained_glass",
-        "minecraft:purple_stained_glass",
-        "minecraft:blue_stained_glass",
-        "minecraft:brown_stained_glass",
-        "minecraft:green_stained_glass",
-        "minecraft:red_stained_glass",
-        "minecraft:black_stained_glass"
-      ]
-    },
     "c/tags/item/dusts/redstone.json": {
       "values": [
         "minecraft:redstone"
+      ]
+    },
+    "c/tags/item/foods/dough/wheat.json": {
+      "values": [
+        "create:dough"
+      ]
+    },
+    "c/tags/item/foods/dough.json": {
+      "values": [
+        "create:dough"
+      ]
+    },
+    "c/tags/item/flours.json": {
+      "values": [
+        "create:wheat_flour"
       ]
     },
     "create/tags/item/not_upright_on_belt.json": {
@@ -901,6 +2400,50 @@
           "id": "autumnity:sap_bottle",
           "required": false
         }
+      ]
+    },
+    "create/tags/block/fan_transparent.json": {
+      "values": [
+        "minecraft:iron_bars",
+        "minecraft:mangrove_roots",
+        "minecraft:copper_grate",
+        "minecraft:exposed_copper_grate",
+        "minecraft:weathered_copper_grate",
+        "minecraft:oxidized_copper_grate",
+        "minecraft:waxed_copper_grate",
+        "minecraft:waxed_exposed_copper_grate",
+        "minecraft:waxed_weathered_copper_grate",
+        "minecraft:waxed_oxidized_copper_grate",
+        "#minecraft:campfires",
+        "#minecraft:fences",
+        "#minecraft:leaves"
+      ]
+    },
+    "create/tags/block/fan_processing_catalysts/blasting.json": {
+      "values": []
+    },
+    "create/tags/block/fan_processing_catalysts/haunting.json": {
+      "values": [
+        "minecraft:soul_fire",
+        "minecraft:soul_campfire"
+      ]
+    },
+    "create/tags/block/fan_processing_catalysts/smoking.json": {
+      "values": [
+        "minecraft:fire",
+        "minecraft:campfire"
+      ]
+    },
+    "create/tags/fluid/fan_processing_catalysts/blasting.json": {
+      "values": [
+        "minecraft:lava",
+        "minecraft:flowing_lava"
+      ]
+    },
+    "create/tags/fluid/fan_processing_catalysts/splashing.json": {
+      "values": [
+        "minecraft:water",
+        "minecraft:flowing_water"
       ]
     }
   }

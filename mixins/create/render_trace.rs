@@ -1,8 +1,11 @@
 // Test instrumentation of the actual pose used by Horizon's model submit path.
 fn create_render_trace(draw: &crate::game::native_block_entity_draw::BlockEntityDraw, model: &str) {
     static TRACE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    let processor = model.ends_with("millstone/inner")
+        || model.ends_with("encased_fan/propeller")
+        || model.ends_with("mechanical_drill/head");
     if !*TRACE.get_or_init(|| std::env::var_os("CREATE_HORIZON_TRACE_POSES").is_some())
-        || draw.game_time % 10 != 0
+        || !processor && draw.game_time % 10 != 0
         || !model.starts_with("create:")
     {
         return;
@@ -12,6 +15,7 @@ fn create_render_trace(draw: &crate::game::native_block_entity_draw::BlockEntity
         || model.contains("hand_crank/")
         || model.ends_with("gauge/dial")
         || model.contains("_material_"))
+        && !processor
     {
         return;
     }
@@ -19,6 +23,7 @@ fn create_render_trace(draw: &crate::game::native_block_entity_draw::BlockEntity
     let offset = if model.ends_with("/shaft")
         || model.ends_with("hand_crank/block")
         || model.contains("_material_")
+        || model.ends_with("millstone/inner")
     {
         4
     } else {

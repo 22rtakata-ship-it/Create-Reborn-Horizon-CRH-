@@ -33,8 +33,8 @@ it is not a promise of acceptance by the registry.
 1. The launcher pipeline now pins the published head of Mixins
    [PR #26](https://github.com/horizon-rust/horizon-mixins/pull/26),
    `a1e13326306c6bc074b11e6a4926deb551c4083e`, fetched from the official Git
-   repository. Local tool patching is no longer part of the build. The PR is
-   still unmerged; repin and revalidate on an accepted upstream revision before
+   repository. Local tool patching is no longer part of the build. Check the
+   current upstream review status, then repin and revalidate on an accepted revision before
    requesting a stable registry listing. Full Linux CI for the proposed fix
    [passed](https://github.com/Delete228/horizon-mixins/actions/runs/41644514346).
 2. The native source/package carries its complete public content in `data/` and

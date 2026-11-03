@@ -37,6 +37,11 @@ pub enum Kind {
         large: bool,
     },
     Press,
+    Millstone,
+    Consumer {
+        facing: Pos,
+        impact: f32,
+    },
     Gearbox,
     Clutch {
         powered: bool,
@@ -58,6 +63,8 @@ impl Node {
         }
         match self.kind {
             Kind::Motor { facing, .. } => delta == facing,
+            Kind::Consumer { facing, .. } => delta == facing,
+            Kind::Millstone => delta == [0, -1, 0],
             Kind::Gearbox => delta[self.axis.index()] == 0,
             _ => delta[self.axis.index()].abs() == 1,
         }
@@ -85,7 +92,19 @@ impl Node {
         }
     }
     fn impact(self) -> f32 {
-        if self.kind == Kind::Press { 8.0 } else { 0.0 }
+        match self.kind {
+            Kind::Press => 8.0,
+            Kind::Millstone => 4.0,
+            Kind::Consumer { impact, .. } => impact,
+            _ => 0.0,
+        }
+    }
+    fn cog(self) -> Option<bool> {
+        match self.kind {
+            Kind::Cog { large } => Some(large),
+            Kind::Millstone => Some(false),
+            _ => None,
+        }
     }
 }
 /// Target reference RPM / source reference RPM. A powered clutch's two
@@ -113,9 +132,9 @@ pub fn ratio(from: Node, to: Node) -> Option<f32> {
     if from.axis != to.axis || delta[from.axis.index()] != 0 {
         return None;
     }
-    match (from.kind, to.kind) {
-        (Kind::Cog { large: false }, Kind::Cog { large: false }) if distance == 1 => Some(-1.0),
-        (Kind::Cog { large: a }, Kind::Cog { large: b })
+    match (from.cog(), to.cog()) {
+        (Some(false), Some(false)) if distance == 1 => Some(-1.0),
+        (Some(a), Some(b))
             if a != b && distance == 2 && delta.iter().filter(|n| n.abs() == 1).count() == 2 =>
         {
             Some(if a { -2.0 } else { -0.5 })
@@ -459,6 +478,54 @@ mod tests {
     fn motor_has_only_its_facing_shaft_port() {
         let n = network(&[motor([0, 0, 0], 16.0, 16.0), node([-1, 0, 0], Kind::Shaft)]);
         assert!(!n.theoretical.contains_key(&[-1, 0, 0]));
+    }
+
+    #[test]
+    fn millstone_meshes_as_a_small_cog_but_has_only_a_bottom_shaft() {
+        let mill = Node {
+            pos: [0, 0, 0],
+            axis: Axis::Y,
+            kind: Kind::Millstone,
+        };
+        for (delta, expected) in [([0, -1, 0], true), ([0, 1, 0], false), ([1, 0, 0], false)] {
+            assert_eq!(mill.shaft_port(delta), expected);
+        }
+        let small = Node {
+            pos: [1, 0, 0],
+            axis: Axis::Y,
+            kind: Kind::Cog { large: false },
+        };
+        assert_eq!(ratio(mill, small), Some(-1.0));
+        assert_eq!(ratio(small, mill), Some(-1.0));
+        let large = Node {
+            pos: [1, 0, 1],
+            axis: Axis::Y,
+            kind: Kind::Cog { large: true },
+        };
+        assert_eq!(ratio(large, mill), Some(-2.0));
+        assert_eq!(ratio(mill, large), Some(-0.5));
+    }
+    #[test]
+    fn a_one_sided_consumer_draws_stress_only_from_its_connected_back_face() {
+        let consumer = Kind::Consumer {
+            facing: [-1, 0, 0],
+            impact: 2.0,
+        };
+        let n = network(&[motor([0, 0, 0], 32.0, 16.0), node([1, 0, 0], consumer)]);
+        assert_eq!(n.speed([1, 0, 0]), 32.0);
+        assert_eq!(n.stress, 64.0);
+        let n = network(&[
+            motor([0, 0, 0], 32.0, 16.0),
+            node(
+                [1, 0, 0],
+                Kind::Consumer {
+                    facing: [1, 0, 0],
+                    impact: 2.0,
+                },
+            ),
+        ]);
+        assert!(!n.theoretical.contains_key(&[1, 0, 0]));
+        assert_eq!(n.stress, 0.0);
     }
 
     #[test]

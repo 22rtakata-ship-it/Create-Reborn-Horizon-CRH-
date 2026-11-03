@@ -26,6 +26,68 @@ def model(name, boxes, texture="minecraft:block/iron_block"):
     })
 
 
+def processors():
+    # State and collision definitions translated from MIT MillstoneBlock,
+    # DirectionalKineticBlock and AllShapes. Geometry below is our provisional
+    # design using vanilla textures, not a copy of the original ARR models.
+    shapes = {"default": [[0, 0, 0, 1, 6 / 16, 1], [2 / 16, 6 / 16, 2 / 16, 14 / 16, 1, 14 / 16]]}
+    write("data/create/horizon/block/millstone.json", {
+        "template": "minecraft:glass", "item": True,
+        "properties": {"hardness": 1.5, "explosion_resistance": 6, "requires_tool": True, "map_color": 6,
+                       "render_shape": "MODEL", "sounds": "minecraft:andesite"},
+        "shapes": shapes, "collision_shapes": shapes,
+    })
+    full = {"default": [[0, 0, 0, 1, 1, 1]]}
+    write("data/create/horizon/block/encased_fan.json", {
+        "template": "minecraft:glass", "item": True,
+        "properties": {"hardness": 1.5, "explosion_resistance": 6, "requires_tool": True, "map_color": 34,
+                       "render_shape": "MODEL", "sounds": "minecraft:andesite"},
+        "state_properties": {"facing": {"type": "enum", "values": ["down", "up", "north", "south", "west", "east"]}},
+        # 1.21.1 DirectionProperty's implicit first value is DOWN. The source
+        # fan does not override it; placement supplies its actual direction.
+        "default_state": {"facing": "down"}, "shapes": full, "collision_shapes": full,
+    })
+    drill_shapes = {"property": "facing", "values": {
+        "up": [[0, 0, 0, 1, .75, 1]], "down": [[0, .25, 0, 1, 1, 1]],
+        "north": [[0, 0, .25, 1, 1, 1]], "south": [[0, 0, 0, 1, 1, .75]],
+        "west": [[.25, 0, 0, 1, 1, 1]], "east": [[0, 0, 0, .75, 1, 1]],
+    }}
+    write("data/create/horizon/block/mechanical_drill.json", {
+        "template": "minecraft:glass", "item": True,
+        "properties": {"hardness": 1.5, "explosion_resistance": 6, "requires_tool": True,
+                       "map_color": 34, "render_shape": "MODEL", "sounds": "minecraft:andesite"},
+        "state_properties": {"facing": {"type": "enum", "values": ["down", "up", "north", "south", "west", "east"]},
+                             "waterlogged": {"type": "boolean"}},
+        "default_state": {"facing": "down", "waterlogged": "false"},
+        "shapes": drill_shapes, "collision_shapes": drill_shapes,
+    })
+    model("millstone/block", [([0, 0, 0], [16, 5, 16]),
+                               ([2, 5, 2], [5, 16, 14]), ([11, 5, 2], [14, 16, 14]),
+                               ([5, 5, 2], [11, 16, 5]), ([5, 5, 11], [11, 16, 14])], "minecraft:block/andesite")
+    model("millstone/inner", [([5, 5, 5], [11, 12, 11]), ([6, 12, 7], [10, 15, 9])], "minecraft:block/smooth_stone")
+    # The source static fan model faces up before blockstate rotations.
+    model("encased_fan/block", [([0, 0, 0], [16, 3, 16]),
+                                 ([0, 3, 0], [3, 16, 16]), ([13, 3, 0], [16, 16, 16]),
+                                 ([3, 3, 0], [13, 16, 3]), ([3, 3, 13], [13, 16, 16])], "minecraft:block/stripped_spruce_log")
+    # The native renderer faces the moving partial along the rear shaft.
+    model("encased_fan/propeller", [([3, 6, 7], [13, 10, 9]), ([6, 3, 7], [10, 13, 9]), ([6, 6, 5], [10, 10, 11])])
+    model("mechanical_drill/block", [([0, 0, 0], [16, 10, 16]), ([2, 10, 2], [14, 12, 14])], "minecraft:block/andesite")
+    model("mechanical_drill/head", [([4, 12, 4], [12, 13, 12]), ([5, 13, 5], [11, 14, 11]), ([7, 14, 7], [9, 16, 9])])
+    for block in ["millstone", "encased_fan", "mechanical_drill"]:
+        variants = {"": {"model": "create:block/" + block + "/block"}}
+        if block != "millstone":
+            variants = {"facing=" + face: {"model": "create:block/" + block + "/block", **rotation}
+                        for face, rotation in {"down": {"x": 180}, "up": {}, "north": {"x": 90},
+                                               "south": {"x": 90, "y": 180}, "west": {"x": 90, "y": 270},
+                                               "east": {"x": 90, "y": 90}}.items()}
+            if block == "mechanical_drill":
+                variants = {key + ",waterlogged=" + wet: value for key, value in variants.items() for wet in ["false", "true"]}
+        write("assets/create/blockstates/" + block + ".json", {"variants": variants})
+        write("assets/create/models/item/" + block + ".json", {"parent": "create:block/" + block + "/block"})
+        write("assets/create/items/" + block + ".json", {"model": {"type": "minecraft:model", "model": "create:item/" + block}})
+        write("data/create/loot_table/blocks/" + block + ".json", {"type": "minecraft:block", "pools": [{"rolls": 1, "entries": [{"type": "minecraft:item", "name": "create:" + block}]}]})
+
+
 def foundation():
     from catalog import BLOCKS as all_blocks, ITEMS, TRANSMISSIONS, STATIC_BLOCKS, INSTRUMENTS, GENERATORS, INTERNAL_BLOCKS, rust_catalog
     for block in TRANSMISSIONS + STATIC_BLOCKS + INSTRUMENTS + GENERATORS:
@@ -71,7 +133,8 @@ def foundation():
         item_decl={"template":"minecraft:iron_ingot","max_stack_size":1 if item in ['wrench','goggles'] else 64}
         if item=='goggles':item_decl['components']={'minecraft:equippable':{'slot':'head','equip_sound':'minecraft:item.armor.equip_generic','dispensable':True,'swappable':True,'damage_on_hurt':False}}
         write("data/create/horizon/item/" + item + ".json", item_decl)
-        write("assets/create/models/item/" + item + ".json", {"parent": "minecraft:item/generated", "textures": {"layer0": "minecraft:item/iron_ingot"}})
+        sprite = {"wheat_flour": "sugar", "dough": "bread"}.get(item, "iron_ingot")
+        write("assets/create/models/item/" + item + ".json", {"parent": "minecraft:item/generated", "textures": {"layer0": "minecraft:item/" + sprite}})
         write("assets/create/items/" + item + ".json", {"model": {"type": "minecraft:model", "model": "create:item/" + item}})
         if item=='goggles':
             write('assets/create/items/goggles.json',{'model':{'type':'minecraft:select','property':'minecraft:display_context','cases':[{'when':'head','model':{'type':'minecraft:model','model':'create:block/goggles'}}],'fallback':{'type':'minecraft:model','model':'create:item/goggles'}}})
@@ -79,6 +142,7 @@ def foundation():
     write('data/create/loot_table/blocks/gearbox.json',{'type':'minecraft:block','pools':[{'rolls':1,'entries':[{'type':'minecraft:alternatives','children':[{'type':'minecraft:item','name':'create:gearbox','conditions':[vertical]},{'type':'minecraft:item','name':'create:vertical_gearbox'}]}]}]})
     model("hand_crank/handle", [([6, 5, 6], [10, 10, 16])], "minecraft:block/oak_planks")
     model('goggles',[([4,6,3],[7,9,4]),([9,6,3],[12,9,4])],'minecraft:block/gold_block')
+    processors()
     # A native world-space hint: our own geometry and vanilla sprite reference.
     model('port_hint',[([7.6,7.6,5],[8.4,8.4,14]),([6,7.5,11],[10,8.5,12]),([7,7.5,12],[9,8.5,13])],'minecraft:block/white_concrete')
     hint=CONTENT/'assets/create/models/block/port_hint.json'
@@ -95,20 +159,25 @@ def foundation():
             return {k: current(v) for k,v in value.items()}
         if isinstance(value, list): return [current(v) for v in value]
         return value
-    for folder, retained in [(CONTENT / "data/create/recipe", reference["recipes"]), (CONTENT / "data/c/tags/item", reference["tags"])]:
+    for folder, retained in [(CONTENT / "data/create/recipe", reference["recipes"]),
+                             (CONTENT / "data/create/tags", reference["tags"]),
+                             (CONTENT / "data/c/tags/item", reference["tags"])]:
         for path in folder.rglob("*.json"):
             if path.relative_to(CONTENT / "data").as_posix() not in retained: path.unlink()
     for path, value in reference["recipes"].items(): write("data/" + path, current(value))
     for path, value in reference["tags"].items(): write("data/" + path, value)
     write("data/create/horizon/creative_tab/kinetics.json", {"title": "itemGroup.create.base", "icon": "create:cogwheel", "items": ["create:" + name for name in all_blocks + ITEMS]})
     # These fallback labels are ours; the JAR replaces them with all upstream locales.
-    extra_blocks = {"gearbox":"Gearbox","clutch":"Clutch","gearshift":"Gearshift","hand_crank":"Hand Crank","andesite_encased_shaft":"Andesite Encased Shaft","brass_encased_shaft":"Brass Encased Shaft","andesite_casing":"Andesite Casing","brass_casing":"Brass Casing","andesite_alloy_block":"Block of Andesite Alloy","brass_block":"Block of Brass","zinc_block":"Block of Zinc","speedometer":"Speedometer","stressometer":"Stressometer","water_wheel":"Water Wheel","large_water_wheel":"Large Water Wheel"}
-    extra_items = {"andesite_alloy":"Andesite Alloy","brass_ingot":"Brass Ingot","brass_nugget":"Brass Nugget","zinc_ingot":"Zinc Ingot","zinc_nugget":"Zinc Nugget","wrench":"Wrench","brass_sheet":"Brass Sheet","vertical_gearbox":"Vertical Gearbox","goggles":"Engineer’s Goggles"}
+    extra_blocks = {"gearbox":"Gearbox","clutch":"Clutch","gearshift":"Gearshift","hand_crank":"Hand Crank","andesite_encased_shaft":"Andesite Encased Shaft","brass_encased_shaft":"Brass Encased Shaft","andesite_casing":"Andesite Casing","brass_casing":"Brass Casing","andesite_alloy_block":"Block of Andesite Alloy","brass_block":"Block of Brass","zinc_block":"Block of Zinc","speedometer":"Speedometer","stressometer":"Stressometer","water_wheel":"Water Wheel","large_water_wheel":"Large Water Wheel","millstone":"Millstone","encased_fan":"Encased Fan","mechanical_drill":"Mechanical Drill"}
+    extra_items = {"andesite_alloy":"Andesite Alloy","brass_ingot":"Brass Ingot","brass_nugget":"Brass Nugget","zinc_ingot":"Zinc Ingot","zinc_nugget":"Zinc Nugget","wrench":"Wrench","brass_sheet":"Brass Sheet","vertical_gearbox":"Vertical Gearbox","goggles":"Engineer’s Goggles","propeller":"Propeller","wheat_flour":"Wheat Flour","dough":"Dough"}
     for locale in ["en_us","ru_ru"]:
         path=CONTENT / ("assets/create/lang/"+locale+".json")
         lang=json.loads(path.read_text())
         lang.update({"block.create."+k:v for k,v in extra_blocks.items()})
         lang.update({"item.create."+k:v for k,v in extra_items.items()})
+        if locale == "ru_ru":
+            lang.update({"block.create.millstone": "Мельничный жернов", "block.create.encased_fan": "Вентилятор в корпусе", "block.create.mechanical_drill": "Механический бур",
+                         "item.create.propeller": "Пропеллер", "item.create.wheat_flour": "Пшеничная мука", "item.create.dough": "Тесто"})
         lang["create.kinetics.creative_motor.rotation_speed"]="Generated Speed in RPM"
         path.write_text(json.dumps(lang,ensure_ascii=False,indent=2)+"\n")
     (NATIVE / "assets/src/catalog.rs").write_text(rust_catalog())
@@ -124,8 +193,8 @@ def main():
     CONTENT.mkdir(exist_ok=True)
     (CONTENT / "horizon-mod.toml").write_text('''id = "create"
 name = "Create for Horizon — prototype"
-version = "0.4.0"
-description = "Experimental kinetic foundation: transmissions, pressing, depots, materials and crafting."
+version = "0.5.0"
+description = "Experimental kinetic foundation with milling, bulk fan processing, stationary drilling, pressing, depots and crafting."
 authors = ["create-horizon contributors"]
 api = "0.2"
 side = "both"

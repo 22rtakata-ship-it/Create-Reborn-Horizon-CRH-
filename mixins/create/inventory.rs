@@ -46,6 +46,12 @@ pub(super) fn press(
     // Create CRecipes.bulkPressing defaults to false.
     let outcome = create_engine::depot::press(input.count, false)?;
     output.count = output.count.checked_mul(outcome.processed)?;
+    // BeltPressingCallbacks.whenItemHeld clears fan processing before copying
+    // either the held result or the unpressed remainder into transported stacks.
+    if let Some(horizon_world::nbt::Tag::Compound(held)) = entity.nbt.get_mut(&"HeldItem".into()) {
+        held.remove(&"FanProcessingType".into());
+        held.remove(&"FanProcessingTime".into());
+    }
     let overflow = if outcome.output_held {
         entity.items[0] = Some(output);
         None

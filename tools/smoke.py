@@ -12,6 +12,10 @@ from common import ROOT
 import interaction_checks
 import foundation_checks
 import engineering_checks
+import milling_checks
+import fan_checks
+import audit05_checks
+import drilling_checks
 
 
 def main():
@@ -23,6 +27,8 @@ def main():
     parser.add_argument("--create-jar", type=Path, help="Exercise the automatic import from this user-supplied Create 6.0.10 JAR")
     parser.add_argument("--audio", action="store_true", help="Enable normal audio output during this test")
     parser.add_argument("--engineering-only",action="store_true",help="Run the new engineering scenarios while iterating; full release validation omits this flag")
+    parser.add_argument("--processors-only",action="store_true",help="Run the new milling/fan scenarios while iterating")
+    parser.add_argument("--fan-only",action="store_true",help="Iterate on native fan scenarios")
     args = parser.parse_args()
     original = args.resources.resolve()
     if not (original / "facts.json").is_file(): raise SystemExit("Not a prepared Horizon resource folder")
@@ -107,6 +113,23 @@ def main():
             call("container", 3, 64, 1, item, count)
         try:
             ready()
+            if args.processors_only or args.fan_only:
+                milling=None if args.fan_only else milling_checks.run(call,args.offscreen,log_path,scratch)
+                fan=fan_checks.run(call,args.offscreen,log_path,scratch)
+                audit05_checks.run(call,args.offscreen,log_path,scratch)
+                audit05_checks.press_resets_fan_progress(call)
+                drill=None if args.fan_only else drilling_checks.run(call,args.offscreen,log_path,scratch)
+                dropped=audit05_checks.prepare_dropped_reload(call)
+                call('quit');process.wait(timeout=30)
+                process=subprocess.Popen(launch,cwd=scratch,env=env,stdout=log,stderr=subprocess.STDOUT)
+                ready()
+                if milling:milling_checks.reloaded(call,milling)
+                fan_checks.reloaded(call,fan)
+                if drill:drilling_checks.reloaded(call,drill)
+                audit05_checks.reloaded_dropped(call,dropped)
+                (scratch/'result.json').write_text(json.dumps({'passed':True,'scope':'processors-only','milling':milling,'fan':fan},indent=2)+'\n')
+                print('Processors smoke passed:',scratch/'result.json',flush=True)
+                return
             if args.engineering_only:
                 engineering=engineering_checks.run(call,args.offscreen,log_path,scratch)
                 call('quit');process.wait(timeout=30)
@@ -140,13 +163,29 @@ def main():
             marked = interaction_checks.depot(call, rendered if args.offscreen else None)
             foundation = foundation_checks.run(call, args.offscreen, log_path, scratch)
             engineering = engineering_checks.run(call,args.offscreen,log_path,scratch)
+            milling=milling_checks.run(call,args.offscreen,log_path,scratch)
+            fan=fan_checks.run(call,args.offscreen,log_path,scratch)
+            audit05_checks.run(call,args.offscreen,log_path,scratch)
+            audit05_checks.press_resets_fan_progress(call)
+            drill=drilling_checks.run(call,args.offscreen,log_path,scratch)
+            dropped=audit05_checks.prepare_dropped_reload(call)
+            # The processor/drill scenarios visit distant chunks. Load the
+            # original press station before editing its blocks again.
+            call("command", "tp @s 3.5 68 4.5")
+            call("wait-ready", 120, timeout=150)
             fixtures = [([0, 66, 0], "create:creative_motor[facing=east]"),
                         ([1, 66, 0], "create:shaft[axis=x]"),
                         ([2, 66, 0], "create:cogwheel[axis=x]"),
                         ([2, 66, 1], "create:cogwheel[axis=x]"),
                         ([3, 66, 1], "create:mechanical_press[facing=east]"),
                         ([3, 64, 1], "create:depot")]
-            for pos, block in fixtures: call("setblock", *pos, block)
+            for pos, block in fixtures:
+                actual = call("setblock", *pos, block)
+                assert actual["block"].split("[")[0] == block.split("[")[0], (pos, block, actual)
+                if "[" in block:
+                    requested = set(block.split("[", 1)[1].rstrip("]").split(","))
+                    returned = set(actual["block"].split("[", 1)[1].rstrip("]").split(","))
+                    assert requested <= returned, (pos, block, actual)
             # Interrupt after the first stroke: return both the remaining inputs
             # and the buffer, then let the abandoned cycle finish without duplication.
             call("command", "data merge block 0 66 0 {ScrollValue:16}")
@@ -211,7 +250,11 @@ def main():
             interaction_checks.reloaded_depot(call, marked)
             foundation_checks.reloaded(call, foundation)
             engineering_checks.reloaded(call,engineering)
-            result = {"passed": True, "scope": "placement, depot exchange/client rendering/components/save, transmissions/redstone, hand crank, wrench/casings, 11 real crafts, hopper IO, dropped-item capture, loose-item pressing, motor settings, sequential depot pressing/result pickup, power interruption and reload",
+            milling_checks.reloaded(call,milling)
+            fan_checks.reloaded(call,fan)
+            drilling_checks.reloaded(call,drill)
+            audit05_checks.reloaded_dropped(call,dropped)
+            result = {"passed": True, "scope": "placement, depot exchange/client rendering/components/save, transmissions/redstone, crank, wrench/casings, crafting, hopper IO, dropped-item capture/pressing, motor settings, sequential pressing, goggles/gauges/comparators, water wheels/multiblock structure, millstone/filtering/bonuses, fan washing/smoking/haunting/blasting, flow/media/direction, stationary drill/loot/gamerules, adversarial inventory conservation, power interruption and reload",
                       "scratch": str(scratch), "original_assets": bool(args.create_jar), "renderer_checks": args.offscreen, "audio_enabled":args.audio, "skipped": [] if args.offscreen else ["crafting menu", "motor screen", "render snapshots"], "transcript": transcript}
             if args.create_jar and "cache verified" not in log_path.read_text():
                 raise AssertionError("The second game start did not reuse the verified resource cache")

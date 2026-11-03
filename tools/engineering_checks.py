@@ -2,6 +2,10 @@
 import json
 import math
 import re
+import shutil
+import subprocess
+import sys
+from common import ROOT
 import foundation_checks
 
 X=36
@@ -121,7 +125,7 @@ def run(call,graphics,log,scratch):
     print('Engineering: blocked placement preserves items, floor retry works, structural break returns one wheel and clears all parts',flush=True)
 
     if graphics:
-        foundation_checks.crafting(call,X+8,clear,['kinetics/vertical_gearbox','kinetics/vertical_gearbox_from_conversion','kinetics/gearbox_from_conversion','kinetics/goggles','kinetics/speedometer','kinetics/stressometer_from_conversion','kinetics/water_wheel','kinetics/large_water_wheel'])
+        foundation_checks.crafting(call,X+8,clear,['kinetics/vertical_gearbox','kinetics/vertical_gearbox_from_conversion','kinetics/gearbox_from_conversion','kinetics/goggles','kinetics/speedometer','kinetics/stressometer_from_conversion','kinetics/water_wheel','kinetics/large_water_wheel','kinetics/propeller','kinetics/millstone','kinetics/encased_fan','kinetics/mechanical_drill','appliances/dough'])
     return fixture
 
 def poses(log,pos):return [json.loads(s.split('Create pose: ',1)[1]) for s in log.read_text().splitlines() if 'Create pose: ' in s and json.loads(s.split('Create pose: ',1)[1])['pos']==pos]
@@ -137,6 +141,24 @@ def angular_velocity(rows,axis):
     j,k=(axis+1)%3,(axis+2)%3
     angle=math.atan2((q[k][j]-q[j][k])/2,(sum(q[i][i] for i in range(3))-1)/2)
     return math.degrees(angle)/dt/.3
+
+def source_rotation(rows,axis,rpm,offset=0):
+    """Compare submitted poses to actual Java angles at recorded frame times.
+
+    Differentiating ideal RPM is inaccurate: Create computes angles in f32,
+    so late frames have quantized angles and apparently uneven instantaneous RPM.
+    The Java fixture exports the original method body, independently of Rust.
+    """
+    work=ROOT/'.local/visual-oracle'
+    if not (work/'VisualOracle.class').is_file():
+        subprocess.run([sys.executable,str(ROOT/'tools/visual_oracle.py')],check=True)
+    a,b=rows[-2:]
+    requests=''.join(f"A {p['time']} {rpm} {offset}\n" for p in [a,b])
+    values=list(map(float,subprocess.check_output([shutil.which('java'),'-cp',str(work),'VisualOracle'],input=requests,text=True).split()))
+    delta=(values[1]-values[0]+math.pi)%(2*math.pi)-math.pi
+    expected=math.degrees(delta)/(b['time']-a['time'])/.3
+    actual=angular_velocity(rows,axis)
+    assert abs(actual-expected)<.05,{'actual':actual,'java':expected,'rpm':rpm,'frames':[a,b]}
 
 def reloaded(call,fixture):
     p=fixture['pos'];text=' '.join(call('command','data get block '+' '.join(map(str,p)))['chat'])

@@ -27,16 +27,37 @@ The following MIT code informed or was adapted into the Rust engine:
 - `waterwheel/WaterWheelBlock[Entity]`, `LargeWaterWheelBlock[Entity]`,
   `LargeWaterWheelBlockItem`, `WaterWheelStructuralBlock`, `WaterWheelRenderer`:
   flow projection/scoring, generated speed, capacity, materials and structural occupancy.
+- `content/kinetics/millstone/MillstoneBlock`, `MillstoneBlockEntity`,
+  `MillstoneRenderer`, `MillingRecipe`, and `AllShapes`: fixed-axis/cog connections,
+  collision, filtered input/output inventories, timer, collection and moving part.
+- `content/kinetics/fan/EncasedFanBlock`, `EncasedFanBlockEntity`,
+  `IAirCurrentSource`, `AirCurrent`, `EncasedFanRenderer`, `FanVisual`,
+  `fan/processing/FanProcessing`, `AllFanProcessingTypes`, `SplashingRecipe` and
+  `HauntingRecipe`: placement and shaft direction, airflow range/segments,
+  obstruction sampling, dropped/depot processing timers, catalyst rules,
+  furnace recipe selection and propeller speed.
+- `content/processing/recipe/ProcessingOutput`: per-output-item probability rolls
+  and result construction. `content/kinetics/belt/transport/TransportedItemStack` supplies the
+  transported fan-processing field conventions.
+- `content/kinetics/drill/DrillBlock`, `DrillBlockEntity`, `DrillRenderer`, and
+  `content/kinetics/base/BlockBreakingKineticBlockEntity`: stationary front-block
+  selection, break progress/retry timing, source NBT names, ordinary loot, rear
+  shaft and rotating head. Contraption movement and entity damage are not ported.
 - `AllSoundEvents` and infrastructure configs: selected composite sound events,
   default gains/pitches, stress and speed parameters.
-- Forty MIT datapack recipes and their referenced tags, exported from
+- 123 MIT datapack recipes and 35 behavior/ingredient tags, exported from
   `src/generated/resources/data/` at the pinned revision. Ingredient syntax is
   adapted to Horizon/Minecraft 26.3. Missing vanilla convention tags are our own
-  definitions. Recipes requiring unimplemented ores are excluded.
+  definitions and supplement Create's tag additions with vanilla entries.
+  Fan block tags omit unimplemented Create blocks. Recipes requiring unavailable
+  items or other mods are excluded.
 
 Paths above are under `src/main/java/com/simibubi/create/`, except the recipe/tag data under
 `src/generated/resources/data/`. The MIT notice is in LICENSE.
-This initial implementation is incomplete and does not claim full behavioral parity.
+Version 0.5 remains incomplete and does not claim full behavioral parity.
+Validation evidence and its limits are recorded in `VALIDATION.md`.
+Rust code organization is native to Horizon; source behavior is the reference,
+not one Rust type for every Java class.
 
 Create's original `src/main/resources/assets/` has a separate All Rights Reserved
 license. Development inputs and port-pack carry-over stay under `.local/`.
@@ -46,7 +67,7 @@ instance's `.horizon-cache/create-assets/`. It does not download or execute the 
 modify the installed mod or grant rights to redistribute the imported resources.
 The input JAR and generated caches are excluded from Git and all release archives.
 Local extraction is not a guarantee of legal clearance. See `ASSETS.md`. The default
-content uses original provisional JSON models and refers to vanilla textures by ID;
+content uses our provisional JSON models and refers to vanilla textures by ID;
 it embeds no Mojang textures or original Create textures.
 
 The resource bootstrap is the published Create **6.0.10** release `UjX6dr61` on
@@ -69,4 +90,4 @@ included in the mod. Builds pin the published commit
 [upstream PR #26](https://github.com/horizon-rust/horizon-mixins/pull/26), which
 recognizes Rust's built-in `recursion_limit` attribute. The launcher fetches that
 commit from the official repository; no tool source is patched locally. This is
-an unmerged contribution, not an upstream release or approval of this port.
+a pinned source dependency, not an upstream approval of this port.

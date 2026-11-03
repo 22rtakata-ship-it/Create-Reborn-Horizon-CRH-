@@ -21,6 +21,9 @@ pub const BLOCKS: &[&str] = &[
     "stressometer",
     "water_wheel",
     "large_water_wheel",
+    "millstone",
+    "encased_fan",
+    "mechanical_drill",
 ];
 pub const ITEMS: &[&str] = &[
     "iron_sheet",
@@ -35,6 +38,9 @@ pub const ITEMS: &[&str] = &[
     "brass_sheet",
     "vertical_gearbox",
     "goggles",
+    "propeller",
+    "wheat_flour",
+    "dough",
 ];
 pub const PARTS: &[&str] = &[
     "shaft",
@@ -55,4 +61,10 @@ pub const PARTS: &[&str] = &[
     "water_wheel/wheel",
     "large_water_wheel/block",
     "large_water_wheel/block_extension",
+    "millstone/block",
+    "millstone/inner",
+    "encased_fan/block",
+    "encased_fan/propeller",
+    "mechanical_drill/block",
+    "mechanical_drill/head",
 ];

@@ -116,6 +116,241 @@ fn imports_every_locale_byte_for_byte() {
 }
 
 #[test]
+fn processor_parts_and_ingredients_are_required_without_accepting_java_loaders() {
+    let home = Stage::new(&std::env::temp_dir()).unwrap();
+    let required = [
+        "assets/create/blockstates/millstone.json",
+        "assets/create/blockstates/encased_fan.json",
+        "assets/create/models/block/millstone/inner.json",
+        "assets/create/models/block/encased_fan/propeller.json",
+        "assets/create/models/item/propeller.json",
+        "assets/create/models/item/wheat_flour.json",
+        "assets/create/models/item/dough.json",
+        "assets/create/blockstates/mechanical_drill.json",
+        "assets/create/models/block/mechanical_drill/head.json",
+        "assets/create/models/item/mechanical_drill.json",
+    ];
+    for path in required {
+        let missing = fixture(|files| {
+            assert!(files.remove(path).is_some(), "catalog must require {path}");
+        });
+        assert!(import_fixture(&home.0, &missing).is_err(), "{path}");
+        assert!(!home.0.join("cache").exists());
+        assert_eq!(fs::read(home.0.join("input.jar")).unwrap(), missing);
+    }
+    for path in [
+        "assets/create/models/block/millstone/inner.json",
+        "assets/create/models/block/encased_fan/propeller.json",
+        "assets/create/models/block/mechanical_drill/head.json",
+    ] {
+        let java = fixture(|files| {
+            files.insert(path.into(), br#"{"loader":"create:java_loader"}"#.to_vec());
+        });
+        let error = import_fixture(&home.0, &java).unwrap_err();
+        assert!(error.to_string().contains("Custom Java model loaders"));
+        assert!(!home.0.join("cache").exists());
+    }
+}
+
+#[test]
+fn processor_catalog_uses_a_new_cache_schema() {
+    let home = Stage::new(&std::env::temp_dir()).unwrap();
+    let bytes = fixture(|_| {});
+    let first = import_fixture(&home.0, &bytes).unwrap();
+    let target = first.pack.parent().unwrap();
+    let old = target.with_file_name(target.file_name().unwrap().to_str().unwrap().replacen(
+        &format!("v{SCHEMA}-"),
+        &format!("v{}-", SCHEMA - 1),
+        1,
+    ));
+    let mut receipt: Value =
+        serde_json::from_slice(&fs::read(target.join("import.json")).unwrap()).unwrap();
+    receipt["schema"] = json!(SCHEMA - 1);
+    fs::write(
+        target.join("import.json"),
+        serde_json::to_vec(&receipt).unwrap(),
+    )
+    .unwrap();
+    fs::remove_file(
+        first
+            .pack
+            .join("assets/create/models/block/mechanical_drill/head.json"),
+    )
+    .unwrap();
+    fs::rename(target, &old).unwrap();
+    let upgraded = import_fixture(&home.0, &bytes).unwrap();
+    assert!(!upgraded.cached);
+    assert!(
+        upgraded
+            .pack
+            .join("assets/create/models/block/millstone/inner.json")
+            .is_file()
+    );
+    assert!(
+        upgraded
+            .pack
+            .join("assets/create/models/block/encased_fan/propeller.json")
+            .is_file()
+    );
+    assert!(
+        upgraded
+            .pack
+            .join("assets/create/models/block/mechanical_drill/head.json")
+            .is_file()
+    );
+    assert!(old.is_dir());
+    assert!(import_fixture(&home.0, &bytes).unwrap().cached);
+}
+
+#[test]
+fn bundled_processors_have_source_states_collision_and_real_processing_recipes() {
+    let bundle: BTreeMap<String, String> =
+        serde_json::from_str(include_str!("../../data/content.json")).unwrap();
+    let read = |path: &str| -> Value { serde_json::from_str(&bundle[path]).unwrap() };
+    let millstone = read("data/create/horizon/block/millstone.json");
+    assert!(millstone.get("state_properties").is_none());
+    assert!(millstone.get("default_state").is_none());
+    assert_eq!(
+        millstone["collision_shapes"],
+        json!({"default":[[0,0,0,1,0.375,1],[0.125,0.375,0.125,0.875,1,0.875]]})
+    );
+    assert_eq!(millstone["shapes"], millstone["collision_shapes"]);
+    let fan = read("data/create/horizon/block/encased_fan.json");
+    assert_eq!(fan["state_properties"].as_object().unwrap().len(), 1);
+    assert_eq!(fan["default_state"], json!({"facing":"down"}));
+    assert_eq!(
+        fan["state_properties"]["facing"]["values"],
+        json!(["down", "up", "north", "south", "west", "east"])
+    );
+    assert_eq!(fan["collision_shapes"], json!({"default":[[0,0,0,1,1,1]]}));
+    let drill = read("data/create/horizon/block/mechanical_drill.json");
+    assert_eq!(
+        drill["default_state"],
+        json!({"facing":"down","waterlogged":"false"})
+    );
+    assert_eq!(drill["shapes"], drill["collision_shapes"]);
+    assert_eq!(drill["collision_shapes"]["property"], "facing");
+    assert_eq!(
+        drill["collision_shapes"]["values"]["up"],
+        json!([[0, 0, 0, 1, 0.75, 1]])
+    );
+    assert_eq!(
+        drill["collision_shapes"]["values"]["east"],
+        json!([[0, 0, 0, 0.75, 1, 1]])
+    );
+    assert_eq!(
+        read("assets/create/blockstates/mechanical_drill.json")["variants"]
+            .as_object()
+            .unwrap()
+            .len(),
+        12
+    );
+    assert_eq!(
+        read("data/create/recipe/crafting/kinetics/mechanical_drill.json")["result"]["id"],
+        "create:mechanical_drill"
+    );
+    for id in ["millstone", "encased_fan", "mechanical_drill"] {
+        let loot = read(&format!("data/create/loot_table/blocks/{id}.json"));
+        assert_eq!(
+            loot["pools"][0]["entries"][0]["name"],
+            format!("create:{id}")
+        );
+    }
+    let wheat = read("data/create/recipe/milling/wheat.json");
+    assert_eq!(wheat["type"], "create:milling");
+    assert_eq!(wheat["processing_time"], 150);
+    assert_eq!(
+        wheat["results"],
+        json!([{"id":"create:wheat_flour"},{"chance":0.25,"count":2,"id":"create:wheat_flour"},{"chance":0.25,"id":"minecraft:wheat_seeds"}])
+    );
+    let dough = read("data/create/recipe/splashing/wheat_flour.json");
+    assert_eq!(dough["ingredients"], json!(["#c:flours/wheat"]));
+    assert_eq!(dough["results"], json!([{"id":"create:dough"}]));
+    for kind in ["smelting", "smoking"] {
+        let bread = read(&format!("data/create/recipe/{kind}/bread.json"));
+        assert_eq!(bread["type"], format!("minecraft:{kind}"));
+        assert_eq!(bread["ingredient"], "create:dough");
+        assert_eq!(bread["result"]["id"], "minecraft:bread");
+    }
+    assert_eq!(
+        read("data/create/recipe/haunting/soul_sand.json")["ingredients"],
+        json!(["#minecraft:sand"])
+    );
+    assert_eq!(
+        read("data/create/recipe/milling/wool.json")["results"][0]["id"],
+        "minecraft:string"
+    );
+    assert_eq!(
+        read("data/create/recipe/milling/bone.json")["results"]
+            .as_array()
+            .unwrap()
+            .len(),
+        3
+    );
+    for (path, values) in [
+        (
+            "c:glass_blocks",
+            vec!["minecraft:glass", "minecraft:red_stained_glass"],
+        ),
+        (
+            "c:glass_panes",
+            vec!["minecraft:glass_pane", "minecraft:red_stained_glass_pane"],
+        ),
+        ("c:stones", vec!["minecraft:stone", "minecraft:andesite"]),
+        ("c:flours/wheat", vec!["create:wheat_flour"]),
+    ] {
+        let (namespace, path) = path.split_once(':').unwrap();
+        let tag = read(&format!("data/{namespace}/tags/item/{path}.json"));
+        for value in values {
+            assert!(
+                tag["values"].as_array().unwrap().contains(&json!(value)),
+                "{path}: {value}"
+            );
+        }
+    }
+    let transparent = read("data/create/tags/block/fan_transparent.json");
+    assert!(
+        transparent["values"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("minecraft:iron_bars"))
+    );
+    assert!(
+        transparent["values"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("#minecraft:fences"))
+    );
+    assert!(
+        !transparent["values"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|v| v.as_str().unwrap().starts_with("create:"))
+    );
+    assert_eq!(
+        read("data/create/tags/block/fan_processing_catalysts/blasting.json")["values"],
+        json!([])
+    );
+    assert_eq!(
+        read("data/create/tags/block/fan_processing_catalysts/haunting.json")["values"],
+        json!(["minecraft:soul_fire", "minecraft:soul_campfire"])
+    );
+    assert_eq!(
+        read("data/create/tags/block/fan_processing_catalysts/smoking.json")["values"],
+        json!(["minecraft:fire", "minecraft:campfire"])
+    );
+    assert_eq!(
+        read("data/create/tags/fluid/fan_processing_catalysts/splashing.json")["values"],
+        json!(["minecraft:water", "minecraft:flowing_water"])
+    );
+    assert_eq!(
+        read("data/create/tags/fluid/fan_processing_catalysts/blasting.json")["values"],
+        json!(["minecraft:lava", "minecraft:flowing_lava"])
+    );
+}
+
+#[test]
 fn bundled_content_repairs_itself_without_changing_other_mods_or_settings() {
     let home = std::env::temp_dir().join(format!("create-content-{}", std::process::id()));
     let _ = fs::remove_dir_all(&home);

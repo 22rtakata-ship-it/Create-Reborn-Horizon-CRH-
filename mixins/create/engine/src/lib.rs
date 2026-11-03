@@ -17,3 +17,12 @@ pub mod visual;
 
 #[path = "core/waterwheel.rs"]
 pub mod waterwheel;
+
+#[path = "core/milling.rs"]
+pub mod milling;
+
+#[path = "core/fan.rs"]
+pub mod fan;
+
+#[path = "core/drilling.rs"]
+pub mod drilling;

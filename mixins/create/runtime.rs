@@ -124,6 +124,9 @@ pub(super) fn owns(block: &str) -> bool {
             | "create:water_wheel"
             | "create:large_water_wheel"
             | "create:water_wheel_structure"
+            | "create:millstone"
+            | "create:encased_fan"
+            | "create:mechanical_drill"
     )
 }
 
@@ -131,6 +134,7 @@ pub(super) fn entity(block: &str, entity: &mut Option<(String, Compound)>) {
     if owns(block) && entity.is_none() {
         let id = match block {
             "create:creative_motor" => "create:motor",
+            "create:mechanical_drill" => "create:drill",
             "create:shaft" | "create:cogwheel" | "create:large_cogwheel" => "create:simple_kinetic",
             "create:andesite_encased_shaft" | "create:brass_encased_shaft" => {
                 "create:encased_shaft"
@@ -273,6 +277,9 @@ pub(super) fn placed(game: &mut Game<'_>, stack: &ItemStack, pos: [i32; 3]) {
 }
 
 pub(super) fn depot_reacts(game: &Game<'_>, pos: [i32; 3], face: [i32; 3]) -> bool {
+    if crate::game::create_port_millstone::reacts(game, pos) {
+        return true;
+    }
     if crate::game::create_port_interactions::reacts(game, pos) {
         return true;
     }
@@ -295,6 +302,11 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3], ca
     if crate::game::create_port_interactions::right_click(game, pos, face) {
         game.swing_arm();
         *canceled = true;
+        return;
+    }
+    if crate::game::create_port_millstone::right_click(game, pos) {
+        *canceled = true;
+        game.swing_arm();
         return;
     }
     if !depot_reacts(game, pos, face) {
@@ -455,7 +467,19 @@ pub(super) fn node(game: &Game<'_>, pos: [i32; 3]) -> Option<Node> {
             }
         };
     }
+    if block == "create:millstone" {
+        axis = Axis::Y;
+    }
     let kind = match block.as_str() {
+        "create:millstone" => Kind::Millstone,
+        "create:encased_fan" | "create:mechanical_drill" => Kind::Consumer {
+            facing: direction.map(|v| -v),
+            impact: if block == "create:mechanical_drill" {
+                4.0
+            } else {
+                2.0
+            },
+        },
         "create:speedometer" | "create:stressometer" => Kind::Shaft,
         "create:water_wheel" | "create:large_water_wheel" => Kind::WaterWheel {
             rpm: match game.world.block_entities.get(&(pos[0], pos[1], pos[2])) {
@@ -698,6 +722,15 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
         Tag::String(format!("{:?}", network.status).as_str().into()),
     );
     let mut sync = old_rpm != rpm;
+    if block == "create:millstone" {
+        sync |= crate::game::create_port_millstone::tick(game, pos, entity, rpm);
+    }
+    if block == "create:encased_fan" {
+        crate::game::create_port_fan::tick(game, pos, entity, rpm);
+    }
+    if block == "create:mechanical_drill" {
+        sync |= crate::game::create_port_drill::tick(game, pos, entity, rpm);
+    }
     if matches!(block.as_str(), "create:speedometer" | "create:stressometer") {
         let value = if block == "create:speedometer" {
             create_engine::visual::speed_dial(rpm)
@@ -841,7 +874,7 @@ pub(super) fn update_tag(entity: &ModBlockEntity, tag: &mut Option<Compound>) {
     if (owns(&entity.id)
         || matches!(
             entity.id.as_str(),
-            "create:motor" | "create:simple_kinetic" | "create:encased_shaft"
+            "create:motor" | "create:simple_kinetic" | "create:encased_shaft" | "create:drill"
         ))
         && tag.is_none()
     {
@@ -856,6 +889,7 @@ pub(super) fn update_tag(entity: &ModBlockEntity, tag: &mut Option<Compound>) {
 }
 
 pub(super) fn container(block: &str, container: &mut Option<ModContainer>) {
+    crate::game::create_port_millstone::container(block, container);
     if block == "create:depot" && container.is_none() {
         *container = Some(ModContainer {
             slots: 9,
@@ -950,6 +984,16 @@ pub(super) fn draw(
             .and_then(horizon_items::item_nbt::item_from_nbt);
         trace_depot(pos, stack.as_ref());
         crate::game::create_port_presentation::depot(game, pos, entity, draw);
+        return;
+    }
+    if crate::game::create_port_millstone::draw(game, pos, entity, draw) {
+        return;
+    }
+    if crate::game::create_port_drill::draw(game, pos, entity, draw) {
+        return;
+    }
+    if block == "create:encased_fan" {
+        crate::game::create_port_fan::draw(game, pos, entity, draw);
         return;
     }
     let Some(node) = node(game, pos) else { return };

@@ -1,6 +1,6 @@
 [mod]
 id = "create"
-version = "0.4.0"
+version = "0.5.0"
 
 [compatibility]
 horizon_revision = "fc02103818c212920fd24aa34a2b2f91ba49e56f"
@@ -329,6 +329,57 @@ bindings = [
   { name = "containers", ty = "&crate::game::machines::Containers<'_>", value = "&*self" },
   { name = "view", ty = "&crate::game::machines::View", value = "view" },
   { name = "slot", ty = "usize", value = "slot" },
+  { name = "stack", ty = "&crate::items::ItemStack", value = "stack" },
+]
+
+[[module]]
+id = "millstone"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_millstone"
+source = "millstone.rs"
+
+[[module]]
+id = "fan"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_fan"
+source = "fan.rs"
+
+[[module]]
+id = "drill"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_drill"
+source = "drill.rs"
+
+[[injection]]
+id = "server-data"
+hook = "server_data_loaded"
+hook_version = 1
+kind = "HEAD"
+helper = "server_data.rs"
+bindings = [
+ {name="game",ty="&mut crate::game::Game<'_>",value="&mut *self"},
+ {name="reload",ty="bool",value="reload"},
+]
+
+[[injection]]
+id = "block-changed"
+hook = "block_changed"
+hook_version = 1
+kind = "HEAD"
+helper = "block_changed.rs"
+bindings = [
+ {name="dimension",ty="horizon_world::level::Dimension",value="dimension"},
+ {name="pos",ty="horizon_core::position::BlockPos",value="pos"},
+]
+
+[[injection]]
+id = "depot-transported-identity"
+target = "horizon_client::game::machines::Game<'_>::container_changed"
+kind = "HEAD"
+helper = "depot_changed.rs"
+bindings = [
+ {name="game",ty="&mut crate::game::Game<'_>",value="&mut *self"},
+ {name="pos",ty="(i32,i32,i32)",value="pos"},
 ]
 
 [[module]]

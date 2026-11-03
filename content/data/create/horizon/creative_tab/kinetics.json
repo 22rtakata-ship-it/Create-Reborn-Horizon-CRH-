@@ -23,6 +23,9 @@
     "create:stressometer",
     "create:water_wheel",
     "create:large_water_wheel",
+    "create:millstone",
+    "create:encased_fan",
+    "create:mechanical_drill",
     "create:iron_sheet",
     "create:golden_sheet",
     "create:copper_sheet",
@@ -34,6 +37,9 @@
     "create:wrench",
     "create:brass_sheet",
     "create:vertical_gearbox",
-    "create:goggles"
+    "create:goggles",
+    "create:propeller",
+    "create:wheat_flour",
+    "create:dough"
   ]
 }
