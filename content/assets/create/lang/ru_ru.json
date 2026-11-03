@@ -1,0 +1,12 @@
+{
+  "itemGroup.create_horizon": "Create для Horizon",
+  "block.create.creative_motor": "Творческий мотор",
+  "block.create.shaft": "Вал",
+  "block.create.cogwheel": "Шестерня",
+  "block.create.large_cogwheel": "Большая шестерня",
+  "block.create.mechanical_press": "Механический пресс",
+  "block.create.depot": "Депо",
+  "item.create.iron_sheet": "Железная пластина",
+  "item.create.golden_sheet": "Золотая пластина",
+  "item.create.copper_sheet": "Медная пластина"
+}

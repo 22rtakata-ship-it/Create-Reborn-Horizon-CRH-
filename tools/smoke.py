@@ -1,0 +1,157 @@
+#!/usr/bin/env python3
+"""Exercise the native motor -> shafts/cogs -> press -> depot in a fresh world."""
+import argparse
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import tempfile
+import time
+from common import ROOT
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--resources", type=Path, required=True)
+    parser.add_argument("--ctl", type=Path)
+    parser.add_argument("--offscreen", action="store_true", help="Also render and capture a frame")
+    args = parser.parse_args()
+    original = args.resources.resolve()
+    if not (original / "facts.json").is_file(): raise SystemExit("Not a prepared Horizon resource folder")
+    ctl = args.ctl or original.parents[2] / "horizon-ctl"
+    game = ROOT / "target/fast/horizon-client"
+    if not game.is_file(): raise SystemExit("Run python3 tools/stage.py build first")
+    scratch = Path(tempfile.mkdtemp(prefix="smoke-", dir=ROOT / ".local"))
+    resources = scratch / "resources"
+    # A private writable copy: resource loaders may create or refresh caches.
+    if os.uname().sysname == "Darwin":
+        subprocess.run(["cp", "-cR", str(original), str(resources)], check=True)
+    else:
+        shutil.copytree(original, resources)
+    env = os.environ.copy()
+    for key, folder in [("HORIZON_HOME", "home"), ("HORIZON_LAUNCHER_HOME", "launcher"),
+                        ("XDG_DATA_HOME", "data"), ("XDG_CONFIG_HOME", "config"),
+                        ("HORIZON_LAUNCHER_TRASH", "trash"), ("HORIZON_LAUNCHER_CLIPBOARD", "clipboard"),
+                        ("HORIZON_LAUNCHER_DESKTOP", "desktop")]:
+        env[key] = str(scratch / folder)
+    env.update({"HORIZON_NO_AUDIO": "1", "HORIZON_LAUNCHER_NO_SELF_UPDATE": "1"})
+    socket = scratch / "ctl.sock"
+    transcript = []
+
+    def call(*words, timeout=120):
+        reply = subprocess.run([str(ctl), "--socket", str(socket), *map(str, words)], env=env,
+                               text=True, capture_output=True, timeout=timeout)
+        if reply.returncode:
+            raise RuntimeError(str(words) + ": " + reply.stdout + reply.stderr)
+        data = json.loads(reply.stdout)
+        transcript.append({"command": list(map(str, words)), "reply": data})
+        return data
+
+    def expect_sheet(item, count):
+        data = call("container", 3, 64, 1)
+        encoded = json.dumps(data)
+        def stacks(value):
+            if isinstance(value, dict):
+                if value.get("item", value.get("id")) == item:
+                    yield value.get("count")
+                for child in value.values(): yield from stacks(child)
+            elif isinstance(value, list):
+                for child in value: yield from stacks(child)
+        if count not in list(stacks(data)):
+            raise AssertionError("Expected " + item + ": " + encoded)
+        # The raw reply is kept for auditing the count and the container slot.
+        print("Container:", encoded, flush=True)
+        return data
+
+    log_path = scratch / "game.log"
+    print("Scratch world:", scratch, flush=True)
+    with log_path.open("w") as log:
+        launch = [str(game), "--resources", str(resources), "--world", "CreatePortSmoke",
+                  "--seed", "5", "--creative", "--render-distance", "2",
+                  "--dev-mod", str(ROOT / "content"), "--control-socket", str(socket),
+                  "--offscreen" if args.offscreen else "--headless"]
+        # The client also stores saves/options relative to cwd, independently of HOME.
+        process = subprocess.Popen(launch, cwd=scratch, env=env, stdout=log, stderr=subprocess.STDOUT)
+
+        def ready():
+            deadline = time.monotonic() + 180
+            while time.monotonic() < deadline:
+                if process.poll() is not None: raise RuntimeError(log_path.read_text()[-8000:])
+                try:
+                    call("state", timeout=5)
+                    break
+                except (RuntimeError, subprocess.TimeoutExpired):
+                    time.sleep(.25)
+            else: raise TimeoutError("Control socket startup; see " + str(log_path))
+            call("wait-ready", 120, timeout=150)
+
+        def input_stack(item, count):
+            # Horizon's vanilla /item command does not yet address mod containers.
+            # Replace this fixture's depot and fill it through the supported control API.
+            call("setblock", 3, 64, 1, "minecraft:air")
+            call("setblock", 3, 64, 1, "create:depot[facing=up]")
+            call("container", 3, 64, 1, item, count)
+        try:
+            ready()
+            call("command", "tp @s 2 68 6")
+            call("wait-ready", 120, timeout=150)
+            call("fill", -2, 64, -2, 7, 68, 7, "minecraft:air")
+            call("fill", -2, 63, -2, 7, 63, 7, "minecraft:smooth_stone")
+            fixtures = [([0, 66, 0], "create:creative_motor[facing=east,speed=16]"),
+                        ([1, 66, 0], "create:shaft[axis=x]"),
+                        ([2, 66, 0], "create:cogwheel[axis=x]"),
+                        ([2, 66, 1], "create:cogwheel[axis=x]"),
+                        ([3, 66, 1], "create:mechanical_press[facing=east]"),
+                        ([3, 64, 1], "create:depot[facing=up]")]
+            for pos, block in fixtures: call("setblock", *pos, block)
+            call("container", 3, 64, 1, "minecraft:iron_ingot", 8)
+            call("wait", 150)
+            expect_sheet("create:iron_sheet", 8)
+            call("command", "data get block 3 66 1")
+            call("messages", 5)
+            # Cut power and replace the input; a stopped network must not process it.
+            call("setblock", 1, 66, 0, "minecraft:air")
+            input_stack("minecraft:copper_ingot", 4)
+            call("wait", 150)
+            stopped = call("container", 3, 64, 1)
+            if "minecraft:copper_ingot" not in json.dumps(stopped): raise AssertionError(stopped)
+            call("setblock", 1, 66, 0, "create:shaft[axis=x]")
+            call("wait", 150)
+            expect_sheet("create:copper_sheet", 4)
+            if args.offscreen:
+                call("command", "time set day")
+                call("command", "tp @s 3 65 3")
+                call("look-at", 2, 65, 1)
+                call("screenshot", scratch / "factory.png")
+                call("interact", 3, 64, 1, "up")
+                screen = call("screen")
+                if not any(name in json.dumps(screen) for name in ["Depot", "create:depot", "block.create.depot"]):
+                    raise AssertionError("Depot menu did not open: " + json.dumps(screen))
+                call("screenshot", scratch / "depot.png")
+                call("close")
+            input_stack("minecraft:gold_ingot", 3)
+            call("wait", 20)
+            call("quit", timeout=30)
+            process.wait(timeout=30)
+            process = subprocess.Popen(launch, cwd=scratch, env=env, stdout=log, stderr=subprocess.STDOUT)
+            ready()
+            call("wait", 150)
+            expect_sheet("create:golden_sheet", 3)
+            result = {"passed": True, "scope": "iron pressing, power interruption, copper after reconnection, gold cycle across save/reload",
+                      "scratch": str(scratch), "transcript": transcript}
+            (scratch / "result.json").write_text(json.dumps(result, indent=2) + "\n")
+            print("Smoke test passed:", scratch / "result.json", flush=True)
+        finally:
+            (scratch / "transcript.json").write_text(json.dumps(transcript, indent=2) + "\n")
+            if process.poll() is None:
+                try: call("quit", timeout=30)
+                except Exception: pass
+                try: process.wait(timeout=30)
+                except subprocess.TimeoutExpired:
+                    process.terminate()
+                    process.wait(timeout=10)
+
+
+if __name__ == "__main__":
+    main()

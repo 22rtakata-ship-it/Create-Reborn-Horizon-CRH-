@@ -1,0 +1,106 @@
+[mod]
+id = "create"
+version = "0.1.0"
+
+[compatibility]
+horizon_revision = "fc02103818c212920fd24aa34a2b2f91ba49e56f"
+
+[[crate]]
+id = "engine"
+path = "engine"
+
+[[module]]
+id = "runtime"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port"
+source = "runtime.rs"
+
+[[injection]]
+id = "entity"
+hook = "block_entity"
+hook_version = 1
+kind = "HEAD"
+helper = "entity.rs"
+bindings = [
+  { name = "block", ty = "&str", value = "block" },
+  { name = "entity", ty = "&mut Option<(String, horizon_world::nbt::Compound)>", value = "&mut *entity" },
+]
+
+[[injection]]
+id = "ticks"
+hook = "block_entity_ticks"
+hook_version = 1
+kind = "HEAD"
+helper = "ticks.rs"
+bindings = [
+  { name = "block", ty = "&str", value = "block" },
+  { name = "ticks", ty = "&mut bool", value = "&mut *ticks" },
+]
+
+[[injection]]
+id = "tick"
+hook = "block_entity_tick"
+hook_version = 1
+kind = "HEAD"
+helper = "tick.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "pos", ty = "[i32; 3]", value = "pos" },
+  { name = "entity", ty = "&mut crate::containers::ModBlockEntity", value = "&mut *entity" },
+]
+
+[[injection]]
+id = "update-tag"
+hook = "block_entity_update_tag"
+hook_version = 1
+kind = "HEAD"
+helper = "update_tag.rs"
+bindings = [
+  { name = "entity", ty = "&crate::containers::ModBlockEntity", value = "entity" },
+  { name = "tag", ty = "&mut Option<horizon_world::nbt::Compound>", value = "&mut *tag" },
+]
+
+[[injection]]
+id = "container"
+hook = "block_entity_container"
+hook_version = 1
+kind = "HEAD"
+helper = "container.rs"
+bindings = [
+  { name = "block", ty = "&str", value = "block" },
+  { name = "container", ty = "&mut Option<crate::containers::ModContainer>", value = "&mut *container" },
+]
+
+[[injection]]
+id = "screen"
+hook = "screen"
+hook_version = 1
+kind = "HEAD"
+helper = "screen.rs"
+bindings = [
+  { name = "block", ty = "&str", value = "block" },
+  { name = "screen", ty = "&mut Option<crate::mod_api::NativeScreen>", value = "&mut *screen" },
+]
+
+[[injection]]
+id = "models"
+hook = "standalone_models"
+hook_version = 1
+kind = "HEAD"
+helper = "models.rs"
+bindings = [{ name = "models", ty = "&mut Vec<String>", value = "&mut *models" }]
+
+[[injection]]
+id = "draw"
+hook = "block_entity_submit"
+hook_version = 1
+kind = "HEAD"
+helper = "draw.rs"
+bindings = [
+  { name = "game", ty = "&crate::game::Game<'_>", value = "self" },
+  { name = "pos", ty = "[i32; 3]", value = "pos" },
+  { name = "block", ty = "&str", value = "block" },
+  { name = "state", ty = "horizon_world::registry::BlockStateId", value = "state" },
+  { name = "entity", ty = "&crate::containers::ModBlockEntity", value = "entity" },
+  { name = "draw", ty = "&mut crate::game::native_block_entity_draw::BlockEntityDraw", value = "&mut *draw" },
+]

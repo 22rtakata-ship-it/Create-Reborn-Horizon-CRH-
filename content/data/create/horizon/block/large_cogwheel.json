@@ -1,0 +1,56 @@
+{
+  "template": "minecraft:glass",
+  "item": true,
+  "properties": {
+    "hardness": 1.5,
+    "render_shape": "ENTITYBLOCK_ANIMATED"
+  },
+  "state_properties": {
+    "axis": {
+      "type": "enum",
+      "values": [
+        "x",
+        "y",
+        "z"
+      ]
+    }
+  },
+  "default_state": {
+    "axis": "y"
+  },
+  "shapes": {
+    "property": "axis",
+    "values": {
+      "x": [
+        [
+          0.375,
+          0,
+          0,
+          0.625,
+          1,
+          1
+        ]
+      ],
+      "y": [
+        [
+          0,
+          0.375,
+          0,
+          1,
+          0.625,
+          1
+        ]
+      ],
+      "z": [
+        [
+          0,
+          0,
+          0.375,
+          1,
+          1,
+          0.625
+        ]
+      ]
+    }
+  }
+}

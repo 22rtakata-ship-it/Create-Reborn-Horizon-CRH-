@@ -1,0 +1,20 @@
+[package]
+name = "create-horizon-core"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+description = "First Create port milestone: kinetic networks and mechanical pressing"
+
+[lib]
+path = "native/engine/src/lib.rs"
+
+[[example]]
+name = "factory"
+path = "examples/factory.rs"
+
+[workspace]
+exclude = ["native/engine", ".local", ".tools"]
+
+[lints.rust]
+unsafe_code = "forbid"

@@ -1,0 +1,35 @@
+{
+  "template": "minecraft:glass",
+  "item": true,
+  "properties": {
+    "hardness": 1.5,
+    "render_shape": "ENTITYBLOCK_ANIMATED"
+  },
+  "state_properties": {
+    "facing": {
+      "type": "enum",
+      "values": [
+        "north",
+        "south",
+        "east",
+        "west",
+        "up",
+        "down"
+      ]
+    },
+    "speed": {
+      "type": "enum",
+      "values": [
+        "16",
+        "32",
+        "64",
+        "128",
+        "256"
+      ]
+    }
+  },
+  "default_state": {
+    "facing": "east",
+    "speed": "16"
+  }
+}

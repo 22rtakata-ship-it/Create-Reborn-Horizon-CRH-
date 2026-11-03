@@ -1,0 +1,11 @@
+{
+  "type": "create:pressing",
+  "ingredients": [
+    "minecraft:iron_ingot"
+  ],
+  "results": [
+    {
+      "id": "create:iron_sheet"
+    }
+  ]
+}

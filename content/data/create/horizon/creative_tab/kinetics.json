@@ -1,0 +1,15 @@
+{
+  "title": "itemGroup.create_horizon",
+  "icon": "create:cogwheel",
+  "items": [
+    "create:creative_motor",
+    "create:shaft",
+    "create:cogwheel",
+    "create:large_cogwheel",
+    "create:mechanical_press",
+    "create:depot",
+    "create:iron_sheet",
+    "create:golden_sheet",
+    "create:copper_sheet"
+  ]
+}

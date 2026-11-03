@@ -1,0 +1,20 @@
+{
+  "template": "minecraft:barrel",
+  "item": true,
+  "properties": {
+    "hardness": 1.5,
+    "render_shape": "ENTITYBLOCK_ANIMATED"
+  },
+  "shapes": {
+    "default": [
+      [
+        0,
+        0,
+        0,
+        1,
+        0.875,
+        1
+      ]
+    ]
+  }
+}

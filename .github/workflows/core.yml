@@ -1,0 +1,22 @@
+name: Rust core
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Rust
+        run: rustup toolchain install 1.99.1 --profile minimal --component rustfmt --component clippy
+      - name: Format
+        run: cargo +1.99.1 fmt --all -- --check
+      - name: Test
+        run: cargo +1.99.1 test --locked
+      - name: Clippy
+        run: cargo +1.99.1 clippy --locked --all-targets -- -D warnings

@@ -1,0 +1,14 @@
+{
+  "horizon_revision": "fc02103818c212920fd24aa34a2b2f91ba49e56f",
+  "horizon_mixins_revision": "ddd9700b21997c95d95ac6ee5ecafe3830cf622a",
+  "horizon_mixins_local_patch": "patches/horizon-mixins-recursion-limit.patch",
+  "create_revision": "4148fd8d5b05c85d88947edc00fb495a5074f57d",
+  "create_version": "6.0.11",
+  "import_create_version": "6.0.10",
+  "import_modrinth_version": "UjX6dr61",
+  "minecraft_source_version": "1.21.1",
+  "minecraft_target_version": "26.3",
+  "native_hooks_api": 359,
+  "rust_version": "1.99.1",
+  "rust_date": "2026-10-15"
+}
