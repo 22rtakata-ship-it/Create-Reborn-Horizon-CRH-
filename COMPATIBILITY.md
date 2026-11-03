@@ -144,9 +144,10 @@ through Horizon's existing persistent unknown-field storage. Native save/reload
 tests verify the exact remaining timer, preserved unknown sibling keys and
 one-time conversion. Item stack components are not used to
 disguise entity state, and no additional raw hook is needed. Airflow on players
-and mobs is not implemented. Fan particles, soundscape,
-all collision/media edge cases and the complete native 0.5 validation remain
-separate work; no complete fan parity is claimed.
+and mobs is not implemented. The full native 0.5 regression, including Metal,
+audio and restart, has passed. Fan particles, soundscape and exhaustive
+collision/media edge coverage remain separate work; no complete fan parity
+is claimed.
 
 The stationary mechanical drill uses the source rear shaft, six orientations and
 12-pixel directional casing collision. Its front target, progress and retry timing

@@ -172,7 +172,16 @@ importer prepares 324 private resource files with cache schema 7.
    contraption drilling, entity damage and automatic block placement out of scope.
 6. Prepare a separate review world and record its exact source/build/instance in
    `VALIDATION.md`. Preserve the owner's previous worlds. The visual checklist is
-   in `LAUNCHER.md`; the native verification is still being completed.
+   in `TESTING_05.md`; native verification and an independent actual-map audit
+   have passed on performance build `native-fc02103-722bc455fcbe`.
+
+This increment is ready for the owner's next visual review. The full Metal/audio
+regression ran 2,729 control commands without skipped scenarios; the independent
+map audit checked eight station groups and five real-menu crafts on an isolated
+copy. Future increments should first cover the reported visual differences, then
+extend coherent processing/transport systems with the same source-oracle and
+native integration approach. Do not register decorative stand-ins for unported
+contraptions, belts or fluid machinery.
 
 Explicit current omissions: fan airflow on mobs/players, full audiovisual parity,
 belts and nozzle behavior. Dropped-item processing progress is now represented in
