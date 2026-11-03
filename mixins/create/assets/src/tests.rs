@@ -78,6 +78,73 @@ fn import_fixture(home: &Path, bytes: &[u8]) -> io::Result<Imported> {
 }
 
 #[test]
+fn bundled_content_repairs_itself_without_changing_other_mods_or_settings() {
+    let home = std::env::temp_dir().join(format!("create-content-{}", std::process::id()));
+    let _ = fs::remove_dir_all(&home);
+    fs::create_dir_all(home.join("horizon-mods")).unwrap();
+    fs::write(
+        home.join("horizon-mods.txt"),
+        "mod.create:true\nmod.other:false\n",
+    )
+    .unwrap();
+    fs::write(home.join("horizon-mods/other.hmod"), b"another mod").unwrap();
+    let bytes = serde_json::to_vec(&json!({
+        "horizon-mod.toml": "id = \"create\"\nversion = \"0.1.0\"\n",
+        "assets/create/items/shaft.json": "{\"model\": {}}"
+    }))
+    .unwrap();
+    let path = bundled_content(&home, &bytes).unwrap();
+    fs::write(path.join("assets/create/items/shaft.json"), "damaged").unwrap();
+    fs::write(path.join("stale-file"), "old release").unwrap();
+    assert_eq!(bundled_content(&home, &bytes).unwrap(), path);
+    assert_eq!(
+        fs::read_to_string(path.join("assets/create/items/shaft.json")).unwrap(),
+        "{\"model\": {}}"
+    );
+    assert!(!path.join("stale-file").exists());
+    let modified = fs::metadata(path.join("horizon-mod.toml"))
+        .unwrap()
+        .modified()
+        .unwrap();
+    bundled_content(&home, &bytes).unwrap();
+    assert_eq!(
+        fs::metadata(path.join("horizon-mod.toml"))
+            .unwrap()
+            .modified()
+            .unwrap(),
+        modified
+    );
+    assert_eq!(
+        fs::read(home.join("horizon-mods/other.hmod")).unwrap(),
+        b"another mod"
+    );
+    assert_eq!(
+        fs::read_to_string(home.join("horizon-mods.txt")).unwrap(),
+        "mod.create:true\nmod.other:false\n"
+    );
+    fs::remove_dir_all(home).unwrap();
+}
+
+#[test]
+fn bundled_content_rejects_paths_outside_its_namespace_before_writing() {
+    let home = std::env::temp_dir().join(format!("create-content-invalid-{}", std::process::id()));
+    for name in [
+        "../escape",
+        "assets/minecraft/override.json",
+        "data/create/../../escape",
+        "/absolute",
+    ] {
+        let bytes = serde_json::to_vec(&BTreeMap::from([
+            ("horizon-mod.toml", "id = \"create\""),
+            (name, "invalid"),
+        ]))
+        .unwrap();
+        assert!(bundled_content(&home, &bytes).is_err());
+    }
+    assert!(!home.exists());
+}
+
+#[test]
 fn imports_dependencies_metadata_and_notice_without_code_or_unused_assets() {
     let home = Stage::new(&std::env::temp_dir()).unwrap();
     let bytes = fixture(|_| {});

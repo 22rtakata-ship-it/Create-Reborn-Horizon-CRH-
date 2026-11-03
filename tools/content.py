@@ -5,7 +5,7 @@ Models reference vanilla textures by ID and contain no upstream texture bytes.
 The full horizon-port-pack carry-over remains in .local for subsequent milestones.
 """
 import json
-from common import ROOT
+from common import ROOT, NATIVE
 
 CONTENT = ROOT / "content"
 BLOCKS = ["creative_motor", "shaft", "cogwheel", "large_cogwheel", "mechanical_press", "depot"]
@@ -106,7 +106,15 @@ capabilities = ["registries"]
         lang.update({"item.create." + sheet + "_sheet": name for sheet, name in zip(SHEETS,
                     ["Iron Sheet", "Golden Sheet", "Copper Sheet"] if language == "en_us" else ["Железная пластина", "Золотая пластина", "Медная пластина"])})
         write("assets/create/lang/" + language + ".json", lang)
-    print("Generated six blocks, three sheets, a depot menu and three pressing recipes.")
+    # Source installs carry only the native bundle. Its documented data folder
+    # therefore contains the complete public content, with no player-side Python.
+    files = {path.relative_to(CONTENT).as_posix(): path.read_text()
+             for path in sorted(CONTENT.rglob("*")) if path.is_file()
+             and "target" not in path.relative_to(CONTENT).parts}
+    bundled = NATIVE / "data/content.json"
+    bundled.parent.mkdir(parents=True, exist_ok=True)
+    bundled.write_text(json.dumps(files, indent=2, ensure_ascii=False) + "\n")
+    print("Generated six blocks, three sheets, a depot menu, three pressing recipes and bundled content.")
 
 
 if __name__ == "__main__":

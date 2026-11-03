@@ -1,5 +1,0 @@
---- a/crates/horizon-mixins-core/src/index.rs
-+++ b/crates/horizon-mixins-core/src/index.rs
-@@ -106,1 +106,2 @@
-                 | "track_caller"
-+                | "recursion_limit"

@@ -36,9 +36,9 @@ def main():
                         ("HORIZON_LAUNCHER_TRASH", "play-trash"), ("HORIZON_LAUNCHER_CLIPBOARD", "play-clipboard"),
                         ("HORIZON_LAUNCHER_DESKTOP", "play-desktop")]: env[key] = str(ROOT / ".local" / folder)
     env.update({"HORIZON_NO_AUDIO": "1", "HORIZON_LAUNCHER_NO_SELF_UPDATE": "1"})
-    content = ROOT / "content"
     work = ROOT / ".local/play-home"
     work.mkdir(parents=True, exist_ok=True)
+    (work / "horizon-mods.txt").write_text("mod.create:true\n")
     if args.create_jar:
         inputs = work / "horizon-mods/create-resources"
         inputs.mkdir(parents=True, exist_ok=True)
@@ -49,7 +49,7 @@ def main():
         if not existing:
             shutil.copy2(args.create_jar, target)
     subprocess.run([str(game), "--resources", str(resources), "--world", "CreateDevelopment", "--creative",
-                    "--render-distance", "4", "--dev-mod", str(content)], cwd=work, env=env, check=True)
+                    "--render-distance", "4"], cwd=work, env=env, check=True)
 
 
 if __name__ == "__main__":

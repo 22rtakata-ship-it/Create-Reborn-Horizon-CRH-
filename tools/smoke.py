@@ -15,15 +15,17 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--resources", type=Path, required=True)
     parser.add_argument("--ctl", type=Path)
+    parser.add_argument("--game", type=Path, help="Test this launcher-built client instead of target/fast/horizon-client")
     parser.add_argument("--offscreen", action="store_true", help="Also render and capture a frame")
     parser.add_argument("--create-jar", type=Path, help="Exercise the automatic import from this user-supplied Create 6.0.10 JAR")
     args = parser.parse_args()
     original = args.resources.resolve()
     if not (original / "facts.json").is_file(): raise SystemExit("Not a prepared Horizon resource folder")
     ctl = args.ctl or original.parents[2] / "horizon-ctl"
-    game = ROOT / "target/fast/horizon-client"
+    game = (args.game or ROOT / "target/fast/horizon-client").resolve()
     if not game.is_file(): raise SystemExit("Run python3 tools/stage.py build first")
     scratch = Path(tempfile.mkdtemp(prefix="smoke-", dir=ROOT / ".local"))
+    (scratch / "horizon-mods.txt").write_text("mod.create:true\n")
     if args.create_jar:
         inputs = scratch / "horizon-mods/create-resources"
         inputs.mkdir(parents=True)
@@ -74,7 +76,7 @@ def main():
     with log_path.open("w") as log:
         launch = [str(game), "--resources", str(resources), "--world", "CreatePortSmoke",
                   "--seed", "5", "--creative", "--render-distance", "2",
-                  "--dev-mod", str(ROOT / "content"), "--control-socket", str(socket),
+                  "--control-socket", str(socket),
                   "--offscreen" if args.offscreen else "--headless"]
         # The client also stores saves/options relative to cwd, independently of HOME.
         process = subprocess.Popen(launch, cwd=scratch, env=env, stdout=log, stderr=subprocess.STDOUT)

@@ -16,6 +16,8 @@ jobs:
         run: rustup toolchain install 1.99.1 --profile minimal --component rustfmt --component clippy
       - name: Format
         run: cargo +1.99.1 fmt --all -- --check
+      - name: Source installation contracts
+        run: python3 tools/check_distribution.py
       - name: Test
         run: cargo +1.99.1 test --locked --workspace
       - name: Clippy

@@ -20,6 +20,15 @@ name = "create_port"
 source = "runtime.rs"
 
 [[injection]]
+id = "bundled-content"
+target = "horizon_client::game::mods::content_root"
+kind = "HEAD"
+helper = "content_paths.rs"
+bindings = [
+  { name = "enabled", ty = "&std::collections::BTreeSet<String>", value = "enabled" },
+]
+
+[[injection]]
 id = "local-assets"
 target = "horizon_client::game::load_resources"
 kind = "HEAD"

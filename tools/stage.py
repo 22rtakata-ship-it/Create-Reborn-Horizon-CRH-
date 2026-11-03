@@ -7,7 +7,7 @@ import shutil
 import hashlib
 import tempfile
 from pathlib import Path
-from common import ROOT, HORIZON, PINS, cargo, check_horizon, environment
+from common import ROOT, HORIZON, NATIVE, PINS, cargo, check_horizon, environment
 import setup_mixins
 
 
@@ -37,10 +37,10 @@ def main():
     if not mixins.exists():
         cargo("build", "--locked", "--manifest-path", ROOT / ".tools/horizon-mixins/Cargo.toml", "-p", "horizon-mixins-cli")
     stage = ROOT / ".local" / "stage"
-    digest = hashlib.sha256((str(PINS) + (ROOT / "patches/horizon-mixins-recursion-limit.patch").read_text()).encode())
-    for path in sorted((ROOT / "native").rglob("*")):
+    digest = hashlib.sha256(str(PINS).encode())
+    for path in sorted(NATIVE.rglob("*")):
         if path.is_file():
-            digest.update(path.relative_to(ROOT / "native").as_posix().encode())
+            digest.update(path.relative_to(NATIVE).as_posix().encode())
             digest.update(path.read_bytes())
     marker = ROOT / ".local" / "stage-key.txt"
     key = digest.hexdigest()
@@ -48,7 +48,7 @@ def main():
         mods = ROOT / ".local" / "mixin-input"
         if mods.exists():
             shutil.rmtree(mods)
-        shutil.copytree(ROOT / "native", mods / "create")
+        shutil.copytree(NATIVE, mods / "create")
         subprocess.run([str(mixins), "plan", "--workspace", str(source), "--mods", str(mods),
                         "--out", str(ROOT / ".local/plan.json")], env=environment(), check=True)
         # Mixins' atomic replacement works on Linux only. Like Horizon's launcher,

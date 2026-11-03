@@ -47,6 +47,59 @@ pub struct Imported {
     pub cached: bool,
 }
 
+/// Materialize this native mod's public content in an owned folder discoverable
+/// by Horizon's content loader. Other mod files and enable settings are untouched.
+pub fn bundled_content(game_dir: &Path, bytes: &[u8]) -> io::Result<PathBuf> {
+    let files: BTreeMap<String, String> = serde_json::from_slice(bytes)?;
+    if !files.contains_key("horizon-mod.toml")
+        || files.len() > 512
+        || files.iter().any(|(name, value)| {
+            !safe_path(name)
+                || !(name == "horizon-mod.toml"
+                    || name.starts_with("assets/create/")
+                    || name.starts_with("data/create/"))
+                || value.len() > MAX_FILE as usize
+        })
+    {
+        return Err(invalid("Invalid bundled Create content"));
+    }
+    let cache = game_dir.join(".horizon-cache/create-content");
+    fs::create_dir_all(&cache)?;
+    let mods = game_dir.join("horizon-mods");
+    fs::create_dir_all(&mods)?;
+    let target = mods.join(".create-native-content");
+    let valid = || {
+        files.iter().all(|(name, expected)| {
+            let path = target.join(name);
+            fs::symlink_metadata(&path).is_ok_and(|m| m.is_file())
+                && fs::read(&path).is_ok_and(|actual| actual == expected.as_bytes())
+        })
+    };
+    if valid() {
+        return Ok(target);
+    }
+    let lock = fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .open(cache.join(".content.lock"))?;
+    lock.lock()?;
+    if !valid() {
+        let stage = Stage::new(&mods)?;
+        for (name, value) in files {
+            let path = stage.0.join(name);
+            fs::create_dir_all(path.parent().expect("content parent"))?;
+            fs::write(path, value)?;
+        }
+        if target.exists() {
+            fs::remove_dir_all(&target)?;
+        }
+        fs::rename(&stage.0, &target)?;
+    }
+    Ok(target)
+}
+
 fn invalid(message: impl Into<String>) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, message.into())
 }

@@ -30,19 +30,18 @@ it is not a promise of acceptance by the registry.
 
 ## Remaining before a registry submission
 
-1. Resolve the pinned Mixins tool's rejection of Rust's built-in
-   `#![recursion_limit = "256"]`. The current local build applies a one-line
-   compatibility fix; the unchanged official launcher cannot reproduce it yet.
-   The fix and regression tests are submitted as
-   [Horizon Mixins PR #26](https://github.com/horizon-rust/horizon-mixins/pull/26).
-   [Full Linux CI for the proposed fix](https://github.com/Delete228/horizon-mixins/actions/runs/41644514346)
-   passed with the upstream workflow and its pinned Rust 1.95.0. The upstream PR's
-   workflow awaits maintainer approval to run.
-   Until a fixed official revision is available and repinned, the development
-   client is usable through the launcher's documented imported-build path.
-2. Provide an installable pairing of native code and content. A `.hnmod` contains
-   code only; our six block definitions and models also need the content `.hmod`.
-   Do not present a successful native-only import as a working complete install.
+1. The launcher pipeline now pins the published head of Mixins
+   [PR #26](https://github.com/horizon-rust/horizon-mixins/pull/26),
+   `a1e13326306c6bc074b11e6a4926deb551c4083e`, fetched from the official Git
+   repository. Local tool patching is no longer part of the build. The PR is
+   still unmerged; repin and revalidate on an accepted upstream revision before
+   requesting a stable registry listing. Full Linux CI for the proposed fix
+   [passed](https://github.com/Delete228/horizon-mixins/actions/runs/41644514346).
+2. The native source/package carries its complete public content in `data/` and
+   materializes it through the ordinary content loader when `create` is enabled.
+   A separate content archive is not required for installation. Validate the
+   complete clean-instance/GitHub path for each published version, not just its
+   archive structure. See [LAUNCHER.md](LAUNCHER.md) and [VALIDATION.md](VALIDATION.md).
 3. Publish an explicitly experimental GitHub release with the validated public
    archives, source commit, checksums and build limitations.
 4. Prepare `mods/<id>.toml` with the owner, author, licence, source, description,
@@ -51,6 +50,6 @@ it is not a promise of acceptance by the registry.
    native version requires review under the registry's current policy.
 
 The launcher supports **Add from GitHub** for native source and `.hnmod` releases,
-and **Import a game build** for an already compiled client. Importing our tested
-client can be used for local development while the tool fix is pending; it is a
-separate imported build, not an official Horizon release or registry approval.
+and **Import a game build** for an already compiled client. Current installation
+uses the normal native-build pipeline; the older imported prototype remains a
+separate development build. Neither route implies registry approval.

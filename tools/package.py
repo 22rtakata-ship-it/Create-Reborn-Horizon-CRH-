@@ -5,7 +5,7 @@ import json
 import shutil
 import subprocess
 import zipfile
-from common import ROOT, PINS, check_horizon
+from common import ROOT, NATIVE, PINS, check_horizon
 
 
 def main():
@@ -15,12 +15,13 @@ def main():
     subprocess.run([str(cli), "build"], cwd=ROOT / "content", check=True)
     destination = ROOT / "dist"
     destination.mkdir(parents=True, exist_ok=True)
-    manifest = {"schema": 1, "id": "create", "version": "0.1.0", "game": PINS["minecraft_target_version"],
-                "horizon": PINS["horizon_revision"], "mixins": PINS["horizon_mixins_revision"]}
+    manifest = json.loads((ROOT / "horizon-native.json").read_text())
+    if (manifest["horizon"], manifest["mixins"]) != (PINS["horizon_revision"], PINS["horizon_mixins_revision"]):
+        raise SystemExit("horizon-native.json differs from compatibility.json")
     native_files = {"horizon-native.json": (json.dumps(manifest, indent=2) + "\n").encode()}
-    for path in sorted((ROOT / "native").rglob("*")):
-        if path.is_file() and path.suffix in [".rs", ".toml"]:
-            native_files["mixins/create/" + path.relative_to(ROOT / "native").as_posix()] = path.read_bytes()
+    for path in sorted(NATIVE.rglob("*")):
+        if path.is_file() and (path.suffix in [".rs", ".toml"] or "data" in path.relative_to(NATIVE).parts):
+            native_files["mixins/create/" + path.relative_to(NATIVE).as_posix()] = path.read_bytes()
     for name in ["LICENSE", "THIRD_PARTY_NOTICES.md"]:
         # NOTICE* is an allowed native bundle text file.
         native_files["mixins/create/" + ("NOTICE.md" if name.endswith(".md") else name)] = (ROOT / name).read_bytes()
@@ -41,7 +42,7 @@ def main():
     content_target = destination / "create-content-0.1.0.hmod"
     shutil.copy2(content_archive, content_target)
     subprocess.run([str(cli), "check", str(content_target), "--json"], check=True)
-    print("Native archives require the local documented Mixins compatibility fix on this Horizon pin.")
+    print("Native archives include all public content and pin the published Mixins PR #26 commit; no local tool patch.")
     print("Original assets are never packaged. Place your own JAR in the instance's horizon-mods/create-resources/.")
 
 

@@ -6,8 +6,9 @@ This is an early creative-mode prototype, not an official Create or Horizon rele
 Only the code covered by MIT is adapted; original Create assets are excluded from
 the public source and default packages. See [third-party notices](THIRD_PARTY_NOTICES.md).
 
-**Запуск через официальный лаунчер:** [инстанс Create Prototype и текущие ограничения](LAUNCHER.md).
+**Запуск через официальный лаунчер:** [установка, сборка и визуальная проверка](LAUNCHER.md).
 **Оригинальная графика:** [положите свой JAR рядом с модом — импорт при запуске](ASSETS.md).
+**План и остановки для проверки:** [PLAN.md](PLAN.md).
 
 Отдельный начальный порт Create на Rust. Папки `../Create` и `../horizon` используются
 как исходные материалы и не изменяются. Версии закреплены в `compatibility.json`.
@@ -19,10 +20,10 @@ the public source and default packages. See [third-party notices](THIRD_PARTY_NO
 
 ## Что находится в проекте
 
-- `native/engine/` — Rust-ядро кинетики и цикла пресса без зависимостей от игры.
-- `native/assets/` — локальный импортёр ресурсов из предоставленного пользователем JAR.
-- `native/runtime.rs` — адаптация к настоящим блокам, NBT, депо, рецептам и рендерингу Horizon.
-- `native/horizon-mixin.toml` — восемь именованных hooks, два закреплённых mixin
+- `mixins/create/engine/` — Rust-ядро кинетики и цикла пресса без зависимостей от игры.
+- `mixins/create/assets/` — локальный импортёр ресурсов из предоставленного пользователем JAR.
+- `mixins/create/runtime.rs` — адаптация к настоящим блокам, NBT, депо, рецептам и рендерингу Horizon.
+- `mixins/create/horizon-mixin.toml` — восемь именованных hooks, три закреплённых mixin
   для загрузки ресурсов и отдельные crates движка и импортёра.
 - `content/` — шесть блоков, три пластины, три рецепта и вкладка творческого инвентаря.
   Начальные модели написаны отдельно и используют ссылки на vanilla-текстуры.
@@ -30,8 +31,27 @@ the public source and default packages. See [third-party notices](THIRD_PARTY_NO
 - `.local/port-work/` — результат настоящего `horizon-port-pack`; оригинальные jar,
   ресурсы, игровые миры и временные сборки остаются локальными и исключены из Git.
 - `dist/` — проверенные архивы кода и небольшого контентного набора.
+- `horizon-native.json` — исходный нативный пакет для установки по GitHub-ссылке;
+  `mixins/create/data/content.json` содержит весь публичный контент этого пакета.
 
 ## Подготовка и сборка
+
+Обычная установка не требует соседних репозиториев Create/Horizon, нашего
+bootstrap или ручных поправок. Создайте instance в Horizon Launcher, установите
+Create через **Mods → Add from GitHub**, затем соберите нативные моды.
+Через консоль с уже установленным лаунчером можно выполнить:
+
+```sh
+python3 tools/launcher.py --instance "Create Native" --github https://github.com/Delete228/create-horizon
+```
+
+Для повторной сборки установленного пакета достаточно команды без `--github`.
+Для разработки уже включённого Create добавьте `--source`: соберётся текущая
+рабочая копия. Оба режима вызывают штатный `horizon-launcher native-build`;
+компилятор, исходники Horizon, Mixins и кэши обслуживает сам лаунчер. Подробные
+шаги, закреплённая проверенная версия и ограничения находятся в [LAUNCHER.md](LAUNCHER.md).
+
+### Низкоуровневые инструменты разработки
 
 Команды выполняются из этой папки; нужны Python 3.9+, Git и системный C/C++ linker.
 Для Java-оракула нужен JDK. На этой машине установлен JDK 25.
@@ -67,14 +87,12 @@ Rust 1.99.1 устанавливается в `.tools/rust/`, Cargo исполь
 применяет mixins во временный каталог и переносит только изменившиеся файлы в
 постоянную сборочную папку. Документационная ссылка `CLAUDE.md` при экспорте опускается.
 
-**Поправка к инструменту:** закреплённый Horizon Mixins ошибочно считает штатный
-Rust-атрибут `recursion_limit` процедурным макросом. `setup_mixins.py` применяет
-однострочную поправку из `patches/` к локальной копии инструмента. Остальные проверки
-hooks и исходников сохраняются. Нативные архивы на этом коммите следует собирать
-этими скриптами; неизменённый официальный инструмент пока отклоняет такой Horizon.
-Это поправка к `horizon-mixins`, а не к игровому коду Horizon. Добавление репозитория
-через **Add from GitHub** само по себе эту несовместимость не устраняет. Состояние
-готовности к каталогу описано в [REGISTRY_READINESS.md](REGISTRY_READINESS.md).
+**Версия инструмента:** пакет закрепляет опубликованный коммит Mixins
+`a1e13326306c6bc074b11e6a4926deb551c4083e` с исправлением `recursion_limit`
+из [PR #26](https://github.com/horizon-rust/horizon-mixins/pull/26). Его получает
+неизменённый лаунчер из официального Git-репозитория; `setup_mixins.py` также
+собирает этот коммит без правки исходников. Это пока ветка непринятого PR.
+Готовность к каталогу описана в [REGISTRY_READINESS.md](REGISTRY_READINESS.md).
 
 ## Что сделал horizon-port-pack
 

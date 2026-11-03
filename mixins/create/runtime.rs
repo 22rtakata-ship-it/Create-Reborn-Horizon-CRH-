@@ -19,6 +19,22 @@ use serde_json::Value;
 
 static ORIGINAL_ASSETS: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
+/// Feed bundled content through Horizon's ordinary content loader, before it
+/// registers blocks or announces mods. The native mod uses the same enable flag.
+pub(super) fn prepare_content(enabled: &std::collections::BTreeSet<String>) {
+    if enabled.contains("create") {
+        match create_assets::bundled_content(
+            &Game::game_dir(),
+            horizon_client::native_data!("create", "content.json"),
+        ) {
+            Ok(path) => {
+                log::info!("Create: bundled content enabled in {}", path.display());
+            }
+            Err(error) => log::error!("Create: bundled content could not be loaded: {error}"),
+        }
+    }
+}
+
 /// Imports the user's JAR before the initial load, and again on pack reload.
 /// Uses Horizon's own pack loader/cache; the installed content archive is untouched.
 pub(super) fn asset_root(root: std::path::PathBuf) -> std::path::PathBuf {

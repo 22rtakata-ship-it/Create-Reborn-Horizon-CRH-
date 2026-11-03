@@ -7,15 +7,15 @@ publish = false
 description = "First Create port milestone: kinetic networks and mechanical pressing"
 
 [lib]
-path = "native/engine/src/lib.rs"
+path = "mixins/create/engine/src/lib.rs"
 
 [[example]]
 name = "factory"
 path = "examples/factory.rs"
 
 [workspace]
-members = ["native/assets"]
-exclude = ["native/engine", ".local", ".tools"]
+members = ["mixins/create/assets"]
+exclude = ["mixins/create/engine", ".local", ".tools"]
 
 [lints.rust]
 unsafe_code = "forbid"

@@ -37,6 +37,9 @@ development. The in-game resource importer currently accepts only the verified
 `ef87fe5709f1ba1f5b8bb20a2925b5afb4669e178fd6d8bf10c167759eefe37a`.
 
 Horizon and Horizon Mixins are MIT. Their original checkouts are not edited or
-included in the mod. The project carries a one-line compatibility patch to Horizon
-Mixins allowing Rust's built-in `recursion_limit` attribute; see `patches/` and
-`tools/setup_mixins.py`. It must be applied for local native builds on this pin.
+included in the mod. Builds pin the published commit
+`a1e13326306c6bc074b11e6a4926deb551c4083e` of Horizon Mixins, the head of
+[upstream PR #26](https://github.com/horizon-rust/horizon-mixins/pull/26), which
+recognizes Rust's built-in `recursion_limit` attribute. The launcher fetches that
+commit from the official repository; no tool source is patched locally. This is
+an unmerged contribution, not an upstream release or approval of this port.
