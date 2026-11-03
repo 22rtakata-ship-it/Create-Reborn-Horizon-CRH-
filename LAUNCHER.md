@@ -7,10 +7,26 @@ Create остаётся неофициальным эксперименталь�
 
 ## Уже подготовлено на этой машине
 
-Для этой итерации подготавливается отдельный **Create Foundation 0.3**, мир
+Для этой итерации подготовлен отдельный **Create Foundation 0.3**, мир
 **CreateFoundation03**, performance-сборка `native-fc02103-7ea49a8f5494`.
-Окончательное подтверждение установки и запуска — в [VALIDATION.md](VALIDATION.md).
+Установка пакета и новый мир проверены; свидетельства — в [VALIDATION.md](VALIDATION.md).
 Старые Create Review 0.2, Create Native/Prototype и их миры не заменяются.
+Новый мир открыт обычной оконной сборкой и поставлен на паузу через игровой API.
+macOS была заблокирована: её окно и актуальный список лаунчера не подтверждены
+визуально. Сам стенд осмотрен по offscreen-снимкам. После разблокировки вернитесь
+в окно Horizon; если лаунчер показывает старый список, перезапустите его окно.
+
+
+При установке 0.3 сработал лимит анонимного GitHub API. Здесь установлен локальный
+проверенный `.hnmod`, каждый файл которого совпал с опубликованным коммитом
+`12d83a0233317484b697292af0c7623ced074ec9`; GitHub origin не создавался.
+Официальный `native-build` прочитал установленный пакет и подтвердил **Up to date**.
+Чтобы позднее включить отслеживание GitHub в этом instance:
+
+```sh
+horizon-launcher mods add-github https://github.com/Delete228/create-horizon --instance "Create Foundation 0.3" --trust-native-code
+horizon-launcher native-build --instance "Create Foundation 0.3" --profile performance --trust-native-code
+```
 
 ## Новый instance
 

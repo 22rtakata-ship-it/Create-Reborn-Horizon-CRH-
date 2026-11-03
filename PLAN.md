@@ -96,3 +96,15 @@ processing, missing speed controls and incorrect/missing sound accompaniment.
 6. Deliver another native performance build with a new review world and an exact
    feature/limitation list, then stop for visual review. Unimplemented mechanisms
    are not counted as features merely because an item can be spawned.
+
+
+0.3 automated checkpoint: implemented the 17-block/26-entry foundation, 30 source
+recipes, default per-item pressing, cleared client snapshots, motor controls,
+transmissions, wrench/casings and item/hopper/world IO. The performance Metal
+scenario passed without skipped checks; 34 Rust tests and four Java oracles pass.
+The Prism reference JAR/config were inspected read-only; Java gameplay itself was
+not run. The delivered native package corresponds to source `12d83a0`.
+
+Review instance: **Create Foundation 0.3**, world **CreateFoundation03**, official
+performance build `native-fc02103-7ea49a8f5494`. Remain at this checkpoint for the
+owner's visual/audio feedback before expanding to belts and further processing.
