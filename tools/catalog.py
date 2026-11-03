@@ -2,9 +2,12 @@
 BASE_BLOCKS = ['creative_motor', 'shaft', 'cogwheel', 'large_cogwheel', 'mechanical_press', 'depot']
 TRANSMISSIONS = ['gearbox', 'clutch', 'gearshift', 'hand_crank', 'andesite_encased_shaft', 'brass_encased_shaft']
 STATIC_BLOCKS = ['andesite_casing', 'brass_casing', 'andesite_alloy_block', 'brass_block', 'zinc_block']
-BLOCKS = BASE_BLOCKS + TRANSMISSIONS + STATIC_BLOCKS
-ITEMS = ['iron_sheet', 'golden_sheet', 'copper_sheet', 'andesite_alloy', 'brass_ingot', 'brass_nugget', 'zinc_ingot', 'zinc_nugget', 'wrench']
-PARTS = ['shaft', 'shaft_half', 'cogwheel', 'large_cogwheel', 'creative_motor/block', 'creative_motor/block_vertical', 'mechanical_press/block', 'mechanical_press/head', 'depot/block', 'hand_crank/handle', 'hand_crank/block']
+INSTRUMENTS = ['speedometer', 'stressometer']
+GENERATORS = ['water_wheel', 'large_water_wheel']
+INTERNAL_BLOCKS = ['water_wheel_structure']
+BLOCKS = BASE_BLOCKS + TRANSMISSIONS + STATIC_BLOCKS + INSTRUMENTS + GENERATORS
+ITEMS = ['iron_sheet', 'golden_sheet', 'copper_sheet', 'andesite_alloy', 'brass_ingot', 'brass_nugget', 'zinc_ingot', 'zinc_nugget', 'wrench', 'brass_sheet', 'vertical_gearbox', 'goggles']
+PARTS = ['shaft', 'shaft_half', 'cogwheel', 'large_cogwheel', 'creative_motor/block', 'creative_motor/block_vertical', 'mechanical_press/block', 'mechanical_press/head', 'depot/block', 'hand_crank/handle', 'hand_crank/block', 'gauge/dial', 'gauge/speedometer/head', 'gauge/stressometer/head', 'goggles', 'water_wheel/wheel', 'large_water_wheel/block', 'large_water_wheel/block_extension']
 
 
 def rust_catalog():

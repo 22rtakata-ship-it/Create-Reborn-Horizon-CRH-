@@ -14,7 +14,6 @@ implementing each feature, and test save/reload inside Horizon.
 | `create:creative_motor` | `create:motor` | `facing`; `ScrollValue` int, default 16 |
 | `create:mechanical_press` | `create:mechanical_press` | horizontal `facing`; `Running`, `Finished` bytes; `Ticks`, `Mode` ints (WORLD=0, BELT=1) |
 | `create:depot` | `create:depot` | `waterlogged` (default false), no facing/open state; `HeldItem`, `OutputBuffer` |
-
 | `create:gearbox` | `create:gearbox` | `axis` |
 | `create:clutch`, `create:gearshift` | corresponding block ID | `axis`, `powered` |
 | `create:hand_crank` | `create:hand_crank` | `facing`, `waterlogged`; `InUse` int, `Backwards` byte |
@@ -23,8 +22,8 @@ implementing each feature, and test save/reload inside Horizon.
 Static casings/storage blocks and alloy/metal/wrench items retain their upstream
 `create:*` IDs. Encased shafts unwrap to and drop `create:shaft`.
 
-The three sheet items retain `create:iron_sheet`, `create:golden_sheet` and
-`create:copper_sheet`. Kinetic entities retain `Speed` as a float. Depot data
+The four sheet items retain `create:iron_sheet`, `create:golden_sheet` and
+`create:copper_sheet` and `create:brass_sheet`. Kinetic entities retain `Speed` as a float. Depot data
 uses `HeldItem.Item`, `Pos`, `PrevPos`, `Offset`, `PrevOffset`, `InSegment`,
 `Angle`, `InDirection`; its eight output slots use `OutputBuffer.Size` and
 `OutputBuffer.Items`. The creative tab uses upstream `itemGroup.create.base`.
@@ -45,8 +44,7 @@ Network serialization (`Source`, `Network`) is not fully represented yet. The pr
 `NetworkStatus` and press bookkeeping `Applied`/`LastTick`; these are port-specific
 extra fields. The `create_horizon.Ports` compound stores diagnostic physical port speeds.
 Gearbox `Speed` uses a fixed reference port rather than Create's source-facing
-basis; physical port ratios are preserved. Hand crank rendered motion is still an
-approximation of the original independent/chasing angle. Complete that schema alongside the corresponding behaviors, retaining
+basis; physical port ratios are preserved. Hand crank rendered motion now uses the original independent/chasing angle. Complete that schema alongside the corresponding behaviors, retaining
 unknown loaded fields and documenting migrations. Existing 0.1 block entity IDs
 remain accepted at runtime; newly placed blocks use the canonical type IDs above.
 
@@ -73,3 +71,27 @@ opposing sources and excessive speeds conservatively stop the component; origina
 breakage/network rebuilding is incomplete. Server configs are currently pinned to
 the relevant Create defaults. World item scan timing/scatter, particles, random
 sound variation, water and some collision/interaction shapes need later parity work.
+
+## 0.4 data and behavior boundary
+
+`create:speedometer` and `create:stressometer` retain `facing`, `axis_along_first`,
+`Value` float and `Color` int. `create:vertical_gearbox` is an item alias for the
+original `create:gearbox` block; normal/vertical recipes and axis-sensitive drops
+use upstream IDs. `create:goggles` uses the head equipment slot and the original
+3D head model through Horizon's item-display selection.
+
+`create:water_wheel` retains six-way `facing`; `create:large_water_wheel` has `axis`
+and `extension`. Both save `FlowScore` int and `Material.Name`, default spruce.
+The invisible structural block uses the canonical `create:water_wheel_structure`
+ID and `facing`. The port currently gives structural blocks a lightweight ticking
+block entity to clean up missing masters; Java does not. The master also stores
+`create_horizon.StructureReady` as a port-specific initialization marker.
+
+World-axis angular transforms and crank motion have direct source/pose checks.
+Gauge interpolation and comparator formulas are implemented with default config.
+Native HUD layout, connection hints and rotation indicators remain provisional;
+complete Java UI/Ponder/particle-provider parity is a later increment. Fluid
+currents come from Horizon's vanilla sampler; Create's extra water-spread restriction
+above wheel axes is not yet ported. Collision/selection shapes still include
+conservative template approximations. This release adds generators, not moving
+contraptions or fluid-handling machinery.

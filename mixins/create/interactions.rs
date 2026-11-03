@@ -58,10 +58,27 @@ pub(super) fn reacts(game: &Game<'_>, pos: [i32; 3]) -> bool {
     if bypass(game) {
         return false;
     }
+    if matches!(
+        block.as_str(),
+        "create:water_wheel" | "create:large_water_wheel" | "create:water_wheel_structure"
+    ) && wheel_material(game).is_some()
+    {
+        return true;
+    }
     block == "create:hand_crank"
         || (block == "create:shaft"
             && matches!(held, Some("create:andesite_casing" | "create:brass_casing")))
         || manual(game, pos).is_some()
+}
+fn wheel_material(game: &Game<'_>) -> Option<String> {
+    let held = game.held()?;
+    let name = held
+        .item
+        .strip_prefix("minecraft:")?
+        .strip_suffix("_planks")?;
+    create_assets::WOODS
+        .contains(&name)
+        .then(|| held.item.to_string())
 }
 fn give(game: &mut Game<'_>, stack: ItemStack, pos: [i32; 3]) {
     let uuid = game.native_acting_id();
@@ -97,11 +114,30 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3]) ->
         return false;
     }
     let block = game.native_block(pos);
+    let pos = if block == "create:water_wheel_structure" {
+        super::create_port_generators::master(game, pos).unwrap_or(pos)
+    } else {
+        pos
+    };
+    let block = game.native_block(pos);
     let wrench = game
         .held()
         .is_some_and(|s| s.item.as_ref() == "create:wrench");
     if wrench {
+        let pickup = if block == "create:gearbox"
+            && game.native_block_property(pos, "axis").as_deref() != Some("y")
+        {
+            "create:vertical_gearbox"
+        } else {
+            block.as_str()
+        };
         if secondary(game) {
+            if block == "create:large_water_wheel" {
+                let mut canceled = false;
+                super::create_port_placement::destroy(game, pos, &mut canceled);
+                super::create_port_sounds::wrench(game, pos, true);
+                return true;
+            }
             if block.ends_with("encased_shaft") {
                 switch(game, pos, "create:shaft");
             } else {
@@ -118,7 +154,7 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3]) ->
                         give(game, stack, pos);
                     }
                     if !game.creative {
-                        give(game, ItemStack::new(block.as_str(), 1), pos);
+                        give(game, ItemStack::new(pickup, 1), pos);
                     }
                 } else {
                     game.native_with_mod_block_entity(pos, |e| {
@@ -129,6 +165,8 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3]) ->
                 }
             }
             crate::game::create_port_sounds::wrench(game, pos, true);
+        } else if block == "create:large_water_wheel" {
+            return false;
         } else if let Some(face) = Direction::from_vector(face) {
             if let Some(axis) = game.native_block_property(pos, "axis") {
                 let axis = match axis.as_str() {
@@ -172,6 +210,24 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3]) ->
             crate::game::create_port_kinetic_runtime::invalidate();
         }
         return true;
+    }
+    if matches!(
+        block.as_str(),
+        "create:water_wheel" | "create:large_water_wheel"
+    ) {
+        if let Some(material) = wheel_material(game) {
+            game.native_with_mod_block_entity(pos, |e| {
+                e.nbt.insert(
+                    "Material".into(),
+                    Tag::Compound(horizon_world::nbt::Compound::from([(
+                        "Name".into(),
+                        Tag::String(material.as_str().into()),
+                    )])),
+                );
+            });
+            game.native_block_entity_sync(pos);
+            return true;
+        }
     }
     if block == "create:hand_crank" {
         let back = secondary(game);

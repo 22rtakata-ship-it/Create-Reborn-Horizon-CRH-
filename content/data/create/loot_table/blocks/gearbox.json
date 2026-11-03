@@ -5,8 +5,26 @@
       "rolls": 1,
       "entries": [
         {
-          "type": "minecraft:item",
-          "name": "create:gearbox"
+          "type": "minecraft:alternatives",
+          "children": [
+            {
+              "type": "minecraft:item",
+              "name": "create:gearbox",
+              "conditions": [
+                {
+                  "condition": "minecraft:block_state_property",
+                  "block": "create:gearbox",
+                  "properties": {
+                    "axis": "y"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "minecraft:item",
+              "name": "create:vertical_gearbox"
+            }
+          ]
         }
       ]
     }

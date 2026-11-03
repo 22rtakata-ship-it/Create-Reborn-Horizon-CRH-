@@ -11,6 +11,7 @@ import time
 from common import ROOT
 import interaction_checks
 import foundation_checks
+import engineering_checks
 
 
 def main():
@@ -21,6 +22,7 @@ def main():
     parser.add_argument("--offscreen", action="store_true", help="Also render and capture a frame")
     parser.add_argument("--create-jar", type=Path, help="Exercise the automatic import from this user-supplied Create 6.0.10 JAR")
     parser.add_argument("--audio", action="store_true", help="Enable normal audio output during this test")
+    parser.add_argument("--engineering-only",action="store_true",help="Run the new engineering scenarios while iterating; full release validation omits this flag")
     args = parser.parse_args()
     original = args.resources.resolve()
     if not (original / "facts.json").is_file(): raise SystemExit("Not a prepared Horizon resource folder")
@@ -45,7 +47,7 @@ def main():
                         ("HORIZON_LAUNCHER_TRASH", "trash"), ("HORIZON_LAUNCHER_CLIPBOARD", "clipboard"),
                         ("HORIZON_LAUNCHER_DESKTOP", "desktop")]:
         env[key] = str(scratch / folder)
-    env.update({"HORIZON_NO_AUDIO": "1", "HORIZON_LAUNCHER_NO_SELF_UPDATE": "1", "CREATE_HORIZON_TRACE": "1"})
+    env.update({"HORIZON_NO_AUDIO": "1", "HORIZON_LAUNCHER_NO_SELF_UPDATE": "1", "CREATE_HORIZON_TRACE": "1", "CREATE_HORIZON_TRACE_POSES":"1"})
     if args.audio: env.pop("HORIZON_NO_AUDIO",None)
     socket = scratch / "ctl.sock"
     transcript = []
@@ -105,6 +107,14 @@ def main():
             call("container", 3, 64, 1, item, count)
         try:
             ready()
+            if args.engineering_only:
+                engineering=engineering_checks.run(call,args.offscreen,log_path,scratch)
+                call('quit');process.wait(timeout=30)
+                process=subprocess.Popen(launch,cwd=scratch,env=env,stdout=log,stderr=subprocess.STDOUT)
+                ready();engineering_checks.reloaded(call,engineering)
+                (scratch/'result.json').write_text(json.dumps({'passed':True,'scope':'engineering-only','fixture':engineering},indent=2)+'\n')
+                print('Engineering smoke passed:',scratch/'result.json',flush=True)
+                return
             if args.create_jar:
                 receipts = list((scratch / ".horizon-cache/create-assets/imports").glob("*/import.json"))
                 if len(receipts) != 1:
@@ -129,6 +139,7 @@ def main():
                 assert rows and rows[-1]["stack"] == expected, {"expected":expected,"last_client_frame":rows[-1:]}
             marked = interaction_checks.depot(call, rendered if args.offscreen else None)
             foundation = foundation_checks.run(call, args.offscreen, log_path, scratch)
+            engineering = engineering_checks.run(call,args.offscreen,log_path,scratch)
             fixtures = [([0, 66, 0], "create:creative_motor[facing=east]"),
                         ([1, 66, 0], "create:shaft[axis=x]"),
                         ([2, 66, 0], "create:cogwheel[axis=x]"),
@@ -199,6 +210,7 @@ def main():
             expect_sheet("create:golden_sheet", 3)
             interaction_checks.reloaded_depot(call, marked)
             foundation_checks.reloaded(call, foundation)
+            engineering_checks.reloaded(call,engineering)
             result = {"passed": True, "scope": "placement, depot exchange/client rendering/components/save, transmissions/redstone, hand crank, wrench/casings, 11 real crafts, hopper IO, dropped-item capture, loose-item pressing, motor settings, sequential depot pressing/result pickup, power interruption and reload",
                       "scratch": str(scratch), "original_assets": bool(args.create_jar), "renderer_checks": args.offscreen, "audio_enabled":args.audio, "skipped": [] if args.offscreen else ["crafting menu", "motor screen", "render snapshots"], "transcript": transcript}
             if args.create_jar and "cache verified" not in log_path.read_text():

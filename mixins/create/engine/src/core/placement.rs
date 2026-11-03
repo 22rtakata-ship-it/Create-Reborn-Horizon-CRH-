@@ -127,6 +127,94 @@ pub fn crank(face: Direction, shift: bool, ports: [bool; 6]) -> Direction {
     face
 }
 
+pub fn vertical_gearbox(horizontal: Direction, ports: [bool; 6]) -> Axis {
+    let mut horizontal_ports = ports;
+    horizontal_ports[0] = false;
+    horizontal_ports[1] = false;
+    let preferred = preferred(horizontal_ports)
+        .map(Direction::axis)
+        .unwrap_or(horizontal.axis());
+    if preferred == Axis::X {
+        Axis::Z
+    } else {
+        Axis::X
+    }
+}
+
+pub fn gauge_axis(facing: Direction, first: bool) -> Axis {
+    match facing.axis() {
+        Axis::X => {
+            if first {
+                Axis::Y
+            } else {
+                Axis::Z
+            }
+        }
+        Axis::Y => {
+            if first {
+                Axis::X
+            } else {
+                Axis::Z
+            }
+        }
+        Axis::Z => {
+            if first {
+                Axis::X
+            } else {
+                Axis::Y
+            }
+        }
+    }
+}
+
+pub fn gauge(
+    face: Direction,
+    look: Direction,
+    horizontal: Direction,
+    ports: [bool; 6],
+    attached: bool,
+) -> (Direction, bool) {
+    if attached {
+        let positive = look.vector().iter().any(|v| *v > 0);
+        return match face.axis() {
+            Axis::X => (
+                if positive {
+                    Direction::North
+                } else {
+                    Direction::South
+                },
+                true,
+            ),
+            Axis::Y => (horizontal.opposite(), horizontal.axis() == Axis::X),
+            Axis::Z => (
+                if positive {
+                    Direction::West
+                } else {
+                    Direction::East
+                },
+                false,
+            ),
+        };
+    }
+    let first = match face.axis() {
+        Axis::X | Axis::Z => {
+            if ports[0] || ports[1] {
+                face.axis() == Axis::X
+            } else {
+                face.axis() == Axis::Z
+            }
+        }
+        Axis::Y => {
+            let mut horizontal_ports = ports;
+            horizontal_ports[0] = false;
+            horizontal_ports[1] = false;
+            preferred(horizontal_ports)
+                .map_or(horizontal.axis() != Axis::X, |d| d.axis() == Axis::X)
+        }
+    };
+    (face, first)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -146,5 +234,26 @@ mod tests {
             Axis::X
         );
         assert_eq!(cog(Direction::Up, true, [false; 6], Some(Axis::X)), Axis::Y);
+    }
+    #[test]
+    fn attached_gauges_always_connect_to_the_clicked_shaft_axis() {
+        for face in Direction::ALL {
+            for look in Direction::ALL {
+                for horizontal in [
+                    Direction::North,
+                    Direction::South,
+                    Direction::East,
+                    Direction::West,
+                ] {
+                    let (facing, first) = gauge(face, look, horizontal, [false; 6], true);
+                    assert_eq!(gauge_axis(facing, first), face.axis());
+                }
+            }
+        }
+        let mut ports = [false; 6];
+        ports[5] = true;
+        assert_eq!(vertical_gearbox(Direction::East, ports), Axis::Z);
+        ports[2] = true;
+        assert_eq!(vertical_gearbox(Direction::South, ports), Axis::X);
     }
 }

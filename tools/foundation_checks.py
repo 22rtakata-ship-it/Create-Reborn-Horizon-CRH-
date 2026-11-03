@@ -122,7 +122,7 @@ def run(call, graphics, log_path, scratch):
     return {'motor_pos':[OFFSET,64,0],'speed':number(0,64,0,'ScrollValue')}
 
 
-def crafting(call,offset,clear):
+def crafting(call,offset,clear,recipes=None):
     def resolve(ingredient,seen=()):
         if isinstance(ingredient,list):return resolve(ingredient[0],seen)
         if isinstance(ingredient,dict):return resolve(ingredient.get('item') or '#'+ingredient['tag'],seen)
@@ -141,7 +141,7 @@ def crafting(call,offset,clear):
         raise AssertionError('No implemented ingredient for '+tag)
     call('setblock',offset+1,64,0,'minecraft:crafting_table')
     call('command',f'tp @s {offset+.5} 64 2.5')
-    recipes=['materials/andesite_alloy','kinetics/shaft','kinetics/cogwheel','kinetics/large_cogwheel','kinetics/hand_crank','kinetics/gearbox','kinetics/clutch','kinetics/gearshift','kinetics/mechanical_press','kinetics/depot','kinetics/wrench']
+    recipes=recipes or ['materials/andesite_alloy','kinetics/shaft','kinetics/cogwheel','kinetics/large_cogwheel','kinetics/hand_crank','kinetics/gearbox','kinetics/clutch','kinetics/gearshift','kinetics/mechanical_press','kinetics/depot','kinetics/wrench']
     for name in recipes:
         recipe=json.loads((ROOT/'content/data/create/recipe/crafting'/(name+'.json')).read_text())
         if 'pattern' in recipe:

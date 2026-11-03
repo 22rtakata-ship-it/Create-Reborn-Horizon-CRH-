@@ -11,3 +11,9 @@ pub mod depot;
 
 #[path = "core/controls.rs"]
 pub mod controls;
+
+#[path = "core/visual.rs"]
+pub mod visual;
+
+#[path = "core/waterwheel.rs"]
+pub mod waterwheel;

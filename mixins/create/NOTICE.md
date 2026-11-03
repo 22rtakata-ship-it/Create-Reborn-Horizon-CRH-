@@ -17,9 +17,19 @@ The following MIT code informed or was adapted into the Rust engine:
   `GearshiftBlockEntity`, `crank/HandCrankBlock[Entity]`, `motor/CreativeMotorBlockEntity`,
   `foundation/block/IWrenchable` and encasing behaviors: implemented transmission,
   placement, wrench, hand crank and motor controls. Native UI drawing is our own.
+- `base/KineticBlockEntityRenderer`, `KineticBlockEntityVisual`, `gearbox/GearboxRenderer`,
+  `transmission/SplitShaftRenderer`, `crank/HandCrankRenderer`, `logistics/depot/DepotRenderer`:
+  positive world-axis transforms, phase, crank interpolation and item piles.
+- `gauge/GaugeBlock[Entity]`, `SpeedGaugeBlockEntity`, `StressGaugeBlockEntity`,
+  `GaugeRenderer`, `base/DirectionalAxisKineticBlock`, `gearbox/VerticalGearboxItem`,
+  `equipment/goggles/GogglesItem`, `GogglesModel`: placement, instrument targets,
+  comparator output, equipment and display contexts.
+- `waterwheel/WaterWheelBlock[Entity]`, `LargeWaterWheelBlock[Entity]`,
+  `LargeWaterWheelBlockItem`, `WaterWheelStructuralBlock`, `WaterWheelRenderer`:
+  flow projection/scoring, generated speed, capacity, materials and structural occupancy.
 - `AllSoundEvents` and infrastructure configs: selected composite sound events,
   default gains/pitches, stress and speed parameters.
-- Thirty MIT datapack recipes and their referenced tags, exported from
+- Forty MIT datapack recipes and their referenced tags, exported from
   `src/generated/resources/data/` at the pinned revision. Ingredient syntax is
   adapted to Horizon/Minecraft 26.3. Missing vanilla convention tags are our own
   definitions. Recipes requiring unimplemented ores are excluded.

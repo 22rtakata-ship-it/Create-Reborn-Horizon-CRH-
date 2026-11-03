@@ -3,7 +3,7 @@
 import json
 import re
 from common import ROOT, NATIVE, PINS
-from catalog import BLOCKS, ITEMS, rust_catalog
+from catalog import BLOCKS, ITEMS, INTERNAL_BLOCKS, rust_catalog
 
 
 def main():
@@ -25,7 +25,7 @@ def main():
     assert (NATIVE / "assets/src/catalog.rs").read_text() == rust_catalog(), "Importer catalog is stale"
     declared_blocks={p.stem for p in (content / "data/create/horizon/block").glob("*.json")}
     declared_items={p.stem for p in (content / "data/create/horizon/item").glob("*.json")}
-    assert declared_blocks == set(BLOCKS) and declared_items == set(ITEMS)
+    assert declared_blocks == set(BLOCKS+INTERNAL_BLOCKS) and declared_items == set(ITEMS)
     tab=json.loads((content / "data/create/horizon/creative_tab/kinetics.json").read_text())
     assert tab["items"] == ["create:"+name for name in BLOCKS+ITEMS]
     assert len(list((content / "data/create/recipe").rglob("*.json"))) == len(reference["recipes"])

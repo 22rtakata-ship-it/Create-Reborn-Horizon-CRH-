@@ -74,6 +74,19 @@
         "id": "create:gearbox"
       }
     },
+    "create/recipe/crafting/kinetics/gearbox_from_conversion.json": {
+      "type": "minecraft:crafting_shapeless",
+      "category": "misc",
+      "ingredients": [
+        {
+          "item": "create:vertical_gearbox"
+        }
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:gearbox"
+      }
+    },
     "create/recipe/crafting/kinetics/gearshift.json": {
       "type": "minecraft:crafting_shapeless",
       "category": "misc",
@@ -91,6 +104,29 @@
       "result": {
         "count": 1,
         "id": "create:gearshift"
+      }
+    },
+    "create/recipe/crafting/kinetics/goggles.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "G": {
+          "tag": "c:glass_blocks"
+        },
+        "P": {
+          "tag": "c:plates/gold"
+        },
+        "S": {
+          "tag": "c:strings"
+        }
+      },
+      "pattern": [
+        " S ",
+        "GPG"
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:goggles"
       }
     },
     "create/recipe/crafting/kinetics/hand_crank.json": {
@@ -148,6 +184,27 @@
         "id": "create:large_cogwheel"
       }
     },
+    "create/recipe/crafting/kinetics/large_water_wheel.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "C": {
+          "item": "create:water_wheel"
+        },
+        "S": {
+          "tag": "minecraft:planks"
+        }
+      },
+      "pattern": [
+        "SSS",
+        "SCS",
+        "SSS"
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:large_water_wheel"
+      }
+    },
     "create/recipe/crafting/kinetics/mechanical_press.json": {
       "type": "minecraft:crafting_shaped",
       "category": "misc",
@@ -187,6 +244,107 @@
       "result": {
         "count": 8,
         "id": "create:shaft"
+      }
+    },
+    "create/recipe/crafting/kinetics/speedometer.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "A": {
+          "item": "create:andesite_casing"
+        },
+        "C": {
+          "item": "minecraft:compass"
+        }
+      },
+      "pattern": [
+        "C",
+        "A"
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:speedometer"
+      }
+    },
+    "create/recipe/crafting/kinetics/speedometer_from_conversion.json": {
+      "type": "minecraft:crafting_shapeless",
+      "category": "misc",
+      "ingredients": [
+        {
+          "item": "create:stressometer"
+        }
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:speedometer"
+      }
+    },
+    "create/recipe/crafting/kinetics/stressometer_from_conversion.json": {
+      "type": "minecraft:crafting_shapeless",
+      "category": "misc",
+      "ingredients": [
+        {
+          "item": "create:speedometer"
+        }
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:stressometer"
+      }
+    },
+    "create/recipe/crafting/kinetics/vertical_gearbox.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "B": {
+          "item": "create:andesite_casing"
+        },
+        "C": {
+          "item": "create:cogwheel"
+        }
+      },
+      "pattern": [
+        "C C",
+        " B ",
+        "C C"
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:vertical_gearbox"
+      }
+    },
+    "create/recipe/crafting/kinetics/vertical_gearbox_from_conversion.json": {
+      "type": "minecraft:crafting_shapeless",
+      "category": "misc",
+      "ingredients": [
+        {
+          "item": "create:gearbox"
+        }
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:vertical_gearbox"
+      }
+    },
+    "create/recipe/crafting/kinetics/water_wheel.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "C": {
+          "item": "create:shaft"
+        },
+        "S": {
+          "tag": "minecraft:planks"
+        }
+      },
+      "pattern": [
+        "SSS",
+        "SCS",
+        "SSS"
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:water_wheel"
       }
     },
     "create/recipe/crafting/kinetics/wrench.json": {
@@ -472,6 +630,19 @@
         }
       ]
     },
+    "create/recipe/pressing/brass_ingot.json": {
+      "type": "create:pressing",
+      "ingredients": [
+        {
+          "tag": "c:ingots/brass"
+        }
+      ],
+      "results": [
+        {
+          "id": "create:brass_sheet"
+        }
+      ]
+    },
     "create/recipe/pressing/copper_ingot.json": {
       "type": "create:pressing",
       "ingredients": [
@@ -602,9 +773,134 @@
         "minecraft:iron_block"
       ]
     },
+    "c/tags/item/strings.json": {
+      "values": [
+        "minecraft:string"
+      ]
+    },
+    "c/tags/item/glass_blocks.json": {
+      "values": [
+        "minecraft:glass",
+        "minecraft:tinted_glass",
+        "minecraft:white_stained_glass",
+        "minecraft:orange_stained_glass",
+        "minecraft:magenta_stained_glass",
+        "minecraft:light_blue_stained_glass",
+        "minecraft:yellow_stained_glass",
+        "minecraft:lime_stained_glass",
+        "minecraft:pink_stained_glass",
+        "minecraft:gray_stained_glass",
+        "minecraft:light_gray_stained_glass",
+        "minecraft:cyan_stained_glass",
+        "minecraft:purple_stained_glass",
+        "minecraft:blue_stained_glass",
+        "minecraft:brown_stained_glass",
+        "minecraft:green_stained_glass",
+        "minecraft:red_stained_glass",
+        "minecraft:black_stained_glass"
+      ]
+    },
     "c/tags/item/dusts/redstone.json": {
       "values": [
         "minecraft:redstone"
+      ]
+    },
+    "create/tags/item/not_upright_on_belt.json": {
+      "values": []
+    },
+    "create/tags/item/upright_on_belt.json": {
+      "values": [
+        "create:blaze_cake_base",
+        "create:blaze_cake",
+        "create:creative_blaze_cake",
+        "create:builders_tea",
+        "minecraft:glass_bottle",
+        "minecraft:potion",
+        "minecraft:splash_potion",
+        "minecraft:lingering_potion",
+        "minecraft:honey_bottle",
+        "minecraft:cake",
+        "minecraft:bowl",
+        "minecraft:mushroom_stew",
+        "minecraft:rabbit_stew",
+        "minecraft:beetroot_soup",
+        "minecraft:suspicious_stew",
+        {
+          "id": "atmospheric:orange_pudding",
+          "required": false
+        },
+        {
+          "id": "atmospheric:orange_sorbet",
+          "required": false
+        },
+        {
+          "id": "atmospheric:passion_fruit_sorbet",
+          "required": false
+        },
+        {
+          "id": "atmospheric:aloe_gel_bottle",
+          "required": false
+        },
+        {
+          "id": "biomeswevegone:blue_glow_bottle",
+          "required": false
+        },
+        {
+          "id": "biomeswevegone:green_glow_bottle",
+          "required": false
+        },
+        {
+          "id": "biomeswevegone:red_glow_bottle",
+          "required": false
+        },
+        {
+          "id": "biomeswevegone:yellow_glow_bottle",
+          "required": false
+        },
+        {
+          "id": "biomeswevegone:allium_oddion_soup",
+          "required": false
+        },
+        {
+          "id": "biomeswevegone:white_puffball_stew",
+          "required": false
+        },
+        {
+          "id": "biomeswevegone:aloe_vera_juice",
+          "required": false
+        },
+        {
+          "id": "silentgems:cup_of_coffee",
+          "required": false
+        },
+        {
+          "id": "silentgems:uncooked_meaty_stew",
+          "required": false
+        },
+        {
+          "id": "silentgems:meaty_stew",
+          "required": false
+        },
+        {
+          "id": "silentgems:uncooked_fishy_stew",
+          "required": false
+        },
+        {
+          "id": "silentgems:fishy_stew",
+          "required": false
+        },
+        {
+          "id": "autumnity:foul_soup",
+          "required": false
+        },
+        {
+          "id": "autumnity:syrup_bottle",
+          "required": false
+        },
+        {
+          "id": "autumnity:sap_bottle",
+          "required": false
+        }
       ]
     }
   }

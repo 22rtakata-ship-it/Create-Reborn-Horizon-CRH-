@@ -71,7 +71,7 @@ review; this is not acceptance of the remaining appearance/behavior milestones.
 See `LAUNCHER.md`, `VALIDATION.md` and `COMPATIBILITY.md` for the checklist,
 evidence and explicit data-format exceptions.
 
-## Current increment: playable foundation (0.3.0)
+## Completed increment: playable foundation (0.3.0)
 
 The owner accepted placement, original graphics and names, and requested a larger
 development interval. Reported defects: stale depot rendering after pickup,
@@ -108,3 +108,27 @@ not run. The delivered native package corresponds to source `12d83a0`.
 Review instance: **Create Foundation 0.3**, world **CreateFoundation03**, official
 performance build `native-fc02103-7ea49a8f5494`. Remain at this checkpoint for the
 owner's visual/audio feedback before expanding to belts and further processing.
+
+
+## Current increment: engineer tools, feedback and survival power (0.4.0)
+
+The owner visually accepted depot IO/default pressing, mechanical propagation,
+wrench rotation and speed limits in 0.3, then requested a wider next increment.
+Observed defects: opposing visible angular motion across adjacent split-shaft
+ports, hand-crank handle facing/animation and non-rotating base, incomplete depot
+item presentation. Missing scope: vertical gearbox item, brass pressing, goggles,
+speed/stress instruments, placement assistance, particles and survival generators.
+
+1. Compare rendering transforms and crank interpolation to pinned Java, including
+   all axis signs. Verify actual rendered poses, not only server RPM fields.
+2. Add original vertical gearbox item/conversions, brass sheet/pressing, engineer
+   goggles and speed/stress gauges with their recipes, states and saved readings.
+3. Add a reusable translated information HUD and in-world connection/rotation
+   feedback, plus source-derived processing/kinetic particles through Horizon.
+4. Add small/large water wheels with flow generation, capacity, placement and
+   physical occupancy rules derived from Java. Keep moving contraptions as their
+   own later subsystem; do not simulate them with decorative placeholder items.
+5. Extend source oracles and real-game interaction/render/save tests. Preserve the
+   owner's finished 0.3 world; prepare a separate native review instance/world.
+6. Publish a tested build and stop again for visual/audio review. Scope and timing
+   are governed by a coherent working increment, not a percentage-of-mod claim.

@@ -42,11 +42,15 @@ def main():
         conventional['c:nuggets/' + metal] = ['minecraft:' + metal + '_nugget']
     conventional['c:rods/wooden'] = ['minecraft:stick']
     conventional['c:dusts/redstone'] = ['minecraft:redstone']
+    conventional['c:strings'] = ['minecraft:string']
+    conventional['c:glass_blocks'] = ['minecraft:glass', 'minecraft:tinted_glass'] + ['minecraft:' + color + '_stained_glass' for color in ['white','orange','magenta','light_blue','yellow','lime','pink','gray','light_gray','cyan','purple','blue','brown','green','red','black']]
+    conventional['create:not_upright_on_belt'] = []
     for kind in ['logs', 'woods']:
         conventional['c:stripped_' + kind] = ['minecraft:stripped_' + wood + ('_log' if kind == 'logs' else '_wood')
             for wood in ['oak','spruce','birch','jungle','acacia','dark_oak','mangrove','cherry']]
     missing = []
-    pending = []
+    display_tags = ['create:upright_on_belt', 'create:not_upright_on_belt']
+    pending = list(display_tags)
     def tag_refs(value):
         if isinstance(value, dict):
             for k,v in value.items():
@@ -92,7 +96,7 @@ def main():
         return r.get('ingredients', [r.get('ingredient')])
     recipes={name:r for name,r in recipes.items() if all(available(i) for i in ingredients(r))}
     required=set()
-    pending=[tag for r in recipes.values() for tag in tag_refs(r)]
+    pending=display_tags + [tag for r in recipes.values() for tag in tag_refs(r)]
     while pending:
         ns,path=pending.pop().split(':',1)
         dest=ns+'/tags/item/'+path+'.json'

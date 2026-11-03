@@ -14,13 +14,22 @@ use zip::ZipArchive;
 pub const INPUT_DIR: &str = "horizon-mods/create-resources";
 pub const CREATE_VERSION: &str = "6.0.10+mc1.21.1 (NeoForge)";
 pub const JAR_SHA256: &str = "ef87fe5709f1ba1f5b8bb20a2925b5afb4669e178fd6d8bf10c167759eefe37a";
-const SCHEMA: u32 = 3;
+const SCHEMA: u32 = 5;
 const MAX_JAR: u64 = 128 << 20;
 const MAX_FILE: u64 = 16 << 20;
 const MAX_TOTAL: usize = 64 << 20;
 const MAX_ENTRIES: usize = 65_536;
 mod catalog;
 pub use catalog::{BLOCKS, ITEMS, PARTS};
+pub const WOODS: &[&str] = &[
+    "oak", "spruce", "birch", "jungle", "acacia", "dark_oak", "mangrove", "cherry", "bamboo",
+    "crimson", "warped", "pale_oak",
+];
+pub const WHEEL_PARTS: &[&str] = &[
+    "water_wheel/wheel",
+    "large_water_wheel/block",
+    "large_water_wheel/block_extension",
+];
 
 #[derive(Debug)]
 pub struct Imported {
@@ -376,10 +385,53 @@ impl Reader {
         }
         self.visiting.insert(path.clone());
         let model = self.json(&path)?;
-        if model.get("loader").is_some() {
-            return Err(invalid(format!(
-                "Custom Java model loaders are unsupported: {path}"
-            )));
+        if let Some(loader) = model.get("loader") {
+            if loader.as_str() != Some("neoforge:obj") {
+                return Err(invalid(format!(
+                    "Custom Java model loaders are unsupported: {path}"
+                )));
+            }
+            // Horizon natively decodes NeoForge OBJ models. Preserve source
+            // geometry and material libraries; never execute a Java loader.
+            let object = model
+                .get("model")
+                .and_then(Value::as_str)
+                .ok_or_else(|| invalid("OBJ model has no asset location"))?;
+            let relative = object
+                .strip_prefix("create:")
+                .filter(|p| p.starts_with("models/") && p.ends_with(".obj") && safe_path(p))
+                .ok_or_else(|| invalid("Unsupported OBJ asset path"))?;
+            let name = format!("assets/create/{relative}");
+            let bytes = self.read(&name)?;
+            let text = std::str::from_utf8(&bytes).map_err(|_| invalid("OBJ must be UTF-8"))?;
+            let libraries: Vec<String> = text
+                .lines()
+                .filter_map(|line| {
+                    line.trim()
+                        .strip_prefix("mtllib ")
+                        .map(str::trim)
+                        .map(str::to_owned)
+                })
+                .collect();
+            self.files.insert(name.clone(), bytes);
+            for library in libraries {
+                if !safe_path(&library) || library.contains('/') || !library.ends_with(".mtl") {
+                    return Err(invalid("Unsafe OBJ material library"));
+                }
+                let material = format!("{}/{}", name.rsplit_once('/').unwrap().0, library);
+                let bytes = self.read(&material)?;
+                let text = std::str::from_utf8(&bytes).map_err(|_| invalid("MTL must be UTF-8"))?;
+                let textures: Vec<String> = text
+                    .lines()
+                    .filter_map(|line| line.trim().strip_prefix("map_Kd ").map(str::trim))
+                    .filter(|id| !id.starts_with('#'))
+                    .map(str::to_owned)
+                    .collect();
+                for texture in textures {
+                    self.texture(&texture)?;
+                }
+                self.files.insert(material, bytes);
+            }
         }
         if let Some(parent) = model.get("parent").and_then(Value::as_str) {
             self.model(parent)?;
@@ -452,6 +504,22 @@ fn collect(bytes: Vec<u8>) -> io::Result<BTreeMap<String, Vec<u8>>> {
     }
     for part in PARTS {
         reader.model(&format!("create:block/{part}"))?;
+    }
+    // Generated local texture variants inherit the original OBJ geometry. They
+    // remain in the player's private cache, under the original asset terms.
+    for part in WHEEL_PARTS {
+        for wood in WOODS {
+            let log = match *wood {
+                "crimson" | "warped" => format!("{wood}_stem"),
+                "bamboo" => "bamboo_block".into(),
+                _ => format!("{wood}_log"),
+            };
+            let value = json!({"parent":format!("create:block/{part}"),"textures":{"log":format!("minecraft:block/{log}"),"log_top":format!("minecraft:block/{log}_top"),"planks":format!("minecraft:block/{wood}_planks")}});
+            reader.files.insert(
+                format!("assets/create/models/block/{part}_material_{wood}.json"),
+                serde_json::to_vec(&value)?,
+            );
+        }
     }
     // Keep every upstream locale byte-for-byte. Translations remain local
     // assets under the same terms as the rest of the player-supplied JAR.

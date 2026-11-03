@@ -28,6 +28,10 @@ pub enum Kind {
         rpm: f32,
         capacity: f32,
     },
+    WaterWheel {
+        rpm: f32,
+        capacity: f32,
+    },
     Shaft,
     Cog {
         large: bool,
@@ -211,6 +215,10 @@ pub fn solve_half(start: Node, half: u8, mut read: impl FnMut(Pos) -> Option<Nod
             rpm,
             capacity: per_rpm,
             ..
+        }
+        | Kind::WaterWheel {
+            rpm,
+            capacity: per_rpm,
         } = node.kind
         {
             if !rpm.is_finite() || !per_rpm.is_finite() || per_rpm < 0.0 {

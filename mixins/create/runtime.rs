@@ -19,6 +19,10 @@ use serde_json::Value;
 
 static ORIGINAL_ASSETS: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
+pub(super) fn original_assets() -> bool {
+    ORIGINAL_ASSETS.load(std::sync::atomic::Ordering::Relaxed)
+}
+
 /// Feed bundled content through Horizon's ordinary content loader, before it
 /// registers blocks or announces mods. The native mod uses the same enable flag.
 pub(super) fn prepare_content(enabled: &std::collections::BTreeSet<String>) {
@@ -115,6 +119,11 @@ pub(super) fn owns(block: &str) -> bool {
             | "create:hand_crank"
             | "create:andesite_encased_shaft"
             | "create:brass_encased_shaft"
+            | "create:speedometer"
+            | "create:stressometer"
+            | "create:water_wheel"
+            | "create:large_water_wheel"
+            | "create:water_wheel_structure"
     )
 }
 
@@ -142,7 +151,7 @@ pub(super) fn ticks(block: &str, ticks: &mut bool) {
     }
 }
 
-fn number(nbt: &Compound, key: &str) -> f32 {
+pub(super) fn number(nbt: &Compound, key: &str) -> f32 {
     match nbt.get(&key.into()) {
         Some(Tag::Float(n)) => f32::from_bits(*n),
         Some(Tag::Int(n)) => *n as f32,
@@ -151,7 +160,7 @@ fn number(nbt: &Compound, key: &str) -> f32 {
     }
 }
 
-fn integer(nbt: &Compound, key: &str) -> i32 {
+pub(super) fn integer(nbt: &Compound, key: &str) -> i32 {
     match nbt.get(&key.into()) {
         Some(Tag::Int(n)) => *n,
         Some(Tag::Byte(n)) => i32::from(*n),
@@ -169,7 +178,7 @@ pub(super) fn use_on(game: &Game<'_>, stack: &ItemStack, pos: [i32; 3], face: [i
 
 // Direction.orderedByNearest, adapted from Horizon's MIT level/place.rs.
 // Uses the engine's vanilla-compatible trigonometric table.
-fn nearest(yaw: f32, pitch: f32) -> Direction {
+pub(super) fn nearest(yaw: f32, pitch: f32) -> Direction {
     use horizon_core::geometry::trig;
     let pitch = pitch * (std::f32::consts::PI / 180.0);
     let yaw = -yaw * (std::f32::consts::PI / 180.0);
@@ -409,7 +418,7 @@ pub(super) fn node(game: &Game<'_>, pos: [i32; 3]) -> Option<Node> {
             .native_block_property(pos, "facing")
             .unwrap_or_else(|| "north".into()),
     );
-    let axis = match axis_property.as_deref() {
+    let mut axis = match axis_property.as_deref() {
         Some("x") => Axis::X,
         Some("y") => Axis::Y,
         Some("z") => Axis::Z,
@@ -417,7 +426,51 @@ pub(super) fn node(game: &Game<'_>, pos: [i32; 3]) -> Option<Node> {
         _ if direction[1] != 0 => Axis::Y,
         _ => Axis::Z,
     };
+    if matches!(block.as_str(), "create:speedometer" | "create:stressometer") {
+        let first = game
+            .native_block_property(pos, "axis_along_first")
+            .as_deref()
+            == Some("true");
+        axis = match axis {
+            Axis::X => {
+                if first {
+                    Axis::Y
+                } else {
+                    Axis::Z
+                }
+            }
+            Axis::Y => {
+                if first {
+                    Axis::X
+                } else {
+                    Axis::Z
+                }
+            }
+            Axis::Z => {
+                if first {
+                    Axis::X
+                } else {
+                    Axis::Y
+                }
+            }
+        };
+    }
     let kind = match block.as_str() {
+        "create:speedometer" | "create:stressometer" => Kind::Shaft,
+        "create:water_wheel" | "create:large_water_wheel" => Kind::WaterWheel {
+            rpm: match game.world.block_entities.get(&(pos[0], pos[1], pos[2])) {
+                Some(BlockEntity::Mod(e)) => create_engine::waterwheel::rpm(
+                    integer(&e.nbt, "FlowScore"),
+                    block == "create:large_water_wheel",
+                ),
+                _ => 0.0,
+            },
+            capacity: if block == "create:large_water_wheel" {
+                128.0
+            } else {
+                32.0
+            },
+        },
         "create:creative_motor" => Kind::Motor {
             facing: direction,
             rpm: {
@@ -549,6 +602,9 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
         }
         return;
     }
+    if crate::game::create_port_generators::tick(game, pos, entity, &block) {
+        return;
+    }
     if matches!(block.as_str(), "create:clutch" | "create:gearshift") {
         let dim = game.dim.id().to_owned();
         let powered = game.native_neighbor_signal(&dim, pos) > 0;
@@ -598,6 +654,12 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
         };
         *rpm = sign * value;
     }
+    if let Kind::WaterWheel { rpm, .. } = &mut start.kind {
+        *rpm = create_engine::waterwheel::rpm(
+            integer(&entity.nbt, "FlowScore"),
+            block == "create:large_water_wheel",
+        );
+    }
     let network = crate::game::create_port_kinetic_runtime::network(game, start, 0);
     let other_half = matches!(start.kind, Kind::Clutch { powered: true })
         .then(|| crate::game::create_port_kinetic_runtime::network(game, start, 1));
@@ -636,6 +698,55 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
         Tag::String(format!("{:?}", network.status).as_str().into()),
     );
     let mut sync = old_rpm != rpm;
+    if matches!(block.as_str(), "create:speedometer" | "create:stressometer") {
+        let value = if block == "create:speedometer" {
+            create_engine::visual::speed_dial(rpm)
+        } else {
+            create_engine::visual::stress_dial(
+                network.capacity,
+                network.stress,
+                network.status == create_engine::kinetics::Status::Overstressed,
+            )
+        };
+        let before = number(&entity.nbt, "Value");
+        entity
+            .nbt
+            .insert("Value".into(), Tag::Float(value.to_bits()));
+        let mix = |a: i32, b: i32, t: f32| {
+            (0..3)
+                .map(|i| {
+                    let x = (a >> (i * 8)) & 255;
+                    let y = (b >> (i * 8)) & 255;
+                    ((x as f32 + (y - x) as f32 * t) as i32) << (i * 8)
+                })
+                .sum::<i32>()
+        };
+        let color = if block == "create:speedometer" {
+            let base = if rpm == 0.0 {
+                0
+            } else if rpm.abs() < 30.0 {
+                0x22FF22
+            } else if rpm.abs() < 100.0 {
+                0x0084FF
+            } else {
+                0xFF55FF
+            };
+            mix(base, 0xFFFFFF, 0.25)
+        } else if value <= 0.0 {
+            integer(&entity.nbt, "Color")
+        } else if value < 0.5 {
+            mix(0x00FF00, 0xFFFF00, value * 2.0)
+        } else if value < 1.0 {
+            mix(0xFFFF00, 0xFF0000, value * 2.0 - 1.0)
+        } else {
+            0xFF0000
+        };
+        entity.nbt.insert("Color".into(), Tag::Int(color));
+        if before != value {
+            sync = true;
+            crate::game::create_port_instruments::changed(game, pos);
+        }
+    }
     if block == "create:mechanical_press" {
         let depot = [pos[0], pos[1] - 2, pos[2]];
         let mut cycle = PressCycle {
@@ -663,6 +774,7 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
         };
         let action = cycle.tick(rpm, plan.is_some() || world_plan.is_some());
         if action == Action::Started {
+            entity.nbt.remove(&"ParticleItems".into());
             entity.nbt.insert("Mode".into(), Tag::Int(mode));
             entity.nbt.insert("Finished".into(), Tag::Byte(0));
         }
@@ -670,6 +782,16 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
             entity.nbt.insert("Finished".into(), Tag::Byte(1));
         }
         if action == Action::Press {
+            let particle = plan
+                .as_ref()
+                .map(|(i, _)| i)
+                .or_else(|| world_plan.as_ref().map(|(i, _)| &i.stack));
+            if let Some(item) = particle {
+                entity.nbt.insert(
+                    "ParticleItems".into(),
+                    Tag::List(vec![horizon_items::item_nbt::item_to_nbt(item)]),
+                );
+            }
             crate::game::create_port_sounds::press(game, pos, rpm);
             if let Some((input, output)) = world_plan {
                 crate::game::create_port_world_items::press(game, input, output);
@@ -746,6 +868,12 @@ pub(super) fn container(block: &str, container: &mut Option<ModContainer>) {
 }
 
 pub(super) fn models(models: &mut Vec<String>) {
+    models.push("create:block/port_hint".into());
+    for part in create_assets::WHEEL_PARTS {
+        for wood in create_assets::WOODS {
+            models.push(format!("create:block/{part}_material_{wood}"));
+        }
+    }
     models.extend(
         create_assets::PARTS
             .iter()
@@ -753,7 +881,7 @@ pub(super) fn models(models: &mut Vec<String>) {
     );
 }
 
-fn face_south(draw: &mut BlockEntityDraw, direction: Direction) {
+pub(super) fn face_south(draw: &mut BlockEntityDraw, direction: Direction) {
     match direction {
         Direction::Up => draw.rotate_about([1.0, 0.0, 0.0], -90.0, [0.5; 3]),
         Direction::Down => draw.rotate_about([1.0, 0.0, 0.0], 90.0, [0.5; 3]),
@@ -821,25 +949,27 @@ pub(super) fn draw(
             .and_then(|held| held.get("Item"))
             .and_then(horizon_items::item_nbt::item_from_nbt);
         trace_depot(pos, stack.as_ref());
-        if let Some(stack) = stack {
-            draw.push();
-            draw.translate([0.5, 13.0 / 16.0, 0.5]);
-            game.native_draw_item(
-                draw,
-                &stack,
-                horizon_assets::item_model::DisplayContext::Ground,
-                None,
-                0,
-            );
-            draw.pop();
-        }
+        crate::game::create_port_presentation::depot(game, pos, entity, draw);
         return;
     }
     let Some(node) = node(game, pos) else { return };
     let direction = game.native_block_property(pos, "facing");
+    crate::game::create_port_presentation::hints(game, pos, draw);
+    let time = draw.game_time as f64 + f64::from(draw.partial);
     if block == "create:hand_crank" {
         let facing = Direction::from_vector(facing(direction.as_deref().unwrap_or("up"))).unwrap();
+        let axis = create_engine::visual::positive_axis(node.axis);
         draw.push();
+        draw.rotate_about(
+            axis,
+            create_engine::visual::angle(
+                time,
+                number(&entity.nbt, "Speed"),
+                create_engine::visual::rotation_offset(pos, node.axis, false),
+            ),
+            [0.5; 3],
+        );
+        // The base model's axis is +Y; its short shaft reaches into the support.
         match facing {
             Direction::Down => draw.rotate_about([1.0, 0.0, 0.0], 180.0, [0.5; 3]),
             Direction::North => draw.rotate_about([1.0, 0.0, 0.0], -90.0, [0.5; 3]),
@@ -851,11 +981,19 @@ pub(super) fn draw(
         game.native_draw_model(draw, "create:block/hand_crank/block", 0xFFFFFF);
         draw.pop();
         draw.push();
-        face_south(draw, facing);
-        let angle = (draw.game_time as f32 + draw.partial) * number(&entity.nbt, "Speed") * 0.3;
-        draw.rotate_about([0.0, 0.0, 1.0], angle, [0.5; 3]);
+        let handle_angle =
+            crate::game::create_port_presentation::crank_angle(game, pos, draw.partial);
+        draw.rotate_about(axis, handle_angle, [0.5; 3]);
+        face_south(draw, facing.opposite());
         game.native_draw_model(draw, "create:block/hand_crank/handle", 0xFFFFFF);
         draw.pop();
+        return;
+    }
+    if matches!(block, "create:speedometer" | "create:stressometer") {
+        crate::game::create_port_instruments::draw(game, pos, entity, draw, node.axis);
+    }
+    if matches!(node.kind, Kind::WaterWheel { .. }) {
+        crate::game::create_port_generators::draw(game, pos, entity, draw, node.axis, block);
         return;
     }
     if matches!(
@@ -866,11 +1004,20 @@ pub(super) fn draw(
             if !node.shaft_port(direction.vector()) {
                 continue;
             }
-            let angle =
-                (draw.game_time as f32 + draw.partial) * port_speed(entity, direction) * 0.3;
+            let angle = create_engine::visual::angle(
+                time,
+                port_speed(entity, direction),
+                create_engine::visual::rotation_offset(pos, direction.axis(), false),
+            );
             draw.push();
+            // Rotate about the positive WORLD axis before orienting the model.
+            // Rotating about local +Z after facing West/Down/North reverses it.
+            draw.rotate_about(
+                create_engine::visual::positive_axis(direction.axis()),
+                angle,
+                [0.5; 3],
+            );
             face_south(draw, direction);
-            draw.rotate_about([0.0, 0.0, 1.0], angle, [0.5; 3]);
             game.native_draw_model(draw, "create:block/shaft_half", 0xFFFFFF);
             draw.pop();
         }
@@ -935,11 +1082,21 @@ pub(super) fn draw(
         draw.pop();
     }
     draw.push();
-    let angle = ((draw.game_time as f64 + f64::from(draw.partial))
-        * f64::from(number(&entity.nbt, "Speed"))
-        * 0.3)
-        .rem_euclid(360.0) as f32;
+    let angle = create_engine::visual::angle(
+        time,
+        number(&entity.nbt, "Speed"),
+        create_engine::visual::rotation_offset(
+            pos,
+            node.axis,
+            matches!(node.kind, Kind::Cog { large: true }),
+        ),
+    );
     if matches!(node.kind, Kind::Motor { .. }) {
+        draw.rotate_about(
+            create_engine::visual::positive_axis(node.axis),
+            angle,
+            [0.5; 3],
+        );
         // The half shaft's untransformed output points south (+Z).
         match direction.as_deref() {
             Some("up") => draw.rotate_about([1.0, 0.0, 0.0], -90.0, [0.5; 3]),
@@ -949,7 +1106,6 @@ pub(super) fn draw(
             Some("north") => draw.rotate_about([0.0, 1.0, 0.0], 180.0, [0.5; 3]),
             _ => {}
         }
-        draw.rotate_about([0.0, 0.0, 1.0], angle, [0.5; 3]);
         game.native_draw_model(draw, "create:block/shaft_half", 0xFFFFFF);
         draw.pop();
         return;

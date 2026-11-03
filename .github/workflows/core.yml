@@ -41,6 +41,7 @@ jobs:
           python3 tools/placement_oracle.py
           python3 tools/rotation_oracle.py
           python3 tools/processing_oracle.py
+          python3 tools/visual_oracle.py
       - uses: actions/upload-artifact@v4
         with:
           name: java-parity-results
@@ -49,3 +50,4 @@ jobs:
             .local/placement-oracle/result.json
             .local/rotation-oracle/result.json
             .local/processing-oracle/result.json
+            .local/visual-oracle/result.json

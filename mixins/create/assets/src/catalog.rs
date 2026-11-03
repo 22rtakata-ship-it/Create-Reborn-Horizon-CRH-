@@ -17,6 +17,10 @@ pub const BLOCKS: &[&str] = &[
     "andesite_alloy_block",
     "brass_block",
     "zinc_block",
+    "speedometer",
+    "stressometer",
+    "water_wheel",
+    "large_water_wheel",
 ];
 pub const ITEMS: &[&str] = &[
     "iron_sheet",
@@ -28,6 +32,9 @@ pub const ITEMS: &[&str] = &[
     "zinc_ingot",
     "zinc_nugget",
     "wrench",
+    "brass_sheet",
+    "vertical_gearbox",
+    "goggles",
 ];
 pub const PARTS: &[&str] = &[
     "shaft",
@@ -41,4 +48,11 @@ pub const PARTS: &[&str] = &[
     "depot/block",
     "hand_crank/handle",
     "hand_crank/block",
+    "gauge/dial",
+    "gauge/speedometer/head",
+    "gauge/stressometer/head",
+    "goggles",
+    "water_wheel/wheel",
+    "large_water_wheel/block",
+    "large_water_wheel/block_extension",
 ];

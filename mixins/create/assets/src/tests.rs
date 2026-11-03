@@ -361,3 +361,33 @@ fn sound_bytes_are_preserved_and_invalid_ogg_is_rejected() {
     });
     assert!(import_fixture(&home.0, &invalid).is_err());
 }
+
+#[test]
+fn obj_models_retain_geometry_and_safe_materials_without_java() {
+    let home = Stage::new(&std::env::temp_dir()).unwrap();
+    let bytes = fixture(|files| {
+        files.insert("assets/create/models/block/shared.json".into(), br##"{"loader":"neoforge:obj","model":"create:models/block/shape.obj","textures":{"all":"create:block/test"}}"##.to_vec());
+        files.insert(
+            "assets/create/models/block/shape.obj".into(),
+            b"mtllib shape.mtl\nv 0 0 0\nv 0 1 0\nv 1 1 0\nv 1 0 0\nf 1 2 3 4\n".to_vec(),
+        );
+        files.insert(
+            "assets/create/models/block/shape.mtl".into(),
+            b"newmtl shape\nmap_Kd #all\n".to_vec(),
+        );
+    });
+    let imported = import_fixture(&home.0, &bytes).unwrap();
+    assert!(
+        fs::read_to_string(imported.pack.join("assets/create/models/block/shape.obj"))
+            .unwrap()
+            .contains("f 1 2 3 4")
+    );
+    let hostile = fixture(|files| {
+        files.insert(
+            "assets/create/models/block/shared.json".into(),
+            br##"{"loader":"neoforge:obj","model":"create:models/block/../../shape.obj"}"##
+                .to_vec(),
+        );
+    });
+    assert!(import_fixture(&home.0, &hostile).is_err());
+}

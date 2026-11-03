@@ -27,8 +27,8 @@ def model(name, boxes, texture="minecraft:block/iron_block"):
 
 
 def foundation():
-    from catalog import BLOCKS as all_blocks, ITEMS, TRANSMISSIONS, STATIC_BLOCKS, rust_catalog
-    for block in TRANSMISSIONS + STATIC_BLOCKS:
+    from catalog import BLOCKS as all_blocks, ITEMS, TRANSMISSIONS, STATIC_BLOCKS, INSTRUMENTS, GENERATORS, INTERNAL_BLOCKS, rust_catalog
+    for block in TRANSMISSIONS + STATIC_BLOCKS + INSTRUMENTS + GENERATORS:
         declaration = {"template": "minecraft:glass", "item": True,
                        "properties": {"hardness": 1.5, "sounds": "minecraft:andesite"}}
         if block in TRANSMISSIONS and block != "hand_crank":
@@ -37,6 +37,19 @@ def foundation():
             if block in ["clutch", "gearshift"]:
                 declaration["state_properties"]["powered"] = {"type": "boolean"}
                 declaration["default_state"]["powered"] = "false"
+        if block in INSTRUMENTS:
+            declaration['state_properties']={'facing':{'type':'enum','values':['down','up','north','south','west','east']},'axis_along_first':{'type':'boolean'}}
+            declaration['default_state']={'facing':'north','axis_along_first':'false'}
+        if block in GENERATORS:
+            declaration['properties']['render_shape']='ENTITYBLOCK_ANIMATED' if block=='large_water_wheel' else 'MODEL'
+            declaration['properties']['sounds']='minecraft:stripped_spruce_wood'
+            key='axis' if block=='large_water_wheel' else 'facing'
+            values=['x','y','z'] if key=='axis' else ['down','up','north','south','west','east']
+            declaration['state_properties']={key:{'type':'enum','values':values}}
+            declaration['default_state']={key:'x' if key=='axis' else 'east'}
+            if key=='axis':
+                declaration['state_properties']['extension']={'type':'boolean'}
+                declaration['default_state']['extension']='false'
         if block == "hand_crank":
             declaration["properties"]["sounds"] = "minecraft:stripped_spruce_wood"
             declaration["properties"]["render_shape"] = "ENTITYBLOCK_ANIMATED"
@@ -50,12 +63,29 @@ def foundation():
         write("assets/create/items/" + block + ".json", {"model": {"type": "minecraft:model", "model": "create:item/" + block}})
         drop = "shaft" if "encased_shaft" in block else block
         write("data/create/loot_table/blocks/" + block + ".json", {"type": "minecraft:block", "pools": [{"rolls": 1, "entries": [{"type": "minecraft:item", "name": "create:" + drop}]}]})
+    write('data/create/horizon/block/water_wheel_structure.json', {'template':'minecraft:glass','item':False,'properties':{'hardness':1.5,'render_shape':'INVISIBLE','sounds':'minecraft:stripped_spruce_wood'},'state_properties':{'facing':{'type':'enum','values':['down','up','north','south','west','east']}},'default_state':{'facing':'north'}})
+    write('assets/create/blockstates/water_wheel_structure.json',{'variants':{'':{'model':'minecraft:block/air'}}})
+    write('data/create/loot_table/blocks/water_wheel_structure.json',{'type':'minecraft:block','pools':[]})
     for item in ITEMS:
-        if item.endswith("_sheet"): continue
-        write("data/create/horizon/item/" + item + ".json", {"template": "minecraft:iron_ingot", "max_stack_size": 1 if item == "wrench" else 64})
+        if item in [name + '_sheet' for name in SHEETS]: continue
+        item_decl={"template":"minecraft:iron_ingot","max_stack_size":1 if item in ['wrench','goggles'] else 64}
+        if item=='goggles':item_decl['components']={'minecraft:equippable':{'slot':'head','equip_sound':'minecraft:item.armor.equip_generic','dispensable':True,'swappable':True,'damage_on_hurt':False}}
+        write("data/create/horizon/item/" + item + ".json", item_decl)
         write("assets/create/models/item/" + item + ".json", {"parent": "minecraft:item/generated", "textures": {"layer0": "minecraft:item/iron_ingot"}})
         write("assets/create/items/" + item + ".json", {"model": {"type": "minecraft:model", "model": "create:item/" + item}})
+        if item=='goggles':
+            write('assets/create/items/goggles.json',{'model':{'type':'minecraft:select','property':'minecraft:display_context','cases':[{'when':'head','model':{'type':'minecraft:model','model':'create:block/goggles'}}],'fallback':{'type':'minecraft:model','model':'create:item/goggles'}}})
+    vertical={'condition':'minecraft:block_state_property','block':'create:gearbox','properties':{'axis':'y'}}
+    write('data/create/loot_table/blocks/gearbox.json',{'type':'minecraft:block','pools':[{'rolls':1,'entries':[{'type':'minecraft:alternatives','children':[{'type':'minecraft:item','name':'create:gearbox','conditions':[vertical]},{'type':'minecraft:item','name':'create:vertical_gearbox'}]}]}]})
     model("hand_crank/handle", [([6, 5, 6], [10, 10, 16])], "minecraft:block/oak_planks")
+    model('goggles',[([4,6,3],[7,9,4]),([9,6,3],[12,9,4])],'minecraft:block/gold_block')
+    # A native world-space hint: our own geometry and vanilla sprite reference.
+    model('port_hint',[([7.6,7.6,5],[8.4,8.4,14]),([6,7.5,11],[10,8.5,12]),([7,7.5,12],[9,8.5,13])],'minecraft:block/white_concrete')
+    hint=CONTENT/'assets/create/models/block/port_hint.json'
+    value=json.loads(hint.read_text())
+    for element in value['elements']:
+        for face in element['faces'].values():face['tintindex']=0
+    hint.write_text(json.dumps(value,indent=2)+'\n')
     # Only MIT recipe/tag data is distributed; original assets stay in the JAR.
     reference = json.loads((ROOT / "tools/data/recipes.json").read_text())
     def current(value):
@@ -72,8 +102,8 @@ def foundation():
     for path, value in reference["tags"].items(): write("data/" + path, value)
     write("data/create/horizon/creative_tab/kinetics.json", {"title": "itemGroup.create.base", "icon": "create:cogwheel", "items": ["create:" + name for name in all_blocks + ITEMS]})
     # These fallback labels are ours; the JAR replaces them with all upstream locales.
-    extra_blocks = {"gearbox":"Gearbox","clutch":"Clutch","gearshift":"Gearshift","hand_crank":"Hand Crank","andesite_encased_shaft":"Andesite Encased Shaft","brass_encased_shaft":"Brass Encased Shaft","andesite_casing":"Andesite Casing","brass_casing":"Brass Casing","andesite_alloy_block":"Block of Andesite Alloy","brass_block":"Block of Brass","zinc_block":"Block of Zinc"}
-    extra_items = {"andesite_alloy":"Andesite Alloy","brass_ingot":"Brass Ingot","brass_nugget":"Brass Nugget","zinc_ingot":"Zinc Ingot","zinc_nugget":"Zinc Nugget","wrench":"Wrench"}
+    extra_blocks = {"gearbox":"Gearbox","clutch":"Clutch","gearshift":"Gearshift","hand_crank":"Hand Crank","andesite_encased_shaft":"Andesite Encased Shaft","brass_encased_shaft":"Brass Encased Shaft","andesite_casing":"Andesite Casing","brass_casing":"Brass Casing","andesite_alloy_block":"Block of Andesite Alloy","brass_block":"Block of Brass","zinc_block":"Block of Zinc","speedometer":"Speedometer","stressometer":"Stressometer","water_wheel":"Water Wheel","large_water_wheel":"Large Water Wheel"}
+    extra_items = {"andesite_alloy":"Andesite Alloy","brass_ingot":"Brass Ingot","brass_nugget":"Brass Nugget","zinc_ingot":"Zinc Ingot","zinc_nugget":"Zinc Nugget","wrench":"Wrench","brass_sheet":"Brass Sheet","vertical_gearbox":"Vertical Gearbox","goggles":"Engineer’s Goggles"}
     for locale in ["en_us","ru_ru"]:
         path=CONTENT / ("assets/create/lang/"+locale+".json")
         lang=json.loads(path.read_text())
@@ -94,7 +124,7 @@ def main():
     CONTENT.mkdir(exist_ok=True)
     (CONTENT / "horizon-mod.toml").write_text('''id = "create"
 name = "Create for Horizon — prototype"
-version = "0.3.0"
+version = "0.4.0"
 description = "Experimental kinetic foundation: transmissions, pressing, depots, materials and crafting."
 authors = ["create-horizon contributors"]
 api = "0.2"
