@@ -32,6 +32,9 @@ it is not a promise of acceptance by the registry.
    compatibility fix; the unchanged official launcher cannot reproduce it yet.
    The fix and regression tests are submitted as
    [Horizon Mixins PR #26](https://github.com/horizon-rust/horizon-mixins/pull/26).
+   [Full Linux CI for the proposed fix](https://github.com/Delete228/horizon-mixins/actions/runs/41644514346)
+   passed with the upstream workflow and its pinned Rust 1.95.0. The upstream PR's
+   workflow awaits maintainer approval to run.
    Until a fixed official revision is available and repinned, the development
    client is usable through the launcher's documented imported-build path.
 2. Provide an installable pairing of native code and content. A `.hnmod` contains
