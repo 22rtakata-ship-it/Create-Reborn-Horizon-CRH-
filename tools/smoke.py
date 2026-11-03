@@ -140,7 +140,11 @@ def main():
                 call("command", "tp @s 3 65 3")
                 call("look-at", 2, 65, 1)
                 call("screenshot", scratch / "factory.png")
+                call("command", "clear @s")
                 call("interact", 3, 64, 1, "up")
+                # A server-thread interaction returns before its menu packet is
+                # necessarily applied by the rendered client.
+                call("wait", 10)
                 screen = call("screen")
                 if not any(name in json.dumps(screen) for name in ["Depot", "create:depot", "block.create.depot"]):
                     raise AssertionError("Depot menu did not open: " + json.dumps(screen))
