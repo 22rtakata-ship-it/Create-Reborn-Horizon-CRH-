@@ -6,6 +6,8 @@ This is an early creative-mode prototype, not an official Create or Horizon rele
 Only the code covered by MIT is adapted; original Create assets are excluded from
 the public source and default packages. See [third-party notices](THIRD_PARTY_NOTICES.md).
 
+**Запуск через официальный лаунчер:** [инстанс Create Prototype и текущие ограничения](LAUNCHER.md).
+
 Отдельный начальный порт Create на Rust. Папки `../Create` и `../horizon` используются
 как исходные материалы и не изменяются. Версии закреплены в `compatibility.json`.
 
