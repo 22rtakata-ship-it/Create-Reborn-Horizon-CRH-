@@ -30,6 +30,10 @@ it is not a promise of acceptance by the registry.
 1. Resolve the pinned Mixins tool's rejection of Rust's built-in
    `#![recursion_limit = "256"]`. The current local build applies a one-line
    compatibility fix; the unchanged official launcher cannot reproduce it yet.
+   The fix and regression tests are submitted as
+   [Horizon Mixins PR #26](https://github.com/horizon-rust/horizon-mixins/pull/26).
+   Until a fixed official revision is available and repinned, the development
+   client is usable through the launcher's documented imported-build path.
 2. Provide an installable pairing of native code and content. A `.hnmod` contains
    code only; our six block definitions and models also need the content `.hmod`.
    Do not present a successful native-only import as a working complete install.
