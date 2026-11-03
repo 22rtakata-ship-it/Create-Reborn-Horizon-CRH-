@@ -14,7 +14,7 @@ unimplemented feature or a question; retain observations about later stages.
 
 ## Milestones
 
-1. **Installation and builds (current).** Build through the official launcher CLI
+1. **Installation and builds (awaiting visual review).** Build through the official launcher CLI
    without local tool patches; carry code and public content in one native
    bundle; test a clean instance and GitHub source installation. Preserve normal
    Horizon instances. Deliver a launchable review instance and exact instructions.
@@ -50,3 +50,12 @@ The target is a GitHub URL or a reviewed Horizon registry entry followed by the
 launcher's normal native build. Original Create assets are not redistributed;
 the player supplies the supported JAR locally. Registry acceptance is the
 maintainers' decision and does not make this an official Horizon/Create project.
+
+## Current review checkpoint
+
+The installation increment is ready for owner review. `Create Native` uses the
+launcher's `performance` build `native-fc02103-1ba8788c96b6`; the independent
+`CreateInstallCheck` world contains the initial factory and all nine prototype
+items. Automated installation, world and renderer checks passed. The launcher
+shows the GitHub mod and its build as **Up to date**. Next: collect the owner's
+visual observations, then agree the bounded appearance increment before coding it.
