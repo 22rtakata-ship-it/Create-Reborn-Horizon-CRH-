@@ -43,5 +43,5 @@ jobs:
         with:
           name: java-parity-results
           path: |
-            .local/oracle/result.json
+            .local/network-oracle/result.json
             .local/placement-oracle/result.json

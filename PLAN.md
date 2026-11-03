@@ -62,3 +62,11 @@ The owner clarified that cross-version Java/Horizon world interoperability is
 not required. Preserve original Create IDs, state names and NBT conventions
 where implemented. Record exceptions and avoid promising untested world compatibility.
 The matching behavior/source/assets baseline is Create 6.0.10 for Minecraft 1.21.1.
+
+Delivery: version 0.2.0, source bundle `b839dcb`, official performance build
+`native-fc02103-0554886ea08b`, instance **Create Review 0.2**, new world
+**CreateReview02**. Placement, direct depot exchange, all upstream locales and
+the identifier baseline are implemented and checked. Stop for the owner's visual
+review; this is not acceptance of the remaining appearance/behavior milestones.
+See `LAUNCHER.md`, `VALIDATION.md` and `COMPATIBILITY.md` for the checklist,
+evidence and explicit data-format exceptions.
