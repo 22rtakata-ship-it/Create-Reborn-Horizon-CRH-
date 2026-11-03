@@ -30,7 +30,7 @@ def main():
     CONTENT.mkdir(exist_ok=True)
     (CONTENT / "horizon-mod.toml").write_text('''id = "create"
 name = "Create for Horizon — prototype"
-version = "0.1.0"
+version = "0.2.0"
 description = "First milestone: motor, shafts, cogs, mechanical press and depot."
 authors = ["create-horizon contributors"]
 api = "0.2"
@@ -42,7 +42,8 @@ capabilities = ["registries"]
                        "properties": {"hardness": 1.5, "render_shape": "ENTITYBLOCK_ANIMATED"}}
         if block in ["shaft", "cogwheel", "large_cogwheel"]:
             declaration["state_properties"] = {"axis": {"type": "enum", "values": ["x", "y", "z"]}}
-            declaration["default_state"] = {"axis": "y"}
+            declaration["state_properties"]["waterlogged"] = {"type": "boolean"}
+            declaration["default_state"] = {"axis": "y", "waterlogged": "false"}
             shapes = {"x": [[0, .375, .375, 1, .625, .625]],
                       "y": [[.375, 0, .375, .625, 1, .625]],
                       "z": [[.375, .375, 0, .625, .625, 1]]}
@@ -56,13 +57,11 @@ capabilities = ["registries"]
             if block == "creative_motor": values += ["up", "down"]
             declaration["state_properties"] = {"facing": {"type": "enum", "values": values}}
             declaration["default_state"] = {"facing": "east"}
-            if block == "creative_motor":
-                declaration["state_properties"]["speed"] = {"type": "enum", "values": ["16", "32", "64", "128", "256"]}
-                declaration["default_state"]["speed"] = "16"
         else:
-            # The barrel template supplies the ordinary container-open interaction.
-            declaration["template"] = "minecraft:barrel"
-            declaration["shapes"] = {"default": [[0, 0, 0, 1, .875, 1]]}
+            # Create's depot is not an inventory screen or a directional barrel.
+            declaration["state_properties"] = {"waterlogged": {"type": "boolean"}}
+            declaration["default_state"] = {"waterlogged": "false"}
+            declaration["shapes"] = {"default": [[0, 0, 0, 1, 13 / 16, 1]]}
         write("data/create/horizon/block/" + block + ".json", declaration)
         # A blockstate model is still needed for the block item and model baking.
         name = {"creative_motor": "creative_motor/block", "mechanical_press": "mechanical_press/block", "depot": "depot/block"}.get(block, block)
@@ -83,8 +82,8 @@ capabilities = ["registries"]
     model("creative_motor/block_vertical", [([1, 0, 1], [15, 14, 15])], "minecraft:block/copper_block")
     model("mechanical_press/block", [([0, 8, 0], [16, 16, 16])])
     model("mechanical_press/head", [([6, -12, 6], [10, 9, 10]), ([2, -14, 2], [14, -10, 14])])
-    model("depot/block", [([1, 0, 1], [15, 12, 15]), ([0, 12, 0], [16, 14, 16])], "minecraft:block/smooth_stone")
-    write("data/create/horizon/menu/depot.json", {"slots": 1})
+    model("depot/block", [([1, 0, 1], [15, 12, 15]), ([0, 12, 0], [16, 13, 16])], "minecraft:block/smooth_stone")
+    (CONTENT / "data/create/horizon/menu/depot.json").unlink(missing_ok=True)
     for name in SHEETS:
         write("data/create/horizon/item/" + name + "_sheet.json", {"template": "minecraft:iron_ingot", "max_stack_size": 64})
         vanilla = "gold" if name == "golden" else name
@@ -97,11 +96,11 @@ capabilities = ["registries"]
             "results": [{"id": "create:" + name + "_sheet"}],
         })
     ids = BLOCKS + [name + "_sheet" for name in SHEETS]
-    write("data/create/horizon/creative_tab/kinetics.json", {"title": "itemGroup.create_horizon", "icon": "create:cogwheel", "items": ["create:" + name for name in ids]})
+    write("data/create/horizon/creative_tab/kinetics.json", {"title": "itemGroup.create.base", "icon": "create:cogwheel", "items": ["create:" + name for name in ids]})
     english = ["Creative Motor", "Shaft", "Cogwheel", "Large Cogwheel", "Mechanical Press", "Depot"]
     russian = ["Творческий мотор", "Вал", "Шестерня", "Большая шестерня", "Механический пресс", "Депо"]
     for language, names, title in [("en_us", english, "Create for Horizon"), ("ru_ru", russian, "Create для Horizon")]:
-        lang = {"itemGroup.create_horizon": title}
+        lang = {"itemGroup.create.base": title}
         lang.update({"block.create." + block: name for block, name in zip(BLOCKS, names)})
         lang.update({"item.create." + sheet + "_sheet": name for sheet, name in zip(SHEETS,
                     ["Iron Sheet", "Golden Sheet", "Copper Sheet"] if language == "en_us" else ["Железная пластина", "Золотая пластина", "Медная пластина"])})
@@ -114,7 +113,7 @@ capabilities = ["registries"]
     bundled = NATIVE / "data/content.json"
     bundled.parent.mkdir(parents=True, exist_ok=True)
     bundled.write_text(json.dumps(files, indent=2, ensure_ascii=False) + "\n")
-    print("Generated six blocks, three sheets, a depot menu, three pressing recipes and bundled content.")
+    print("Generated six blocks, three sheets, direct depot interaction, three pressing recipes and bundled content.")
 
 
 if __name__ == "__main__":

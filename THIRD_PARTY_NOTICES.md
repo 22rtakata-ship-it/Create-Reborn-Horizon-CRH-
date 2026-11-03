@@ -1,7 +1,7 @@
 # Third-party work
 
 Create reference: Creators-of-Create/Create, commit
-`4148fd8d5b05c85d88947edc00fb495a5074f57d`, development version 6.0.11.
+`ac0c444d9828da3453ae8cc65338e8de063286fb`, release 6.0.10 (Minecraft 1.21.1).
 Copyright (c) The Create Team / The Creators of Create.
 
 The following MIT code informed or was adapted into the Rust engine:
@@ -30,11 +30,17 @@ it embeds no Mojang textures or original Create textures.
 
 The resource bootstrap is the published Create **6.0.10** release `UjX6dr61` on
 Modrinth. Its provenance and verified hashes are in `.local/import-provenance.json`.
-It is explicitly separate from the 6.0.11 source reference. Replace it using
-`tools/import_create.py --jar /path/to/a/built/6.0.11.jar` when available for port-pack
-development. The in-game resource importer currently accepts only the verified
-6.0.10 NeoForge 1.21.1 JAR, SHA-256
-`ef87fe5709f1ba1f5b8bb20a2925b5afb4669e178fd6d8bf10c167759eefe37a`.
+Its source, behavior oracle and resource baseline now match the same published
+6.0.10 release. Every locale is imported from the local JAR without redistribution.
+
+Additional MIT references used in the placement/depot adapter:
+- `RotatedPillarKineticBlock`, `DirectionalKineticBlock`, `CreativeMotorBlock`,
+  `CogWheelBlock`: placement choice and neighboring shaft ports.
+- `SharedDepotBlockMethods.onUse`, `DepotBehaviour`, `TransportedItemStack`:
+  top-face exchange and saved field names. Java method bodies used by the oracle
+  are AST-exported into `.local` and are not shipped as player code.
+- Horizon `horizon-world/src/level/place.rs` (MIT, horizon-rust contributors):
+  the nearest-looking-direction calculation, adapted to the placement adapter.
 
 Horizon and Horizon Mixins are MIT. Their original checkouts are not edited or
 included in the mod. Builds pin the published commit

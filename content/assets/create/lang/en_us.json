@@ -1,5 +1,5 @@
 {
-  "itemGroup.create_horizon": "Create for Horizon",
+  "itemGroup.create.base": "Create for Horizon",
   "block.create.creative_motor": "Creative Motor",
   "block.create.shaft": "Shaft",
   "block.create.cogwheel": "Cogwheel",

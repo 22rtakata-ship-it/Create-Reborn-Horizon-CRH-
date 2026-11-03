@@ -1,5 +1,5 @@
 {
-  "itemGroup.create_horizon": "Create для Horizon",
+  "itemGroup.create.base": "Create для Horizon",
   "block.create.creative_motor": "Творческий мотор",
   "block.create.shaft": "Вал",
   "block.create.cogwheel": "Шестерня",

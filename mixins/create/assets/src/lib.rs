@@ -14,7 +14,7 @@ use zip::ZipArchive;
 pub const INPUT_DIR: &str = "horizon-mods/create-resources";
 pub const CREATE_VERSION: &str = "6.0.10+mc1.21.1 (NeoForge)";
 pub const JAR_SHA256: &str = "ef87fe5709f1ba1f5b8bb20a2925b5afb4669e178fd6d8bf10c167759eefe37a";
-const SCHEMA: u32 = 1;
+const SCHEMA: u32 = 2;
 const MAX_JAR: u64 = 128 << 20;
 const MAX_FILE: u64 = 16 << 20;
 const MAX_TOTAL: usize = 64 << 20;
@@ -469,6 +469,18 @@ fn collect(bytes: Vec<u8>) -> io::Result<BTreeMap<String, Vec<u8>>> {
     }
     for part in PARTS {
         reader.model(&format!("create:block/{part}"))?;
+    }
+    // Keep every upstream locale byte-for-byte. Translations remain local
+    // assets under the same terms as the rest of the player-supplied JAR.
+    let locales: Vec<String> = reader
+        .zip
+        .file_names()
+        .filter_map(Result::ok)
+        .filter(|name| name.starts_with("assets/create/lang/") && name.ends_with(".json"))
+        .map(|name| name.into_owned())
+        .collect();
+    for locale in locales {
+        reader.json(&locale)?;
     }
     let license = reader.read("LICENSE.md_create-1.21.1")?;
     reader.files.insert("CREATE-LICENSE.md".into(), license);

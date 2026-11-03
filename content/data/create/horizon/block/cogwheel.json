@@ -13,10 +13,14 @@
         "y",
         "z"
       ]
+    },
+    "waterlogged": {
+      "type": "boolean"
     }
   },
   "default_state": {
-    "axis": "y"
+    "axis": "y",
+    "waterlogged": "false"
   },
   "shapes": {
     "property": "axis",

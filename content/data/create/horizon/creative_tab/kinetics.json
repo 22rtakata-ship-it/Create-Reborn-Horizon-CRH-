@@ -1,5 +1,5 @@
 {
-  "title": "itemGroup.create_horizon",
+  "title": "itemGroup.create.base",
   "icon": "create:cogwheel",
   "items": [
     "create:creative_motor",

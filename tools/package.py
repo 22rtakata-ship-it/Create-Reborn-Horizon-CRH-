@@ -28,7 +28,7 @@ def main():
     content_archive = ROOT / "content/target/horizon-mod/create.hmod"
     with zipfile.ZipFile(content_archive) as package:
         content_files = {name: package.read(name) for name in package.namelist() if not name.endswith("/")}
-    outputs = [("create-0.1.0.hnmod", native_files), ("create-0.1.0.hmod", {**native_files, **content_files})]
+    outputs = [(f"create-{manifest['version']}.hnmod", native_files), (f"create-{manifest['version']}.hmod", {**native_files, **content_files})]
     for name, files in outputs:
         target = destination / name
         with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as package:
@@ -39,7 +39,7 @@ def main():
                 package.writestr(info, data)
         subprocess.run([str(cli), "check", str(target), "--kind", "native-mod", "--json"], check=True)
         print(target)
-    content_target = destination / "create-content-0.1.0.hmod"
+    content_target = destination / f"create-content-{manifest['version']}.hmod"
     shutil.copy2(content_archive, content_target)
     subprocess.run([str(cli), "check", str(content_target), "--json"], check=True)
     print("Native archives include all public content and pin the published Mixins PR #26 commit; no local tool patch.")

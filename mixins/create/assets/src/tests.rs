@@ -33,6 +33,14 @@ fn fixture(change: impl FnOnce(&mut BTreeMap<String, Vec<u8>>)) -> Vec<u8> {
             "elements": [{"from": [0, 0, 0], "to": [16, 16, 16], "faces": {"north": {"texture": "#all"}}}]
         }),
     );
+    json_file(
+        "assets/create/lang/en_us.json".into(),
+        json!({"block.create.shaft":"Fixture Shaft"}),
+    );
+    json_file(
+        "assets/create/lang/ru_ru.json".into(),
+        json!({"block.create.shaft":"Фикстура"}),
+    );
     files.insert(
         "assets/create/textures/block/test.png".into(),
         b"\x89PNG\r\n\x1a\nsynthetic fixture".to_vec(),
@@ -75,6 +83,28 @@ fn import_fixture(home: &Path, bytes: &[u8]) -> io::Result<Imported> {
         (97, 1),
         &format!("{:x}", Sha256::digest(bytes)),
     )
+}
+
+#[test]
+fn imports_every_locale_byte_for_byte() {
+    let bytes = fixture(|files| {
+        files.insert(
+            "assets/create/lang/test_test.json".into(),
+            b"{ \"block.create.shaft\" : \"Exact whitespace\" }\n".to_vec(),
+        );
+    });
+    let files = collect(bytes.clone()).unwrap();
+    let mut archive = ZipArchive::new(Cursor::new(bytes)).unwrap();
+    for locale in ["en_us", "ru_ru", "test_test"] {
+        let path = format!("assets/create/lang/{locale}.json");
+        let mut expected = Vec::new();
+        archive
+            .by_name(&path)
+            .unwrap()
+            .read_to_end(&mut expected)
+            .unwrap();
+        assert_eq!(files[&path], expected);
+    }
 }
 
 #[test]

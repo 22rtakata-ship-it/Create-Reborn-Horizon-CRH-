@@ -1,6 +1,6 @@
 [mod]
 id = "create"
-version = "0.1.0"
+version = "0.2.0"
 
 [compatibility]
 horizon_revision = "fc02103818c212920fd24aa34a2b2f91ba49e56f"
@@ -104,17 +104,6 @@ bindings = [
 ]
 
 [[injection]]
-id = "screen"
-hook = "screen"
-hook_version = 1
-kind = "HEAD"
-helper = "screen.rs"
-bindings = [
-  { name = "block", ty = "&str", value = "block" },
-  { name = "screen", ty = "&mut Option<crate::mod_api::NativeScreen>", value = "&mut *screen" },
-]
-
-[[injection]]
 id = "models"
 hook = "standalone_models"
 hook_version = 1
@@ -135,4 +124,55 @@ bindings = [
   { name = "state", ty = "horizon_world::registry::BlockStateId", value = "state" },
   { name = "entity", ty = "&crate::containers::ModBlockEntity", value = "entity" },
   { name = "draw", ty = "&mut crate::game::native_block_entity_draw::BlockEntityDraw", value = "&mut *draw" },
+]
+
+[[injection]]
+id = "use-on"
+hook = "use_item_on"
+hook_version = 1
+kind = "HEAD"
+helper = "use_on.rs"
+bindings = [
+  { name = "game", ty = "&crate::game::Game<'_>", value = "&*self" },
+  { name = "stack", ty = "&crate::items::ItemStack", value = "stack" },
+  { name = "pos", ty = "[i32; 3]", value = "pos" },
+  { name = "face", ty = "[i32; 3]", value = "face" },
+]
+
+[[injection]]
+id = "placed"
+hook = "place_block"
+hook_version = 1
+kind = "HEAD"
+helper = "placed.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "stack", ty = "&crate::items::ItemStack", value = "stack" },
+  { name = "pos", ty = "[i32; 3]", value = "pos" },
+]
+
+[[injection]]
+id = "right-click"
+hook = "right_click_block"
+hook_version = 1
+kind = "HEAD"
+helper = "right_click.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "pos", ty = "[i32; 3]", value = "pos" },
+  { name = "face", ty = "[i32; 3]", value = "face" },
+  { name = "canceled", ty = "&mut bool", value = "&mut *canceled" },
+]
+
+# API 359 has a server right-click hook but no block client-result hook.
+# Pin this one prediction boundary; do not duplicate inventory logic on clients.
+[[injection]]
+id = "depot-prediction"
+target = "horizon_client::game::remote::Game<'_>::remote_block_reacts"
+kind = "HEAD"
+cancellable = true
+helper = "depot_prediction.rs"
+bindings = [
+  { name = "game", ty = "&crate::game::Game<'_>", value = "&*self" },
+  { name = "hit", ty = "&crate::game::Hit", value = "hit" },
 ]

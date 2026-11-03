@@ -1,9 +1,17 @@
 {
-  "template": "minecraft:barrel",
+  "template": "minecraft:glass",
   "item": true,
   "properties": {
     "hardness": 1.5,
     "render_shape": "ENTITYBLOCK_ANIMATED"
+  },
+  "state_properties": {
+    "waterlogged": {
+      "type": "boolean"
+    }
+  },
+  "default_state": {
+    "waterlogged": "false"
   },
   "shapes": {
     "default": [
@@ -12,7 +20,7 @@
         0,
         0,
         1,
-        0.875,
+        0.8125,
         1
       ]
     ]

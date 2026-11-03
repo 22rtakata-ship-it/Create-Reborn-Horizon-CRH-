@@ -1,6 +1,6 @@
 id = "create"
 name = "Create for Horizon — prototype"
-version = "0.1.0"
+version = "0.2.0"
 description = "First milestone: motor, shafts, cogs, mechanical press and depot."
 authors = ["create-horizon contributors"]
 api = "0.2"

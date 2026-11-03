@@ -9,6 +9,7 @@ import subprocess
 import tempfile
 import time
 from common import ROOT
+import interaction_checks
 
 
 def main():
@@ -97,7 +98,7 @@ def main():
             # Horizon's vanilla /item command does not yet address mod containers.
             # Replace this fixture's depot and fill it through the supported control API.
             call("setblock", 3, 64, 1, "minecraft:air")
-            call("setblock", 3, 64, 1, "create:depot[facing=up]")
+            call("setblock", 3, 64, 1, "create:depot")
             call("container", 3, 64, 1, item, count)
         try:
             ready()
@@ -108,18 +109,20 @@ def main():
                 receipt = json.loads(receipts[0].read_text())
                 if not any(name.endswith("/axis.png") for name in receipt["files"]):
                     raise AssertionError("Original shaft texture was not imported")
-                if "Create: 49 local resources" not in log_path.read_text():
+                if f"Create: {len(receipt['files'])} local resources" not in log_path.read_text():
                     raise AssertionError("The imported resource pack was not applied")
             call("command", "tp @s 2 68 6")
             call("wait-ready", 120, timeout=150)
             call("fill", -2, 64, -2, 7, 68, 7, "minecraft:air")
             call("fill", -2, 63, -2, 7, 63, 7, "minecraft:smooth_stone")
-            fixtures = [([0, 66, 0], "create:creative_motor[facing=east,speed=16]"),
+            interaction_checks.placement(call)
+            marked = interaction_checks.depot(call)
+            fixtures = [([0, 66, 0], "create:creative_motor[facing=east]"),
                         ([1, 66, 0], "create:shaft[axis=x]"),
                         ([2, 66, 0], "create:cogwheel[axis=x]"),
                         ([2, 66, 1], "create:cogwheel[axis=x]"),
                         ([3, 66, 1], "create:mechanical_press[facing=east]"),
-                        ([3, 64, 1], "create:depot[facing=up]")]
+                        ([3, 64, 1], "create:depot")]
             for pos, block in fixtures: call("setblock", *pos, block)
             call("container", 3, 64, 1, "minecraft:iron_ingot", 8)
             call("wait", 150)
@@ -141,15 +144,8 @@ def main():
                 call("look-at", 2, 65, 1)
                 call("screenshot", scratch / "factory.png")
                 call("command", "clear @s")
-                call("interact", 3, 64, 1, "up")
-                # A server-thread interaction returns before its menu packet is
-                # necessarily applied by the rendered client.
-                call("wait", 10)
-                screen = call("screen")
-                if not any(name in json.dumps(screen) for name in ["Depot", "create:depot", "block.create.depot"]):
-                    raise AssertionError("Depot menu did not open: " + json.dumps(screen))
+                call("look-at", 3.5, 64.9, 1.5)
                 call("screenshot", scratch / "depot.png")
-                call("close")
             input_stack("minecraft:gold_ingot", 3)
             call("wait", 20)
             call("quit", timeout=30)
@@ -158,7 +154,8 @@ def main():
             ready()
             call("wait", 150)
             expect_sheet("create:golden_sheet", 3)
-            result = {"passed": True, "scope": "iron pressing, power interruption, copper after reconnection, gold cycle across save/reload",
+            interaction_checks.reloaded_depot(call, marked)
+            result = {"passed": True, "scope": "12 placement cases, direct depot exchange/components/save, iron pressing, power interruption, copper after reconnection, gold cycle across save/reload",
                       "scratch": str(scratch), "original_assets": bool(args.create_jar), "transcript": transcript}
             if args.create_jar and "cache verified" not in log_path.read_text():
                 raise AssertionError("The second game start did not reuse the verified resource cache")

@@ -1,4 +1,4 @@
-# Create for Horizon — первый этап
+# Create for Horizon — экспериментальный порт
 
 **Unofficial experimental port**, maintained by [Delete228](https://github.com/Delete228).
 Based on [Create by the Creators of Create](https://github.com/Creators-of-Create/Create).
@@ -9,6 +9,7 @@ the public source and default packages. See [third-party notices](THIRD_PARTY_NO
 **Запуск через официальный лаунчер:** [установка, сборка и визуальная проверка](LAUNCHER.md).
 **Оригинальная графика:** [положите свой JAR рядом с модом — импорт при запуске](ASSETS.md).
 **План и остановки для проверки:** [PLAN.md](PLAN.md).
+**Исходные ID и границы формата данных:** [COMPATIBILITY.md](COMPATIBILITY.md).
 
 Отдельный начальный порт Create на Rust. Папки `../Create` и `../horizon` используются
 как исходные материалы и не изменяются. Версии закреплены в `compatibility.json`.
@@ -23,8 +24,8 @@ the public source and default packages. See [third-party notices](THIRD_PARTY_NO
 - `mixins/create/engine/` — Rust-ядро кинетики и цикла пресса без зависимостей от игры.
 - `mixins/create/assets/` — локальный импортёр ресурсов из предоставленного пользователем JAR.
 - `mixins/create/runtime.rs` — адаптация к настоящим блокам, NBT, депо, рецептам и рендерингу Horizon.
-- `mixins/create/horizon-mixin.toml` — восемь именованных hooks, три закреплённых mixin
-  для загрузки ресурсов и отдельные crates движка и импортёра.
+- `mixins/create/horizon-mixin.toml` — десять именованных hooks, четыре закреплённых mixin
+  для ресурсов и клиентского результата клика; отдельные crates движка и импортёра.
 - `content/` — шесть блоков, три пластины, три рецепта и вкладка творческого инвентаря.
   Начальные модели написаны отдельно и используют ссылки на vanilla-текстуры.
 - `tools/` — установка локальных инструментов, импорт, сборка, проверки и запуск.
@@ -65,7 +66,7 @@ cd create-horizon
 git clone https://github.com/horizon-rust/horizon.git ../horizon
 git -C ../horizon checkout fc02103818c212920fd24aa34a2b2f91ba49e56f
 git clone https://github.com/Creators-of-Create/Create.git ../Create
-git -C ../Create checkout 4148fd8d5b05c85d88947edc00fb495a5074f57d
+git -C ../Create checkout ac0c444d9828da3453ae8cc65338e8de063286fb
 ```
 
 ```sh
@@ -97,8 +98,8 @@ Rust 1.99.1 устанавливается в `.tools/rust/`, Cargo исполь
 ## Что сделал horizon-port-pack
 
 Для начального импорта используется опубликованный Create **6.0.10** на NeoForge
-1.21.1; локальные исходники имеют версию **6.0.11** и служат отдельной закреплённой
-ссылкой для переноса поведения. Версии не выдаются за одинаковые. Исходный jar
+1.21.1. Поведение теперь переносится с коммита того же релиза **6.0.10**;
+инструменты читают его через Git, не переключая соседнюю рабочую копию. Исходный jar
 проверяется по SHA-512 из метаданных закреплённого релиза Modrinth.
 
 Запускаются настоящие шаги `import`, `inventory --offline`, `carry ... create`,
@@ -110,8 +111,8 @@ Rust 1.99.1 устанавливается в `.tools/rust/`, Cargo исполь
 Разработческий импорт port-pack запускается отдельно: `tools/import_create.py --jar PATH`
 для своего JAR либо `tools/import_create.py --download-bootstrap` для явного скачивания
 закреплённого входа 6.0.10. Это не требуется для сборки и запуска прототипа.
-Собственный jar 6.0.11 можно передать через `tools/import_create.py --jar PATH`;
-перед сменой версии нужно освободить `.local/input-instance/mods/` от прежнего jar.
+Другой JAR можно исследовать через `tools/import_create.py --jar PATH`, однако
+игровой импорт поддерживает только закреплённый релиз 6.0.10.
 
 Оригинальные ресурсы Create имеют All Rights Reserved. Обычный пакет их не содержит.
 Пользователь сам помещает JAR Create 6.0.10 NeoForge 1.21.1 в
@@ -135,10 +136,13 @@ python3 tools/cargo.py test --workspace --target-dir target/core
 python3 tools/cargo.py clippy --workspace --all-targets --target-dir target/core -- -D warnings
 python3 tools/cargo.py run --example factory --target-dir target/core
 python3 tools/oracle.py
+python3 tools/placement_oracle.py
 ```
 
 Оракул компилирует **неизменённый** исходный `KineticNetwork.java` с минимальным
 адаптером блока/мира и сравнивает 75 сценариев мощности и нагрузки с Rust.
+Второй оракул извлекает тела методов размещения из того же Java-коммита через
+AST JDK и сравнивает 27 648 комбинаций для вала, шестерней и мотора.
 Это не полная проверка поведения мода в NeoForge. Unit-тесты дополнительно
 проверяют передаточные отношения, разрыв сети, перегрузку и цикл пресса.
 
@@ -157,8 +161,9 @@ python3 tools/play.py --resources "/полный/путь/к/.local/horizon-clie
 `smoke.py` создаёт отдельные homes, копию ресурсов и новый тестовый мир. Он
 проверяет железные пластины, остановку при разрыве вала и медные пластины после
 восстановления соединения, затем сохранение и загрузку незавершённого цикла
-золотых пластин. В режиме `--offscreen` дополнительно проверяется открытие депо
-и сохраняются снимки рендера. Логи и результаты находятся в `.local/smoke-*/`.
+золотых пластин. Дополнительно проверяются размещение и прямой обмен с депо
+без меню, количество и компоненты предметов через сохранение. В режиме
+`--offscreen` сохраняются снимки рендера. Логи и результаты — в `.local/smoke-*/`.
 `play.py` использует собственный постоянный мир `.local/play-home/`; путь к
 ресурсам после первого запуска сохраняется в локальной конфигурации.
 

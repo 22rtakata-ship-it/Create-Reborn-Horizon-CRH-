@@ -1,8 +1,8 @@
 {
   "horizon_revision": "fc02103818c212920fd24aa34a2b2f91ba49e56f",
   "horizon_mixins_revision": "a1e13326306c6bc074b11e6a4926deb551c4083e",
-  "create_revision": "4148fd8d5b05c85d88947edc00fb495a5074f57d",
-  "create_version": "6.0.11",
+  "create_revision": "ac0c444d9828da3453ae8cc65338e8de063286fb",
+  "create_version": "6.0.10",
   "import_create_version": "6.0.10",
   "import_modrinth_version": "UjX6dr61",
   "minecraft_source_version": "1.21.1",

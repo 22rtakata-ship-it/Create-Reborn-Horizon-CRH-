@@ -48,7 +48,7 @@ pub struct Node {
 }
 
 impl Node {
-    fn shaft_port(self, delta: Pos) -> bool {
+    pub fn shaft_port(self, delta: Pos) -> bool {
         match self.kind {
             Kind::Motor { facing, .. } => delta == facing,
             _ => delta[self.axis.index()].abs() == 1,
