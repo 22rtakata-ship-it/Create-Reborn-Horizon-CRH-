@@ -6,7 +6,7 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 HORIZON = ROOT.parent / "horizon"
-CREATE = ROOT.parent / "Create"
+CREATE = Path(os.environ.get("CREATE_SOURCE", ROOT.parent / "Create")).resolve()
 NATIVE = ROOT / "mixins" / "create"
 PINS = json.loads((ROOT / "compatibility.json").read_text())
 

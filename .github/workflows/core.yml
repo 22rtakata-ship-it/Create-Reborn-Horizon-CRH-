@@ -22,3 +22,26 @@ jobs:
         run: cargo +1.99.1 test --locked --workspace
       - name: Clippy
         run: cargo +1.99.1 clippy --locked --workspace --all-targets -- -D warnings
+      - uses: actions/checkout@v4
+        with:
+          repository: Creators-of-Create/Create
+          ref: ac0c444d9828da3453ae8cc65338e8de063286fb
+          path: reference-create
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Original Java behavior oracles
+        env:
+          CREATE_SOURCE: ${{ github.workspace }}/reference-create
+        run: |
+          mkdir -p .tools/rust
+          ln -s "$(dirname "$(rustup which --toolchain 1.99.1 cargo)")" .tools/rust/bin
+          python3 tools/oracle.py
+          python3 tools/placement_oracle.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: java-parity-results
+          path: |
+            .local/oracle/result.json
+            .local/placement-oracle/result.json

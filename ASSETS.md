@@ -9,15 +9,16 @@
 1. Установите мод через GitHub и соберите его лаунчером: [инструкция](LAUNCHER.md).
 2. Получите оригинальный **Create 6.0.10 для Minecraft 1.21.1, NeoForge** из
    [релиза Create на Modrinth](https://modrinth.com/mod/create/version/UjX6dr61).
-3. Откройте папку нужного инстанса в Horizon Launcher. Рядом с `create.hnmod`
-   создайте папку `create-resources` и положите в неё **один** JAR. Имя файла
+3. Откройте папку нужного инстанса в Horizon Launcher. В ней создайте
+   `horizon-mods/create-resources` и положите туда **один** JAR. Имя файла
    произвольное, расширение — `.jar`. Распаковывать или запускать его не нужно.
 4. Запустите инстанс. Нужные ресурсы извлекутся автоматически до загрузки моделей.
 
 ```text
 <папка инстанса>/
-  horizon-mods/
+  horizon-native-mods/
     create.hnmod
+  horizon-mods/
     create-resources/
       create-1.21.1-6.0.10.jar
 ```

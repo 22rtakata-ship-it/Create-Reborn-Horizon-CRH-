@@ -27,6 +27,7 @@ def placement(call):
         call("wait", 3)
         if shift:
             call("key", "shift", "down")
+            call("wait", 3)
         try:
             call("interact", 0, 64, 0, "up")
             call("wait", 10)
@@ -105,6 +106,7 @@ def depot(call):
     assert slots()[0] == {"item": "minecraft:copper_ingot", "count": 5}, slots()
     call("command", "tp @s 0.5 65 2.5")
     call("key", "shift", "down")
+    call("wait", 3)
     try:
         click()
     finally:
