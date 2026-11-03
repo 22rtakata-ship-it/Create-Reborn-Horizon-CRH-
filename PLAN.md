@@ -51,7 +51,7 @@ launcher's normal native build. Original Create assets are not redistributed;
 the player supplies the supported JAR locally. Registry acceptance is the
 maintainers' decision and does not make this an official Horizon/Create project.
 
-## Current increment: original interactions
+## Completed increment: original interactions (0.2.0)
 
 The owner accepted the installation checkpoint. Reported differences: shafts only
 place vertically; the depot opens a chest-like menu. Implement source-derived
@@ -70,3 +70,29 @@ the identifier baseline are implemented and checked. Stop for the owner's visual
 review; this is not acceptance of the remaining appearance/behavior milestones.
 See `LAUNCHER.md`, `VALIDATION.md` and `COMPATIBILITY.md` for the checklist,
 evidence and explicit data-format exceptions.
+
+## Current increment: playable foundation (0.3.0)
+
+The owner accepted placement, original graphics and names, and requested a larger
+development interval. Reported defects: stale depot rendering after pickup,
+unretrievable processing output, bulk pressing instead of the default per-item
+processing, missing speed controls and incorrect/missing sound accompaniment.
+
+1. Reproduce these failures; distinguish server inventories, client update tags,
+   rendered state and player inventory. Test clicks during a processing cycle,
+   partial extraction, output buffers, stack components, break/drop and reload.
+2. Implement the original default pressing policy (`bulkPressing = false`),
+   a proper depot processing/output model and explicit client snapshot clearing.
+3. Extend the kinetic core with perpendicular large gears, gearboxes, clutches,
+   gearshifts and a hand crank. Add persistent motor speed/direction control,
+   wrench interactions and redstone switching. Compare source-derived rules.
+4. Add the material/casing/crafting foundation for the implemented machines,
+   retaining upstream IDs and recipe identities. Import required original models,
+   textures and sounds only from the player's JAR.
+5. Check unit/state-machine tests, Java oracles, actual crafting, hopper/player
+   exchanges, client snapshots/rendering, power changes and saves through Horizon's
+   control API. Inspect the matching Prism Create installation as a reference;
+   never alter its existing worlds.
+6. Deliver another native performance build with a new review world and an exact
+   feature/limitation list, then stop for visual review. Unimplemented mechanisms
+   are not counted as features merely because an item can be spawned.

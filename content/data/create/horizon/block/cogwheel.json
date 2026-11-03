@@ -3,7 +3,8 @@
   "item": true,
   "properties": {
     "hardness": 1.5,
-    "render_shape": "ENTITYBLOCK_ANIMATED"
+    "render_shape": "ENTITYBLOCK_ANIMATED",
+    "sounds": "minecraft:stripped_spruce_wood"
   },
   "state_properties": {
     "axis": {

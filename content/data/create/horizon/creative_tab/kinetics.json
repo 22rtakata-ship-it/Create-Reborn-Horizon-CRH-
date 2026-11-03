@@ -8,8 +8,25 @@
     "create:large_cogwheel",
     "create:mechanical_press",
     "create:depot",
+    "create:gearbox",
+    "create:clutch",
+    "create:gearshift",
+    "create:hand_crank",
+    "create:andesite_encased_shaft",
+    "create:brass_encased_shaft",
+    "create:andesite_casing",
+    "create:brass_casing",
+    "create:andesite_alloy_block",
+    "create:brass_block",
+    "create:zinc_block",
     "create:iron_sheet",
     "create:golden_sheet",
-    "create:copper_sheet"
+    "create:copper_sheet",
+    "create:andesite_alloy",
+    "create:brass_ingot",
+    "create:brass_nugget",
+    "create:zinc_ingot",
+    "create:zinc_nugget",
+    "create:wrench"
   ]
 }

@@ -7,7 +7,7 @@ use crate::{
     items::ItemStack,
 };
 use create_engine::{
-    kinetics::{self, Axis, Kind, Node},
+    kinetics::{Axis, Kind, Node},
     placement::{self, Direction},
     pressing::{Action, PressCycle, head_offset, tick_speed},
 };
@@ -100,7 +100,7 @@ pub(super) fn asset_root(root: std::path::PathBuf) -> std::path::PathBuf {
     }
 }
 
-fn owns(block: &str) -> bool {
+pub(super) fn owns(block: &str) -> bool {
     matches!(
         block,
         "create:creative_motor"
@@ -109,6 +109,12 @@ fn owns(block: &str) -> bool {
             | "create:large_cogwheel"
             | "create:mechanical_press"
             | "create:depot"
+            | "create:gearbox"
+            | "create:clutch"
+            | "create:gearshift"
+            | "create:hand_crank"
+            | "create:andesite_encased_shaft"
+            | "create:brass_encased_shaft"
     )
 }
 
@@ -117,6 +123,9 @@ pub(super) fn entity(block: &str, entity: &mut Option<(String, Compound)>) {
         let id = match block {
             "create:creative_motor" => "create:motor",
             "create:shaft" | "create:cogwheel" | "create:large_cogwheel" => "create:simple_kinetic",
+            "create:andesite_encased_shaft" | "create:brass_encased_shaft" => {
+                "create:encased_shaft"
+            }
             _ => block,
         };
         let mut nbt = Compound::new();
@@ -209,7 +218,11 @@ pub(super) fn placed(game: &mut Game<'_>, stack: &ItemStack, pos: [i32; 3]) {
     let sneaking = game.keys.contains(&winit::keyboard::KeyCode::ShiftLeft);
     let look = nearest(game.yaw, game.pitch);
     let axis = match stack.item.as_ref() {
-        "create:shaft" => Some(placement::shaft(look, face, sneaking, ports)),
+        "create:shaft"
+        | "create:andesite_encased_shaft"
+        | "create:brass_encased_shaft"
+        | "create:clutch"
+        | "create:gearshift" => Some(placement::shaft(look, face, sneaking, ports)),
         "create:cogwheel" | "create:large_cogwheel" => {
             let against = if game.native_block(clicked) == "create:cogwheel" {
                 node(game, clicked).map(|n| n.axis)
@@ -233,6 +246,7 @@ pub(super) fn placed(game: &mut Game<'_>, stack: &ItemStack, pos: [i32; 3]) {
     } else {
         let facing = match stack.item.as_ref() {
             "create:creative_motor" => Some(placement::motor(look, sneaking, ports)),
+            "create:hand_crank" => Some(placement::crank(face, sneaking, ports)),
             "create:mechanical_press" => Some(
                 [
                     Direction::North,
@@ -250,6 +264,9 @@ pub(super) fn placed(game: &mut Game<'_>, stack: &ItemStack, pos: [i32; 3]) {
 }
 
 pub(super) fn depot_reacts(game: &Game<'_>, pos: [i32; 3], face: [i32; 3]) -> bool {
+    if crate::game::create_port_interactions::reacts(game, pos) {
+        return true;
+    }
     if !game.native_on("create") || game.native_block(pos) != "create:depot" || face != [0, 1, 0] {
         return false;
     }
@@ -266,6 +283,11 @@ pub(super) fn depot_reacts(game: &Game<'_>, pos: [i32; 3], face: [i32; 3]) -> bo
 }
 
 pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3], canceled: &mut bool) {
+    if crate::game::create_port_interactions::right_click(game, pos, face) {
+        game.swing_arm();
+        *canceled = true;
+        return;
+    }
     if !depot_reacts(game, pos, face) {
         return;
     }
@@ -283,6 +305,9 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3], ca
         return;
     };
     let uuid = game.native_acting_id();
+    if !taken.is_empty() {
+        crate::game::create_port_sounds::pickup(game, pos);
+    }
     for stack in taken {
         if let Some(rest) = game.native_give_stack(uuid, stack)
             && let Some(player) = game.native_player()
@@ -298,6 +323,7 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3], ca
     // Read the hand after returning the old stack: Inventory.add may have
     // merged equal items into it. Creative players also empty their hand.
     if put {
+        crate::game::create_port_sounds::depot(game, pos);
         let incoming = game.held_mut().take();
         game.native_with_mod_block_entity(pos, |e| {
             e.items[0] = incoming;
@@ -313,7 +339,7 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3], ca
 
 /// Match DepotBehaviour/TransportedItemStack's public data names. Horizon also
 /// saves its generic Items slots; Create ignores that additional container field.
-fn depot_data(entity: &mut ModBlockEntity) -> bool {
+pub(super) fn depot_data(entity: &mut ModBlockEntity) -> bool {
     let old = entity.nbt.clone();
     if let Some(item) = entity
         .items
@@ -375,7 +401,7 @@ fn facing(value: &str) -> [i32; 3] {
     }
 }
 
-fn node(game: &Game<'_>, pos: [i32; 3]) -> Option<Node> {
+pub(super) fn node(game: &Game<'_>, pos: [i32; 3]) -> Option<Node> {
     let block = game.native_block(pos);
     let axis_property = game.native_block_property(pos, "axis");
     let direction = facing(
@@ -411,7 +437,39 @@ fn node(game: &Game<'_>, pos: [i32; 3]) -> Option<Node> {
             },
             capacity: 16384.0,
         },
-        "create:shaft" => Kind::Shaft,
+        "create:shaft" | "create:andesite_encased_shaft" | "create:brass_encased_shaft" => {
+            Kind::Shaft
+        }
+        "create:gearbox" => Kind::Gearbox,
+        "create:clutch" => Kind::Clutch {
+            powered: game.native_block_property(pos, "powered").as_deref() == Some("true"),
+        },
+        "create:gearshift" => Kind::Gearshift {
+            powered: game.native_block_property(pos, "powered").as_deref() == Some("true"),
+        },
+        "create:hand_crank" => {
+            let (active, back) = match game.world.block_entities.get(&(pos[0], pos[1], pos[2])) {
+                Some(BlockEntity::Mod(e)) => (
+                    integer(&e.nbt, "InUse") > 0,
+                    integer(&e.nbt, "Backwards") != 0,
+                ),
+                _ => (false, false),
+            };
+            let sign = if direction.iter().any(|v| *v < 0) {
+                -1.0
+            } else {
+                1.0
+            };
+            Kind::Motor {
+                facing: direction.map(|v| -v),
+                rpm: if active {
+                    32.0 * sign * if back { -1.0 } else { 1.0 }
+                } else {
+                    0.0
+                },
+                capacity: 8.0,
+            }
+        }
         "create:cogwheel" => Kind::Cog { large: false },
         "create:large_cogwheel" => Kind::Cog { large: true },
         "create:mechanical_press" => Kind::Press,
@@ -420,7 +478,7 @@ fn node(game: &Game<'_>, pos: [i32; 3]) -> Option<Node> {
     Some(Node { pos, axis, kind })
 }
 
-fn ingredient(json: &Value) -> Option<Value> {
+pub(super) fn ingredient(json: &Value) -> Option<Value> {
     if json.is_string() {
         return Some(json.clone());
     }
@@ -459,10 +517,9 @@ fn result(game: &Game<'_>, stack: &ItemStack) -> Option<ItemStack> {
         if !input.test(stack) {
             continue;
         }
-        let Some(mut output) = game.native_recipe_result(&outputs[0]) else {
+        let Some(output) = game.native_recipe_result(&outputs[0]) else {
             continue;
         };
-        output.count = output.count.checked_mul(stack.count)?;
         if output.count <= game.native_max_stack_size(&output.item)? {
             return Some(output);
         }
@@ -486,28 +543,86 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
         return;
     }
     if block == "create:depot" {
+        crate::game::create_port_world_items::catch(game, pos, entity);
         if depot_data(entity) {
             game.native_block_entity_sync(pos);
         }
         return;
     }
+    if matches!(block.as_str(), "create:clutch" | "create:gearshift") {
+        let dim = game.dim.id().to_owned();
+        let powered = game.native_neighbor_signal(&dim, pos) > 0;
+        if game.native_set_block_property(pos, "powered", if powered { "true" } else { "false" }) {
+            crate::game::create_port_kinetic_runtime::invalidate();
+        }
+    }
+    if block == "create:hand_crank" {
+        let in_use = integer(&entity.nbt, "InUse");
+        if in_use > 0 {
+            entity.nbt.insert("InUse".into(), Tag::Int(in_use - 1));
+            if in_use == 1 {
+                crate::game::create_port_kinetic_runtime::invalidate();
+            }
+        }
+    }
     let Some(mut start) = node(game, pos) else {
         return;
     };
-    if let Kind::Motor { rpm, facing, .. } = &mut start.kind {
-        let value = entity
-            .nbt
-            .get(&"ScrollValue".into())
-            .map(|_| integer(&entity.nbt, "ScrollValue") as f32)
-            .unwrap_or(16.0);
-        *rpm = if facing.iter().any(|v| *v < 0) {
-            -value
+    if let Kind::Motor { rpm, .. } = &mut start.kind {
+        let direction = facing(
+            &game
+                .native_block_property(pos, "facing")
+                .unwrap_or_else(|| "north".into()),
+        );
+        let sign = if direction.iter().any(|v| *v < 0) {
+            -1.0
         } else {
-            value
+            1.0
         };
+        let value = if block == "create:hand_crank" {
+            if integer(&entity.nbt, "InUse") > 0 {
+                if integer(&entity.nbt, "Backwards") != 0 {
+                    -32.0
+                } else {
+                    32.0
+                }
+            } else {
+                0.0
+            }
+        } else {
+            entity
+                .nbt
+                .get(&"ScrollValue".into())
+                .map(|_| integer(&entity.nbt, "ScrollValue") as f32)
+                .unwrap_or(16.0)
+        };
+        *rpm = sign * value;
     }
-    let network = kinetics::solve(start, |at| node(game, at));
-    let rpm = network.speed(pos);
+    let network = crate::game::create_port_kinetic_runtime::network(game, start, 0);
+    let other_half = matches!(start.kind, Kind::Clutch { powered: true })
+        .then(|| crate::game::create_port_kinetic_runtime::network(game, start, 1));
+    let mut ports = Compound::new();
+    for d in Direction::ALL {
+        let delta = d.vector();
+        let mut speed = network.port_speed(pos, delta);
+        if let Some(other) = &other_half {
+            if other.port_speed(pos, delta).abs() > speed.abs() {
+                speed = other.port_speed(pos, delta);
+            }
+        }
+        ports.insert(d.name().into(), Tag::Float(speed.to_bits()));
+    }
+    entity.nbt.insert(
+        "create_horizon".into(),
+        Tag::Compound(Compound::from([("Ports".into(), Tag::Compound(ports))])),
+    );
+    let mut rpm = network.speed(pos);
+    if let Some(other) = &other_half {
+        if other.speed(pos).abs() > rpm.abs() {
+            rpm = other.speed(pos);
+        }
+    }
+
     let old_rpm = number(&entity.nbt, "Speed");
     entity.nbt.insert("Speed".into(), Tag::Float(rpm.to_bits()));
     entity
@@ -523,27 +638,62 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
     let mut sync = old_rpm != rpm;
     if block == "create:mechanical_press" {
         let depot = [pos[0], pos[1] - 2, pos[2]];
-        let plan = depot_input(game, depot)
-            .and_then(|input| result(game, &input).map(|output| (input, output)));
         let mut cycle = PressCycle {
             running: integer(&entity.nbt, "Running") != 0,
             ticks: integer(&entity.nbt, "Ticks"),
             applied: integer(&entity.nbt, "Applied") != 0,
         };
-        let action = cycle.tick(rpm, plan.is_some());
+        let mode = if cycle.running {
+            integer(&entity.nbt, "Mode")
+        } else {
+            i32::from(game.native_block(depot) == "create:depot")
+        };
+        let plan = if mode == 1 {
+            depot_input(game, depot)
+                .and_then(|input| result(game, &input).map(|output| (input, output)))
+        } else {
+            None
+        };
+        let world_plan = if mode == 0 {
+            crate::game::create_port_world_items::inputs(game, pos)
+                .into_iter()
+                .find_map(|input| result(game, &input.stack).map(|output| (input, output)))
+        } else {
+            None
+        };
+        let action = cycle.tick(rpm, plan.is_some() || world_plan.is_some());
+        if action == Action::Started {
+            entity.nbt.insert("Mode".into(), Tag::Int(mode));
+            entity.nbt.insert("Finished".into(), Tag::Byte(0));
+        }
+        if action == Action::Finished {
+            entity.nbt.insert("Finished".into(), Tag::Byte(1));
+        }
         if action == Action::Press {
+            crate::game::create_port_sounds::press(game, pos, rpm);
+            if let Some((input, output)) = world_plan {
+                crate::game::create_port_world_items::press(game, input, output);
+            }
             if let Some((input, output)) = plan {
+                let max = game.native_max_stack_size(&output.item).unwrap_or(64);
                 let changed = game
                     .native_with_mod_block_entity(depot, |target| {
-                        if target.id != "create:depot" || target.items.first() != Some(&Some(input))
-                        {
-                            return false;
-                        }
-                        target.items[0] = Some(output);
-                        true
+                        crate::game::create_port_inventory::press(target, input, output, max)
                     })
-                    .unwrap_or(false);
-                if changed {
+                    .flatten();
+                if let Some(overflow) = changed {
+                    for item in overflow {
+                        game.spawn_item(
+                            item,
+                            [
+                                f64::from(depot[0]) + 0.5,
+                                f64::from(depot[1]) + 1.0,
+                                f64::from(depot[2]) + 0.5,
+                            ],
+                            [0.0; 3],
+                            10,
+                        );
+                    }
                     game.native_block_entity_sync(depot);
                 }
             }
@@ -566,10 +716,20 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
 }
 
 pub(super) fn update_tag(entity: &ModBlockEntity, tag: &mut Option<Compound>) {
-    if (owns(&entity.id) || matches!(entity.id.as_str(), "create:motor" | "create:simple_kinetic"))
+    if (owns(&entity.id)
+        || matches!(
+            entity.id.as_str(),
+            "create:motor" | "create:simple_kinetic" | "create:encased_shaft"
+        ))
         && tag.is_none()
     {
-        *tag = Some(entity.nbt.clone());
+        let mut snapshot = entity.nbt.clone();
+        if entity.id == "create:depot" && entity.items.first().is_none_or(Option::is_none) {
+            // Horizon merges update tags. Absence would leave the old rendered
+            // stack alive; send an explicit empty value on the wire only.
+            snapshot.insert("HeldItem".into(), Tag::Compound(Compound::new()));
+        }
+        *tag = Some(snapshot);
     }
 }
 
@@ -587,19 +747,46 @@ pub(super) fn container(block: &str, container: &mut Option<ModContainer>) {
 
 pub(super) fn models(models: &mut Vec<String>) {
     models.extend(
-        [
-            "shaft",
-            "shaft_half",
-            "cogwheel",
-            "large_cogwheel",
-            "creative_motor/block",
-            "creative_motor/block_vertical",
-            "mechanical_press/block",
-            "mechanical_press/head",
-            "depot/block",
-        ]
-        .map(|name| format!("create:block/{name}")),
+        create_assets::PARTS
+            .iter()
+            .map(|name| format!("create:block/{name}")),
     );
+}
+
+fn face_south(draw: &mut BlockEntityDraw, direction: Direction) {
+    match direction {
+        Direction::Up => draw.rotate_about([1.0, 0.0, 0.0], -90.0, [0.5; 3]),
+        Direction::Down => draw.rotate_about([1.0, 0.0, 0.0], 90.0, [0.5; 3]),
+        Direction::North => draw.rotate_about([0.0, 1.0, 0.0], 180.0, [0.5; 3]),
+        Direction::East => draw.rotate_about([0.0, 1.0, 0.0], 90.0, [0.5; 3]),
+        Direction::West => draw.rotate_about([0.0, 1.0, 0.0], -90.0, [0.5; 3]),
+        Direction::South => {}
+    }
+}
+fn port_speed(entity: &ModBlockEntity, direction: Direction) -> f32 {
+    match entity
+        .nbt
+        .get(&"create_horizon".into())
+        .and_then(|t| t.get("Ports"))
+        .and_then(|t| t.get(direction.name()))
+    {
+        Some(Tag::Float(v)) => f32::from_bits(*v),
+        _ => 0.0,
+    }
+}
+fn trace_depot(pos: [i32; 3], stack: Option<&ItemStack>) {
+    static TRACE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    if !*TRACE.get_or_init(|| std::env::var_os("CREATE_HORIZON_TRACE").is_some()) {
+        return;
+    }
+    thread_local! {static LAST: std::cell::RefCell<std::collections::BTreeMap<[i32;3],Option<(String,u32)>>> = const {std::cell::RefCell::new(std::collections::BTreeMap::new())};}
+    let value = stack.map(|s| (s.item.to_string(), s.count));
+    LAST.with(|last| {
+        let mut last=last.borrow_mut();
+        if last.get(&pos) == Some(&value) {return;}
+        last.insert(pos,value);
+        log::info!("Create render depot: {}",serde_json::json!({"pos":pos,"stack":stack.map(|s|serde_json::json!({"item":s.item.as_ref(),"count":s.count}))}));
+    });
 }
 
 fn orient(draw: &mut BlockEntityDraw, axis: Axis) {
@@ -628,27 +815,67 @@ pub(super) fn draw(
         draw.light =
             horizon_client::block_entity_render::vertex_light((sky_light << 4) | block_light);
         game.native_draw_model(draw, "create:block/depot/block", 0xFFFFFF);
-        if let Some(held) = entity.nbt.get(&"HeldItem".into()) {
-            if let Some(stack) = held
-                .get("Item")
-                .and_then(horizon_items::item_nbt::item_from_nbt)
-            {
-                draw.push();
-                draw.translate([0.5, 13.0 / 16.0, 0.5]);
-                game.native_draw_item(
-                    draw,
-                    &stack,
-                    horizon_assets::item_model::DisplayContext::Ground,
-                    None,
-                    0,
-                );
-                draw.pop();
-            }
+        let stack = entity
+            .nbt
+            .get(&"HeldItem".into())
+            .and_then(|held| held.get("Item"))
+            .and_then(horizon_items::item_nbt::item_from_nbt);
+        trace_depot(pos, stack.as_ref());
+        if let Some(stack) = stack {
+            draw.push();
+            draw.translate([0.5, 13.0 / 16.0, 0.5]);
+            game.native_draw_item(
+                draw,
+                &stack,
+                horizon_assets::item_model::DisplayContext::Ground,
+                None,
+                0,
+            );
+            draw.pop();
         }
         return;
     }
     let Some(node) = node(game, pos) else { return };
     let direction = game.native_block_property(pos, "facing");
+    if block == "create:hand_crank" {
+        let facing = Direction::from_vector(facing(direction.as_deref().unwrap_or("up"))).unwrap();
+        draw.push();
+        match facing {
+            Direction::Down => draw.rotate_about([1.0, 0.0, 0.0], 180.0, [0.5; 3]),
+            Direction::North => draw.rotate_about([1.0, 0.0, 0.0], -90.0, [0.5; 3]),
+            Direction::South => draw.rotate_about([1.0, 0.0, 0.0], 90.0, [0.5; 3]),
+            Direction::East => draw.rotate_about([0.0, 0.0, 1.0], -90.0, [0.5; 3]),
+            Direction::West => draw.rotate_about([0.0, 0.0, 1.0], 90.0, [0.5; 3]),
+            Direction::Up => {}
+        }
+        game.native_draw_model(draw, "create:block/hand_crank/block", 0xFFFFFF);
+        draw.pop();
+        draw.push();
+        face_south(draw, facing);
+        let angle = (draw.game_time as f32 + draw.partial) * number(&entity.nbt, "Speed") * 0.3;
+        draw.rotate_about([0.0, 0.0, 1.0], angle, [0.5; 3]);
+        game.native_draw_model(draw, "create:block/hand_crank/handle", 0xFFFFFF);
+        draw.pop();
+        return;
+    }
+    if matches!(
+        node.kind,
+        Kind::Gearbox | Kind::Clutch { .. } | Kind::Gearshift { .. }
+    ) {
+        for direction in Direction::ALL {
+            if !node.shaft_port(direction.vector()) {
+                continue;
+            }
+            let angle =
+                (draw.game_time as f32 + draw.partial) * port_speed(entity, direction) * 0.3;
+            draw.push();
+            face_south(draw, direction);
+            draw.rotate_about([0.0, 0.0, 1.0], angle, [0.5; 3]);
+            game.native_draw_model(draw, "create:block/shaft_half", 0xFFFFFF);
+            draw.pop();
+        }
+        return;
+    }
     if matches!(node.kind, Kind::Motor { .. } | Kind::Press) {
         draw.push();
         let model = if node.kind == Kind::Press {
@@ -691,7 +918,12 @@ pub(super) fn draw(
             };
             let travel = if original {
                 // Create's belt/depot head reaches the depot's 13/16 top two blocks below.
-                head_offset(ticks) * 19.0 / 16.0
+                head_offset(ticks)
+                    * if integer(&entity.nbt, "Mode") == 1 {
+                        19.0 / 16.0
+                    } else {
+                        1.0
+                    }
             } else if ticks <= 120.0 {
                 ticks / 120.0
             } else {

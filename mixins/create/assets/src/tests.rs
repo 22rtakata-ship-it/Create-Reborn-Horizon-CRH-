@@ -14,7 +14,7 @@ fn fixture(change: impl FnOnce(&mut BTreeMap<String, Vec<u8>>)) -> Vec<u8> {
             json!({"variants": {"": {"model": "create:block/shared"}}}),
         );
     }
-    for item in BLOCKS.into_iter().chain(SHEETS) {
+    for item in BLOCKS.iter().chain(ITEMS) {
         json_file(
             format!("assets/create/models/item/{item}.json"),
             json!({"parent": "create:block/shared"}),
@@ -40,6 +40,14 @@ fn fixture(change: impl FnOnce(&mut BTreeMap<String, Vec<u8>>)) -> Vec<u8> {
     json_file(
         "assets/create/lang/ru_ru.json".into(),
         json!({"block.create.shaft":"Фикстура"}),
+    );
+    json_file(
+        "assets/create/sounds.json".into(),
+        json!({"fixture":{"sounds":["create:fixture"]}}),
+    );
+    files.insert(
+        "assets/create/sounds/fixture.ogg".into(),
+        b"OggSsynthetic fixture".to_vec(),
     );
     files.insert(
         "assets/create/textures/block/test.png".into(),
@@ -185,6 +193,8 @@ fn imports_dependencies_metadata_and_notice_without_code_or_unused_assets() {
         "assets/create/models/block/shared.json",
         "assets/create/textures/block/test.png",
         "assets/create/textures/block/test.png.mcmeta",
+        "assets/create/sounds.json",
+        "assets/create/sounds/fixture.ogg",
         "CREATE-LICENSE.md",
         "pack.mcmeta",
     ] {
@@ -333,4 +343,21 @@ fn symlinked_input_is_not_followed() {
             .to_string()
             .contains("regular file")
     );
+}
+
+#[test]
+fn sound_bytes_are_preserved_and_invalid_ogg_is_rejected() {
+    let home = Stage::new(&std::env::temp_dir()).unwrap();
+    let imported = import_fixture(&home.0, &fixture(|_| {})).unwrap();
+    assert_eq!(
+        fs::read(imported.pack.join("assets/create/sounds/fixture.ogg")).unwrap(),
+        b"OggSsynthetic fixture"
+    );
+    let invalid = fixture(|files| {
+        files.insert(
+            "assets/create/sounds/fixture.ogg".into(),
+            b"invalid audio".to_vec(),
+        );
+    });
+    assert!(import_fixture(&home.0, &invalid).is_err());
 }

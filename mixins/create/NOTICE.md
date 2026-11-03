@@ -10,11 +10,22 @@ The following MIT code informed or was adapted into the Rust engine:
 - `content/kinetics/RotationPropagator.java`: supported coaxial and small/large cog connections.
 - `content/kinetics/press/PressingBehaviour.java`: 240-unit cycle, midpoint processing,
   clamped speed interpolation, integer truncation and the rendered head's motion curve.
-- Three basic pressing recipes: iron, gold and copper ingots to sheets. The starter
-  content narrows convention tags to vanilla ingredients.
+- `content/kinetics/press/BeltPressingCallbacks`, `MechanicalPressBlockEntity`,
+  `logistics/depot/DepotBehaviour`, `DepotItemHandler` and `SharedDepotBlockMethods`:
+  one-at-a-time default pressing, output buffering, automation and landed items.
+- `content/kinetics/simpleRelays/GearboxBlockEntity`, `ClutchBlockEntity`,
+  `GearshiftBlockEntity`, `crank/HandCrankBlock[Entity]`, `motor/CreativeMotorBlockEntity`,
+  `foundation/block/IWrenchable` and encasing behaviors: implemented transmission,
+  placement, wrench, hand crank and motor controls. Native UI drawing is our own.
+- `AllSoundEvents` and infrastructure configs: selected composite sound events,
+  default gains/pitches, stress and speed parameters.
+- Thirty MIT datapack recipes and their referenced tags, exported from
+  `src/generated/resources/data/` at the pinned revision. Ingredient syntax is
+  adapted to Horizon/Minecraft 26.3. Missing vanilla convention tags are our own
+  definitions. Recipes requiring unimplemented ores are excluded.
 
-Paths above are under `src/main/java/com/simibubi/create/`, except the recipes under
-`src/generated/resources/data/create/recipe/pressing/`. The MIT notice is in LICENSE.
+Paths above are under `src/main/java/com/simibubi/create/`, except the recipe/tag data under
+`src/generated/resources/data/`. The MIT notice is in LICENSE.
 This initial implementation is incomplete and does not claim full behavioral parity.
 
 Create's original `src/main/resources/assets/` has a separate All Rights Reserved

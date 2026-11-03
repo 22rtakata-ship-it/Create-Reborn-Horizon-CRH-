@@ -26,12 +26,76 @@ def model(name, boxes, texture="minecraft:block/iron_block"):
     })
 
 
+def foundation():
+    from catalog import BLOCKS as all_blocks, ITEMS, TRANSMISSIONS, STATIC_BLOCKS, rust_catalog
+    for block in TRANSMISSIONS + STATIC_BLOCKS:
+        declaration = {"template": "minecraft:glass", "item": True,
+                       "properties": {"hardness": 1.5, "sounds": "minecraft:andesite"}}
+        if block in TRANSMISSIONS and block != "hand_crank":
+            declaration["state_properties"] = {"axis": {"type": "enum", "values": ["x", "y", "z"]}}
+            declaration["default_state"] = {"axis": "y"}
+            if block in ["clutch", "gearshift"]:
+                declaration["state_properties"]["powered"] = {"type": "boolean"}
+                declaration["default_state"]["powered"] = "false"
+        if block == "hand_crank":
+            declaration["properties"]["sounds"] = "minecraft:stripped_spruce_wood"
+            declaration["properties"]["render_shape"] = "ENTITYBLOCK_ANIMATED"
+            declaration["state_properties"] = {"facing": {"type": "enum", "values": ["up", "down", "north", "south", "west", "east"]}, "waterlogged": {"type": "boolean"}}
+            declaration["default_state"] = {"facing": "up", "waterlogged": "false"}
+        write("data/create/horizon/block/" + block + ".json", declaration)
+        texture = "minecraft:block/stripped_spruce_log" if "casing" in block else "minecraft:block/iron_block"
+        model(block + "/block", [([0, 0, 0], [16, 16, 16])], texture)
+        write("assets/create/blockstates/" + block + ".json", {"variants": {"": {"model": "create:block/" + block + "/block"}}})
+        write("assets/create/models/item/" + block + ".json", {"parent": "create:block/" + block + "/block"})
+        write("assets/create/items/" + block + ".json", {"model": {"type": "minecraft:model", "model": "create:item/" + block}})
+        drop = "shaft" if "encased_shaft" in block else block
+        write("data/create/loot_table/blocks/" + block + ".json", {"type": "minecraft:block", "pools": [{"rolls": 1, "entries": [{"type": "minecraft:item", "name": "create:" + drop}]}]})
+    for item in ITEMS:
+        if item.endswith("_sheet"): continue
+        write("data/create/horizon/item/" + item + ".json", {"template": "minecraft:iron_ingot", "max_stack_size": 1 if item == "wrench" else 64})
+        write("assets/create/models/item/" + item + ".json", {"parent": "minecraft:item/generated", "textures": {"layer0": "minecraft:item/iron_ingot"}})
+        write("assets/create/items/" + item + ".json", {"model": {"type": "minecraft:model", "model": "create:item/" + item}})
+    model("hand_crank/handle", [([6, 5, 6], [10, 10, 16])], "minecraft:block/oak_planks")
+    # Only MIT recipe/tag data is distributed; original assets stay in the JAR.
+    reference = json.loads((ROOT / "tools/data/recipes.json").read_text())
+    def current(value):
+        if isinstance(value, dict):
+            if set(value) == {"item"}: return value["item"]
+            if set(value) == {"tag"}: return "#" + value["tag"]
+            return {k: current(v) for k,v in value.items()}
+        if isinstance(value, list): return [current(v) for v in value]
+        return value
+    for folder, retained in [(CONTENT / "data/create/recipe", reference["recipes"]), (CONTENT / "data/c/tags/item", reference["tags"])]:
+        for path in folder.rglob("*.json"):
+            if path.relative_to(CONTENT / "data").as_posix() not in retained: path.unlink()
+    for path, value in reference["recipes"].items(): write("data/" + path, current(value))
+    for path, value in reference["tags"].items(): write("data/" + path, value)
+    write("data/create/horizon/creative_tab/kinetics.json", {"title": "itemGroup.create.base", "icon": "create:cogwheel", "items": ["create:" + name for name in all_blocks + ITEMS]})
+    # These fallback labels are ours; the JAR replaces them with all upstream locales.
+    extra_blocks = {"gearbox":"Gearbox","clutch":"Clutch","gearshift":"Gearshift","hand_crank":"Hand Crank","andesite_encased_shaft":"Andesite Encased Shaft","brass_encased_shaft":"Brass Encased Shaft","andesite_casing":"Andesite Casing","brass_casing":"Brass Casing","andesite_alloy_block":"Block of Andesite Alloy","brass_block":"Block of Brass","zinc_block":"Block of Zinc"}
+    extra_items = {"andesite_alloy":"Andesite Alloy","brass_ingot":"Brass Ingot","brass_nugget":"Brass Nugget","zinc_ingot":"Zinc Ingot","zinc_nugget":"Zinc Nugget","wrench":"Wrench"}
+    for locale in ["en_us","ru_ru"]:
+        path=CONTENT / ("assets/create/lang/"+locale+".json")
+        lang=json.loads(path.read_text())
+        lang.update({"block.create."+k:v for k,v in extra_blocks.items()})
+        lang.update({"item.create."+k:v for k,v in extra_items.items()})
+        lang["create.kinetics.creative_motor.rotation_speed"]="Generated Speed in RPM"
+        path.write_text(json.dumps(lang,ensure_ascii=False,indent=2)+"\n")
+    (NATIVE / "assets/src/catalog.rs").write_text(rust_catalog())
+    # Provisional aliases derived from MIT AllSoundEvents registrations.
+    write("assets/create/sounds.json", {key: {"sounds": [{"type": "event", "name": event}]} for key,event in {
+        "depot_slide": "minecraft:block.sand.break", "depot_plop": "minecraft:entity.item_frame.add_item",
+        "mechanical_press_activation": "minecraft:block.anvil.land", "cranking": "minecraft:block.wood.place",
+        "wrench_rotate": "minecraft:block.wooden_trapdoor.close", "wrench_remove": "minecraft:entity.item.pickup",
+    }.items()})
+
+
 def main():
     CONTENT.mkdir(exist_ok=True)
     (CONTENT / "horizon-mod.toml").write_text('''id = "create"
 name = "Create for Horizon — prototype"
-version = "0.2.0"
-description = "First milestone: motor, shafts, cogs, mechanical press and depot."
+version = "0.3.0"
+description = "Experimental kinetic foundation: transmissions, pressing, depots, materials and crafting."
 authors = ["create-horizon contributors"]
 api = "0.2"
 side = "both"
@@ -39,7 +103,9 @@ capabilities = ["registries"]
 ''')
     for block in BLOCKS:
         declaration = {"template": "minecraft:glass", "item": True,
-                       "properties": {"hardness": 1.5, "render_shape": "ENTITYBLOCK_ANIMATED"}}
+                       "properties": {"hardness": 1.5, "render_shape": "ENTITYBLOCK_ANIMATED", "sounds": "minecraft:andesite"}}
+        if block in ["cogwheel", "large_cogwheel"]:
+            declaration["properties"]["sounds"] = "minecraft:stripped_spruce_wood"
         if block in ["shaft", "cogwheel", "large_cogwheel"]:
             declaration["state_properties"] = {"axis": {"type": "enum", "values": ["x", "y", "z"]}}
             declaration["state_properties"]["waterlogged"] = {"type": "boolean"}
@@ -105,6 +171,7 @@ capabilities = ["registries"]
         lang.update({"item.create." + sheet + "_sheet": name for sheet, name in zip(SHEETS,
                     ["Iron Sheet", "Golden Sheet", "Copper Sheet"] if language == "en_us" else ["Железная пластина", "Золотая пластина", "Медная пластина"])})
         write("assets/create/lang/" + language + ".json", lang)
+    foundation()
     # Source installs carry only the native bundle. Its documented data folder
     # therefore contains the complete public content, with no player-side Python.
     files = {path.relative_to(CONTENT).as_posix(): path.read_text()
@@ -113,7 +180,8 @@ capabilities = ["registries"]
     bundled = NATIVE / "data/content.json"
     bundled.parent.mkdir(parents=True, exist_ok=True)
     bundled.write_text(json.dumps(files, indent=2, ensure_ascii=False) + "\n")
-    print("Generated six blocks, three sheets, direct depot interaction, three pressing recipes and bundled content.")
+    from catalog import BLOCKS as all_blocks, ITEMS
+    print(f"Generated {len(all_blocks)} blocks, {len(ITEMS)} standalone items and bundled foundation content.")
 
 
 if __name__ == "__main__":

@@ -3,7 +3,8 @@
   "item": true,
   "properties": {
     "hardness": 1.5,
-    "render_shape": "ENTITYBLOCK_ANIMATED"
+    "render_shape": "ENTITYBLOCK_ANIMATED",
+    "sounds": "minecraft:andesite"
   },
   "state_properties": {
     "facing": {

@@ -1,7 +1,7 @@
 {
   "type": "create:pressing",
   "ingredients": [
-    "minecraft:iron_ingot"
+    "#c:ingots/iron"
   ],
   "results": [
     {

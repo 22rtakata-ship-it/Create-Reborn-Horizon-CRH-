@@ -3,6 +3,7 @@
 import json
 import re
 from common import ROOT, NATIVE, PINS
+from catalog import BLOCKS, ITEMS, rust_catalog
 
 
 def main():
@@ -19,7 +20,16 @@ def main():
                 and "target" not in p.relative_to(content).parts}
     actual = json.loads((NATIVE / "data/content.json").read_text())
     assert actual == expected, "Bundled public content is stale: run tools/content.py"
-    for path in NATIVE.rglob("*"):
+    reference=json.loads((ROOT / "tools/data/recipes.json").read_text())
+    assert reference["reference"] == PINS["create_revision"]
+    assert (NATIVE / "assets/src/catalog.rs").read_text() == rust_catalog(), "Importer catalog is stale"
+    declared_blocks={p.stem for p in (content / "data/create/horizon/block").glob("*.json")}
+    declared_items={p.stem for p in (content / "data/create/horizon/item").glob("*.json")}
+    assert declared_blocks == set(BLOCKS) and declared_items == set(ITEMS)
+    tab=json.loads((content / "data/create/horizon/creative_tab/kinetics.json").read_text())
+    assert tab["items"] == ["create:"+name for name in BLOCKS+ITEMS]
+    assert len(list((content / "data/create/recipe").rglob("*.json"))) == len(reference["recipes"])
+    for path in [*NATIVE.rglob("*"), *content.rglob("*")]:
         assert not path.is_symlink(), "Source bundles must not contain links: " + str(path)
         assert path.suffix.lower() not in {".jar", ".class", ".png", ".ogg"}, str(path)
     assert (NATIVE / "LICENSE").read_bytes() == (ROOT / "LICENSE").read_bytes()

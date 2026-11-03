@@ -1,7 +1,7 @@
 {
   "type": "create:pressing",
   "ingredients": [
-    "minecraft:copper_ingot"
+    "#c:ingots/copper"
   ],
   "results": [
     {

@@ -10,6 +10,7 @@ import tempfile
 import time
 from common import ROOT
 import interaction_checks
+import foundation_checks
 
 
 def main():
@@ -19,6 +20,7 @@ def main():
     parser.add_argument("--game", type=Path, help="Test this launcher-built client instead of target/fast/horizon-client")
     parser.add_argument("--offscreen", action="store_true", help="Also render and capture a frame")
     parser.add_argument("--create-jar", type=Path, help="Exercise the automatic import from this user-supplied Create 6.0.10 JAR")
+    parser.add_argument("--audio", action="store_true", help="Enable normal audio output during this test")
     args = parser.parse_args()
     original = args.resources.resolve()
     if not (original / "facts.json").is_file(): raise SystemExit("Not a prepared Horizon resource folder")
@@ -43,7 +45,8 @@ def main():
                         ("HORIZON_LAUNCHER_TRASH", "trash"), ("HORIZON_LAUNCHER_CLIPBOARD", "clipboard"),
                         ("HORIZON_LAUNCHER_DESKTOP", "desktop")]:
         env[key] = str(scratch / folder)
-    env.update({"HORIZON_NO_AUDIO": "1", "HORIZON_LAUNCHER_NO_SELF_UPDATE": "1"})
+    env.update({"HORIZON_NO_AUDIO": "1", "HORIZON_LAUNCHER_NO_SELF_UPDATE": "1", "CREATE_HORIZON_TRACE": "1"})
+    if args.audio: env.pop("HORIZON_NO_AUDIO",None)
     socket = scratch / "ctl.sock"
     transcript = []
 
@@ -66,7 +69,7 @@ def main():
                 for child in value.values(): yield from stacks(child)
             elif isinstance(value, list):
                 for child in value: yield from stacks(child)
-        if count not in list(stacks(data)):
+        if sum(stacks(data)) != count:
             raise AssertionError("Expected " + item + ": " + encoded)
         # The raw reply is kept for auditing the count and the container slot.
         print("Container:", encoded, flush=True)
@@ -116,7 +119,16 @@ def main():
             call("fill", -2, 64, -2, 7, 68, 7, "minecraft:air")
             call("fill", -2, 63, -2, 7, 63, 7, "minecraft:smooth_stone")
             interaction_checks.placement(call)
-            marked = interaction_checks.depot(call)
+            def rendered(pos, expected):
+                call("wait", 4)
+                rows = []
+                for line in log_path.read_text().splitlines():
+                    if "Create render depot: " in line:
+                        row = json.loads(line.split("Create render depot: ", 1)[1])
+                        if row["pos"] == list(pos): rows.append(row)
+                assert rows and rows[-1]["stack"] == expected, {"expected":expected,"last_client_frame":rows[-1:]}
+            marked = interaction_checks.depot(call, rendered if args.offscreen else None)
+            foundation = foundation_checks.run(call, args.offscreen, log_path, scratch)
             fixtures = [([0, 66, 0], "create:creative_motor[facing=east]"),
                         ([1, 66, 0], "create:shaft[axis=x]"),
                         ([2, 66, 0], "create:cogwheel[axis=x]"),
@@ -124,9 +136,40 @@ def main():
                         ([3, 66, 1], "create:mechanical_press[facing=east]"),
                         ([3, 64, 1], "create:depot")]
             for pos, block in fixtures: call("setblock", *pos, block)
+            # Interrupt after the first stroke: return both the remaining inputs
+            # and the buffer, then let the abandoned cycle finish without duplication.
+            call("command", "data merge block 0 66 0 {ScrollValue:16}")
+            input_stack("minecraft:iron_ingot", 8)
+            for _ in range(90):
+                sample = call("container", 3,64,1)["slots"]
+                if any(s and s["item"] == "create:iron_sheet" for s in sample): break
+                call("wait",2)
+            else: raise AssertionError("No first pressing stroke")
+            assert sample[0] == {"item":"minecraft:iron_ingot","count":7}, sample
+            call("command", "clear @s"); call("command", "tp @s 3.5 65 3.5")
+            call("interact",3,64,1,"up"); call("wait",10)
+            inv = call("inventory")["counts"]
+            assert inv.get("minecraft:iron_ingot") == 7 and inv.get("create:iron_sheet") == 1, inv
+            call("wait",150)
+            assert all(s is None for s in call("container",3,64,1)["slots"])
+            assert call("inventory")["counts"] == inv
+            if args.offscreen: rendered((3,64,1),None)
+            print("Mid-cycle pickup: seven inputs plus one result returned exactly once; no ghost output",flush=True)
+            call("command", "clear @s")
+            call("command", "data merge block 0 66 0 {ScrollValue:128}")
+            before_strokes = log_path.read_text().count("Create sound: create:mechanical_press_activation [3, 66, 1]")
             call("container", 3, 64, 1, "minecraft:iron_ingot", 8)
             call("wait", 150)
             expect_sheet("create:iron_sheet", 8)
+            strokes = log_path.read_text().count("Create sound: create:mechanical_press_activation [3, 66, 1]") - before_strokes
+            assert strokes == 8, {"expected_strokes":8,"actual_strokes":strokes}
+            call("command", "clear @s")
+            call("command", "tp @s 3.5 65 3.5")
+            call("interact", 3, 64, 1, "up"); call("wait", 10)
+            assert call("inventory")["counts"].get("create:iron_sheet") == 8
+            assert all(s is None for s in call("container", 3, 64, 1)["slots"])
+            if args.offscreen: rendered((3,64,1), None)
+            print("Processed stack: all eight sheets retrieved by one empty-hand click; client visual cleared", flush=True)
             call("command", "data get block 3 66 1")
             call("messages", 5)
             # Cut power and replace the input; a stopped network must not process it.
@@ -155,8 +198,9 @@ def main():
             call("wait", 150)
             expect_sheet("create:golden_sheet", 3)
             interaction_checks.reloaded_depot(call, marked)
-            result = {"passed": True, "scope": "12 placement cases, direct depot exchange/components/save, iron pressing, power interruption, copper after reconnection, gold cycle across save/reload",
-                      "scratch": str(scratch), "original_assets": bool(args.create_jar), "transcript": transcript}
+            foundation_checks.reloaded(call, foundation)
+            result = {"passed": True, "scope": "placement, depot exchange/client rendering/components/save, transmissions/redstone, hand crank, wrench/casings, 11 real crafts, hopper IO, dropped-item capture, loose-item pressing, motor settings, sequential depot pressing/result pickup, power interruption and reload",
+                      "scratch": str(scratch), "original_assets": bool(args.create_jar), "renderer_checks": args.offscreen, "audio_enabled":args.audio, "skipped": [] if args.offscreen else ["crafting menu", "motor screen", "render snapshots"], "transcript": transcript}
             if args.create_jar and "cache verified" not in log_path.read_text():
                 raise AssertionError("The second game start did not reuse the verified resource cache")
             (scratch / "result.json").write_text(json.dumps(result, indent=2) + "\n")

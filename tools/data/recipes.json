@@ -1,0 +1,611 @@
+{
+  "reference": "ac0c444d9828da3453ae8cc65338e8de063286fb",
+  "license": "MIT recipe data; original definitions of vanilla convention tags",
+  "recipes": {
+    "create/recipe/crafting/kinetics/clutch.json": {
+      "type": "minecraft:crafting_shapeless",
+      "category": "misc",
+      "ingredients": [
+        {
+          "item": "create:andesite_casing"
+        },
+        {
+          "item": "create:shaft"
+        },
+        {
+          "tag": "c:dusts/redstone"
+        }
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:clutch"
+      }
+    },
+    "create/recipe/crafting/kinetics/cogwheel.json": {
+      "type": "minecraft:crafting_shapeless",
+      "category": "misc",
+      "ingredients": [
+        {
+          "item": "create:shaft"
+        },
+        {
+          "tag": "minecraft:planks"
+        }
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:cogwheel"
+      }
+    },
+    "create/recipe/crafting/kinetics/depot.json": {
+      "type": "minecraft:crafting_shapeless",
+      "category": "misc",
+      "ingredients": [
+        {
+          "item": "create:andesite_alloy"
+        },
+        {
+          "item": "create:andesite_casing"
+        }
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:depot"
+      }
+    },
+    "create/recipe/crafting/kinetics/gearbox.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "B": {
+          "item": "create:andesite_casing"
+        },
+        "C": {
+          "item": "create:cogwheel"
+        }
+      },
+      "pattern": [
+        " C ",
+        "CBC",
+        " C "
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:gearbox"
+      }
+    },
+    "create/recipe/crafting/kinetics/gearshift.json": {
+      "type": "minecraft:crafting_shapeless",
+      "category": "misc",
+      "ingredients": [
+        {
+          "item": "create:andesite_casing"
+        },
+        {
+          "item": "create:cogwheel"
+        },
+        {
+          "tag": "c:dusts/redstone"
+        }
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:gearshift"
+      }
+    },
+    "create/recipe/crafting/kinetics/hand_crank.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "A": {
+          "item": "create:andesite_alloy"
+        },
+        "C": {
+          "tag": "minecraft:planks"
+        }
+      },
+      "pattern": [
+        "CCC",
+        "  A"
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:hand_crank"
+      }
+    },
+    "create/recipe/crafting/kinetics/large_cogwheel.json": {
+      "type": "minecraft:crafting_shapeless",
+      "category": "misc",
+      "ingredients": [
+        {
+          "item": "create:shaft"
+        },
+        {
+          "tag": "minecraft:planks"
+        },
+        {
+          "tag": "minecraft:planks"
+        }
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:large_cogwheel"
+      }
+    },
+    "create/recipe/crafting/kinetics/large_cogwheel_from_little.json": {
+      "type": "minecraft:crafting_shapeless",
+      "category": "misc",
+      "ingredients": [
+        {
+          "item": "create:cogwheel"
+        },
+        {
+          "tag": "minecraft:planks"
+        }
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:large_cogwheel"
+      }
+    },
+    "create/recipe/crafting/kinetics/mechanical_press.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "C": {
+          "item": "create:andesite_casing"
+        },
+        "I": {
+          "tag": "c:storage_blocks/iron"
+        },
+        "S": {
+          "item": "create:shaft"
+        }
+      },
+      "pattern": [
+        "S",
+        "C",
+        "I"
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:mechanical_press"
+      }
+    },
+    "create/recipe/crafting/kinetics/shaft.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "A": {
+          "item": "create:andesite_alloy"
+        }
+      },
+      "pattern": [
+        "A",
+        "A"
+      ],
+      "result": {
+        "count": 8,
+        "id": "create:shaft"
+      }
+    },
+    "create/recipe/crafting/kinetics/wrench.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "G": {
+          "tag": "c:plates/gold"
+        },
+        "P": {
+          "item": "create:cogwheel"
+        },
+        "S": {
+          "tag": "c:rods/wooden"
+        }
+      },
+      "pattern": [
+        "GG",
+        "GP",
+        " S"
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:wrench"
+      }
+    },
+    "create/recipe/crafting/materials/andesite_alloy.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "A": {
+          "item": "minecraft:andesite"
+        },
+        "B": {
+          "tag": "c:nuggets/iron"
+        }
+      },
+      "pattern": [
+        "BA",
+        "AB"
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:andesite_alloy"
+      }
+    },
+    "create/recipe/crafting/materials/andesite_alloy_block.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "C": {
+          "item": "create:andesite_alloy"
+        }
+      },
+      "pattern": [
+        "CCC",
+        "CCC",
+        "CCC"
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:andesite_alloy_block"
+      }
+    },
+    "create/recipe/crafting/materials/andesite_alloy_from_block.json": {
+      "type": "minecraft:crafting_shapeless",
+      "category": "misc",
+      "ingredients": [
+        {
+          "item": "create:andesite_alloy_block"
+        }
+      ],
+      "result": {
+        "count": 9,
+        "id": "create:andesite_alloy"
+      }
+    },
+    "create/recipe/crafting/materials/andesite_alloy_from_zinc.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "A": {
+          "item": "minecraft:andesite"
+        },
+        "B": {
+          "tag": "c:nuggets/zinc"
+        }
+      },
+      "pattern": [
+        "BA",
+        "AB"
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:andesite_alloy"
+      }
+    },
+    "create/recipe/crafting/materials/brass_block_from_compacting.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "#": {
+          "tag": "c:ingots/brass"
+        }
+      },
+      "pattern": [
+        "###",
+        "###",
+        "###"
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:brass_block"
+      }
+    },
+    "create/recipe/crafting/materials/brass_ingot_from_compacting.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "#": {
+          "tag": "c:nuggets/brass"
+        }
+      },
+      "pattern": [
+        "###",
+        "###",
+        "###"
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:brass_ingot"
+      }
+    },
+    "create/recipe/crafting/materials/brass_ingot_from_decompacting.json": {
+      "type": "minecraft:crafting_shapeless",
+      "category": "misc",
+      "ingredients": [
+        {
+          "tag": "c:storage_blocks/brass"
+        }
+      ],
+      "result": {
+        "count": 9,
+        "id": "create:brass_ingot"
+      }
+    },
+    "create/recipe/crafting/materials/brass_nugget_from_decompacting.json": {
+      "type": "minecraft:crafting_shapeless",
+      "category": "misc",
+      "ingredients": [
+        {
+          "tag": "c:ingots/brass"
+        }
+      ],
+      "result": {
+        "count": 9,
+        "id": "create:brass_nugget"
+      }
+    },
+    "create/recipe/crafting/materials/zinc_block_from_compacting.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "#": {
+          "tag": "c:ingots/zinc"
+        }
+      },
+      "pattern": [
+        "###",
+        "###",
+        "###"
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:zinc_block"
+      }
+    },
+    "create/recipe/crafting/materials/zinc_ingot_from_compacting.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "#": {
+          "tag": "c:nuggets/zinc"
+        }
+      },
+      "pattern": [
+        "###",
+        "###",
+        "###"
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:zinc_ingot"
+      }
+    },
+    "create/recipe/crafting/materials/zinc_ingot_from_decompacting.json": {
+      "type": "minecraft:crafting_shapeless",
+      "category": "misc",
+      "ingredients": [
+        {
+          "tag": "c:storage_blocks/zinc"
+        }
+      ],
+      "result": {
+        "count": 9,
+        "id": "create:zinc_ingot"
+      }
+    },
+    "create/recipe/crafting/materials/zinc_nugget_from_decompacting.json": {
+      "type": "minecraft:crafting_shapeless",
+      "category": "misc",
+      "ingredients": [
+        {
+          "tag": "c:ingots/zinc"
+        }
+      ],
+      "result": {
+        "count": 9,
+        "id": "create:zinc_nugget"
+      }
+    },
+    "create/recipe/item_application/andesite_casing_from_log.json": {
+      "type": "create:item_application",
+      "ingredients": [
+        {
+          "tag": "c:stripped_logs"
+        },
+        {
+          "item": "create:andesite_alloy"
+        }
+      ],
+      "results": [
+        {
+          "id": "create:andesite_casing"
+        }
+      ]
+    },
+    "create/recipe/item_application/andesite_casing_from_wood.json": {
+      "type": "create:item_application",
+      "ingredients": [
+        {
+          "tag": "c:stripped_woods"
+        },
+        {
+          "item": "create:andesite_alloy"
+        }
+      ],
+      "results": [
+        {
+          "id": "create:andesite_casing"
+        }
+      ]
+    },
+    "create/recipe/item_application/brass_casing_from_log.json": {
+      "type": "create:item_application",
+      "ingredients": [
+        {
+          "tag": "c:stripped_logs"
+        },
+        {
+          "tag": "c:ingots/brass"
+        }
+      ],
+      "results": [
+        {
+          "id": "create:brass_casing"
+        }
+      ]
+    },
+    "create/recipe/item_application/brass_casing_from_wood.json": {
+      "type": "create:item_application",
+      "ingredients": [
+        {
+          "tag": "c:stripped_woods"
+        },
+        {
+          "tag": "c:ingots/brass"
+        }
+      ],
+      "results": [
+        {
+          "id": "create:brass_casing"
+        }
+      ]
+    },
+    "create/recipe/pressing/copper_ingot.json": {
+      "type": "create:pressing",
+      "ingredients": [
+        {
+          "tag": "c:ingots/copper"
+        }
+      ],
+      "results": [
+        {
+          "id": "create:copper_sheet"
+        }
+      ]
+    },
+    "create/recipe/pressing/gold_ingot.json": {
+      "type": "create:pressing",
+      "ingredients": [
+        {
+          "tag": "c:ingots/gold"
+        }
+      ],
+      "results": [
+        {
+          "id": "create:golden_sheet"
+        }
+      ]
+    },
+    "create/recipe/pressing/iron_ingot.json": {
+      "type": "create:pressing",
+      "ingredients": [
+        {
+          "tag": "c:ingots/iron"
+        }
+      ],
+      "results": [
+        {
+          "id": "create:iron_sheet"
+        }
+      ]
+    }
+  },
+  "tags": {
+    "c/tags/item/ingots/iron.json": {
+      "values": [
+        "minecraft:iron_ingot"
+      ]
+    },
+    "c/tags/item/ingots/gold.json": {
+      "values": [
+        "minecraft:gold_ingot"
+      ]
+    },
+    "c/tags/item/ingots/copper.json": {
+      "values": [
+        "minecraft:copper_ingot"
+      ]
+    },
+    "c/tags/item/ingots/brass.json": {
+      "values": [
+        "create:brass_ingot"
+      ]
+    },
+    "c/tags/item/stripped_woods.json": {
+      "values": [
+        "minecraft:stripped_oak_wood",
+        "minecraft:stripped_spruce_wood",
+        "minecraft:stripped_birch_wood",
+        "minecraft:stripped_jungle_wood",
+        "minecraft:stripped_acacia_wood",
+        "minecraft:stripped_dark_oak_wood",
+        "minecraft:stripped_mangrove_wood",
+        "minecraft:stripped_cherry_wood"
+      ]
+    },
+    "c/tags/item/stripped_logs.json": {
+      "values": [
+        "minecraft:stripped_oak_log",
+        "minecraft:stripped_spruce_log",
+        "minecraft:stripped_birch_log",
+        "minecraft:stripped_jungle_log",
+        "minecraft:stripped_acacia_log",
+        "minecraft:stripped_dark_oak_log",
+        "minecraft:stripped_mangrove_log",
+        "minecraft:stripped_cherry_log"
+      ]
+    },
+    "c/tags/item/ingots/zinc.json": {
+      "values": [
+        "create:zinc_ingot"
+      ]
+    },
+    "c/tags/item/storage_blocks/zinc.json": {
+      "values": [
+        "create:zinc_block"
+      ]
+    },
+    "c/tags/item/nuggets/zinc.json": {
+      "values": [
+        "create:zinc_nugget"
+      ]
+    },
+    "c/tags/item/storage_blocks/brass.json": {
+      "values": [
+        "create:brass_block"
+      ]
+    },
+    "c/tags/item/nuggets/brass.json": {
+      "values": [
+        "create:brass_nugget"
+      ]
+    },
+    "c/tags/item/nuggets/iron.json": {
+      "values": [
+        "minecraft:iron_nugget"
+      ]
+    },
+    "c/tags/item/rods/wooden.json": {
+      "values": [
+        "minecraft:stick"
+      ]
+    },
+    "c/tags/item/plates/gold.json": {
+      "values": [
+        "create:golden_sheet"
+      ]
+    },
+    "c/tags/item/storage_blocks/iron.json": {
+      "values": [
+        "minecraft:iron_block"
+      ]
+    },
+    "c/tags/item/dusts/redstone.json": {
+      "values": [
+        "minecraft:redstone"
+      ]
+    }
+  }
+}

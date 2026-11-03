@@ -1,6 +1,6 @@
 [mod]
 id = "create"
-version = "0.2.0"
+version = "0.3.0"
 
 [compatibility]
 horizon_revision = "fc02103818c212920fd24aa34a2b2f91ba49e56f"
@@ -176,3 +176,161 @@ bindings = [
   { name = "game", ty = "&crate::game::Game<'_>", value = "&*self" },
   { name = "hit", ty = "&crate::game::Hit", value = "hit" },
 ]
+
+[[module]]
+id = "inventory"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_inventory"
+source = "inventory.rs"
+
+[[module]]
+id = "kinetic_runtime"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_kinetic_runtime"
+source = "kinetic_runtime.rs"
+
+[[module]]
+id = "sounds"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_sounds"
+source = "sounds.rs"
+
+[[module]]
+id = "interactions"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_interactions"
+source = "interactions.rs"
+
+[[module]]
+id = "motor-control"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_motor_control"
+source = "motor_control.rs"
+
+[[injection]]
+id = "motor-open"
+hook = "interaction_key"
+hook_version = 1
+kind = "HEAD"
+helper = "motor_open.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "button", ty = "i32", value = "button" },
+  { name = "hand", ty = "horizon_client::first_person::Hand", value = "hand" },
+  { name = "swing", ty = "&mut bool", value = "&mut *swing_hand" },
+  { name = "canceled", ty = "&mut bool", value = "&mut *canceled" },
+]
+
+[[injection]]
+id = "motor-wheel"
+hook = "wheel"
+hook_version = 1
+kind = "HEAD"
+helper = "motor_wheel.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "steps", ty = "f32", value = "steps" },
+  { name = "claimed", ty = "&mut bool", value = "&mut *claimed" },
+]
+
+[[injection]]
+id = "motor-frame"
+hook = "frame"
+hook_version = 1
+kind = "HEAD"
+helper = "motor_frame.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+]
+
+[[injection]]
+id = "motor-packet"
+hook = "net_from_client"
+hook_version = 1
+kind = "HEAD"
+helper = "motor_packet.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "player", ty = "u128", value = "player" },
+  { name = "channel", ty = "&str", value = "channel" },
+  { name = "data", ty = "&[u8]", value = "data" },
+]
+
+[[injection]]
+id = "motor-level"
+hook = "level_tick_pre"
+hook_version = 1
+kind = "HEAD"
+helper = "motor_level.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+]
+
+[[injection]]
+id = "motor-draw"
+hook = "screen_render_post"
+hook_version = 1
+kind = "HEAD"
+helper = "motor_draw.rs"
+bindings = [
+  { name = "game", ty = "&crate::game::Game<'_>", value = "&*self" },
+  { name = "batch", ty = "&mut horizon_client::hud::HudBatch", value = "&mut *batch" },
+  { name = "screen", ty = "&crate::mod_api::NativeScreenView<'_>", value = "screen" },
+]
+
+[[injection]]
+id = "motor-click"
+hook = "screen_mouse_button_pressed_pre"
+hook_version = 1
+kind = "HEAD"
+helper = "motor_click.rs"
+bindings = [
+  { name = "game", ty = "&crate::game::Game<'_>", value = "&*self" },
+  { name = "screen", ty = "&crate::mod_api::NativeScreenView<'_>", value = "screen" },
+  { name = "button", ty = "i32", value = "button" },
+  { name = "canceled", ty = "&mut bool", value = "&mut *canceled" },
+]
+
+[[injection]]
+id = "motor-drag"
+hook = "screen_mouse_dragged_pre"
+hook_version = 1
+kind = "HEAD"
+helper = "motor_drag.rs"
+bindings = [
+  { name = "game", ty = "&crate::game::Game<'_>", value = "&*self" },
+  { name = "screen", ty = "&crate::mod_api::NativeScreenView<'_>", value = "screen" },
+  { name = "button", ty = "i32", value = "button" },
+  { name = "canceled", ty = "&mut bool", value = "&mut *canceled" },
+]
+
+[[injection]]
+id = "motor-hud"
+hook = "hud"
+hook_version = 1
+kind = "HEAD"
+helper = "motor_hud.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "batch", ty = "&mut horizon_client::hud::HudBatch", value = "&mut *batch" },
+]
+
+# The named container declaration has no dynamic insertion predicate at API 359.
+# Preserve DepotItemHandler's no-merging rule at the inventory query boundary.
+[[injection]]
+id = "depot-automation-insert"
+target = "horizon_client::game::machines::Containers<'_>::can_place"
+kind = "HEAD"
+cancellable = true
+helper = "depot_automation.rs"
+bindings = [
+  { name = "containers", ty = "&crate::game::machines::Containers<'_>", value = "&*self" },
+  { name = "view", ty = "&crate::game::machines::View", value = "view" },
+  { name = "slot", ty = "usize", value = "slot" },
+]
+
+[[module]]
+id = "world-items"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_world_items"
+source = "world_items.rs"

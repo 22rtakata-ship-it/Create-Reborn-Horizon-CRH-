@@ -14,31 +14,13 @@ use zip::ZipArchive;
 pub const INPUT_DIR: &str = "horizon-mods/create-resources";
 pub const CREATE_VERSION: &str = "6.0.10+mc1.21.1 (NeoForge)";
 pub const JAR_SHA256: &str = "ef87fe5709f1ba1f5b8bb20a2925b5afb4669e178fd6d8bf10c167759eefe37a";
-const SCHEMA: u32 = 2;
+const SCHEMA: u32 = 3;
 const MAX_JAR: u64 = 128 << 20;
 const MAX_FILE: u64 = 16 << 20;
 const MAX_TOTAL: usize = 64 << 20;
 const MAX_ENTRIES: usize = 65_536;
-const BLOCKS: [&str; 6] = [
-    "creative_motor",
-    "shaft",
-    "cogwheel",
-    "large_cogwheel",
-    "mechanical_press",
-    "depot",
-];
-const SHEETS: [&str; 3] = ["iron_sheet", "golden_sheet", "copper_sheet"];
-const PARTS: [&str; 9] = [
-    "shaft",
-    "shaft_half",
-    "cogwheel",
-    "large_cogwheel",
-    "creative_motor/block",
-    "creative_motor/block_vertical",
-    "mechanical_press/block",
-    "mechanical_press/head",
-    "depot/block",
-];
+mod catalog;
+pub use catalog::{BLOCKS, ITEMS, PARTS};
 
 #[derive(Debug)]
 pub struct Imported {
@@ -57,7 +39,8 @@ pub fn bundled_content(game_dir: &Path, bytes: &[u8]) -> io::Result<PathBuf> {
             !safe_path(name)
                 || !(name == "horizon-mod.toml"
                     || name.starts_with("assets/create/")
-                    || name.starts_with("data/create/"))
+                    || name.starts_with("data/create/")
+                    || name.starts_with("data/c/tags/item/"))
                 || value.len() > MAX_FILE as usize
         })
     {
@@ -464,7 +447,7 @@ fn collect(bytes: Vec<u8>) -> io::Result<BTreeMap<String, Vec<u8>>> {
         let state = reader.json(&format!("assets/create/blockstates/{block}.json"))?;
         reader.blockstate_models(&state)?;
     }
-    for item in BLOCKS.into_iter().chain(SHEETS) {
+    for item in BLOCKS.iter().chain(ITEMS) {
         reader.model(&format!("create:item/{item}"))?;
     }
     for part in PARTS {
@@ -481,6 +464,21 @@ fn collect(bytes: Vec<u8>) -> io::Result<BTreeMap<String, Vec<u8>>> {
         .collect();
     for locale in locales {
         reader.json(&locale)?;
+    }
+    reader.json("assets/create/sounds.json")?;
+    let sounds: Vec<String> = reader
+        .zip
+        .file_names()
+        .filter_map(Result::ok)
+        .filter(|name| name.starts_with("assets/create/sounds/") && name.ends_with(".ogg"))
+        .map(|name| name.into_owned())
+        .collect();
+    for sound in sounds {
+        let bytes = reader.read(&sound)?;
+        if !bytes.starts_with(b"OggS") {
+            return Err(invalid(format!("Not Ogg audio: {sound}")));
+        }
+        reader.files.insert(sound, bytes);
     }
     let license = reader.read("LICENSE.md_create-1.21.1")?;
     reader.files.insert("CREATE-LICENSE.md".into(), license);

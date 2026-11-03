@@ -1,10 +1,10 @@
 [package]
 name = "create-horizon-core"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 license = "MIT"
 publish = false
-description = "First Create port milestone: kinetic networks and mechanical pressing"
+description = "Experimental Create foundation: kinetics, pressing and item interactions"
 
 [lib]
 path = "mixins/create/engine/src/lib.rs"

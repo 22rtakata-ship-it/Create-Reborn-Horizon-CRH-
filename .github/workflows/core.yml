@@ -39,9 +39,13 @@ jobs:
           ln -s "$(dirname "$(rustup which --toolchain 1.99.1 cargo)")" .tools/rust/bin
           python3 tools/oracle.py
           python3 tools/placement_oracle.py
+          python3 tools/rotation_oracle.py
+          python3 tools/processing_oracle.py
       - uses: actions/upload-artifact@v4
         with:
           name: java-parity-results
           path: |
             .local/network-oracle/result.json
             .local/placement-oracle/result.json
+            .local/rotation-oracle/result.json
+            .local/processing-oracle/result.json

@@ -29,6 +29,15 @@ impl Direction {
             _ => Axis::X,
         }
     }
+    pub fn clockwise(self, axis: Axis) -> Self {
+        let [x, y, z] = self.vector();
+        Self::from_vector(match axis {
+            Axis::X => [x, z, -y],
+            Axis::Y => [-z, y, x],
+            Axis::Z => [y, -x, z],
+        })
+        .unwrap()
+    }
     pub fn opposite(self) -> Self {
         match self {
             Self::Down => Self::Up,
@@ -107,6 +116,15 @@ pub fn motor(look: Direction, sneaking: bool, ports: [bool; 6]) -> Direction {
         return direction;
     }
     if sneaking { look } else { look.opposite() }
+}
+
+/// HandCrankBlock.getStateForPlacement: mount against the clicked support;
+/// prefer the neighbor shaft's direction unless secondary use overrides it.
+pub fn crank(face: Direction, shift: bool, ports: [bool; 6]) -> Direction {
+    if !shift && let Some(preferred) = preferred(ports) {
+        return preferred.opposite();
+    }
+    face
 }
 
 #[cfg(test)]

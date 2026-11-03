@@ -1,21 +1,17 @@
 // Copyright (c) The Create Team / The Creators of Create
 // Copyright (c) 2026 create-horizon contributors
 // SPDX-License-Identifier: MIT
-// Rust implementation of the first supported RotationPropagator connection rules
-// and KineticNetwork's capacity/stress accounting. See THIRD_PARTY_NOTICES.md.
+// RotationPropagator connection equations and KineticNetwork stress accounting.
 use std::collections::{BTreeMap, VecDeque};
-
 pub type Pos = [i32; 3];
-pub const MAX_NODES: usize = 256;
+pub const MAX_NODES: usize = 4096;
 pub const MAX_RPM: f32 = 256.0;
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Axis {
     X,
     Y,
     Z,
 }
-
 impl Axis {
     pub fn index(self) -> usize {
         match self {
@@ -25,7 +21,6 @@ impl Axis {
         }
     }
 }
-
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Kind {
     Motor {
@@ -38,47 +33,80 @@ pub enum Kind {
         large: bool,
     },
     Press,
+    Gearbox,
+    Clutch {
+        powered: bool,
+    },
+    Gearshift {
+        powered: bool,
+    },
 }
-
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Node {
     pub pos: Pos,
     pub axis: Axis,
     pub kind: Kind,
 }
-
 impl Node {
     pub fn shaft_port(self, delta: Pos) -> bool {
+        if delta.iter().map(|v| v.abs()).sum::<i32>() != 1 {
+            return false;
+        }
         match self.kind {
             Kind::Motor { facing, .. } => delta == facing,
+            Kind::Gearbox => delta[self.axis.index()] == 0,
             _ => delta[self.axis.index()].abs() == 1,
         }
     }
-
-    fn impact(self) -> f32 {
-        // Default Create stress impact for a mechanical press; shafts/cogs are free.
-        if matches!(self.kind, Kind::Press) {
-            8.0
-        } else {
-            0.0
+    /// Rotation at this face / local reference rotation. A gearbox's reference
+    /// is its first positive shaft axis. This is a basis, not its NBT Speed.
+    pub fn port_modifier(self, delta: Pos) -> f32 {
+        let Some(axis) = delta.iter().position(|v| *v != 0) else {
+            return 1.0;
+        };
+        match self.kind {
+            Kind::Gearbox => {
+                let reference = (0..3).find(|i| *i != self.axis.index()).unwrap();
+                delta[axis] as f32 * if axis == reference { 1.0 } else { -1.0 }
+            }
+            Kind::Gearshift { powered: true } if delta[axis] < 0 => -1.0,
+            _ => 1.0,
         }
     }
+    fn half(self, delta: Pos) -> u8 {
+        if matches!(self.kind, Kind::Clutch { powered: true }) {
+            u8::from(delta[self.axis.index()] < 0)
+        } else {
+            0
+        }
+    }
+    fn impact(self) -> f32 {
+        if self.kind == Kind::Press { 8.0 } else { 0.0 }
+    }
 }
-
-/// Target RPM / source RPM, for supported neighboring connections.
-/// Perpendicular large-cog connections, belts, gearboxes and encased drives are pending.
+/// Target reference RPM / source reference RPM. A powered clutch's two
+/// independent shaft halves are separated by the graph, not by deleting ports.
 pub fn ratio(from: Node, to: Node) -> Option<f32> {
-    let delta = std::array::from_fn(|i| to.pos[i] - from.pos[i]);
+    let delta: Pos = std::array::from_fn(|i| to.pos[i] - from.pos[i]);
     let distance: i32 = delta.iter().map(|n| n.abs()).sum();
-    if from.axis != to.axis {
-        return None;
+    if distance == 1 && from.shaft_port(delta) && to.shaft_port(delta.map(|v| -v)) {
+        return Some(from.port_modifier(delta) / to.port_modifier(delta.map(|v| -v)));
     }
-    let axis = from.axis.index();
-    if distance == 1 && delta[axis] != 0 {
-        let opposite = delta.map(|n| -n);
-        return (from.shaft_port(delta) && to.shaft_port(opposite)).then_some(1.0);
+    if from.kind == (Kind::Cog { large: true })
+        && to.kind == (Kind::Cog { large: true })
+        && from.axis != to.axis
+    {
+        let a = from.axis.index();
+        let b = to.axis.index();
+        if distance == 2 && delta[a].abs() == 1 && delta[b].abs() == 1 {
+            return Some(if (delta[a] > 0) ^ (delta[b] > 0) {
+                -1.0
+            } else {
+                1.0
+            });
+        }
     }
-    if delta[axis] != 0 {
+    if from.axis != to.axis || delta[from.axis.index()] != 0 {
         return None;
     }
     match (from.kind, to.kind) {
@@ -91,7 +119,6 @@ pub fn ratio(from: Node, to: Node) -> Option<f32> {
         _ => None,
     }
 }
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Status {
     Idle,
@@ -102,15 +129,15 @@ pub enum Status {
     TooFast,
     TooLarge,
 }
-
 #[derive(Clone, Debug)]
 pub struct Network {
     pub status: Status,
     pub capacity: f32,
     pub stress: f32,
     pub theoretical: BTreeMap<Pos, f32>,
+    pub ports: BTreeMap<(Pos, Pos), f32>,
+    pub vertices: Vec<(Pos, u8)>,
 }
-
 impl Network {
     pub fn speed(&self, pos: Pos) -> f32 {
         if self.status == Status::Running {
@@ -119,36 +146,47 @@ impl Network {
             0.0
         }
     }
+    pub fn port_speed(&self, pos: Pos, direction: Pos) -> f32 {
+        if self.status == Status::Running {
+            self.ports.get(&(pos, direction)).copied().unwrap_or(0.0)
+        } else {
+            0.0
+        }
+    }
 }
-
 fn close(a: f32, b: f32) -> bool {
     (a - b).abs() <= 0.0001 * a.abs().max(b.abs()).max(1.0)
 }
-
-/// Discovers only loaded nodes supplied by `read`; never loads world chunks.
-/// Ratios are relative to the starting node. Stopping the whole component on a
-/// conflict is a conservative prototype policy, not Create's block-breaking rule.
-pub fn solve(start: Node, mut read: impl FnMut(Pos) -> Option<Node>) -> Network {
-    let mut nodes = BTreeMap::from([(start.pos, start)]);
-    let mut factors = BTreeMap::from([(start.pos, 1.0_f32)]);
-    let mut queue = VecDeque::from([start]);
+pub fn solve(start: Node, read: impl FnMut(Pos) -> Option<Node>) -> Network {
+    solve_half(start, 0, read)
+}
+/// Every powered clutch has two vertices. Its shafts remain connected to their
+/// own neighbors but cannot transmit across the open clutch. No chunks are loaded.
+pub fn solve_half(start: Node, half: u8, mut read: impl FnMut(Pos) -> Option<Node>) -> Network {
+    let first = (start.pos, half);
+    let mut nodes = BTreeMap::from([(first, start)]);
+    let mut factors = BTreeMap::from([(first, 1.0_f32)]);
+    let mut queue = VecDeque::from([(first, start)]);
     let mut failure = None;
-    while let Some(from) = queue.pop_front() {
+    while let Some((key, from)) = queue.pop_front() {
         for x in -1..=1 {
             for y in -1..=1 {
                 for z in -1..=1 {
                     let offset: Pos = [x, y, z];
                     let distance: i32 = offset.iter().map(|n| n.abs()).sum();
-                    if !(1..=2).contains(&distance) {
+                    if !(1..=2).contains(&distance) || from.half(offset) != key.1 {
                         continue;
                     }
                     let pos = std::array::from_fn(|i| from.pos[i] + offset[i]);
-                    let Some(to) = read(pos) else { continue };
+                    let Some(to) = read(pos) else {
+                        continue;
+                    };
                     let Some(ratio) = ratio(from, to) else {
                         continue;
                     };
-                    let factor = factors[&from.pos] * ratio;
-                    if let Some(old) = factors.get(&pos) {
+                    let target = (pos, to.half(offset.map(|v| -v)));
+                    let factor = factors[&key] * ratio;
+                    if let Some(old) = factors.get(&target) {
                         if !close(*old, factor) {
                             failure = Some(Status::InconsistentCycle);
                         }
@@ -158,9 +196,9 @@ pub fn solve(start: Node, mut read: impl FnMut(Pos) -> Option<Node>) -> Network 
                             queue.clear();
                             break;
                         }
-                        nodes.insert(pos, to);
-                        factors.insert(pos, factor);
-                        queue.push_back(to);
+                        nodes.insert(target, to);
+                        factors.insert(target, factor);
+                        queue.push_back((target, to));
                     }
                 }
             }
@@ -168,7 +206,7 @@ pub fn solve(start: Node, mut read: impl FnMut(Pos) -> Option<Node>) -> Network 
     }
     let mut base = None;
     let mut capacity = 0.0;
-    for node in nodes.values() {
+    for (key, node) in &nodes {
         if let Kind::Motor {
             rpm,
             capacity: per_rpm,
@@ -179,31 +217,30 @@ pub fn solve(start: Node, mut read: impl FnMut(Pos) -> Option<Node>) -> Network 
                 failure = Some(Status::ConflictingSources);
                 continue;
             }
-            // A stopped source supplies no rotation and does not oppose another motor.
             if rpm == 0.0 {
                 continue;
             }
-            let proposed = rpm / factors[&node.pos];
-            if base.is_some_and(|old| !close(old, proposed)) {
+            let proposed = rpm / factors[key];
+            if base.is_some_and(|old: f32| old.signum() != proposed.signum()) {
                 failure = Some(Status::ConflictingSources);
             }
-            base = Some(proposed);
+            // RotationPropagator propagates the faster compatible source back
+            // through the slower drive. Merely differing RPM is not a conflict.
+            if base.is_none_or(|old| proposed.abs() > old.abs()) {
+                base = Some(proposed);
+            }
             capacity += per_rpm * rpm.abs();
         }
     }
     let base = base.unwrap_or(0.0);
-    let theoretical: BTreeMap<_, _> = factors
-        .iter()
-        .map(|(p, factor)| (*p, base * factor))
-        .collect();
     let stress = nodes
-        .values()
-        .map(|n| n.impact() * theoretical[&n.pos].abs())
+        .iter()
+        .map(|(key, n)| n.impact() * (base * factors[key]).abs())
         .sum();
     let status = failure.unwrap_or_else(|| {
-        if theoretical
+        if factors
             .values()
-            .any(|rpm| !rpm.is_finite() || rpm.abs() > MAX_RPM)
+            .any(|factor| !(base * factor).is_finite() || (base * factor).abs() > MAX_RPM)
         {
             Status::TooFast
         } else if base == 0.0 {
@@ -214,11 +251,32 @@ pub fn solve(start: Node, mut read: impl FnMut(Pos) -> Option<Node>) -> Network 
             Status::Running
         }
     });
+    let mut theoretical = BTreeMap::new();
+    let mut ports = BTreeMap::new();
+    let vertices = nodes.keys().copied().collect();
+    for (key, n) in nodes {
+        let speed = base * factors[&key];
+        theoretical.entry(n.pos).or_insert(speed);
+        for d in [
+            [-1, 0, 0],
+            [1, 0, 0],
+            [0, -1, 0],
+            [0, 1, 0],
+            [0, 0, -1],
+            [0, 0, 1],
+        ] {
+            if n.shaft_port(d) && n.half(d) == key.1 {
+                ports.insert((n.pos, d), speed * n.port_modifier(d));
+            }
+        }
+    }
     Network {
         status,
         capacity,
         stress,
         theoretical,
+        ports,
+        vertices,
     }
 }
 
@@ -245,6 +303,96 @@ mod tests {
     }
     fn network(nodes: &[Node]) -> Network {
         solve(nodes[0], |p| nodes.iter().copied().find(|n| n.pos == p))
+    }
+
+    #[test]
+    fn gearbox_routes_four_ports_with_original_direction_signs() {
+        let nodes = [
+            motor([0, 0, 0], 16.0, 16384.0),
+            node([1, 0, 0], Kind::Gearbox),
+            node([2, 0, 0], Kind::Shaft),
+            Node {
+                pos: [1, 0, 1],
+                axis: Axis::Z,
+                kind: Kind::Shaft,
+            },
+        ];
+        let mut nodes = nodes;
+        nodes[1].axis = Axis::Y;
+        let n = network(&nodes);
+        assert_eq!(n.speed([2, 0, 0]), -16.0);
+        assert_eq!(n.speed([1, 0, 1]), 16.0);
+        assert_eq!(n.port_speed([1, 0, 0], [-1, 0, 0]), 16.0);
+    }
+    #[test]
+    fn open_clutch_keeps_input_half_rotating_and_isolates_two_independent_sources() {
+        let nodes = [
+            motor([0, 0, 0], 16.0, 16384.0),
+            node([1, 0, 0], Kind::Clutch { powered: true }),
+            node([2, 0, 0], Kind::Shaft),
+            Node {
+                pos: [3, 0, 0],
+                axis: Axis::X,
+                kind: Kind::Motor {
+                    facing: [-1, 0, 0],
+                    rpm: 64.0,
+                    capacity: 16384.0,
+                },
+            },
+        ];
+        let left = network(&nodes);
+        assert_eq!(left.status, Status::Running);
+        assert_eq!(left.port_speed([1, 0, 0], [-1, 0, 0]), 16.0);
+        assert!(!left.theoretical.contains_key(&[2, 0, 0]));
+        let right = solve_half(nodes[1], 0, |p| nodes.iter().copied().find(|n| n.pos == p));
+        assert_eq!(right.speed([2, 0, 0]), 64.0);
+        assert_eq!(right.port_speed([1, 0, 0], [1, 0, 0]), 64.0);
+    }
+    #[test]
+    fn clutch_engages_and_gearshift_reverses_only_when_powered() {
+        for (kind, expected) in [
+            (Kind::Clutch { powered: false }, 16.0),
+            (Kind::Gearshift { powered: false }, 16.0),
+            (Kind::Gearshift { powered: true }, -16.0),
+        ] {
+            let n = network(&[
+                motor([0, 0, 0], 16.0, 16384.0),
+                node([1, 0, 0], kind),
+                node([2, 0, 0], Kind::Shaft),
+            ]);
+            assert_eq!(n.speed([2, 0, 0]), expected);
+        }
+    }
+    #[test]
+    fn perpendicular_large_gears_preserve_each_quadrants_sign() {
+        for a in [Axis::X, Axis::Y, Axis::Z] {
+            for b in [Axis::X, Axis::Y, Axis::Z] {
+                if a == b {
+                    continue;
+                }
+                for da in [-1, 1] {
+                    for db in [-1, 1] {
+                        let from = Node {
+                            pos: [0; 3],
+                            axis: a,
+                            kind: Kind::Cog { large: true },
+                        };
+                        let mut to = Node {
+                            pos: [0; 3],
+                            axis: b,
+                            kind: Kind::Cog { large: true },
+                        };
+                        to.pos[a.index()] = da;
+                        to.pos[b.index()] = db;
+                        assert_eq!(
+                            ratio(from, to),
+                            Some(if (da > 0) ^ (db > 0) { -1.0 } else { 1.0 })
+                        );
+                        assert_eq!(ratio(to, from), ratio(from, to));
+                    }
+                }
+            }
+        }
     }
 
     #[test]
@@ -310,7 +458,7 @@ mod tests {
         let mut second = motor([2, 0, 0], 32.0, 16.0);
         second.kind = Kind::Motor {
             facing: [-1, 0, 0],
-            rpm: 32.0,
+            rpm: -32.0,
             capacity: 16.0,
         };
         let n = network(&[
@@ -320,6 +468,24 @@ mod tests {
         ]);
         assert_eq!(n.status, Status::ConflictingSources);
         assert_eq!(n.speed([1, 0, 0]), 0.0);
+    }
+
+    #[test]
+    fn faster_compatible_motor_overdrives_the_slower_without_conflict() {
+        let mut other = motor([2, 0, 0], 32.0, 16.0);
+        other.kind = Kind::Motor {
+            facing: [-1, 0, 0],
+            rpm: 32.0,
+            capacity: 16.0,
+        };
+        let n = network(&[
+            motor([0, 0, 0], 16.0, 16.0),
+            node([1, 0, 0], Kind::Shaft),
+            other,
+        ]);
+        assert_eq!(n.status, Status::Running);
+        assert_eq!(n.speed([1, 0, 0]), 32.0);
+        assert_eq!(n.capacity, 768.0);
     }
 
     #[test]

@@ -56,7 +56,7 @@ DEPOT = (0, 64, 0)
 MARKED = {"item": "minecraft:candle", "count": 2}
 
 
-def depot(call):
+def depot(call, render=None):
     def slots():
         return call("container", *DEPOT)["slots"]
 
@@ -65,6 +65,8 @@ def depot(call):
         call("wait", 10)
         screen = call("screen")
         assert screen["screen"] == "playing", screen
+        if render:
+            render(DEPOT, slots()[0])
 
     def clear():
         call("command", "kill @e[type=minecraft:item]")

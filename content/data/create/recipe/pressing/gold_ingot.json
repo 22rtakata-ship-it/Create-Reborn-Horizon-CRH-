@@ -1,7 +1,7 @@
 {
   "type": "create:pressing",
   "ingredients": [
-    "minecraft:gold_ingot"
+    "#c:ingots/gold"
   ],
   "results": [
     {
