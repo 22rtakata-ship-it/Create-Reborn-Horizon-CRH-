@@ -7,6 +7,7 @@ Only the code covered by MIT is adapted; original Create assets are excluded fro
 the public source and default packages. See [third-party notices](THIRD_PARTY_NOTICES.md).
 
 **Запуск через официальный лаунчер:** [инстанс Create Prototype и текущие ограничения](LAUNCHER.md).
+**Оригинальная графика:** [положите свой JAR рядом с модом — импорт при запуске](ASSETS.md).
 
 Отдельный начальный порт Create на Rust. Папки `../Create` и `../horizon` используются
 как исходные материалы и не изменяются. Версии закреплены в `compatibility.json`.
@@ -19,8 +20,10 @@ the public source and default packages. See [third-party notices](THIRD_PARTY_NO
 ## Что находится в проекте
 
 - `native/engine/` — Rust-ядро кинетики и цикла пресса без зависимостей от игры.
+- `native/assets/` — локальный импортёр ресурсов из предоставленного пользователем JAR.
 - `native/runtime.rs` — адаптация к настоящим блокам, NBT, депо, рецептам и рендерингу Horizon.
-- `native/horizon-mixin.toml` — восемь именованных hooks и отдельный engine crate.
+- `native/horizon-mixin.toml` — восемь именованных hooks, два закреплённых mixin
+  для загрузки ресурсов и отдельные crates движка и импортёра.
 - `content/` — шесть блоков, три пластины, три рецепта и вкладка творческого инвентаря.
   Начальные модели написаны отдельно и используют ссылки на vanilla-текстуры.
 - `tools/` — установка локальных инструментов, импорт, сборка, проверки и запуск.
@@ -48,7 +51,6 @@ git -C ../Create checkout 4148fd8d5b05c85d88947edc00fb495a5074f57d
 ```sh
 python3 tools/bootstrap.py
 python3 tools/cargo.py build --manifest-path ../horizon/Cargo.toml --locked -p horizon-port-pack -p cargo-horizon-mod
-python3 tools/import_create.py
 python3 tools/content.py
 python3 tools/stage.py check
 python3 tools/stage.py build
@@ -87,24 +89,32 @@ hooks и исходников сохраняются. Нативные архи�
 не переносится. Этот полный набор не подключается к игровому прототипу: активен
 только явно реализованный небольшой набор из `content/`.
 
+Разработческий импорт port-pack запускается отдельно: `tools/import_create.py --jar PATH`
+для своего JAR либо `tools/import_create.py --download-bootstrap` для явного скачивания
+закреплённого входа 6.0.10. Это не требуется для сборки и запуска прототипа.
 Собственный jar 6.0.11 можно передать через `tools/import_create.py --jar PATH`;
 перед сменой версии нужно освободить `.local/input-instance/mods/` от прежнего jar.
 
-Оригинальные ресурсы Create имеют All Rights Reserved. Они остаются в `.local/`.
-Для локального просмотра с ними:
+Оригинальные ресурсы Create имеют All Rights Reserved. Обычный пакет их не содержит.
+Пользователь сам помещает JAR Create 6.0.10 NeoForge 1.21.1 в
+`horizon-mods/create-resources/` своего инстанса; мод импортирует нужные ресурсы
+автоматически при запуске и перезагрузке ресурспаков. JAR проверяется по SHA-256,
+распакованный набор остаётся в `.horizon-cache/create-assets/`. Подробности и
+границы лицензии — в [ASSETS.md](ASSETS.md).
+Для отдельного разработческого мира:
 
 ```sh
-python3 tools/package.py --with-original-assets
+python3 tools/play.py --create-jar /path/to/create-1.21.1-6.0.10.jar
 ```
 
-Такой архив находится в `.local/dist/` и не предназначен для распространения.
-Атрибуция MIT-кода и границы лицензий описаны в `THIRD_PARTY_NOTICES.md`.
+Этот запуск не создаёт архивов с чужими ресурсами. Атрибуция MIT-кода и границы
+лицензий описаны в `THIRD_PARTY_NOTICES.md`.
 
 ## Проверки
 
 ```sh
-python3 tools/cargo.py test --target-dir target/core
-python3 tools/cargo.py clippy --all-targets --target-dir target/core -- -D warnings
+python3 tools/cargo.py test --workspace --target-dir target/core
+python3 tools/cargo.py clippy --workspace --all-targets --target-dir target/core -- -D warnings
 python3 tools/cargo.py run --example factory --target-dir target/core
 python3 tools/oracle.py
 ```
@@ -138,7 +148,8 @@ python3 tools/play.py --resources "/полный/путь/к/.local/horizon-clie
 см. [результаты первого этапа](VALIDATION.md). Путь к ресурсам сохранён, поэтому
 для обычного запуска достаточно `python3 tools/play.py`.
 
-Для оригинальных ресурсов добавьте `--original-assets` к `play.py`.
+Для оригинальных ресурсов передайте `--create-jar /path/to/create-1.21.1-6.0.10.jar`
+при первом запуске `play.py`; при следующих запусках достаточно оставленного JAR.
 
 В творческом инвентаре есть вкладка Create. Мотор по умолчанию выдаёт 16 RPM.
 Для первого стенда можно использовать команды:

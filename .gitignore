@@ -6,4 +6,6 @@ target/
 dist/
 __pycache__/
 *.pyc
+*.jar
+create-resources/
 .DS_Store

@@ -14,6 +14,7 @@ name = "factory"
 path = "examples/factory.rs"
 
 [workspace]
+members = ["native/assets"]
 exclude = ["native/engine", ".local", ".tools"]
 
 [lints.rust]

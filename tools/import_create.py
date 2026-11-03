@@ -2,7 +2,7 @@
 """Run the real Horizon pipeline on an explicitly pinned, published Create jar.
 
 The source checkout is 6.0.11; the published resource bootstrap is 6.0.10.
-Use --jar with a built 6.0.11 jar to replace that bootstrap. All imported files
+Use --jar with your own jar or explicitly request --download-bootstrap. All imported files
 stay in .local because upstream assets are All Rights Reserved.
 """
 import argparse
@@ -21,7 +21,9 @@ def get(url):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--jar", type=Path, help="Use your own compiled Create jar instead of downloading 6.0.10")
+    inputs_group = parser.add_mutually_exclusive_group(required=True)
+    inputs_group.add_argument("--jar", type=Path, help="Use your own Create jar (offline)")
+    inputs_group.add_argument("--download-bootstrap", action="store_true", help="Explicitly download the pinned 6.0.10 development input from Modrinth")
     args = parser.parse_args()
     check_horizon()
     binary = ROOT / "target" / "debug" / "horizon-port-pack"

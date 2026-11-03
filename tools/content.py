@@ -73,12 +73,14 @@ capabilities = ["registries"]
             "type": "minecraft:block", "pools": [{"rolls": 1, "entries": [{"type": "minecraft:item", "name": "create:" + block}]}]})
     shaft = [([6, 0, 6], [10, 16, 10])]
     model("shaft", shaft)
+    model("shaft_half", [([6, 6, 8], [10, 10, 16])])
     for name, low, high in [("cogwheel", 2, 14), ("large_cogwheel", -1, 17)]:
         boxes = shaft + [([low, 6, low], [high, 10, high])]
         for x, z in [(0, 6), (6, 0), (12, 6), (6, 12)]:
             boxes.append(([x, 5, z], [x + 4, 11, z + 4]))
         model(name, boxes, "minecraft:block/oak_planks")
     model("creative_motor/block", [([1, 0, 1], [15, 14, 15])], "minecraft:block/copper_block")
+    model("creative_motor/block_vertical", [([1, 0, 1], [15, 14, 15])], "minecraft:block/copper_block")
     model("mechanical_press/block", [([0, 8, 0], [16, 16, 16])])
     model("mechanical_press/head", [([6, -12, 6], [10, 9, 10]), ([2, -14, 2], [14, -10, 14])])
     model("depot/block", [([1, 0, 1], [15, 12, 15]), ([0, 12, 0], [16, 14, 16])], "minecraft:block/smooth_stone")

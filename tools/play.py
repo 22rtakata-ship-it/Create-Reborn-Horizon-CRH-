@@ -12,7 +12,7 @@ from common import ROOT
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--resources", type=Path)
-    parser.add_argument("--original-assets", action="store_true")
+    parser.add_argument("--create-jar", type=Path, help="Copy your Create 6.0.10 JAR into the development instance for automatic local import")
     args = parser.parse_args()
     config = ROOT / ".local/development.json"
     if args.resources:
@@ -36,10 +36,18 @@ def main():
                         ("HORIZON_LAUNCHER_TRASH", "play-trash"), ("HORIZON_LAUNCHER_CLIPBOARD", "play-clipboard"),
                         ("HORIZON_LAUNCHER_DESKTOP", "play-desktop")]: env[key] = str(ROOT / ".local" / folder)
     env.update({"HORIZON_NO_AUDIO": "1", "HORIZON_LAUNCHER_NO_SELF_UPDATE": "1"})
-    content = ROOT / ".local/dist/create-content-0.1.0.hmod" if args.original_assets else ROOT / "content"
-    if not content.exists(): raise SystemExit("Run tools/package.py --with-original-assets first")
+    content = ROOT / "content"
     work = ROOT / ".local/play-home"
     work.mkdir(parents=True, exist_ok=True)
+    if args.create_jar:
+        inputs = work / "horizon-mods/create-resources"
+        inputs.mkdir(parents=True, exist_ok=True)
+        target = inputs / "create.jar"
+        existing = [path for path in inputs.iterdir() if path.suffix.lower() == ".jar"]
+        if existing and (len(existing) != 1 or existing[0].read_bytes() != args.create_jar.read_bytes()):
+            raise SystemExit("A different resource JAR is already present in " + str(inputs))
+        if not existing:
+            shutil.copy2(args.create_jar, target)
     subprocess.run([str(game), "--resources", str(resources), "--world", "CreateDevelopment", "--creative",
                     "--render-distance", "4", "--dev-mod", str(content)], cwd=work, env=env, check=True)
 

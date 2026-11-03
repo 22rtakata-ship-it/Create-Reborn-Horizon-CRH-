@@ -9,13 +9,80 @@ use crate::{
 };
 use create_engine::{
     kinetics::{self, Axis, Kind, Node},
-    pressing::{Action, PressCycle, tick_speed},
+    pressing::{Action, PressCycle, head_offset, tick_speed},
 };
 use horizon_world::{
     nbt::{Compound, Tag},
     registry::BlockStateId,
 };
 use serde_json::Value;
+
+static ORIGINAL_ASSETS: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Imports the user's JAR before the initial load, and again on pack reload.
+/// Uses Horizon's own pack loader/cache; the installed content archive is untouched.
+pub(super) fn asset_root(root: std::path::PathBuf) -> std::path::PathBuf {
+    ORIGINAL_ASSETS.store(false, std::sync::atomic::Ordering::Relaxed);
+    // Horizon consumes registry declarations while building the root; their
+    // source data/*/horizon files are deliberately absent from that overlay.
+    if !root
+        .join("data/create/recipe/pressing/iron_ingot.json")
+        .is_file()
+        || !root.join("assets/create/items/shaft.json").is_file()
+    {
+        return root;
+    }
+    let home = Game::game_dir();
+    let result = (|| -> std::io::Result<Option<std::path::PathBuf>> {
+        let Some(imported) = create_assets::prepare(&home, horizon_client::packs::RESOURCE_FORMAT)?
+        else {
+            log::warn!(
+                "Create: using provisional resources. Place the original Create {} JAR in {}",
+                create_assets::CREATE_VERSION,
+                home.join(create_assets::INPUT_DIR).display()
+            );
+            return Ok(None);
+        };
+        let packs = horizon_client::packs::folder(
+            imported.pack.parent().expect("pack parent"),
+            horizon_client::packs::RESOURCE_FORMAT,
+        );
+        if packs.len() != 1 {
+            return Err(std::io::Error::other(
+                "The locally imported Create resource pack could not be read",
+            ));
+        }
+        let overlay = horizon_client::packs::resource_root(
+            &root,
+            &packs,
+            &home.join(".horizon-cache/create-assets/overlay"),
+        )?;
+        log::info!(
+            "Create: {} local resources from Create {} ({}); JAR and installed mod unchanged",
+            imported.files,
+            create_assets::CREATE_VERSION,
+            if imported.cached {
+                "cache verified"
+            } else {
+                "imported"
+            }
+        );
+        Ok(Some(overlay))
+    })();
+    match result {
+        Ok(Some(overlay)) => {
+            ORIGINAL_ASSETS.store(true, std::sync::atomic::Ordering::Relaxed);
+            overlay
+        }
+        Ok(None) => root,
+        Err(error) => {
+            log::warn!(
+                "Create: local resource import failed; using provisional resources: {error}"
+            );
+            root
+        }
+    }
+}
 
 fn owns(block: &str) -> bool {
     matches!(
@@ -280,9 +347,11 @@ pub(super) fn models(models: &mut Vec<String>) {
     models.extend(
         [
             "shaft",
+            "shaft_half",
             "cogwheel",
             "large_cogwheel",
             "creative_motor/block",
+            "creative_motor/block_vertical",
             "mechanical_press/block",
             "mechanical_press/head",
             "depot/block",
@@ -310,14 +379,20 @@ pub(super) fn draw(
     if !owns(block) {
         return;
     }
+    let original = ORIGINAL_ASSETS.load(std::sync::atomic::Ordering::Relaxed);
     if block == "create:depot" {
+        // The barrel interaction template occludes light at its own position.
+        // The depot's exposed top and displayed item are lit from the air above it.
+        let (block_light, sky_light) = game.native_light([pos[0], pos[1] + 1, pos[2]]);
+        draw.light =
+            horizon_client::block_entity_render::vertex_light((sky_light << 4) | block_light);
         game.native_draw_model(draw, "create:block/depot/block", 0xFFFFFF);
         if let Some(Tag::String(item)) = entity.nbt.get(&"DisplayItem".into()) {
             if integer(&entity.nbt, "DisplayCount") > 0 {
                 let Ok(item) = item.to_string() else { return };
                 let stack = ItemStack::new(&item, 1);
                 draw.push();
-                draw.translate([0.5, 1.0, 0.5]);
+                draw.translate([0.5, if original { 13.0 / 16.0 } else { 1.0 }, 0.5]);
                 game.native_draw_item(
                     draw,
                     &stack,
@@ -331,18 +406,31 @@ pub(super) fn draw(
         return;
     }
     let Some(node) = node(game, pos) else { return };
+    let direction = game.native_block_property(pos, "facing");
     if matches!(node.kind, Kind::Motor { .. } | Kind::Press) {
-        let yaw = match game.native_block_property(pos, "facing").as_deref() {
-            Some("east") => 90.0,
-            Some("south") => 180.0,
-            Some("west") => 270.0,
-            _ => 0.0,
-        };
         draw.push();
-        draw.rotate_about([0.0, 1.0, 0.0], yaw, [0.5; 3]);
         let model = if node.kind == Kind::Press {
+            let yaw = match direction.as_deref() {
+                Some("east") => -90.0,
+                Some("south") => 180.0,
+                Some("west") => 90.0,
+                _ => 0.0,
+            };
+            draw.rotate_about([0.0, 1.0, 0.0], yaw, [0.5; 3]);
             "create:block/mechanical_press/block"
+        } else if matches!(direction.as_deref(), Some("up" | "down")) {
+            if direction.as_deref() == Some("down") {
+                draw.rotate_about([1.0, 0.0, 0.0], 180.0, [0.5; 3]);
+            }
+            "create:block/creative_motor/block_vertical"
         } else {
+            let yaw = match direction.as_deref() {
+                Some("east") => 90.0,
+                Some("north") => 180.0,
+                Some("west") => -90.0,
+                _ => 0.0,
+            };
+            draw.rotate_about([0.0, 1.0, 0.0], yaw, [0.5; 3]);
             "create:block/creative_motor/block"
         };
         game.native_draw_model(draw, model, 0xFFFFFF);
@@ -359,7 +447,10 @@ pub(super) fn draw(
                     + elapsed * tick_speed(number(&entity.nbt, "Speed")) as f32)
                     .min(240.0)
             };
-            let travel = if ticks <= 120.0 {
+            let travel = if original {
+                // Create's belt/depot head reaches the depot's 13/16 top two blocks below.
+                head_offset(ticks) * 19.0 / 16.0
+            } else if ticks <= 120.0 {
                 ticks / 120.0
             } else {
                 (240.0 - ticks) / 120.0
@@ -370,11 +461,26 @@ pub(super) fn draw(
         draw.pop();
     }
     draw.push();
-    orient(draw, node.axis);
     let angle = ((draw.game_time as f64 + f64::from(draw.partial))
         * f64::from(number(&entity.nbt, "Speed"))
         * 0.3)
         .rem_euclid(360.0) as f32;
+    if matches!(node.kind, Kind::Motor { .. }) {
+        // The half shaft's untransformed output points south (+Z).
+        match direction.as_deref() {
+            Some("up") => draw.rotate_about([1.0, 0.0, 0.0], -90.0, [0.5; 3]),
+            Some("down") => draw.rotate_about([1.0, 0.0, 0.0], 90.0, [0.5; 3]),
+            Some("east") => draw.rotate_about([0.0, 1.0, 0.0], 90.0, [0.5; 3]),
+            Some("west") => draw.rotate_about([0.0, 1.0, 0.0], -90.0, [0.5; 3]),
+            Some("north") => draw.rotate_about([0.0, 1.0, 0.0], 180.0, [0.5; 3]),
+            _ => {}
+        }
+        draw.rotate_about([0.0, 0.0, 1.0], angle, [0.5; 3]);
+        game.native_draw_model(draw, "create:block/shaft_half", 0xFFFFFF);
+        draw.pop();
+        return;
+    }
+    orient(draw, node.axis);
     draw.rotate_about([0.0, 1.0, 0.0], angle, [0.5; 3]);
     let model = match node.kind {
         Kind::Cog { large: false } => "create:block/cogwheel",

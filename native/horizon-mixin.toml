@@ -9,11 +9,34 @@ horizon_revision = "fc02103818c212920fd24aa34a2b2f91ba49e56f"
 id = "engine"
 path = "engine"
 
+[[crate]]
+id = "assets"
+path = "assets"
+
 [[module]]
 id = "runtime"
 file = "crates/horizon-client/src/game.rs"
 name = "create_port"
 source = "runtime.rs"
+
+[[injection]]
+id = "local-assets"
+target = "horizon_client::game::load_resources"
+kind = "HEAD"
+helper = "assets_startup.rs"
+bindings = [{ name = "root", ty = "&mut std::path::PathBuf", value = "&mut root" }]
+
+[[injection]]
+id = "local-assets-reload"
+target = "horizon_client::game::packs::stage_pack"
+kind = "MODIFY_VARIABLE"
+variable = { name = "root", ordinal = 1, at = "STORE" }
+require = 1
+ordinal = 0
+helper = "assets_root.rs"
+bindings = [
+  { name = "root", ty = "std::path::PathBuf", value = "$value" },
+]
 
 [[injection]]
 id = "entity"

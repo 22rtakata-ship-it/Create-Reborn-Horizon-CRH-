@@ -5,6 +5,19 @@
 // integration is deliberately outside this game-independent state machine.
 pub const CYCLE: i32 = 240;
 
+/// Create's getRenderedHeadOffset: accelerate down, hold, then retract.
+pub fn head_offset(ticks: f32) -> f32 {
+    if !ticks.is_finite() {
+        return 0.0;
+    }
+    let ticks = ticks.clamp(0.0, CYCLE as f32);
+    if ticks < (CYCLE * 2 / 3) as f32 {
+        (ticks / CYCLE as f32 * 2.0).powi(3).clamp(0.0, 1.0)
+    } else {
+        ((CYCLE as f32 - ticks) / CYCLE as f32 * 3.0).clamp(0.0, 1.0)
+    }
+}
+
 pub fn tick_speed(rpm: f32) -> i32 {
     if rpm == 0.0 || !rpm.is_finite() {
         return 0;
@@ -66,6 +79,23 @@ impl PressCycle {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn rendered_head_follows_create_acceleration_hold_and_retraction() {
+        for (ticks, expected) in [
+            (0.0, 0.0),
+            (60.0, 0.125),
+            (120.0, 1.0),
+            (160.0, 1.0),
+            (200.0, 0.5),
+            (240.0, 0.0),
+        ] {
+            assert!((head_offset(ticks) - expected).abs() < 0.0001);
+        }
+        assert_eq!(head_offset(-1.0), 0.0);
+        assert_eq!(head_offset(500.0), 0.0);
+        assert_eq!(head_offset(f32::NAN), 0.0);
+    }
 
     #[test]
     fn tick_speeds_follow_create_lerp_and_integer_truncation() {

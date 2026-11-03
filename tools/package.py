@@ -9,14 +9,11 @@ from common import ROOT, PINS, check_horizon
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--with-original-assets", action="store_true",
-                        help="Local preview only: overlay imported, All Rights Reserved Create assets")
-    args = parser.parse_args()
+    argparse.ArgumentParser(description=__doc__).parse_args()
     check_horizon()
     cli = ROOT / "target/debug/cargo-horizon-mod"
     subprocess.run([str(cli), "build"], cwd=ROOT / "content", check=True)
-    destination = ROOT / (".local/dist" if args.with_original_assets else "dist")
+    destination = ROOT / "dist"
     destination.mkdir(parents=True, exist_ok=True)
     manifest = {"schema": 1, "id": "create", "version": "0.1.0", "game": PINS["minecraft_target_version"],
                 "horizon": PINS["horizon_revision"], "mixins": PINS["horizon_mixins_revision"]}
@@ -30,12 +27,6 @@ def main():
     content_archive = ROOT / "content/target/horizon-mod/create.hmod"
     with zipfile.ZipFile(content_archive) as package:
         content_files = {name: package.read(name) for name in package.namelist() if not name.endswith("/")}
-    if args.with_original_assets:
-        original = ROOT / ".local/port-work/mods/create/carry/assets/create"
-        if not original.is_dir(): raise SystemExit("Run tools/import_create.py first")
-        for path in sorted(original.rglob("*")):
-            if path.is_file():
-                content_files["assets/create/" + path.relative_to(original).as_posix()] = path.read_bytes()
     outputs = [("create-0.1.0.hnmod", native_files), ("create-0.1.0.hmod", {**native_files, **content_files})]
     for name, files in outputs:
         target = destination / name
@@ -48,13 +39,10 @@ def main():
         subprocess.run([str(cli), "check", str(target), "--kind", "native-mod", "--json"], check=True)
         print(target)
     content_target = destination / "create-content-0.1.0.hmod"
-    if args.with_original_assets:
-        with zipfile.ZipFile(content_target, "w", zipfile.ZIP_DEFLATED) as package:
-            for path, data in sorted(content_files.items()): package.writestr(path, data)
-    else:
-        shutil.copy2(content_archive, content_target)
+    shutil.copy2(content_archive, content_target)
     subprocess.run([str(cli), "check", str(content_target), "--json"], check=True)
     print("Native archives require the local documented Mixins compatibility fix on this Horizon pin.")
+    print("Original assets are never packaged. Place your own JAR in the instance's horizon-mods/create-resources/.")
 
 
 if __name__ == "__main__":

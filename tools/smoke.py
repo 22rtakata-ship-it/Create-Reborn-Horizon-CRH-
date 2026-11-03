@@ -16,6 +16,7 @@ def main():
     parser.add_argument("--resources", type=Path, required=True)
     parser.add_argument("--ctl", type=Path)
     parser.add_argument("--offscreen", action="store_true", help="Also render and capture a frame")
+    parser.add_argument("--create-jar", type=Path, help="Exercise the automatic import from this user-supplied Create 6.0.10 JAR")
     args = parser.parse_args()
     original = args.resources.resolve()
     if not (original / "facts.json").is_file(): raise SystemExit("Not a prepared Horizon resource folder")
@@ -23,6 +24,10 @@ def main():
     game = ROOT / "target/fast/horizon-client"
     if not game.is_file(): raise SystemExit("Run python3 tools/stage.py build first")
     scratch = Path(tempfile.mkdtemp(prefix="smoke-", dir=ROOT / ".local"))
+    if args.create_jar:
+        inputs = scratch / "horizon-mods/create-resources"
+        inputs.mkdir(parents=True)
+        shutil.copy2(args.create_jar, inputs / "create.jar")
     resources = scratch / "resources"
     # A private writable copy: resource loaders may create or refresh caches.
     if os.uname().sysname == "Darwin":
@@ -94,6 +99,15 @@ def main():
             call("container", 3, 64, 1, item, count)
         try:
             ready()
+            if args.create_jar:
+                receipts = list((scratch / ".horizon-cache/create-assets/imports").glob("*/import.json"))
+                if len(receipts) != 1:
+                    raise AssertionError("The game did not automatically import the local JAR: " + log_path.read_text()[-8000:])
+                receipt = json.loads(receipts[0].read_text())
+                if not any(name.endswith("/axis.png") for name in receipt["files"]):
+                    raise AssertionError("Original shaft texture was not imported")
+                if "Create: 49 local resources" not in log_path.read_text():
+                    raise AssertionError("The imported resource pack was not applied")
             call("command", "tp @s 2 68 6")
             call("wait-ready", 120, timeout=150)
             call("fill", -2, 64, -2, 7, 68, 7, "minecraft:air")
@@ -139,7 +153,9 @@ def main():
             call("wait", 150)
             expect_sheet("create:golden_sheet", 3)
             result = {"passed": True, "scope": "iron pressing, power interruption, copper after reconnection, gold cycle across save/reload",
-                      "scratch": str(scratch), "transcript": transcript}
+                      "scratch": str(scratch), "original_assets": bool(args.create_jar), "transcript": transcript}
+            if args.create_jar and "cache verified" not in log_path.read_text():
+                raise AssertionError("The second game start did not reuse the verified resource cache")
             (scratch / "result.json").write_text(json.dumps(result, indent=2) + "\n")
             print("Smoke test passed:", scratch / "result.json", flush=True)
         finally:

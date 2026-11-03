@@ -13,8 +13,11 @@ official mods; a third-party listing does not require moving this project's code
 - Source is public at <https://github.com/Delete228/create-horizon>.
 - The project uses MIT, preserves Create's MIT attribution and links the original
   project. See `LICENSE`, `THIRD_PARTY_NOTICES.md` and the introduction to `README.md`.
-- Original Create assets and Minecraft resources are excluded from Git and default
-  packages. Imported resources and optional private previews remain in `.local/`.
+- Original Create assets and Minecraft resources are excluded from Git and every
+  release package. An offline importer reads a player-supplied original JAR in the
+  instance and uses Horizon's resource-pack loader. Generated resources remain in
+  that instance's private cache. See `ASSETS.md` for the process and licence limits;
+  this design is not a claim of permission from Create's authors.
 - Native archives pin full Horizon and Horizon Mixins commits and pass the official
   `cargo-horizon-mod check --kind native-mod`. The content archive passes its own check.
 - Actual compiled-game validation is described in `VALIDATION.md`; gameplay tests
