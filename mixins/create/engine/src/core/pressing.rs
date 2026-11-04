@@ -44,11 +44,8 @@ pub enum Action {
 impl PressCycle {
     pub fn tick(&mut self, rpm: f32, input_ready: bool) -> Action {
         let step = tick_speed(rpm);
-        if step == 0 {
-            return Action::None;
-        }
         if !self.running {
-            if !input_ready {
+            if step == 0 || !input_ready {
                 return Action::None;
             }
             *self = Self {
@@ -61,6 +58,9 @@ impl PressCycle {
         if self.ticks > CYCLE {
             self.running = false;
             return Action::Finished;
+        }
+        if step == 0 {
+            return Action::None;
         }
         let action = if self.ticks == CYCLE / 2 && !self.applied {
             self.applied = true;
@@ -519,5 +519,22 @@ mod tests {
         assert_eq!(cycle.ticks, 120);
         assert_eq!(cycle.tick(16.0, true), Action::Press);
         assert_eq!(cycle.tick(16.0, true), Action::None);
+    }
+
+    #[test]
+    fn completed_retraction_finishes_even_when_power_disappears_before_next_tick() {
+        let mut cycle = PressCycle {
+            running: true,
+            ticks: 240,
+            applied: true,
+        };
+        assert_eq!(cycle.tick(0.0, true), Action::None);
+        assert!(cycle.running);
+        assert_eq!(cycle.tick(128.0, true), Action::None);
+        assert_eq!(cycle.ticks, 255);
+        // PressingBehaviour.tick checks completion before adding zero tick speed.
+        assert_eq!(cycle.tick(0.0, true), Action::Finished);
+        assert!(!cycle.running);
+        assert_eq!(cycle.tick(0.0, true), Action::None);
     }
 }

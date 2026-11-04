@@ -92,6 +92,44 @@ impl Processing {
         before <= 0
     }
 }
+/// FanProcessing.applyProcessing(TransportedItemStack): recipes and the private
+/// TransportedItemStack constructor random source belong to the adapter.
+pub trait TransportedContext<T> {
+    fn can_process(&mut self, stack: &crate::transport::Stack<T>, kind: ProcessingType) -> bool;
+    fn process(
+        &mut self,
+        stack: &crate::transport::Stack<T>,
+        kind: ProcessingType,
+    ) -> Option<Vec<crate::transport::Stack<T>>>;
+    /// getSimilar constructs with the original input stack before replacing it
+    /// with a copied recipe result. Upright/package rules therefore use input.
+    fn similar_angle(&mut self, input: &crate::transport::Stack<T>) -> i32;
+}
+pub fn process_transported<T: Clone>(
+    item: &mut crate::transport::Transported<T>,
+    kind: ProcessingType,
+    context: &mut impl TransportedContext<T>,
+) -> crate::transport::TransportedResult<T> {
+    use crate::transport::TransportedResult;
+    let can_process = item.fan.kind != Some(kind) && context.can_process(&item.stack, kind);
+    if !item.fan.transported(kind, item.stack.count, can_process) {
+        return TransportedResult::DoNothing;
+    }
+    let Some(stacks) = context.process(&item.stack, kind) else {
+        return TransportedResult::DoNothing;
+    };
+    let outputs = stacks
+        .into_iter()
+        .map(|stack| {
+            let angle = context.similar_angle(&item.stack);
+            item.similar(stack, angle)
+        })
+        .collect();
+    TransportedResult::Convert {
+        outputs,
+        held: None,
+    }
+}
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Segment {
     pub end: i32,
@@ -205,6 +243,156 @@ pub fn accelerated(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::transport::{Inventory, Stack, Transported, TransportedResult};
+
+    struct Context {
+        valid: bool,
+        outputs: Option<Vec<Stack<i32>>>,
+        checks: usize,
+        processes: usize,
+        copied_inputs: Vec<i32>,
+    }
+    impl TransportedContext<i32> for Context {
+        fn can_process(&mut self, _: &Stack<i32>, _: ProcessingType) -> bool {
+            self.checks += 1;
+            self.valid
+        }
+        fn process(&mut self, _: &Stack<i32>, _: ProcessingType) -> Option<Vec<Stack<i32>>> {
+            self.processes += 1;
+            self.outputs.clone()
+        }
+        fn similar_angle(&mut self, input: &Stack<i32>) -> i32 {
+            self.copied_inputs.push(input.payload);
+            83
+        }
+    }
+    fn input() -> Transported<i32> {
+        Transported::new(
+            Stack {
+                payload: 11,
+                count: 17,
+                maximum: 64,
+            },
+            31,
+        )
+    }
+    fn context(valid: bool) -> Context {
+        Context {
+            valid,
+            outputs: None,
+            checks: 0,
+            processes: 0,
+            copied_inputs: Vec::new(),
+        }
+    }
+    #[test]
+    fn transported_eligibility_is_cached_and_null_conversion_keeps_the_source_sentinel() {
+        let mut item = input();
+        let mut context = context(true);
+        for _ in 0..302 {
+            assert_eq!(
+                process_transported(&mut item, ProcessingType::Splashing, &mut context),
+                TransportedResult::DoNothing
+            );
+        }
+        assert_eq!(item.fan.time, 0);
+        assert_eq!((context.checks, context.processes), (1, 0));
+        // A changed recipe does not restart cached eligibility or the timer.
+        context.valid = false;
+        assert_eq!(
+            process_transported(&mut item, ProcessingType::Splashing, &mut context),
+            TransportedResult::DoNothing
+        );
+        assert_eq!((item.fan.time, context.processes), (-1, 1));
+        for _ in 0..5 {
+            process_transported(&mut item, ProcessingType::Splashing, &mut context);
+        }
+        assert_eq!((context.checks, context.processes), (1, 1));
+        process_transported(&mut item, ProcessingType::Haunting, &mut context);
+        assert_eq!((item.fan.time, context.checks), (-1, 2));
+        context.valid = true;
+        process_transported(&mut item, ProcessingType::Splashing, &mut context);
+        assert_eq!((item.fan.time, context.checks), (301, 3));
+    }
+    #[test]
+    fn transported_conversion_copies_input_classification_and_keeps_completed_fan_data() {
+        let mut item = input();
+        item.position = 3.75;
+        item.previous_position = 3.25;
+        item.side_offset = 0.14;
+        item.previous_side_offset = -0.12;
+        item.inserted_at = 2;
+        item.locked = true;
+        item.externally_locked = true;
+        item.fan = Processing {
+            kind: Some(ProcessingType::Splashing),
+            time: 0,
+        };
+        let mut context = context(false);
+        context.outputs = Some(vec![
+            Stack {
+                payload: 22,
+                count: 16,
+                maximum: 16,
+            },
+            Stack {
+                payload: 33,
+                count: 1,
+                maximum: 64,
+            },
+        ]);
+        let TransportedResult::Convert { outputs, held } =
+            process_transported(&mut item, ProcessingType::Splashing, &mut context)
+        else {
+            panic!("expected source conversion")
+        };
+        assert!(held.is_none());
+        assert_eq!(context.copied_inputs, [11, 11]);
+        for output in outputs {
+            assert_eq!(output.position, 3.75);
+            assert_eq!(output.previous_position, 3.25);
+            assert_eq!(output.previous_side_offset, -0.12);
+            assert_eq!(output.side_offset, (83.0 - 180.0) / 1080.0);
+            assert_eq!(output.inserted_at, 2);
+            assert!(!output.locked && !output.externally_locked);
+            assert_eq!(output.fan, item.fan);
+            assert_eq!(output.fan.time, -1);
+        }
+        assert_eq!((context.checks, context.processes), (0, 1));
+    }
+    #[test]
+    fn handler_noop_progress_survives_and_pending_conversion_excludes_duplicate_callbacks() {
+        let mut item = input();
+        item.position = 2.5;
+        let mut inventory = Inventory {
+            items: vec![item],
+            ..Inventory::default()
+        };
+        let mut context = context(true);
+        assert_eq!(
+            inventory.apply_to_each_within(2.5, 0.51, |item| Some(process_transported(
+                item,
+                ProcessingType::Splashing,
+                &mut context
+            ))),
+            0
+        );
+        assert_eq!(inventory.items[0].fan.time, 301);
+        inventory.items[0].fan.time = 0;
+        context.outputs = Some(Vec::new());
+        assert_eq!(
+            inventory.apply_to_each_within(2.5, 0.51, |item| Some(process_transported(
+                item,
+                ProcessingType::Splashing,
+                &mut context
+            ))),
+            1
+        );
+        inventory.apply_to_each_within(2.5, 0.51, |_| panic!("source toRemove must be excluded"));
+        inventory.flush();
+        assert!(inventory.items.is_empty());
+        assert_eq!(context.processes, 1);
+    }
     #[test]
     fn media_order_and_inclusive_boundaries_reverse_with_flow() {
         use ProcessingType::*;

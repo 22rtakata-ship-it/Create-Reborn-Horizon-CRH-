@@ -14,6 +14,23 @@ import time
 from common import ROOT
 
 
+def wait_loaded(call, positions, attempts=40):
+    """Wait for authoritative columns, beyond the client's wait-ready signal.
+
+    A newly teleported camera can be ready before adjacent server columns exist.
+    Check every caller-supplied fixture column before any world mutation.
+    """
+    positions = list(positions)
+    for _ in range(attempts):
+        replies = [call('command', 'execute if loaded ' + ' '.join(map(str, pos))
+                        + ' run say create_fixture_column_loaded') for pos in positions]
+        if all(any('create_fixture_column_loaded' in line for line in reply.get('chat', []))
+               for reply in replies):
+            return
+        call('wait', 5)
+    raise AssertionError(('Fixture server columns did not load', positions, replies))
+
+
 class NativeCheckSession:
     def __init__(self, game, resources, ctl, create_jar, *, name='parity', graphics=True, audio=False, size=(1280, 720)):
         self.game = Path(game).resolve()

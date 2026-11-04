@@ -42,7 +42,7 @@ fn state(game: &Game<'_>, pos: Pos) -> Option<BeltPressState> {
     Some(BeltPressState {
         running: port::integer(&entity.nbt, "Running") != 0,
         ticks: port::integer(&entity.nbt, "Ticks"),
-        rpm: port::number(&entity.nbt, "Speed"),
+        rpm: port::running_speed(game, &entity.nbt),
         bulk: false,
     })
 }

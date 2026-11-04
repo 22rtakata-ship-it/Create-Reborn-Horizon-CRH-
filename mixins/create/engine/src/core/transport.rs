@@ -548,7 +548,8 @@ impl<T: Clone + PartialEq> Inventory<T> {
     }
     pub fn stack_at(&self, offset: i32) -> Option<usize> {
         self.items.iter().position(|item| {
-            item.stack.count > 0
+            !item.scheduled_removal
+                && item.stack.count > 0
                 && item.position > offset as f32
                 && item.position <= offset as f32 + 1.0
         })
@@ -1401,5 +1402,33 @@ mod tests {
         assert_eq!(inventory.stack_at(1), None);
         assert_eq!(inventory.extract(0, 99, false).unwrap().count, 8);
         assert_eq!(inventory.stack_at(0), None);
+    }
+
+    #[test]
+    fn handler_extraction_cannot_take_a_converted_record_before_queue_flush() {
+        let mut inventory = Inventory {
+            items: vec![item(0.5, 8)],
+            ..Default::default()
+        };
+        assert_eq!(
+            inventory.apply_to_each_within(0.5, 0.51, |_| {
+                let mut output = item(0.5, 3);
+                output.stack.payload = "processed";
+                Some(TransportedResult::Convert {
+                    outputs: vec![output],
+                    held: None,
+                })
+            }),
+            1
+        );
+        // Source getStackAtOffset skips toRemove and cannot see toInsert yet.
+        assert_eq!(inventory.stack_at(0), None);
+        assert!(inventory.extract(0, 64, false).is_none());
+        inventory.flush();
+        let output = inventory.extract(0, 64, false).unwrap();
+        assert_eq!((output.payload, output.count), ("processed", 3));
+        assert_eq!(inventory.stack_at(0), None);
+        inventory.flush();
+        assert!(inventory.items.is_empty());
     }
 }

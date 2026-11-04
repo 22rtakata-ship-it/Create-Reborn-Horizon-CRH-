@@ -80,5 +80,19 @@
         1
       ]
     ]
+  },
+  "outline_context_shapes": {
+    "player": {
+      "default": [
+        [
+          0,
+          0.125,
+          0,
+          1,
+          1,
+          1
+        ]
+      ]
+    }
   }
 }

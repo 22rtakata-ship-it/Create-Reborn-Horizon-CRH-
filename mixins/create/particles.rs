@@ -869,23 +869,30 @@ pub(super) fn client_tick(game: &mut Game<'_>) {
                 }
             }
         }
-        for (depot, kind) in &flow.handlers {
-            let Some(BlockEntity::Mod(e)) = game
-                .world
-                .block_entities
-                .get(&(depot[0], depot[1], depot[2]))
-            else {
-                continue;
+        for (handler, kind) in &flow.handlers {
+            let positions = if game.native_block(*handler) == "create:belt" {
+                super::create_port_belt::processing_positions(game, *handler, 0.51)
+            } else {
+                let Some(BlockEntity::Mod(e)) = game
+                    .world
+                    .block_entities
+                    .get(&(handler[0], handler[1], handler[2]))
+                else {
+                    continue;
+                };
+                if e.id != "create:depot" || e.nbt.get(&"HeldItem".into()).is_none() {
+                    continue;
+                }
+                vec![handler.map(|v| f64::from(v) + 0.5)]
             };
-            if e.id != "create:depot" || e.nbt.get(&"HeldItem".into()).is_none() {
-                continue;
+            for position in positions {
+                let extras = rules::processing_particles(
+                    *kind,
+                    position,
+                    &mut Random(&mut game.world.random),
+                );
+                emit(game, extras);
             }
-            let extras = rules::processing_particles(
-                *kind,
-                depot.map(|v| f64::from(v) + 0.5),
-                &mut Random(&mut game.world.random),
-            );
-            emit(game, extras);
         }
     }
 }

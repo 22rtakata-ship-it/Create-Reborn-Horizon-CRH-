@@ -41,10 +41,18 @@ struct KnownChain {
     inventory: Contents,
     rpm: f32,
 }
+#[derive(Clone)]
+struct ProcessingOwner {
+    // Source live records keep toRemove identities and toInsert outputs apart
+    // until the controller ticks or its serialization boundary is reached.
+    inventory: Contents,
+    committed: Option<Tag>,
+}
 #[derive(Default)]
 struct State {
     checked: Option<i64>,
     chains: BTreeMap<Pos, KnownChain>,
+    processing: BTreeMap<Pos, ProcessingOwner>,
 }
 thread_local! { static STATE: RefCell<transport::SessionCache<State>> = RefCell::new(Default::default()); }
 // TransportedItemStack owns a private java.util.Random, independent of level
@@ -417,14 +425,14 @@ fn initialize(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity) -> boo
         game.native_block_entity_sync(segment.pos);
     }
     let inventory = if pos == controller {
-        read_inventory(game, entity)
+        authoritative_inventory(game, controller, entity)
     } else {
         match game
             .world
             .block_entities
             .get(&(controller[0], controller[1], controller[2]))
         {
-            Some(BlockEntity::Mod(e)) => read_inventory(game, e),
+            Some(BlockEntity::Mod(e)) => authoritative_inventory(game, controller, e),
             _ => Contents::default(),
         }
     };
@@ -645,18 +653,100 @@ fn controller_inventory(game: &Game<'_>, controller: Pos) -> Option<Contents> {
         .block_entities
         .get(&(controller[0], controller[1], controller[2]))
     {
-        Some(BlockEntity::Mod(e)) if e.id == ID => Some(read_inventory(game, e)),
+        Some(BlockEntity::Mod(e)) if e.id == ID => {
+            Some(authoritative_inventory(game, controller, e))
+        }
         _ => None,
     }
+}
+fn authoritative_inventory(game: &Game<'_>, controller: Pos, entity: &ModBlockEntity) -> Contents {
+    let live = with_state(game, |s| {
+        if let Some(owner) = s.processing.get(&controller)
+            && owner.committed.as_ref() == entity.nbt.get(&"Inventory".into())
+        {
+            return Some(owner.inventory.clone());
+        }
+        // Ordinary data merge/replacement is authoritative over stale cache.
+        s.processing.remove(&controller);
+        None
+    });
+    live.unwrap_or_else(|| read_inventory(game, entity))
 }
 fn save_controller(game: &mut Game<'_>, controller: Pos, inventory: &mut Contents) {
     game.native_with_mod_block_entity(controller, |e| write_inventory(e, inventory));
     with_state(game, |s| {
+        s.processing.remove(&controller);
         if let Some(c) = s.chains.get_mut(&controller) {
             c.inventory = inventory.clone();
         }
     });
     game.native_block_entity_sync(controller);
+}
+fn stage_processing(game: &mut Game<'_>, controller: Pos, inventory: Contents) {
+    // Canonical NBT is always save-safe. Its flushed clone is also what an
+    // outbound tag must show, without exposing queued outputs to another
+    // handler in this simulation pass.
+    let mut saved = inventory.clone();
+    let committed = game
+        .native_with_mod_block_entity(controller, |entity| {
+            if entity.id != ID {
+                return None;
+            }
+            write_inventory(entity, &mut saved);
+            Some(entity.nbt.get(&"Inventory".into()).cloned())
+        })
+        .flatten();
+    let Some(committed) = committed else { return };
+    with_state(game, |s| {
+        if let Some(chain) = s.chains.get_mut(&controller) {
+            chain.inventory = inventory.clone();
+        }
+        s.processing.insert(
+            controller,
+            ProcessingOwner {
+                inventory,
+                committed,
+            },
+        );
+    });
+}
+/// The pinned tick_lan HEAD hook calls this before outgoing block-entity tags.
+/// LevelTickPost runs after networking and would expose a stale frame instead.
+pub(super) fn flush_processing(game: &mut Game<'_>) {
+    if !simulates(game) {
+        return;
+    }
+    let pending = with_state(game, |s| std::mem::take(&mut s.processing));
+    for (controller, mut owner) in pending {
+        if game.native_block(controller) != ID {
+            continue;
+        }
+        let committed = game
+            .native_with_mod_block_entity(controller, |entity| {
+                if entity.id != ID {
+                    return None;
+                }
+                if owner.committed.as_ref() == entity.nbt.get(&"Inventory".into()) {
+                    write_inventory(entity, &mut owner.inventory);
+                    Some(true)
+                } else {
+                    Some(false)
+                }
+            })
+            .flatten();
+        let current = match committed {
+            Some(true) => Some(owner.inventory),
+            Some(false) => controller_inventory(game, controller),
+            None => None,
+        };
+        if let Some(current) = current {
+            with_state(game, |s| {
+                if let Some(chain) = s.chains.get_mut(&controller) {
+                    chain.inventory = current;
+                }
+            });
+        }
+    }
 }
 /// TransportedItemStackHandlerBehaviour.applyToAllItems boundary for fan or
 /// other machine adapters. Source results queue conversions/removals; equal
@@ -679,13 +769,52 @@ pub(super) fn apply_to_each_within(
     let Some(mut inventory) = controller_inventory(game, controller) else {
         return 0;
     };
+    let mut metadata_changed = false;
     let changed = inventory.apply_to_each_within(index as f32 + 0.5, maximum_distance, |item| {
-        apply(game, item)
+        let before = item.clone();
+        let result = apply(game, item);
+        metadata_changed |= *item != before;
+        result
     });
+    if metadata_changed || changed > 0 {
+        stage_processing(game, controller, inventory);
+    }
     if changed > 0 {
-        save_controller(game, controller, &mut inventory);
+        game.native_block_entity_sync(controller);
     }
     changed
+}
+pub(super) fn processing_positions(
+    game: &Game<'_>,
+    pos: Pos,
+    maximum_distance: f32,
+) -> Vec<[f64; 3]> {
+    if game.native_block(pos) != ID || !maximum_distance.is_finite() || maximum_distance <= 0.0 {
+        return Vec::new();
+    }
+    let Some((controller, index)) = node_data(game, pos) else {
+        return Vec::new();
+    };
+    let Some(inventory) = controller_inventory(game, controller) else {
+        return Vec::new();
+    };
+    let Some(BlockEntity::Mod(entity)) =
+        game.world
+            .block_entities
+            .get(&(controller[0], controller[1], controller[2]))
+    else {
+        return Vec::new();
+    };
+    let shape = belt(game, controller, entity, 0.0);
+    inventory
+        .items
+        .iter()
+        .filter(|item| {
+            !item.scheduled_removal
+                && ((index as f32 + 0.5) - item.position).abs() < maximum_distance
+        })
+        .map(|item| shape.world_position(controller, item.position))
+        .collect()
 }
 fn eject(game: &mut Game<'_>, controller: Pos, belt: Belt, item: Moving) {
     let mut at = belt.world_position(controller, item.position);
@@ -840,7 +969,7 @@ fn restored_chain(game: &Game<'_>, pos: Pos) -> Option<(Pos, KnownChain)> {
     Some((
         controller,
         KnownChain {
-            inventory: read_inventory(game, entity),
+            inventory: authoritative_inventory(game, controller, entity),
             rpm: number(&entity.nbt, "Speed"),
             chain,
         },
@@ -857,7 +986,7 @@ fn eject_controller_without_chain(game: &mut Game<'_>, pos: Pos) {
     {
         return;
     }
-    let mut inventory = read_inventory(game, entity);
+    let mut inventory = authoritative_inventory(game, pos, entity);
     let b = belt(game, pos, entity, number(&entity.nbt, "Speed"));
     inventory.flush();
     game.native_with_mod_block_entity(pos, |entity| {
@@ -901,6 +1030,9 @@ pub(super) fn maintenance(game: &mut Game<'_>) {
             return Vec::new();
         }
         s.checked = Some(game.world.game_time);
+        s.processing.retain(|controller, _| {
+            game.world.loaded(controller[0], controller[2]) && game.native_block(*controller) == ID
+        });
         s.chains.retain(|_, c| {
             c.chain
                 .segments
@@ -1142,7 +1274,10 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity, r
     }
     let old_inventory = entity.nbt.get(&"Inventory".into()).cloned();
     let belt = belt(game, pos, entity, rpm);
-    let mut contents = read_inventory(game, entity);
+    let mut contents = authoritative_inventory(game, pos, entity);
+    with_state(game, |s| {
+        s.processing.remove(&pos);
+    });
     if !belt.slope.transports() {
         for item in contents.items.drain(..) {
             eject(game, pos, belt, item);

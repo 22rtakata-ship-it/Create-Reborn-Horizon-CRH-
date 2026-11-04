@@ -274,7 +274,7 @@ fn roll(
                 game.world.random.next_float()
             });
             if output.count > 0 {
-                let max = game.native_max_stack_size(&output.item).unwrap_or(64);
+                let max = super::create_port::stack_maximum(game, &output);
                 if let Some(rest) = super::create_port_inventory::insert(&mut result, output, max) {
                     result.push(Some(rest));
                 }
@@ -287,7 +287,7 @@ fn roll(
                 .and_then(|i| i.remainder.clone())
         {
             let output = ItemStack::new(item.as_str(), 1);
-            let max = game.native_max_stack_size(&output.item).unwrap_or(64);
+            let max = super::create_port::stack_maximum(game, &output);
             if let Some(rest) = super::create_port_inventory::insert(&mut result, output, max) {
                 result.push(Some(rest));
             }
@@ -395,7 +395,7 @@ fn process_depot(game: &mut Game<'_>, pos: [i32; 3], kind: Type) {
         .as_ref()
         .into_iter()
         .flatten()
-        .map(|s| game.native_max_stack_size(&s.item).unwrap_or(64))
+        .map(|s| super::create_port::stack_maximum(game, s))
         .collect();
     let overflow = game
         .native_with_mod_block_entity(pos, |e| {
@@ -438,6 +438,51 @@ fn process_depot(game: &mut Game<'_>, pos: [i32; 3], kind: Type) {
         game.native_block_entity_sync(pos);
     }
 }
+struct BeltContext<'a, 'b> {
+    game: &'a mut Game<'b>,
+}
+impl fan::TransportedContext<ItemStack> for BeltContext<'_, '_> {
+    fn can_process(
+        &mut self,
+        stack: &create_engine::transport::Stack<ItemStack>,
+        kind: Type,
+    ) -> bool {
+        plan(self.game, &super::create_port_belt::game_stack(stack), kind).is_some()
+    }
+    fn process(
+        &mut self,
+        stack: &create_engine::transport::Stack<ItemStack>,
+        kind: Type,
+    ) -> Option<Vec<create_engine::transport::Stack<ItemStack>>> {
+        let input = super::create_port_belt::game_stack(stack);
+        let outputs = plan(self.game, &input, kind)?;
+        Some(
+            roll(
+                self.game,
+                &input,
+                &outputs,
+                matches!(kind, Type::Splashing | Type::Haunting),
+            )
+            .into_iter()
+            .map(|output| super::create_port_belt::core_stack(self.game, output))
+            .collect(),
+        )
+    }
+    fn similar_angle(&mut self, input: &create_engine::transport::Stack<ItemStack>) -> i32 {
+        super::create_port_belt::angle(self.game, &input.payload)
+    }
+}
+fn process_belt(game: &mut Game<'_>, pos: [i32; 3], kind: Type) {
+    // AirCurrent uses handleProcessingOnAllItems(.51f). The belt can be stopped:
+    // processing is owned by the active fan, independently of belt movement.
+    super::create_port_belt::apply_to_each_within(game, pos, 0.51, |game, item| {
+        Some(fan::process_transported(
+            item,
+            kind,
+            &mut BeltContext { game },
+        ))
+    });
+}
 pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEntity, rpm: f32) {
     refresh(game);
     let dim = game.dim.id().to_owned();
@@ -468,7 +513,10 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
             for offset in 0..=i32::from(facing.axis() != create_engine::kinetics::Axis::Y) {
                 let mut p = add(pos, facing, i);
                 p[1] -= offset;
-                if game.native_block(p) == "create:depot"
+                let block = game.native_block(p);
+                if matches!(block.as_str(), "create:depot" | "create:belt")
+                    && matches!(game.world.block_entities.get(&(p[0], p[1], p[2])),
+                        Some(crate::containers::BlockEntity::Mod(e)) if e.id == block)
                     && let Some(kind) = media(game, p).or(kind)
                 {
                     current.handlers.push((p, kind));
@@ -569,7 +617,11 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
             }
         }
         for (p, kind) in &current.handlers {
-            process_depot(game, *p, *kind);
+            match game.native_block(*p).as_str() {
+                "create:belt" => process_belt(game, *p, *kind),
+                "create:depot" => process_depot(game, *p, *kind),
+                _ => {}
+            }
         }
     }
     super::create_port_fan_entities::server_tick(

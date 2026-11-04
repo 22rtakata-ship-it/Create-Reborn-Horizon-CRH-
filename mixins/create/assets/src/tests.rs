@@ -427,6 +427,50 @@ fn basin_mixer_bundle_keeps_source_defaults_and_only_supported_dry_recipes() {
     assert!(contains(&mixer["collision_shapes"], [0.125, 0.0625, 0.5]));
     assert_eq!(basin["collision_shapes"], basin["shapes"]);
     assert_eq!(mixer["collision_shapes"], mixer["shapes"]);
+    assert_eq!(
+        basin["collision_context_shapes"]
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(String::as_str)
+            .collect::<Vec<_>>(),
+        ["item"]
+    );
+    assert_eq!(
+        mixer["outline_context_shapes"]
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(String::as_str)
+            .collect::<Vec<_>>(),
+        ["player"]
+    );
+    assert!(basin.get("outline_context_shapes").is_none());
+    assert!(mixer.get("collision_context_shapes").is_none());
+    // AllShapes source BooleanOp subtraction, tested over every voxel cell.
+    // In particular, the player's mixer outline does not fill its physical
+    // collision frame, and the Basin item floor/rim differ independently.
+    for x in 0..16 {
+        for y in 0..16 {
+            for z in 0..16 {
+                let p = [x, y, z].map(|v| (f64::from(v) + 0.5) / 16.0);
+                let middle = (2..14).contains(&x) && (2..14).contains(&z);
+                assert_eq!(
+                    contains(&basin["collision_context_shapes"]["item"], p),
+                    (middle && y < 5) || (!middle && (2..13).contains(&y))
+                );
+                assert_eq!(contains(&basin["interaction_shapes"], p), y >= 2 || middle);
+                assert_eq!(
+                    contains(&mixer["outline_context_shapes"]["player"], p),
+                    y >= 2
+                );
+                assert_eq!(
+                    contains(&mixer["collision_shapes"], p),
+                    !(4..12).contains(&x) || !(4..12).contains(&z)
+                );
+            }
+        }
+    }
     for id in ["basin", "mechanical_mixer"] {
         assert_eq!(
             read(&format!("data/create/loot_table/blocks/{id}.json"))["pools"][0]["entries"][0]["name"],

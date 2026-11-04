@@ -3,7 +3,7 @@ id = "create"
 version = "0.5.0"
 
 [compatibility]
-horizon_revision = "b45ffd5a670f20e66db7fc01f53fd94907563adc"
+horizon_revision = "08821fdbce6b5d081f1e6cc5c4d0da5438861222"
 
 [[crate]]
 id = "engine"
@@ -549,6 +549,13 @@ bindings = [
  {name="channel",ty="&str",value="channel"},
  {name="data",ty="&[u8]",value="data"},
 ]
+
+[[injection]]
+id = "belt-processing-flush"
+target = "horizon_client::game::lan::Game<'_>::tick_lan"
+kind = "HEAD"
+helper = "belt_flush.rs"
+bindings = [{name="game",ty="&mut crate::game::Game<'_>",value="&mut *self"}]
 
 [[injection]]
 id = "particle-events-flush"

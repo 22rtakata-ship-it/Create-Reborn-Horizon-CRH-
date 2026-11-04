@@ -167,6 +167,17 @@ pub(super) fn number(nbt: &Compound, key: &str) -> f32 {
     }
 }
 
+/// KineticBlockEntity.getSpeed: debug stepping a frozen world does not expose
+/// theoretical network RPM to a machine. Keep the stored Speed/port diagnostics
+/// intact so unfreezing resumes the same network instead of propagating zero.
+pub(super) fn running_speed(game: &Game<'_>, nbt: &Compound) -> f32 {
+    if game.clock.frozen() {
+        0.0
+    } else {
+        number(nbt, "Speed")
+    }
+}
+
 pub(super) fn integer(nbt: &Compound, key: &str) -> i32 {
     match nbt.get(&key.into()) {
         Some(Tag::Int(n)) => *n,
@@ -813,18 +824,19 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
         Tag::String(format!("{:?}", network.status).as_str().into()),
     );
     let mut sync = old_rpm != rpm;
-    sync |= crate::game::create_port_belt::tick(game, pos, entity, rpm);
+    let running_rpm = running_speed(game, &entity.nbt);
+    sync |= crate::game::create_port_belt::tick(game, pos, entity, running_rpm);
     if block == "create:millstone" {
-        sync |= crate::game::create_port_millstone::tick(game, pos, entity, rpm);
+        sync |= crate::game::create_port_millstone::tick(game, pos, entity, running_rpm);
     }
     if block == "create:mechanical_mixer" {
-        sync |= crate::game::create_port_mixer::tick(game, pos, entity, rpm);
+        sync |= crate::game::create_port_mixer::tick(game, pos, entity, running_rpm);
     }
     if block == "create:encased_fan" {
-        crate::game::create_port_fan::tick(game, pos, entity, rpm);
+        crate::game::create_port_fan::tick(game, pos, entity, running_rpm);
     }
     if block == "create:mechanical_drill" {
-        sync |= crate::game::create_port_drill::tick(game, pos, entity, rpm);
+        sync |= crate::game::create_port_drill::tick(game, pos, entity, running_rpm);
     }
     if matches!(block.as_str(), "create:speedometer" | "create:stressometer") {
         let value = if block == "create:speedometer" {
@@ -876,6 +888,10 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
         }
     }
     if block == "create:mechanical_press" {
+        // PressingBehaviour.write always emits these defaults, including an
+        // untouched first belt cycle (start(BELT) does not reset Finished).
+        entity.nbt.entry("Finished".into()).or_insert(Tag::Byte(0));
+        entity.nbt.entry("Mode".into()).or_insert(Tag::Int(0));
         let depot = [pos[0], pos[1] - 2, pos[2]];
         let mut cycle = PressCycle {
             running: integer(&entity.nbt, "Running") != 0,
@@ -903,7 +919,7 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
         } else {
             None
         };
-        let action = cycle.tick(rpm, plan.is_some() || world_plan.is_some());
+        let action = cycle.tick(running_rpm, plan.is_some() || world_plan.is_some());
         if action == Action::Started {
             entity.nbt.remove(&"ParticleItems".into());
             entity.nbt.insert("Mode".into(), Tag::Int(mode));
@@ -1212,7 +1228,7 @@ pub(super) fn draw(
                 0.0
             } else {
                 (integer(&entity.nbt, "Ticks") as f32
-                    + elapsed * tick_speed(number(&entity.nbt, "Speed")) as f32)
+                    + elapsed * tick_speed(running_speed(game, &entity.nbt)) as f32)
                     .min(240.0)
             };
             let travel = if original {

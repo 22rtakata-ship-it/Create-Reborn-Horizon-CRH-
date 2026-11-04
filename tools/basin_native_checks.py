@@ -43,7 +43,8 @@ def write_shared_fixture(path):
             'source': PINS['create_revision'], 'tested': False}
 
 
-def run(call, graphics=False, log=None, scratch=None, *, exact_timing=False):
+def run(call, graphics=False, log=None, scratch=None, *, start_at=None):
+    assert start_at in [None, 'dough'], start_at
     scratch = Path(scratch).resolve()
     scratch.relative_to((ROOT / '.local').resolve())
     assert call('state')['world'] == 'CreateParity06', 'Only the harness disposable world is authorized'
@@ -51,13 +52,11 @@ def run(call, graphics=False, log=None, scratch=None, *, exact_timing=False):
     report = {'passed': False, 'checks': [], 'images': [], 'source': PINS['create_revision'],
               'unsupported': ['nonempty fluid tanks', 'heated recipes', 'filters', 'side spouts',
                               'falling-item intake until entity-sensitive contact hook is connected']}
-    report['exact_timing_requested'] = exact_timing
-    report['timing_scope'] = ('strict native clock batches; matching original normal-tick observer still required'
-                              if exact_timing else 'bounded live integration; exact cycle timing remains an isolated source oracle')
+    report['start_at'] = start_at
+    report['timing_scope'] = 'bounded live integration; exact normal-tick timing is checked separately by basin_timing_checks.py'
     report['known_differences'] = [
-        'entity-sensitive Basin item collision/interaction shape and Mixer player outline await the next API pin',
         'stored empty tank Level.Force remains present; original LerpedFloat emits and clears this one-shot flag',
-        'original frozen getSpeed returns0; native debug-freeze compatibility awaits a separate change',
+        'full client presentation under debug-freeze is not yet compared',
     ]
     report['shared_fixture'] = write_shared_fixture(scratch / 'schematics/own-basin-mixer.nbt')
     result = scratch / 'basin-native-result.json'
@@ -158,136 +157,99 @@ def run(call, graphics=False, log=None, scratch=None, *, exact_timing=False):
         assert len(values) == 1, reply
         return int(values[0])
 
-    def step(ticks):
-        # Original KineticBlockEntity.getSpeed() returns0 while isFrozen(),
-        # including /tick step. Vanilla sprint temporarily clears that flag,
-        # runs the exact batch, then restores the previous frozen state.
-        before = game_time()
-        ctl('wait', 3)
-        assert game_time() == before, 'Timing batch must begin in a preserved frozen gap'
-        command('tick sprint ' + str(ticks))
-        ctl('wait', ticks + 2)
-        for attempt in range(12):
-            after = game_time()
-            if after >= before + ticks:
-                break
-            ctl('wait', 5)
-        assert after - before == ticks, (before, after, ticks)
-        ctl('wait', 3)
-        assert game_time() == after, 'Sprint must restore the preserved frozen gap'
-        report.setdefault('timing_batches', []).append({'before': before, 'after': after, 'ticks': ticks})
-
     def passed(text):
         report['checks'].append(text)
         result.write_text(json.dumps(report, indent=2) + '\n')
 
-    reset()
-    original = data()
-    assert 'InputTanks' in original and 'OutputTanks' in original and 'TankContent: {}' in original, original
-    assert 'FilterAmount: 64' in original, original
-    for key in ['InputItems', 'OutputItems']:
-        inventory = re.search(r'\b' + key + r':\s*\{([^{}]*)\}', original)
-        assert inventory and re.search(r'\bSize:\s*9\b', inventory[1]), original
-        assert re.search(r'\bItems:\s*\[\]', inventory[1]), original
-    inventories([('minecraft:andesite', 64, 501)])
-    setblock((x - 1, y, z), 'minecraft:hopper[facing=east]')
-    command(f'data merge block {x - 1} {y} {z} ' + '{Items:[' + stack('minecraft:andesite', 3, 0, 501) + ']}')
-    ctl('wait', 32)
-    assert counts(slots()[:9]) == {'minecraft:andesite': 64}
-    assert counts(slots((x - 1, y, z))) == {'minecraft:andesite': 3}
-    command(f'data merge block {x - 1} {y} {z} ' + '{Items:[' + stack('minecraft:andesite', 2, 0, 502) + ']}')
-    ctl('wait', 24)
-    held = slots()
-    assert held[0]['count'] == 64 and held[1]['count'] == 2 and all(v is None for v in held[2:9]), held
-    assert 'basin_marker: 501' in data() and 'basin_marker: 502' in data()
-    passed('canonical18slots/typed empty tank fields; ordinary hopper respects unique component-bearing stack and first empty input slot')
+    if start_at != 'dough':
+        reset()
+        original = data()
+        assert 'InputTanks' in original and 'OutputTanks' in original and 'TankContent: {}' in original, original
+        assert 'FilterAmount: 64' in original, original
+        for key in ['InputItems', 'OutputItems']:
+            inventory = re.search(r'\b' + key + r':\s*\{([^{}]*)\}', original)
+            assert inventory and re.search(r'\bSize:\s*9\b', inventory[1]), original
+            assert re.search(r'\bItems:\s*\[\]', inventory[1]), original
+        inventories([('minecraft:andesite', 64, 501)])
+        setblock((x - 1, y, z), 'minecraft:hopper[facing=east]')
+        command(f'data merge block {x - 1} {y} {z} ' + '{Items:[' + stack('minecraft:andesite', 3, 0, 501) + ']}')
+        ctl('wait', 32)
+        assert counts(slots()[:9]) == {'minecraft:andesite': 64}
+        assert counts(slots((x - 1, y, z))) == {'minecraft:andesite': 3}
+        command(f'data merge block {x - 1} {y} {z} ' + '{Items:[' + stack('minecraft:andesite', 2, 0, 502) + ']}')
+        ctl('wait', 24)
+        held = slots()
+        assert held[0]['count'] == 64 and held[1]['count'] == 2 and all(v is None for v in held[2:9]), held
+        assert 'basin_marker: 501' in data() and 'basin_marker: 502' in data()
+        passed('canonical18slots/typed empty tank fields; ordinary hopper respects unique component-bearing stack and first empty input slot')
 
-    reset()
-    inventories([('minecraft:andesite', 2, 601)], [('minecraft:iron_nugget', 2, 602)])
-    setblock((x, y - 1, z + 1), 'minecraft:chest')
-    setblock((x, y - 1, z), 'minecraft:hopper[facing=south]')
-    ctl('wait', 80)
-    assert counts(slots()) == {}
-    assert counts(slots((x, y - 1, z + 1))) == {'minecraft:andesite': 2, 'minecraft:iron_nugget': 2}
-    chest = data((x, y - 1, z + 1))
-    assert 'basin_marker: 601' in chest and 'basin_marker: 602' in chest, chest
-    passed('ordinary extraction hopper reads input and output halves and conserves both component markers')
+        reset()
+        inventories([('minecraft:andesite', 2, 601)], [('minecraft:iron_nugget', 2, 602)])
+        setblock((x, y - 1, z + 1), 'minecraft:chest')
+        setblock((x, y - 1, z), 'minecraft:hopper[facing=south]')
+        ctl('wait', 80)
+        assert counts(slots()) == {}
+        assert counts(slots((x, y - 1, z + 1))) == {'minecraft:andesite': 2, 'minecraft:iron_nugget': 2}
+        chest = data((x, y - 1, z + 1))
+        assert 'basin_marker: 601' in chest and 'basin_marker: 602' in chest, chest
+        passed('ordinary extraction hopper reads input and output halves and conserves both component markers')
 
-    reset()
-    inventories([('minecraft:andesite', 2, 701)], [('minecraft:iron_nugget', 2, 702)])
-    command('give @s minecraft:iron_ingot 1')
-    ctl('wait', 5)
-    ctl('select', 'minecraft:iron_ingot')
-    click()
-    assert counts(slots()) == {'minecraft:andesite': 2, 'minecraft:iron_nugget': 2}
-    command('clear @s')
-    ctl('wait', 5)
-    click()
-    assert counts(slots()) == {}
-    assert ctl('inventory')['counts'] == {'minecraft:andesite': 2, 'minecraft:iron_nugget': 2}
-    player = ' '.join(command('data get entity @s Inventory')['chat'])
-    assert 'basin_marker: 701' in player and 'basin_marker: 702' in player, player
-    assert ctl('state')['menu'] is None
-    passed('nonempty hand does not insert; empty hand retrieves both halves with no chest menu')
+        reset()
+        inventories([('minecraft:andesite', 2, 701)], [('minecraft:iron_nugget', 2, 702)])
+        command('give @s minecraft:iron_ingot 1')
+        # A normal user interaction tries both hands. Occupy the offhand too so
+        # an empty offhand cannot legitimately trigger Basin's empty-stack pickup.
+        command('item replace entity @s weapon.offhand with minecraft:iron_ingot 1')
+        ctl('wait', 5)
+        ctl('select', 'minecraft:iron_ingot')
+        assert ctl('inventory')['offhand']['item'] == 'minecraft:iron_ingot'
+        click()
+        assert counts(slots()) == {'minecraft:andesite': 2, 'minecraft:iron_nugget': 2}
+        command('clear @s')
+        ctl('wait', 5)
+        click()
+        assert counts(slots()) == {}
+        assert ctl('inventory')['counts'] == {'minecraft:andesite': 2, 'minecraft:iron_nugget': 2}
+        player = ' '.join(command('data get entity @s Inventory')['chat'])
+        assert 'basin_marker: 701' in player and 'basin_marker: 702' in player, player
+        assert ctl('state')['menu'] is None
+        passed('both hands occupied do not insert/retrieve; empty-hand interaction retrieves both halves with no chest menu')
 
-    reset()
-    inventories([('minecraft:andesite', 2), ('minecraft:iron_nugget', 2)])
-    if exact_timing:
-        command('tick freeze')
-        try:
-            power(32)
-            for attempt in range(5):
-                step(1)
-                if number('Running') != 0:
-                    break
-            assert number('Ticks') == 1
-            assert abs(number('Speed')) == 32
-            step(81)
-            assert counts(slots()[9:]) == {}, slots()
-            step(1)
-            assert counts(slots()[9:]) == {'create:andesite_alloy': 1}
-            assert counts(slots()[:9]) == {'minecraft:andesite': 1, 'minecraft:iron_nugget': 1}
-            step(61)
-            assert counts(slots()[9:]) == {'create:andesite_alloy': 1}
-            step(1)
-            assert counts(slots()[9:]) == {'create:andesite_alloy': 2} and counts(slots()[:9]) == {}
-        finally:
-            command('tick unfreeze')
-        passed('real32RPM network exact native83/62 batches; paired original normal-tick timing validation remains separate')
-    else:
+        reset()
+        inventories([('minecraft:andesite', 2), ('minecraft:iron_nugget', 2)])
         power(32)
         ctl('wait', 180)
         assert abs(number('Speed')) == 32
         assert counts(slots()[9:]) == {'create:andesite_alloy': 2} and counts(slots()[:9]) == {}
         passed('live real32RPM network completes and repeats two dry batches, conserving exact inputs/outputs')
-    saved = data((x, y + 2, z))
-    assert 'ProcessingTicks' not in saved and 'CurrentRecipe' not in saved, saved
+        saved = data((x, y + 2, z))
+        assert 'ProcessingTicks' not in saved and 'CurrentRecipe' not in saved, saved
 
-    reset()
-    inventories([('minecraft:andesite', 1), ('minecraft:iron_nugget', 1)])
-    power(29)
-    ctl('wait', 100)
-    assert number('Running') == 0 and counts(slots()[9:]) == {}
-    power(30)
-    ctl('wait', 8)
-    assert number('Running') == 1 and abs(number('Speed')) == 30
-    power(0)
-    ctl('wait', 50)
-    assert counts(slots()[:9]) == {'minecraft:andesite': 1, 'minecraft:iron_nugget': 1}
-    assert counts(slots()[9:]) == {} and number('Running') == 0
-    passed('source minimum30RPM boundary and power-loss retraction preserve unprocessed inputs')
+        reset()
+        inventories([('minecraft:andesite', 1), ('minecraft:iron_nugget', 1)])
+        power(29)
+        ctl('wait', 100)
+        assert number('Running') == 0 and counts(slots()[9:]) == {}
+        power(30)
+        ctl('wait', 8)
+        assert number('Running') == 1 and abs(number('Speed')) == 30
+        power(0)
+        ctl('wait', 50)
+        assert counts(slots()[:9]) == {'minecraft:andesite': 1, 'minecraft:iron_nugget': 1}
+        assert counts(slots()[9:]) == {} and number('Running') == 0
+        passed('source minimum30RPM boundary and power-loss retraction preserve unprocessed inputs')
 
-    reset()
-    outputs = [('create:andesite_alloy', 64)] + [('minecraft:' + i, 64) for i in ['stone', 'cobblestone', 'andesite', 'diorite', 'granite', 'dirt', 'sand', 'gravel']]
-    inventories([('minecraft:andesite', 1), ('minecraft:iron_nugget', 1)], outputs)
-    power(32)
-    ctl('wait', 100)
-    assert number('Running') == 0 and counts(slots()[:9]) == {'minecraft:andesite': 1, 'minecraft:iron_nugget': 1}
-    outputs[0] = ('create:andesite_alloy', 63)
-    inventories([('minecraft:andesite', 1), ('minecraft:iron_nugget', 1)], outputs)
-    ctl('wait', 110)
-    assert counts(slots()[:9]) == {} and counts(slots()[9:])['create:andesite_alloy'] == 64
-    passed('full output blocks starting/consumption; freeing one matching output space resumes exactly one batch')
+        reset()
+        outputs = [('create:andesite_alloy', 64)] + [('minecraft:' + i, 64) for i in ['stone', 'cobblestone', 'andesite', 'diorite', 'granite', 'dirt', 'sand', 'gravel']]
+        inventories([('minecraft:andesite', 1), ('minecraft:iron_nugget', 1)], outputs)
+        power(32)
+        ctl('wait', 100)
+        assert number('Running') == 0 and counts(slots()[:9]) == {'minecraft:andesite': 1, 'minecraft:iron_nugget': 1}
+        outputs[0] = ('create:andesite_alloy', 63)
+        inventories([('minecraft:andesite', 1), ('minecraft:iron_nugget', 1)], outputs)
+        ctl('wait', 110)
+        assert counts(slots()[:9]) == {} and counts(slots()[9:])['create:andesite_alloy'] == 64
+        passed('full output blocks starting/consumption; freeing one matching output space resumes exactly one batch')
 
     reset()
     inventories([('create:wheat_flour', 2), ('minecraft:water_bucket', 1)])
@@ -295,8 +257,8 @@ def run(call, graphics=False, log=None, scratch=None, *, exact_timing=False):
     ctl('wait', 115)
     assert counts(slots()[:9]) == {'create:wheat_flour': 1}
     assert counts(slots()[9:]) == {'minecraft:bucket': 1, 'create:dough': 1}, slots()
-    assert slots()[9]['item'] == 'minecraft:bucket' and slots()[10]['item'] == 'create:dough'
-    passed('source shapeless dough recipe consumes bucket/flour units and preserves one ordinary bucket remainder in source order')
+    assert slots()[9]['item'] == 'create:dough' and slots()[10]['item'] == 'minecraft:bucket'
+    passed('source shapeless dough recipe consumes bucket/flour units and emits dough then one ordinary bucket remainder in source order')
 
     for name, patch, retained in [
         ('filter', '{Filter:{id:"minecraft:andesite",count:1}}', r'Filter:\s*\{(?=[^{}]*\bid:\s*"minecraft:andesite")(?=[^{}]*\bcount:\s*1\b)[^{}]*\}'),

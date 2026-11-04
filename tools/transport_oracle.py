@@ -15,6 +15,7 @@ import shutil
 import subprocess
 
 from common import CREATE, PINS, ROOT, cargo
+from native_check_session import wait_loaded
 
 
 SHAPES_JAVA = r'''import java.util.*;
@@ -378,6 +379,7 @@ def run_boundaries(call, graphics=False, log=None, scratch=None, numeric_overrid
     def setup(name):
         command('gamemode creative')
         dimension(name)
+        wait_loaded(ctl, [(px, y, pz) for px in [x - 2, x + 5] for pz in [z - 3, z + 8]])
         command(f'fill {x - 2} {y - 3} {z - 3} {x + 5} {y + 4} {z + 8} minecraft:air')
         command(f'fill {x - 2} {y - 1} {z - 3} {x + 5} {y - 1} {z + 8} minecraft:smooth_stone')
         ctl('wait', 5)

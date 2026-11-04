@@ -89,9 +89,7 @@ def processors():
 
 
 def basin_mixer():
-    # MIT AllShapes defaults. Entity-sensitive ItemEntity basin collision,
-    # filled interaction raytrace and player-only mixer shape require a normal
-    # context-aware native hook; these static declarations do not fake them.
+    # MIT AllShapes and BasinBlock/MechanicalMixerBlock context dispatch.
     basin = {'default': [[0, 2/16, 0, 2/16, 1, 1],
                          [14/16, 2/16, 0, 1, 1, 1],
                          [2/16, 2/16, 0, 14/16, 1, 2/16],
@@ -99,18 +97,28 @@ def basin_mixer():
                          [2/16, 0, 2/16, 14/16, 2/16, 14/16]]}
     mixer = {'default': [[0, 0, 0, 4/16, 1, 1], [12/16, 0, 0, 1, 1, 1],
                          [4/16, 0, 0, 12/16, 1, 4/16], [4/16, 0, 12/16, 12/16, 1, 1]]}
+    basin_item = {'default': [[0, 2/16, 0, 2/16, 13/16, 1],
+                              [14/16, 2/16, 0, 1, 13/16, 1],
+                              [2/16, 2/16, 0, 14/16, 13/16, 2/16],
+                              [2/16, 2/16, 14/16, 14/16, 13/16, 1],
+                              [2/16, 0, 2/16, 14/16, 5/16, 14/16]]}
+    basin_interaction = {'default': [[0, 2/16, 0, 1, 1, 1],
+                                     [2/16, 0, 2/16, 14/16, 2/16, 14/16]]}
     write('data/create/horizon/block/basin.json', {
         'template': 'minecraft:glass', 'item': True,
         'properties': {'hardness': 1.5, 'explosion_resistance': 6, 'requires_tool': True,
                        'map_color': 21, 'sounds': 'minecraft:netherite_block', 'render_shape': 'MODEL'},
         'state_properties': {'facing': {'type': 'enum', 'values': ['down', 'north', 'south', 'west', 'east']}},
         'default_state': {'facing': 'down'}, 'shapes': basin, 'collision_shapes': basin,
+        'collision_context_shapes': {'item': basin_item},
+        'interaction_shapes': basin_interaction,
     })
     write('data/create/horizon/block/mechanical_mixer.json', {
         'template': 'minecraft:glass', 'item': True,
         'properties': {'hardness': 1.5, 'explosion_resistance': 6, 'requires_tool': True,
                        'map_color': 11, 'sounds': 'minecraft:stone', 'render_shape': 'MODEL'},
         'shapes': mixer, 'collision_shapes': mixer,
+        'outline_context_shapes': {'player': {'default': [[0, 2/16, 0, 1, 1, 1]]}},
     })
     # Our provisional geometry uses vanilla textures and contains no original
     # model bytes. The local JAR importer replaces it with the genuine parts.
