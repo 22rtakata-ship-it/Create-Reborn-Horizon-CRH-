@@ -1405,6 +1405,20 @@ pub(super) fn render_bounds(
         bounds[i + 3] = ((end[i] - pos[i]).max(0) + 2) as f32;
     }
 }
+
+// BeltRenderer uses Catnip AngleHelper.horizontalAngle, which negates the
+// vanilla Y angle on the X axis. Using Direction.toYRot here reverses the
+// slope of east/west partials and separates adjacent diagonal segments.
+fn render_yaw(facing: Direction) -> f32 {
+    match facing {
+        Direction::South => 0.0,
+        Direction::West => -90.0,
+        Direction::North => 180.0,
+        Direction::East => -270.0,
+        _ => 0.0,
+    }
+}
+
 pub(super) fn draw(
     game: &Game<'_>,
     pos: Pos,
@@ -1430,12 +1444,7 @@ pub(super) fn draw(
     let rpm = number(&entity.nbt, "Speed");
     let time = draw.game_time as f32 + draw.partial;
     draw.push();
-    let yaw = match facing {
-        Direction::South => 0.0,
-        Direction::West => 90.0,
-        Direction::North => 180.0,
-        _ => 270.0,
-    };
+    let yaw = render_yaw(facing);
     draw.rotate_about(
         [0.0, 1.0, 0.0],
         yaw + if slope == Slope::Upward { 180.0 } else { 0.0 } + if sideways { 270.0 } else { 0.0 },

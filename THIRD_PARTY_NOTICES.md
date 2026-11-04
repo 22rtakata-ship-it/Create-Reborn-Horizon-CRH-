@@ -92,9 +92,15 @@ not one Rust type for every Java class.
 Ponder **1.0.82+mc1.21.1**, bundled in the player's pinned Create JAR, contains
 Catnip's `net.createmod.catnip.lang.LangBuilder`, `LangNumberFormat`,
 `FontHelper`, `animation.LerpedFloat` (linear/EXP tank levels),
-`gui.element.BoxElement`, `outliner.Outliner` and `theme.Color`. Their MIT code informs
+`gui.element.BoxElement`, `outliner.Outliner`, `math.AngleHelper` and `theme.Color`. Their MIT code informs
 tooltip indentation, locale number formatting, highlighting, default colors and
-alpha behavior, world display expiry and fluid-level chase/interpolation. The exact notice below is from the bundled JAR's `LICENSE_Ponder`.
+alpha behavior, world display expiry, belt/motor orientation and fluid-level
+chase/interpolation. The bundled JAR records commit
+`355b488f3d5c5756b33de190d2dd4f7e483480e0` in its `Git-Hash` manifest field.
+The belt render oracle calls this original `AngleHelper` class from the private
+reference classpath; public Java/Rust recording templates retain MIT attribution
+and contain no original models or textures. The exact notice below is from the
+bundled JAR's `LICENSE_Ponder`.
 This attribution concerns code; it does not change the resource license described
 below.
 
@@ -149,8 +155,8 @@ Additional MIT references used in the placement/depot adapter:
 
 Horizon and Horizon Mixins are MIT. Their original checkouts are not edited or
 included in the mod. Builds pin the published commit
-`a1e13326306c6bc074b11e6a4926deb551c4083e` of Horizon Mixins, the head of
-[upstream PR #26](https://github.com/horizon-rust/horizon-mixins/pull/26), which
+`e8cd0aa38cffef49cb2e088ef716baa107148c02` of Horizon Mixins, accepted through
+[upstream PR #25](https://github.com/horizon-rust/horizon-mixins/pull/25), which
 recognizes Rust's built-in `recursion_limit` attribute. The launcher fetches that
 commit from the official repository; no tool source is patched locally. This is
 a pinned source dependency, not an upstream approval of this port.
