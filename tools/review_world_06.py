@@ -50,6 +50,8 @@ STATIONS = [
      'check':'Обычные верстаки и бочки с материалами; переключить survival для ручной проверки рецептов.'},
     {'id':'schematic','title':'12. Проверка и вставка схематики','visit':[68.5,64,37.5],'target':[66,65,32],
      'check':'/create schematic inspect own-press.nbt, затем /create schematic paste own-press.nbt 64 64 32. Пять блоков образуют работающий пресс; неподдержанные схемы отклоняются целиком.'},
+    {'id':'compacting','title':'13. Пресс над чашей','visit':[68.5,64,27.5],'target':[66,65,20],
+     'check':'Три мотора 0→32 RPM: 8 снежков→2 снежных блока; 9 снежных блоков→1 лёд; 2 кремня+гравий+100 mB лавы→1 андезит. Горелка не нужна. Пустая рука забирает выход.'},
 ]
 
 
@@ -90,6 +92,8 @@ def write_walkthrough(scratch,include_lit=False):
         'Схематика: в creative выполните `/create schematic inspect own-press.nbt`, затем',
         '`/create schematic paste own-press.nbt 64 64 32`. Положите один медный слиток на депо X66 Y64 Z32.',
         'Файлы рядом с миром, в папке `schematics/`. `unsupported-belt.nbt` демонстрирует отказ до записи блоков.',
+        'Станция 13: чаши X60/66/72 Y64 Z20, моторы X58/64/70 Y66 Z20. Поставьте 32 RPM.',
+        'Лава внутри третьей чаши: 1000 mB до обработки и 900 mB после одного андезита.',
         'Это ограниченный командный импорт; исходные предметы, preview и экран схематики ещё не перенесены.',
         'Внутренняя лавовая чаша не выпускает жидкость в мир; наружная лава вентилятора закрыта стеклом.',
         'Автовставка в середину ленты, трубы, нагреваемые жидкостные рецепты и падающий ввод Basin здесь не обещаны.',
@@ -275,6 +279,20 @@ def build(call,scratch,*,include_lit=False):
         check('Authored schematic fixtures prepared; destination left empty',
               fixture_hashes=fixtures,anchor=SCHEMATIC_ANCHOR)
 
+        for x in [60,66,72]:
+            for pos,block in [((x,64,20),'basin[facing=down]'),
+                ((x,66,20),'mechanical_press[facing=east]'),
+                ((x-1,66,20),'shaft[axis=x]'),
+                ((x-2,66,20),'creative_motor[facing=east]')]:put(pos,block)
+            power((x-2,66,20),0)
+        put((72,64,24),'minecraft:barrel')
+        for slot,item,n in [(0,'minecraft:snowball',16),(1,'minecraft:snow_block',64),
+            (2,'minecraft:flint',64),(3,'minecraft:gravel',64),
+            (4,'minecraft:lava_bucket',1),(5,'minecraft:bucket',4)]:stock((72,64,24),slot,item,n)
+        sign(60,24,['13 ПРЕСС + ЧАША','8 снежков → 2 блока','Мотор: 0 → 32 RPM','Пустая рука: взять'])
+        sign(66,24,['УПЛОТНЕНИЕ','9 снежных блоков','→ 1 лёд','Мотор: 0 → 32 RPM'])
+        sign(72,27,['АНДЕЗИТ / ЛАВА','2 кремня + гравий','100 mB → 1 андезит','Нагрев не нужен'])
+
         # Final stock after terrain debris is gone. Recreate depots so debris
         # cannot silently occupy HeldItem or an output buffer during authoring.
         cmd('kill @e[type=minecraft:item]')
@@ -287,6 +305,16 @@ def build(call,scratch,*,include_lit=False):
         basin_stock((55,64,2),[('create:wheat_flour',4)])
         basin_stock((59,64,6),[('minecraft:dirt',2),('minecraft:coarse_dirt',1),('minecraft:rooted_dirt',1)])
         basin_stock((69,65,2),[('minecraft:copper_ingot',4),('create:zinc_ingot',4)])
+        basin_stock((60,64,20),[('minecraft:snowball',8)])
+        basin_stock((66,64,20),[('minecraft:snow_block',9)])
+        basin_stock((72,64,20),[('minecraft:flint',2),('minecraft:gravel',1)])
+        bucket((72,64,20),'lava_bucket')
+        compacting_lava=read((72,64,20),'InputTanks')
+        assert 'minecraft:lava' in compacting_lava and 'amount: 1000' in compacting_lava,compacting_lava
+        assert all(rpm((x,66,20))==0 for x in [58,64,70])
+        check('Three stopped Press/Basin stations: snowball compression, explicit ice recipe and real lava-bucket andesite',
+              inputs={'60 64 20':{'minecraft:snowball':8},'66 64 20':{'minecraft:snow_block':9},
+                      '72 64 20':{'minecraft:flint':2,'minecraft:gravel':1}},lava_millibuckets=1000)
         stock((43,66,14),0,'minecraft:wheat',32)
         bucket((55,64,9),'water_bucket');bucket((55,64,9),'lava_bucket')
         fluids=read((55,64,9),'InputTanks')

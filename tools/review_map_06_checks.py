@@ -16,6 +16,7 @@ from common import ROOT
 from reference_java import CREATE_SHA256
 from native_check_session import wait_loaded
 from review_washing_checks import inspect as inspect_washing
+from review_compacting_checks import BASINS as COMPACTING_BASINS, inspect as inspect_compacting, run as run_compacting
 
 WORLD = 'CreateFactory06'
 CATALOG = set('''creative_motor shaft cogwheel large_cogwheel mechanical_press depot
@@ -29,7 +30,7 @@ creative_blaze_cake'''.split())
 FANS = [(20,'create:wheat_flour','create:dough'), (24,'create:dough','minecraft:bread'),
         (28,'minecraft:sand','minecraft:soul_sand'), (32,'minecraft:raw_iron','minecraft:iron_ingot'),
         (36,'minecraft:beef','minecraft:cooked_beef')]
-OUTPUTS = [(26,64,6),(44,64,14),(47,64,25),(43,64,2),(55,64,2),(59,64,6),(69,65,2)]
+OUTPUTS = [(26,64,6),(44,64,14),(47,64,25),(43,64,2),(55,64,2),(59,64,6),(69,65,2),*COMPACTING_BASINS]
 MILL_PIPELINE = [(43,66,14),(43,65,14),(43,64,14)]
 CRAFT_BARRELS = [(16,64,36),(18,64,36),(22,64,36)]
 CRAFT_RECIPES = ['kinetics/whisk','kinetics/basin','kinetics/mechanical_mixer',
@@ -108,8 +109,13 @@ def _clone(scratch):
     assert authored['passed'] and authored['plan']['world'] == WORLD, authored
     completed=json.loads((source.parents[1]/'result.json').read_text())
     assert completed['passed'] and completed['home']==str(source.parents[1]) and completed['world']==WORLD,completed
-    marker=dict(marker,include_lit_burner=authored['plan'].get('include_lit_burner',False))
+    marker=dict(marker,include_lit_burner=authored['plan'].get('include_lit_burner',False),
+        include_compacting=any(station['id']=='compacting' for station in authored['plan']['stations']))
     return scratch, marker
+
+
+def _output_positions(marker):
+    return [p for p in OUTPUTS if marker.get('include_compacting') or p not in COMPACTING_BASINS]
 
 
 def _counts(slots):
@@ -433,6 +439,8 @@ def run(call, graphics=False, log=None, scratch=None, *, resume_initial=False, r
             report['delivered_crafting_stock']={'required':required,'available':dict(craft_stock)}
             assert not any(call('entities',96,'minecraft:item')['entities']), 'Unexpected loose item entities in delivered map'
             report['washing_initial']=inspect_washing(call)
+            if marker.get('include_compacting'):
+                report['compacting_initial']=inspect_compacting(call,scratch)
             record('Delivered catalog47, carried36/goggles, signs/materials, stopped inputs and empty output buffers')
             if not resume_initial: capture('review06-overview-before',(42,86,51),(39,65,15))
             cmd('gamemode creative');cmd('tick unfreeze');clear()
@@ -553,6 +561,10 @@ def run(call, graphics=False, log=None, scratch=None, *, resume_initial=False, r
         else:report['crafting_gap']='Actual menu checks require graphics'
         if marker.get('source_schematic_files_sha256'):
             _schematic_station(call,scratch,record)
+        if marker.get('include_compacting'):
+            report['compacting']=run_compacting(call,graphics,log,scratch)
+            report['images'].extend(report['compacting']['images'])
+            record('Three delivered Press/Basin rigs: snowballs8→snowblocks2, snowblocks9→ice1, flint2+gravel1+lava100mB→andesite1; stopped and picked up normally')
         cmd('item replace entity @s armor.head with create:goggles')
         capture('review06-overview-after',(42,86,51),(39,65,15))
         call('save-all');_source_unchanged(marker)
@@ -617,7 +629,8 @@ def prepare_restart(call,scratch):
     settling={'before':pipe_before,'after':pipe_after,'totals_before':total_before,
         'totals_after':totals(pipe_after),'normal_ticks_waited':waited,'normal_game_ticks_elapsed':elapsed,
         'motor_scroll_value':0,'scope':'Ordinary hopper transfer with stopped Millstone; no replenishment, redstone or NBT/timer edits.'}
-    positions=[(2,64,0),(4,64,0),*CRAFT_BARRELS,*OUTPUTS,*MILL_PIPELINE,*[(6,64,z) for z,_,_ in FANS]]
+    positions=[(2,64,0),(4,64,0),*CRAFT_BARRELS,*_output_positions(marker),*MILL_PIPELINE,*[(6,64,z) for z,_,_ in FANS]]
+    wait_loaded(call,positions)
     before={'source':marker['source'],'source_level_sha256':marker['source_level_sha256'],
         'mill_pipeline_settling':settling,
         'containers':{' '.join(map(str,p)):call('container',*p)['slots'] for p in positions},

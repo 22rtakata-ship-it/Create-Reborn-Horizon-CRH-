@@ -1,5 +1,5 @@
 {
-  "horizon_revision": "8438f415fb0fe3bee40c9cd0f29d4ca2ffe869be",
+  "horizon_revision": "9c7f9b2215dfed497aba5522c44f38926628648d",
   "horizon_mixins_revision": "a1e13326306c6bc074b11e6a4926deb551c4083e",
   "create_revision": "ac0c444d9828da3453ae8cc65338e8de063286fb",
   "create_version": "6.0.10",
@@ -20,7 +20,8 @@
     "state_block_entity_factory",
     "terrain_model",
     "block_clone_item",
-    "item_interact_mob"
+    "item_interact_mob",
+    "item_after_vertical_collision"
   ],
   "horizon_world_canvas_pull_request": "https://github.com/horizon-rust/horizon/pull/8918",
   "horizon_owned_sounds_pull_request": "https://github.com/horizon-rust/horizon/pull/8924",

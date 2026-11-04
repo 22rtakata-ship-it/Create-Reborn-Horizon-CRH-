@@ -69,6 +69,16 @@ def heated_mixing(recipe):
             and dry_mixing(dict(recipe,heat_requirement='none')))
 
 
+def compacting(recipe):
+    """The same bounded Basin codec, selected by the real compacting type.
+
+    Unimplemented fluid tags/results and unavailable Create ingredients remain
+    rejected; no recipe is converted to a simpler predicate or fake output.
+    """
+    return (recipe.get('type') == 'create:compacting'
+            and (dry_mixing(recipe) or fluid_mixing(recipe) or heated_mixing(recipe)))
+
+
 def burner_data_maps(names, read):
     """Actual MIT data maps declared by CreateDataMaps (not item fuel tags).
 
@@ -109,7 +119,7 @@ def main():
         elif isinstance(value, list):
             for child in value: yield from dependencies(child)
     recipes = {}
-    processing = {'create:milling', 'create:splashing', 'create:haunting', 'create:mixing'}
+    processing = {'create:milling', 'create:splashing', 'create:haunting', 'create:mixing', 'create:compacting'}
     cooking = {'minecraft:smelting', 'minecraft:smoking', 'minecraft:blasting'}
     for name in names:
         if not name.startswith(base + 'create/recipe/') or not name.endswith('.json'): continue
@@ -121,6 +131,7 @@ def main():
             # integration. Other fluid/heat/component recipe codecs stay out.
             if name not in {base+'create/recipe/mixing/dough_by_mixing.json',
                             base+'create/recipe/mixing/mud_by_mixing.json'} or not fluid_mixing(r): continue
+        if kind == 'create:compacting' and not compacting(r): continue
         # Conditional recipes depend on other mods and their ingredient codecs.
         if 'neoforge:conditions' in r: continue
         output = r.get('result', {})

@@ -1,9 +1,9 @@
 [mod]
 id = "create"
-version = "0.6.0-alpha.1"
+version = "0.6.0-alpha.2"
 
 [compatibility]
-horizon_revision = "8438f415fb0fe3bee40c9cd0f29d4ca2ffe869be"
+horizon_revision = "9c7f9b2215dfed497aba5522c44f38926628648d"
 
 [[crate]]
 id = "engine"
@@ -458,6 +458,18 @@ name = "create_port_basin"
 source = "basin.rs"
 
 [[module]]
+id = "basin-recipes"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_basin_recipes"
+source = "basin_recipes.rs"
+
+[[module]]
+id = "press-basin"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_press_basin"
+source = "press_basin.rs"
+
+[[module]]
 id = "mixer"
 file = "crates/horizon-client/src/game.rs"
 name = "create_port_mixer"
@@ -693,6 +705,12 @@ id = "native-audio"
 file = "crates/horizon-client/src/game.rs"
 name = "create_port_nativeaudio"
 source = "nativeaudio.rs"
+
+[[module]]
+id = "press-client"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_press_client"
+source = "press_client.rs"
 
 [[injection]]
 id = "crank-client-data"
@@ -986,4 +1004,27 @@ helper = "inventory_decode.rs"
 bindings = [
  { name = "id", ty = "&str", value = "&id" },
  { name = "tag", ty = "&horizon_world::nbt::Tag", value = "tag" },
+]
+
+
+# Real movement-phase intake; exact-pinned while this native fragment is pending.
+[[module]]
+id = "item-contact"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_item_contact"
+source = "item_contact.rs"
+
+[[injection]]
+id = "item-after-vertical-collision"
+target = "horizon_client::game::native_hooks::Game<'_>::native_item_after_vertical_collision"
+kind = "HEAD"
+helper = "item_after_vertical_collision.rs"
+bindings = [
+ {name="game",ty="&mut crate::game::Game<'_>",value="&mut *self"},
+ {name="dimension",ty="&str",value="dimension"},
+ {name="client",ty="bool",value="client"},
+ {name="state",ty="horizon_world::registry::BlockStateId",value="state"},
+ {name="item_pos",ty="[f64; 3]",value="item_pos"},
+ {name="stack",ty="&mut crate::items::ItemStack",value="&mut *stack"},
+ {name="discard",ty="&mut bool",value="&mut *discard"},
 ]

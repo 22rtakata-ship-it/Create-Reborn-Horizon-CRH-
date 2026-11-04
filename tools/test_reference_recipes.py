@@ -2,7 +2,7 @@
 import copy
 import unittest
 
-from reference_recipes import dry_mixing, fluid_mixing, heated_mixing, burner_data_maps
+from reference_recipes import dry_mixing, fluid_mixing, heated_mixing, burner_data_maps, compacting
 
 
 class DryMixing(unittest.TestCase):
@@ -87,6 +87,35 @@ class FluidMixing(unittest.TestCase):
                 self.assertFalse(fluid_mixing(r))
         r=copy.deepcopy(self.recipe);r['heat_requirement']='heated'
         self.assertFalse(fluid_mixing(r))
+
+
+class Compacting(unittest.TestCase):
+    def test_nine_snow_blocks_and_stone_lava_keep_their_full_inputs(self):
+        ice = {'type': 'create:compacting', 'ingredients': [{'item': 'minecraft:snow_block'}] * 9,
+               'results': [{'id': 'minecraft:ice'}]}
+        stone = {'type': 'create:compacting', 'ingredients': [
+            {'item': 'minecraft:flint'}, {'item': 'minecraft:flint'}, {'item': 'minecraft:gravel'},
+            {'type': 'neoforge:single', 'fluid': 'minecraft:lava', 'amount': 100}],
+            'results': [{'id': 'minecraft:andesite'}]}
+        for recipe in [ice, stone]:
+            before = copy.deepcopy(recipe)
+            self.assertTrue(compacting(recipe))
+            self.assertEqual(recipe, before)
+        self.assertFalse(compacting(dict(ice, type='create:mixing')))
+
+    def test_fluid_tags_results_and_unknown_predicates_fail_closed(self):
+        for ingredient in [
+            {'type': 'neoforge:tag', 'tag': 'c:honey', 'amount': 1000},
+            {'type': 'neoforge:single', 'fluid': 'create:chocolate', 'amount': 250},
+            {'type': 'neoforge:single', 'fluid': 'minecraft:lava', 'amount': 100, 'components': {}},
+            {'item': 'minecraft:flint', 'unknown_predicate': True},
+        ]:
+            recipe = {'type': 'create:compacting', 'ingredients': [ingredient],
+                      'results': [{'id': 'minecraft:honey_block'}]}
+            with self.subTest(ingredient=ingredient):
+                self.assertFalse(compacting(recipe))
+        self.assertFalse(compacting({'type': 'create:compacting', 'ingredients': ['minecraft:ice'],
+                                    'results': [{'fluid': 'minecraft:water', 'amount': 1000}]}))
 
 
 class BurnerDataMaps(unittest.TestCase):

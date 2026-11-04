@@ -3,6 +3,7 @@
 #[ignore = "requires private prepared resources and the complete native mod stage"]
 fn mixer_reload_actual_game_and_client_rng() {
     use super::*;
+    use crate::items::ItemStack;
     use crate::game::{Audio,Game,Options,Progress,Settings,World,execution_role::ExecutionRole,load_resources};
     use crate::game::create_port_basin as basin;
     use horizon_client::{chunk::Chunk,containers::ModBlockEntityFields};
@@ -47,7 +48,7 @@ fn mixer_reload_actual_game_and_client_rng() {
     let mut state=basin::read(&game,basin_pos).unwrap();let first=choose(&mut game,basin_pos,&mut state).expect("initial shapeless recipe");
     assert_eq!(first.id,"demo:reload_test");assert_eq!(first.core.outputs[0].stack.key.0.item.as_ref(),"minecraft:diamond");
     let owner=match &game.world.block_entities[&(1,72,1)]{BlockEntity::Mod(e)=>e.revision(),_=>unreachable!()};
-    with_world(&game,|world|{world.running.insert(mixer_pos,Running{owner:Some(owner),cycle:rules::Mixer{running:true,ticks:20,processing_ticks:1},recipe:Some(first.clone()),pending:false,rpm:32.0,..Default::default()});});
+    with_world(&game,|world|{world.running.insert(mixer_pos,Running{owner:Some(owner),cycle:rules::Mixer{running:true,ticks:20,processing_ticks:1},recipe:Some(first.clone()),..Default::default()});});
     game.native_with_mod_block_entity(mixer_pos,|e|{e.nbt.insert("Running".into(),Tag::Byte(1));e.nbt.insert("Ticks".into(),Tag::Int(20));});
     let address=std::ptr::from_ref(game.recipes())as usize;
     write("data/demo/recipe/reload_test.json",definition("minecraft:emerald"));

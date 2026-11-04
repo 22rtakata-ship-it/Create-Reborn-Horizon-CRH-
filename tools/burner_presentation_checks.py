@@ -214,14 +214,21 @@ def validate_reference(path):
     return report
 
 
-def run(call, graphics, log, scratch, reference):
+def run(call, graphics, log, scratch, reference, only=None):
     """Native callback; caller owns a fresh private world and exclusive GPU lease."""
     assert graphics, 'An actual renderer is required'
     assert call('state')['world'] == 'CreateParity06'
     scratch = private(scratch)
     source = validate_reference(reference)
+    selected = source['cases']
+    if only is not None:
+        assert only and len(only) == len(set(only))
+        names = {row['spec']['name'] for row in selected}
+        assert set(only) <= names, (only, names)
+        selected = [row for row in selected if row['spec']['name'] in only]
     report = dict(passed=False, reference=str(Path(reference).resolve()),
-                  source=PINS['create_revision'], scope=__doc__, cases=[], human_review='pending')
+                  source=PINS['create_revision'], scope=__doc__, cases=[], human_review='pending',
+                  selected=[row['spec']['name'] for row in selected])
     output = scratch / 'burner-presentation-native-result.json'
     transcript = scratch / 'burner-presentation-native-transcript.jsonl'
     def save():
@@ -251,7 +258,7 @@ def run(call, graphics, log, scratch, reference):
         for key, value in [('fov', FOV), ('bobView', 'false'), ('chatVisibility', 2)]:
             ctl('options-set', key, value)
         ctl('key', 'f1', 'tap'); hidden = True
-        for row in source['cases']:
+        for row in selected:
             case = row['spec']
             cmd('tick freeze')
             cmd('setblock ' + xyz(ABOVE) + ' minecraft:air')
@@ -308,6 +315,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--mode', choices=['plan', 'java', 'native'], default='plan')
     parser.add_argument('--reference', type=Path)
+    parser.add_argument('--only', nargs='+', choices=[case['name'] for case in CASES],
+        help='native-only bounded recapture; omitted retains the full twelve-case check')
     parser.add_argument('--replace-java-case', choices=[case['name'] for case in CASES],
         help='one targeted source recapture; preserves prior JSON/PNG and refuses another repeat')
     for name in ('game', 'resources', 'ctl', 'create-jar'):
@@ -317,6 +326,7 @@ def main():
         print(json.dumps(dict(cases=CASES, position=POS, camera=CAMERA, target=TARGET,
                               window=WINDOW, framebuffer=FRAMEBUFFER, fov=FOV), indent=2))
     elif args.mode == 'java':
+        assert args.only is None, '--only is a native capture option'
         capture_java(reference=args.reference, replace_case=args.replace_java_case)
     else:
         if not all([args.reference, args.game, args.resources, args.ctl, args.create_jar]):
@@ -327,7 +337,7 @@ def main():
         (session.scratch / 'options.txt').write_text('tutorialStep:none\nchatVisibility:2\n')
         session.env.update(HORIZON_API_DISCOVERY='http://127.0.0.1:9/', HORIZON_NO_DISCORD='1')
         with session:
-            run(session.call, True, session.log, session.scratch, args.reference)
+            run(session.call, True, session.log, session.scratch, args.reference, only=args.only)
 
 
 if __name__ == '__main__':

@@ -45,6 +45,7 @@ jobs:
           python3 tools/milling_oracle.py
           python3 tools/fan_oracle.py
           python3 tools/drilling_oracle.py
+          python3 tools/basin_recipe_filter_oracle.py
       - uses: actions/upload-artifact@v4
         with:
           name: java-parity-results
@@ -57,3 +58,4 @@ jobs:
             .local/milling-oracle/result.json
             .local/fan-oracle/result.json
             .local/drilling-oracle/result.json
+            .local/basin-recipe-filter-*/result.json

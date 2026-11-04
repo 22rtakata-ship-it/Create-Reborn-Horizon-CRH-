@@ -9,7 +9,14 @@ The following MIT code informed or was adapted into the Rust engine:
 - `content/kinetics/KineticNetwork.java`: capacity and stress scale with absolute RPM.
 - `content/kinetics/RotationPropagator.java`: supported coaxial and small/large cog connections.
 - `content/kinetics/press/PressingBehaviour.java`: 240-unit cycle, midpoint processing,
-  clamped speed interpolation, integer truncation and the rendered head's motion curve.
+  clamped speed interpolation, integer truncation, client receipt/hold/interpolation,
+  item-particle request ordering and the rendered head's motion curve.
+- `content/processing/basin/BasinOperatingBlockEntity`, `BasinRecipe`,
+  `content/kinetics/press/MechanicalPressBlockEntity` and
+  `foundation/item/ItemHelper`: shared bounded mixing/compacting recipe compilation,
+  square-crafting compression eligibility, deferred Basin checks, completion
+  restarts and retained in-flight recipes. World adapters and actual-client
+  presentation have separate acceptance evidence and documented limits.
 - `content/kinetics/press/BeltPressingCallbacks`, `MechanicalPressBlockEntity`,
   `logistics/depot/DepotBehaviour`, `DepotItemHandler` and `SharedDepotBlockMethods`:
   one-at-a-time default pressing, output buffering, automation and landed items.

@@ -1,6 +1,6 @@
 id = "create"
 name = "Create for Horizon — prototype"
-version = "0.6.0-alpha.1"
+version = "0.6.0-alpha.2"
 description = "Experimental kinetic foundation with milling, bulk fan processing, stationary drilling, pressing, depots and crafting."
 authors = ["create-horizon contributors"]
 api = "0.2"

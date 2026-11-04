@@ -94,6 +94,20 @@ pub(super) fn automation_accepts(stack: &ItemStack) -> bool {
     stack.count > 0 && INPUTS.with(|cache| cache.borrow().accepted.contains(stack.item.as_ref()))
 }
 
+/// MillstoneInventoryHandler.canProcess: evaluate the current compiled
+/// ingredient predicate, without changing the processing cycle's last recipe.
+pub(super) fn can_process(game: &Game<'_>, stack: &ItemStack) -> bool {
+    refresh_recipes(game);
+    stack.count > 0
+        && INPUTS.with(|cache| {
+            cache
+                .borrow()
+                .recipes
+                .iter()
+                .any(|recipe| recipe.input.test(stack))
+        })
+}
+
 #[derive(Clone)]
 struct Recipe {
     duration: i32,
@@ -223,59 +237,6 @@ fn max_stack(game: &Game<'_>, stack: &ItemStack) -> u32 {
     super::create_port::stack_maximum(game, stack)
 }
 
-fn catch(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEntity) {
-    // updateEntityAfterFallOn checks the item's containing block and the one
-    // below. Horizon's entity query excludes touching AABBs: an item resting
-    // on the top is at y+1, so include that boundary and verify actual support
-    // against the block's collision boxes before accepting it.
-    const CONTACT_EPSILON: f64 = 1.0e-7;
-    let dim = game.dim.id().to_owned();
-    let min = pos.map(f64::from);
-    let mut max = min.map(|v| v + 1.0);
-    max[1] += CONTACT_EPSILON;
-    let collision = game.native_block_collision(pos);
-    for dropped in game.native_item_entities(&dim, min, max) {
-        if !game
-            .dropped
-            .iter()
-            .find(|e| e.id == dropped.id)
-            .is_some_and(|item| {
-                let (lo, hi) = (item.bounds().min_position(), item.bounds().max_position());
-                item.on_ground
-                    && collision.iter().any(|shape| {
-                        (item.position.y - (min[1] + shape[4])).abs() <= CONTACT_EPSILON
-                            && lo.x < min[0] + shape[3]
-                            && hi.x > min[0] + shape[0]
-                            && lo.z < min[2] + shape[5]
-                            && hi.z > min[2] + shape[2]
-                    })
-            })
-            || dropped.position[0].floor() != f64::from(pos[0])
-            || dropped.position[2].floor() != f64::from(pos[2])
-            || !automation_accepts(&dropped.stack)
-        {
-            continue;
-        }
-        let old = entity.items[0].clone();
-        let rest = crate::game::create_port_inventory::insert(
-            &mut entity.items[..1],
-            dropped.stack.clone(),
-            max_stack(game, &dropped.stack).min(milling::SLOT_LIMIT),
-        );
-        let remainder = rest.unwrap_or_else(|| {
-            let mut stack = dropped.stack.clone();
-            stack.count = 0;
-            stack
-        });
-        if remainder.count == dropped.stack.count {
-            continue;
-        }
-        if !game.native_set_item_entity(&dim, dropped.id, remainder) {
-            entity.items[0] = old;
-        }
-    }
-}
-
 /// Called after the kinetic network has resolved the current signed RPM.
 pub(super) fn tick(
     game: &mut Game<'_>,
@@ -288,7 +249,6 @@ pub(super) fn tick(
     }
     refresh_recipes(game);
     restore(entity);
-    catch(game, pos, entity);
     let input = entity.items[0].clone().filter(|s| s.count > 0);
     let mut cycle = MillCycle {
         timer: crate::game::create_port::integer(&entity.nbt, "Timer"),

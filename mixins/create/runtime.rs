@@ -9,7 +9,7 @@ use crate::{
 use create_engine::{
     kinetics::{Axis, Kind, Node},
     placement::{self, Direction},
-    pressing::{Action, PressCycle, head_offset, tick_speed},
+    pressing::{Action, PressCycle},
 };
 use horizon_world::{
     nbt::{Compound, Tag},
@@ -882,6 +882,7 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
     }
 
     let old_rpm = number(&entity.nbt, "Speed");
+    let old_running_rpm = running_speed(game, &entity.nbt);
     entity.nbt.insert("Speed".into(), Tag::Float(rpm.to_bits()));
     let generated = match start.kind {
         Kind::Motor { rpm, .. } | Kind::WaterWheel { rpm, .. } => Some(rpm),
@@ -905,6 +906,8 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
         sync |= crate::game::create_port_millstone::tick(game, pos, entity, running_rpm);
     }
     if block == "create:mechanical_mixer" {
+        crate::game::create_port_mixer::on_speed_changed(entity, old_rpm, rpm);
+        crate::game::create_port_mixer::on_speed_changed(entity, old_running_rpm, running_rpm);
         sync |= crate::game::create_port_mixer::tick(game, pos, entity, running_rpm);
     }
     if block == "create:encased_fan" {
@@ -963,95 +966,120 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
         }
     }
     if block == "create:mechanical_press" {
-        // PressingBehaviour.write always emits these defaults, including an
-        // untouched first belt cycle (start(BELT) does not reset Finished).
-        entity.nbt.entry("Finished".into()).or_insert(Tag::Byte(0));
-        entity.nbt.entry("Mode".into()).or_insert(Tag::Int(0));
-        let depot = [pos[0], pos[1] - 2, pos[2]];
-        let mut cycle = PressCycle {
-            running: integer(&entity.nbt, "Running") != 0,
-            ticks: integer(&entity.nbt, "Ticks"),
-            applied: integer(&entity.nbt, "Applied") != 0,
-        };
-        let mode = if cycle.running {
-            integer(&entity.nbt, "Mode")
+        // ParticleItems is source client-only/transient data, not saved state.
+        entity.nbt.remove(&"ParticleItems".into());
+        crate::game::create_port_press_basin::on_speed_changed(entity, old_rpm, rpm);
+        crate::game::create_port_press_basin::on_speed_changed(
+            entity,
+            old_running_rpm,
+            running_rpm,
+        );
+        if let Some(changed) =
+            crate::game::create_port_press_basin::tick(game, pos, entity, running_rpm)
+        {
+            sync |= changed;
         } else {
-            i32::from(matches!(
-                game.native_block(depot).as_str(),
-                "create:depot" | "create:belt"
-            ))
-        };
-        let plan = if mode == 1 {
-            depot_input(game, depot)
-                .and_then(|input| result(game, &input).map(|output| (input, output)))
-        } else {
-            None
-        };
-        let world_plan = if mode == 0 {
-            crate::game::create_port_world_items::inputs(game, pos)
-                .into_iter()
-                .find_map(|input| result(game, &input.stack).map(|output| (input, output)))
-        } else {
-            None
-        };
-        let action = cycle.tick(running_rpm, plan.is_some() || world_plan.is_some());
-        if action == Action::Started {
-            entity.nbt.remove(&"ParticleItems".into());
-            entity.nbt.insert("Mode".into(), Tag::Int(mode));
-        }
-        if action == Action::Finished {
-            entity.nbt.insert("Finished".into(), Tag::Byte(1));
-        }
-        if action == Action::Press {
-            let particle = plan
-                .as_ref()
-                .map(|(i, _)| i)
-                .or_else(|| world_plan.as_ref().map(|(i, _)| &i.stack));
-            if let Some(item) = particle {
-                entity.nbt.insert(
-                    "ParticleItems".into(),
-                    Tag::List(vec![horizon_items::item_nbt::item_to_nbt(item)]),
-                );
+            // PressingBehaviour.write always emits these defaults, including an
+            // untouched first belt cycle (start(BELT) does not reset Finished).
+            entity.nbt.entry("Finished".into()).or_insert(Tag::Byte(0));
+            entity.nbt.entry("Mode".into()).or_insert(Tag::Int(0));
+            let depot = [pos[0], pos[1] - 2, pos[2]];
+            let mut cycle = PressCycle {
+                running: integer(&entity.nbt, "Running") != 0,
+                ticks: integer(&entity.nbt, "Ticks"),
+                applied: integer(&entity.nbt, "Applied") != 0,
+            };
+            let mode = if cycle.running {
+                integer(&entity.nbt, "Mode")
+            } else {
+                i32::from(matches!(
+                    game.native_block(depot).as_str(),
+                    "create:depot" | "create:belt"
+                ))
+            };
+            let plan = if mode == 1 {
+                depot_input(game, depot)
+                    .and_then(|input| result(game, &input).map(|output| (input, output)))
+            } else {
+                None
+            };
+            let world_plan = if mode == 0 {
+                crate::game::create_port_world_items::inputs(game, pos)
+                    .into_iter()
+                    .find_map(|input| result(game, &input.stack).map(|output| (input, output)))
+            } else {
+                None
+            };
+            let action = cycle.tick(running_rpm, plan.is_some() || world_plan.is_some());
+            if action == Action::Started {
+                entity.clear_client_update_fields();
+                entity.nbt.remove(&"ParticleItems".into());
+                entity.nbt.insert("Mode".into(), Tag::Int(mode));
             }
-            crate::game::create_port_sounds::press(game, pos, rpm);
-            if let Some((input, output)) = world_plan {
-                crate::game::create_port_world_items::press(game, input, output);
+            if action == Action::Finished {
+                entity.clear_client_update_fields();
+                entity.nbt.insert("Finished".into(), Tag::Byte(1));
+                entity.nbt.insert("NeedsUpdate".into(), Tag::Byte(1));
             }
-            if let Some((input, output)) = plan {
-                let max = game.native_max_stack_size(&output.item).unwrap_or(64);
-                let changed = game
-                    .native_with_mod_block_entity(depot, |target| {
-                        crate::game::create_port_inventory::press(target, input, output, max)
-                    })
-                    .flatten();
-                if let Some(overflow) = changed {
-                    for item in overflow {
-                        game.spawn_item(
-                            item,
-                            [
-                                f64::from(depot[0]) + 0.5,
-                                f64::from(depot[1]) + 1.0,
-                                f64::from(depot[2]) + 0.5,
-                            ],
-                            [0.0; 3],
-                            10,
-                        );
+            if action == Action::Press {
+                let mut particle = plan
+                    .as_ref()
+                    .map(|(i, _)| i.clone())
+                    .or_else(|| world_plan.as_ref().map(|(i, _)| i.stack.clone()));
+                // tryProcessInWorld stores the original stack reference, then
+                // shrinks that stack in the nonbulk count>1 branch before writeClient.
+                if world_plan.is_some()
+                    && let Some(item) = &mut particle
+                    && item.count > 1
+                {
+                    item.count -= 1;
+                }
+                if let Some(item) = particle {
+                    entity.set_client_update_fields(Compound::from([(
+                        "ParticleItems".into(),
+                        Tag::List(vec![horizon_items::item_nbt::item_to_nbt(&item)]),
+                    )]));
+                }
+                crate::game::create_port_sounds::press(game, pos, rpm);
+                if let Some((input, output)) = world_plan {
+                    crate::game::create_port_world_items::press(game, input, output);
+                }
+                if let Some((input, output)) = plan {
+                    let max = game.native_max_stack_size(&output.item).unwrap_or(64);
+                    let changed = game
+                        .native_with_mod_block_entity(depot, |target| {
+                            crate::game::create_port_inventory::press(target, input, output, max)
+                        })
+                        .flatten();
+                    if let Some(overflow) = changed {
+                        for item in overflow {
+                            game.spawn_item(
+                                item,
+                                [
+                                    f64::from(depot[0]) + 0.5,
+                                    f64::from(depot[1]) + 1.0,
+                                    f64::from(depot[2]) + 0.5,
+                                ],
+                                [0.0; 3],
+                                10,
+                            );
+                        }
+                        game.native_block_entity_sync(depot);
                     }
-                    game.native_block_entity_sync(depot);
                 }
             }
+            entity
+                .nbt
+                .insert("Running".into(), Tag::Byte(i8::from(cycle.running)));
+            entity.nbt.insert("Ticks".into(), Tag::Int(cycle.ticks));
+            entity
+                .nbt
+                .insert("Applied".into(), Tag::Int(i32::from(cycle.applied)));
+            entity
+                .nbt
+                .insert("LastTick".into(), Tag::Long(game.world.game_time));
+            sync |= action != Action::None;
         }
-        entity
-            .nbt
-            .insert("Running".into(), Tag::Byte(i8::from(cycle.running)));
-        entity.nbt.insert("Ticks".into(), Tag::Int(cycle.ticks));
-        entity
-            .nbt
-            .insert("Applied".into(), Tag::Int(i32::from(cycle.applied)));
-        entity
-            .nbt
-            .insert("LastTick".into(), Tag::Long(game.world.game_time));
-        sync |= action != Action::None;
     }
     if sync {
         game.native_block_entity_sync(pos);
@@ -1078,6 +1106,13 @@ pub(super) fn update_tag(entity: &ModBlockEntity, tag: &mut Option<Compound>) {
             // Horizon merges update tags. Absence would leave the old rendered
             // stack alive; send an explicit empty value on the wire only.
             snapshot.insert("HeldItem".into(), Tag::Compound(Compound::new()));
+        }
+        if entity.id == "create:mechanical_press" {
+            snapshot.remove(&"ParticleItems".into());
+            snapshot.extend(entity.take_client_update_fields());
+            snapshot
+                .entry("ParticleItems".into())
+                .or_insert(Tag::List(Vec::new()));
         }
         *tag = Some(snapshot);
     }
@@ -1109,6 +1144,11 @@ pub(super) fn models(models: &mut Vec<String>) {
         create_assets::PARTS
             .iter()
             .map(|name| format!("create:block/{name}")),
+    );
+    models.extend(
+        create_assets::EXTRA_MODELS
+            .iter()
+            .map(|name| format!("create:{name}")),
     );
 }
 
@@ -1167,7 +1207,6 @@ pub(super) fn draw(
     if !owns(block) {
         return;
     }
-    let original = ORIGINAL_ASSETS.load(std::sync::atomic::Ordering::Relaxed);
     if block == "create:blaze_burner" {
         crate::game::create_port_burner_presentation::draw(game, pos, state, entity, draw);
         return;
@@ -1304,31 +1343,8 @@ pub(super) fn draw(
         };
         game.native_draw_model(draw, model, 0xFFFFFF);
         if node.kind == Kind::Press {
-            let last = match entity.nbt.get(&"LastTick".into()) {
-                Some(Tag::Long(t)) => *t,
-                _ => draw.game_time,
-            };
-            let elapsed = (draw.game_time - last).max(0) as f32 + draw.partial;
-            let ticks = if integer(&entity.nbt, "Running") == 0 {
-                0.0
-            } else {
-                (integer(&entity.nbt, "Ticks") as f32
-                    + elapsed * tick_speed(running_speed(game, &entity.nbt)) as f32)
-                    .min(240.0)
-            };
-            let travel = if original {
-                // Create's belt/depot head reaches the depot's 13/16 top two blocks below.
-                head_offset(ticks)
-                    * if integer(&entity.nbt, "Mode") == 1 {
-                        19.0 / 16.0
-                    } else {
-                        1.0
-                    }
-            } else if ticks <= 120.0 {
-                ticks / 120.0
-            } else {
-                (240.0 - ticks) / 120.0
-            };
+            let travel =
+                crate::game::create_port_press_client::travel(game, pos, entity, draw.partial);
             draw.translate([0.0, -travel, 0.0]);
             game.native_draw_model(draw, "create:block/mechanical_press/head", 0xFFFFFF);
         }

@@ -326,6 +326,7 @@ fn part(
     y: f32,
     angle: Option<f32>,
     json: bool,
+    shade: NativeModelShade,
 ) {
     draw.push();
     draw.translate([0.0, y, 0.0]);
@@ -337,7 +338,7 @@ fn part(
         model,
         NativeModelRenderOptions {
             material: NativeModelMaterial::Model,
-            shade: NativeModelShade::Entity,
+            shade,
             uv_shrink_ratio: if json { 4.0 / 2048.0 } else { 0.0 },
             ..Default::default()
         },
@@ -382,6 +383,7 @@ pub(super) fn draw(
         frame.head_y,
         Some(frame.angle),
         true,
+        NativeModelShade::Entity,
     );
     if frame.goggles {
         part(
@@ -391,6 +393,7 @@ pub(super) fn draw(
             frame.head_y + 0.5,
             Some(frame.angle),
             true,
+            NativeModelShade::Entity,
         );
     }
     if let Some(logistics) = frame.hat {
@@ -431,6 +434,9 @@ pub(super) fn draw(
             frame.small_y,
             None,
             false,
+            // Actual pinned OBJ BakedQuads are unshaded; Flywheel's public
+            // material reports cardinalLightingMode=OFF for both rod pairs.
+            NativeModelShade::Off,
         );
         part(
             game,
@@ -443,6 +449,7 @@ pub(super) fn draw(
             frame.large_y,
             None,
             false,
+            NativeModelShade::Off,
         );
     }
     if let Some(flame) = frame.flame {
@@ -451,7 +458,8 @@ pub(super) fn draw(
             "create:block/blaze_burner/flame",
             NativeModelRenderOptions {
                 material: NativeModelMaterial::Model,
-                shade: NativeModelShade::Entity,
+                // The source OBJ flame likewise has shade=false/OFF.
+                shade: NativeModelShade::Off,
                 uv_shift: Some(NativeModelUvShift {
                     source_sprite: "create:block/blaze_burner_flame",
                     target_sprite: if flame.superheated {

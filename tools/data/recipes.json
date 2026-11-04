@@ -2,6 +2,115 @@
   "reference": "ac0c444d9828da3453ae8cc65338e8de063286fb",
   "license": "MIT recipe/data-map data; original definitions of vanilla convention tags",
   "recipes": {
+    "create/recipe/compacting/andesite_from_flint.json": {
+      "type": "create:compacting",
+      "ingredients": [
+        {
+          "item": "minecraft:flint"
+        },
+        {
+          "item": "minecraft:flint"
+        },
+        {
+          "item": "minecraft:gravel"
+        },
+        {
+          "type": "neoforge:single",
+          "amount": 100,
+          "fluid": "minecraft:lava"
+        }
+      ],
+      "results": [
+        {
+          "id": "minecraft:andesite"
+        }
+      ]
+    },
+    "create/recipe/compacting/diorite_from_flint.json": {
+      "type": "create:compacting",
+      "ingredients": [
+        {
+          "item": "minecraft:flint"
+        },
+        {
+          "item": "minecraft:flint"
+        },
+        {
+          "item": "minecraft:calcite"
+        },
+        {
+          "type": "neoforge:single",
+          "amount": 100,
+          "fluid": "minecraft:lava"
+        }
+      ],
+      "results": [
+        {
+          "id": "minecraft:diorite"
+        }
+      ]
+    },
+    "create/recipe/compacting/granite_from_flint.json": {
+      "type": "create:compacting",
+      "ingredients": [
+        {
+          "item": "minecraft:flint"
+        },
+        {
+          "item": "minecraft:flint"
+        },
+        {
+          "item": "minecraft:red_sand"
+        },
+        {
+          "type": "neoforge:single",
+          "amount": 100,
+          "fluid": "minecraft:lava"
+        }
+      ],
+      "results": [
+        {
+          "id": "minecraft:granite"
+        }
+      ]
+    },
+    "create/recipe/compacting/ice.json": {
+      "type": "create:compacting",
+      "ingredients": [
+        {
+          "item": "minecraft:snow_block"
+        },
+        {
+          "item": "minecraft:snow_block"
+        },
+        {
+          "item": "minecraft:snow_block"
+        },
+        {
+          "item": "minecraft:snow_block"
+        },
+        {
+          "item": "minecraft:snow_block"
+        },
+        {
+          "item": "minecraft:snow_block"
+        },
+        {
+          "item": "minecraft:snow_block"
+        },
+        {
+          "item": "minecraft:snow_block"
+        },
+        {
+          "item": "minecraft:snow_block"
+        }
+      ],
+      "results": [
+        {
+          "id": "minecraft:ice"
+        }
+      ]
+    },
     "create/recipe/crafting/appliances/dough.json": {
       "type": "minecraft:crafting_shapeless",
       "category": "misc",

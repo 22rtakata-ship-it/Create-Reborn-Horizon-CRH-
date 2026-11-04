@@ -27,7 +27,6 @@ struct Motion {
     previous_dial: f32,
     speed: f32,
     status: String,
-    applied: bool,
     effects: KineticEffects,
 }
 thread_local! {static MOTION_WORLD:std::cell::Cell<(usize,usize)>=const{std::cell::Cell::new((0,0))};}
@@ -114,8 +113,7 @@ pub(super) fn tick(game: &mut Game<'_>) {
         let speed = number(&nbt, "Speed");
         crate::game::create_port_nativeaudio::block(game, pos, &block, &nbt, speed);
         let status = text(&nbt, "NetworkStatus");
-        let applied = integer(&nbt, "Applied") != 0;
-        let (particles, stress_effect) = MOTION.with(|m| {
+        let stress_effect = MOTION.with(|m| {
             let mut m = m.borrow_mut();
             let state = m.entry(key(game, pos)).or_default();
             if state.block != block || state.tick > time {
@@ -126,7 +124,7 @@ pub(super) fn tick(game: &mut Game<'_>) {
                 };
             }
             if state.tick == time {
-                return (false, None);
+                return None;
             }
             let previous_status = state.status.clone();
             state.speed = speed;
@@ -137,47 +135,14 @@ pub(super) fn tick(game: &mut Game<'_>) {
             if state.dial > 1.0 && game.particles.level_random().next_float() < 0.5 {
                 state.dial -= (state.dial - 1.0) * game.particles.level_random().next_float();
             }
-            let emit = applied && !state.applied;
-            state.applied = applied;
             state.tick = time;
             if previous_status != status
                 && (previous_status == "Overstressed" || status == "Overstressed")
             {
                 state.effects.trigger_overstress();
             }
-            let stress = state.effects.tick(true, status == "Overstressed").stress;
-            (emit, stress)
+            state.effects.tick(true, status == "Overstressed").stress
         });
-        if particles && let Some(Tag::List(items)) = nbt.get(&"ParticleItems".into()) {
-            for item in items
-                .iter()
-                .filter_map(horizon_items::item_nbt::item_from_nbt)
-            {
-                let options = game.item_particle(&item);
-                let y = if integer(&nbt, "Mode") == 1 {
-                    f64::from(pos[1]) - 1.25
-                } else {
-                    f64::from(pos[1]) - 0.75
-                };
-                for _ in 0..15 {
-                    let mut velocity = particle_rules::offset_randomly(
-                        &mut Random(game.particles.level_random()),
-                        0.125,
-                    );
-                    velocity[1] = 0.125;
-                    game.particles.add(
-                        &options,
-                        [f64::from(pos[0]) + 0.5, y, f64::from(pos[2]) + 0.5],
-                        velocity,
-                    );
-                }
-                trace(
-                    "press_particles",
-                    pos,
-                    serde_json::json!({"item":item.item.as_ref(),"count":15}),
-                );
-            }
-        }
         if let Some(effect) = stress_effect {
             let options = ParticleOptions::simple(if effect.smoke {
                 ParticleType::Smoke

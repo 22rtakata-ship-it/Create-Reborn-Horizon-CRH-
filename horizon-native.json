@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "id": "create",
-  "version": "0.6.0-alpha.1",
+  "version": "0.6.0-alpha.2",
   "game": "26.3",
-  "horizon": "8438f415fb0fe3bee40c9cd0f29d4ca2ffe869be",
+  "horizon": "9c7f9b2215dfed497aba5522c44f38926628648d",
   "mixins": "a1e13326306c6bc074b11e6a4926deb551c4083e"
 }

@@ -40,7 +40,10 @@ def cold_preflight(source):
     for pos,expected in [((43,64,2),{'minecraft:andesite':4,'minecraft:iron_nugget':4}),
         ((55,64,2),{'create:wheat_flour':4}),
         ((59,64,6),{'minecraft:dirt':2,'minecraft:coarse_dirt':1,'minecraft:rooted_dirt':1}),
-        ((69,65,2),{'minecraft:copper_ingot':4,'create:zinc_ingot':4})]:
+        ((69,65,2),{'minecraft:copper_ingot':4,'create:zinc_ingot':4}),
+        ((60,64,20),{'minecraft:snowball':8}),
+        ((66,64,20),{'minecraft:snow_block':9}),
+        ((72,64,20),{'minecraft:flint':2,'minecraft:gravel':1})]:
         data=fields(pos)
         assert dict(_slots(data['InputItems']['value'].get('Items')))==expected,(pos,data)
         assert not _slots(data['OutputItems']['value'].get('Items')),(pos,data)
@@ -64,6 +67,10 @@ def cold_preflight(source):
         assert fluid['amount']=={'type':'int','value':1000},fluid
         fluids.append(fluid['id']['value'])
     assert fluids==['minecraft:water','minecraft:lava'],fluids
+    compacting=fields((72,64,20))['InputTanks']['value']
+    compacting_fluids=[segment['value']['TankContent']['value']['Fluid']['value'] for segment in compacting]
+    assert any(fluid.get('id',{}).get('value')=='minecraft:lava'
+               and fluid.get('amount',{}).get('value')==1000 for fluid in compacting_fluids),compacting_fluids
     assert not _slots(display['InputItems']['value'].get('Items')),display
     assert not _slots(display['OutputItems']['value'].get('Items')),display
     belt=fields((25,65,0))['Inventory']['value']['Items']['value']
@@ -102,8 +109,8 @@ def main():
     # Historical clones remain usable by their recorded runners, but must not
     # silently turn a missing new station into a successful current audit.
     authored=json.loads((source/'review06-build-result.json').read_text())
-    assert authored['passed'] and any(station['id']=='schematic' for station in authored['plan']['stations']), \
-        'The current review audit requires schematic station12'
+    assert authored['passed'] and {'schematic','compacting'} <= {station['id'] for station in authored['plan']['stations']}, \
+        'The current review audit requires schematic station12 and Press/Basin station13'
     fixtures=json.loads((source/'schematic-fixtures.json').read_text())
     assert {'own-press.nbt','unsupported-belt.nbt'}<=fixtures.keys(), \
         'The current review package is missing required schematic fixtures'

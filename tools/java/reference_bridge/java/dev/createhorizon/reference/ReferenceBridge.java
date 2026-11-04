@@ -186,6 +186,7 @@ public final class ReferenceBridge {
         return switch (path) {
             case "/state" -> state();
             case "/ui" -> await(client(Observations::ui));
+            case "/burner_models" -> await(client(BurnerRenderObservation::models));
             case "/particles" -> await(client(() -> Observations.particles(body)));
             case "/damage" -> await(server().submit(() -> Observations.damage(server(), body)));
             case "/entities" -> await(server().submit(() -> Observations.entities(player(server()).serverLevel(), body)));
@@ -260,6 +261,7 @@ public final class ReferenceBridge {
         result.add("framebuffer_size", vector(mc.getWindow().getWidth(), mc.getWindow().getHeight()));
         result.addProperty("data_version", SharedConstants.getCurrentVersion().getDataVersion().getVersion());
         result.add("render_backend", renderBackend(mc));
+        result.add("burner_render_observation", BurnerRenderObservation.snapshot(mc));
         if (mc.player != null) {
             result.add("position", vector(mc.player.getX(), mc.player.getY(), mc.player.getZ()));
             result.addProperty("yaw", mc.player.getYRot()); result.addProperty("pitch", mc.player.getXRot());

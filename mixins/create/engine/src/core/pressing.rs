@@ -5,6 +5,9 @@
 // BeltPressingCallbacks at Create ac0c444d9828da3453ae8cc65338e8de063286fb.
 // World IO, recipe lookup and presentation remain in the platform adapter.
 pub const CYCLE: i32 = 240;
+#[path = "press_client.rs"]
+mod client;
+pub use client::{PressClient, PressMode, PressPacket, PressParticleContext, tick_speed};
 
 /// Create's getRenderedHeadOffset: accelerate down, hold, then retract.
 pub fn head_offset(ticks: f32) -> f32 {
@@ -17,13 +20,6 @@ pub fn head_offset(ticks: f32) -> f32 {
     } else {
         ((CYCLE as f32 - ticks) / CYCLE as f32 * 3.0).clamp(0.0, 1.0)
     }
-}
-
-pub fn tick_speed(rpm: f32) -> i32 {
-    if rpm == 0.0 || !rpm.is_finite() {
-        return 0;
-    }
-    (1.0 + (rpm.abs() / 512.0).clamp(0.0, 1.0) * 59.0) as i32
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -487,6 +483,9 @@ mod tests {
             (256.0, 30),
             (512.0, 60),
             (1024.0, 60),
+            (f32::INFINITY, 60),
+            (f32::NEG_INFINITY, 60),
+            (f32::NAN, 0),
         ] {
             assert_eq!(tick_speed(rpm), expected);
         }

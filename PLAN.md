@@ -240,3 +240,12 @@ credits. Publish a repository-wide subsystem checklist linked from README, using
 checked items only for completed, verified behavior and explicitly marking
 partial implementations and presentation differences. Preserve every existing
 player instance/world.
+
+## Current owner instruction: finish this checkpoint and stop
+
+On 2026-11-04 the owner replaced the earlier quota/percentage work target with
+finishing the current development increment and handing it over. Close Stage10
+item contact/material fixes and Stage11 Press/Basin/client pressing, preserve
+measured differences, run native regressions, publish reproducible source and
+prepare the review world. Do not start another subsystem after this handoff.
+The repository-wide acceptance checklist remains in ROADMAP.md.

@@ -10,7 +10,7 @@ use create_engine::{
     transport::{ProcessingResult, ProcessingUpdate, Stack, Transported},
 };
 use horizon_core::random::{LegacyRandom, RandomSource};
-use horizon_world::nbt::Tag;
+use horizon_world::nbt::{Compound, Tag};
 use std::cell::RefCell;
 
 type Pos = [i32; 3];
@@ -68,6 +68,7 @@ pub(super) fn received(
             entity.nbt.insert("Ticks".into(), Tag::Int(0));
             entity.nbt.insert("Mode".into(), Tag::Int(1));
             entity.nbt.insert("Applied".into(), Tag::Int(0));
+            entity.clear_client_update_fields();
             entity.nbt.remove(&"ParticleItems".into());
         });
         game.native_block_entity_sync(pos);
@@ -81,6 +82,7 @@ struct Context<'a, 'b> {
 impl BeltPressContext<ItemStack> for Context<'_, '_> {
     fn clear_particles(&mut self) {
         self.game.native_with_mod_block_entity(self.pos, |entity| {
+            entity.clear_client_update_fields();
             entity.nbt.remove(&"ParticleItems".into());
         });
     }
@@ -88,10 +90,10 @@ impl BeltPressContext<ItemStack> for Context<'_, '_> {
         let original = belt::game_stack(&input.stack);
         let output = port::result(self.game, &original)?;
         self.game.native_with_mod_block_entity(self.pos, |entity| {
-            entity.nbt.insert(
+            entity.set_client_update_fields(Compound::from([(
                 "ParticleItems".into(),
                 Tag::List(vec![horizon_items::item_nbt::item_to_nbt(&original)]),
-            );
+            )]));
         });
         Some(vec![belt::core_stack(self.game, output)])
     }

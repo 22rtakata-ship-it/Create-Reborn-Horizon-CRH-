@@ -49,6 +49,7 @@ struct Motion {
 struct Server {
     owner: Option<ModRevision>,
     initialized: bool,
+    contents_changed: bool,
     tick: Option<i64>,
     lazy: i32,
     backup: i32,
@@ -59,6 +60,7 @@ impl Default for Server {
         Self {
             owner: None,
             initialized: false,
+            contents_changed: false,
             tick: None,
             lazy: 10,
             backup: 20,
@@ -84,6 +86,27 @@ pub(super) fn reset(reload: bool) {
         MOTION.with(|m| m.borrow_mut().clear());
         SERVER.with(|m| m.borrow_mut().clear());
     }
+}
+
+/// BasinInventory.whenContentsChanged/notifyChangeOfContents only raises a
+/// flag. The next ordinary Basin tick schedules its operator checker.
+pub(super) fn notify_contents(game: &Game<'_>, pos: Pos) {
+    let Some(BlockEntity::Mod(entity)) = game.world.block_entities.get(&(pos[0], pos[1], pos[2]))
+    else {
+        return;
+    };
+    if entity.id != ID || !crate::game::create_port::inventory_supported(entity) {
+        return;
+    }
+    SERVER.with(|cache| {
+        let mut cache = cache.borrow_mut();
+        let server = cache
+            .dimension(std::ptr::from_ref(&game.world) as usize, game.dim.id())
+            .entry(pos)
+            .or_default();
+        server.bind(entity.revision());
+        server.contents_changed = true;
+    });
 }
 
 pub(super) fn container(block: &str, container: &mut Option<ModContainer>) {
@@ -409,6 +432,7 @@ pub(super) fn write(game: &mut Game<'_>, pos: Pos, basin: &Basin) -> bool {
     };
     if changed {
         game.native_block_entity_sync(pos);
+        notify_contents(game, pos);
     }
     changed
 }
@@ -471,7 +495,7 @@ fn commit_fluids(game: &mut Game<'_>, pos: Pos, state: &Basin) {
         .unwrap_or(false);
     if changed {
         game.native_block_entity_sync(pos);
-        crate::game::create_port_mixer::schedule(game, [pos[0], pos[1] + 2, pos[2]]);
+        notify_contents(game, pos);
     }
 }
 fn core_fluid(stack: &NativeFluidStack) -> Option<rules::Fluid<fluids::Key>> {
@@ -663,7 +687,8 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity) -
                 ..Server::default()
             };
         }
-        let mut scheduled = !s.initialized;
+        // The duplicate-tick return above deliberately leaves this flag set.
+        let mut scheduled = std::mem::take(&mut s.contents_changed) || !s.initialized;
         if !s.initialized {
             s.initialized = true;
             s.backup -= 1;
@@ -672,7 +697,7 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity) -
             s.lazy = 10;
             if s.backup <= 0 {
                 s.backup = 20;
-                scheduled = entity.items.iter().flatten().any(|s| s.count > 0)
+                scheduled |= entity.items.iter().flatten().any(|s| s.count > 0)
                     || ["InputTanks", "OutputTanks"].into_iter().any(|key| {
                         read_tanks(entity, key)
                             .is_ok_and(|tanks| tanks.iter().flatten().any(|f| f.amount > 0))
@@ -686,8 +711,12 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity) -
         s.tick = Some(game.world.game_time);
         scheduled
     });
-    if changed || scheduled {
+    // Canonical serialization may normalize a supported loaded inventory's
+    // order/numeric tags. Basin.read does not notify contents: only genuine
+    // inventory/fluid events, initialization and the lazy backup wake it.
+    if scheduled {
         crate::game::create_port_mixer::schedule(game, [pos[0], pos[1] + 2, pos[2]]);
+        crate::game::create_port_press_basin::schedule(game, [pos[0], pos[1] + 2, pos[2]]);
     }
     if changed {
         let dim = game.dim.id().to_owned();
@@ -863,6 +892,7 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: Pos) -> bool {
     }
     game.native_block_entity_sync(pos);
     crate::game::create_port_mixer::basin_removed(game, [pos[0], pos[1] + 2, pos[2]]);
+    crate::game::create_port_press_basin::basin_removed(game, [pos[0], pos[1] + 2, pos[2]]);
     true
 }
 
@@ -874,6 +904,7 @@ pub(super) fn removed(game: &mut Game<'_>, pos: Pos) {
             .remove(&pos);
     });
     crate::game::create_port_mixer::basin_removed(game, [pos[0], pos[1] + 2, pos[2]]);
+    crate::game::create_port_press_basin::basin_removed(game, [pos[0], pos[1] + 2, pos[2]]);
 }
 pub(super) fn maintenance(game: &mut Game<'_>) {
     SERVER.with(|cache| {
