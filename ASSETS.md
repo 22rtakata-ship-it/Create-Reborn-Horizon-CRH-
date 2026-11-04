@@ -1,21 +1,21 @@
-# Оригинальные ресурсы из вашего JAR
+# Original resources from your JAR
 
-Порт не распространяет оригинальные текстуры и модели Create. При запуске он
-может прочитать их из JAR, который вы сами поместили в свой инстанс Horizon.
-Ни Java, ни NeoForge для импорта не запускаются; скачивания из интернета нет.
+The port does not distribute Create's original textures and models. At startup it
+can read them from a JAR that you place in your Horizon instance yourself.
+Neither Java nor NeoForge is started for import, and nothing is downloaded.
 
-## Установка
+## Installation
 
-1. Установите мод через GitHub и соберите его лаунчером: [инструкция](LAUNCHER.md).
-2. Получите оригинальный **Create 6.0.10 для Minecraft 1.21.1, NeoForge** из
-   [релиза Create на Modrinth](https://modrinth.com/mod/create/version/UjX6dr61).
-3. Откройте папку нужного инстанса в Horizon Launcher. В ней создайте
-   `horizon-mods/create-resources` и положите туда **один** JAR. Имя файла
-   произвольное, расширение — `.jar`. Распаковывать или запускать его не нужно.
-4. Запустите инстанс. Нужные ресурсы извлекутся автоматически до загрузки моделей.
+1. Install the mod from GitHub and build it with the Launcher: [instructions](LAUNCHER.md).
+2. Obtain original **Create 6.0.10 for Minecraft 1.21.1, NeoForge** from the
+   [Create release on Modrinth](https://modrinth.com/mod/create/version/UjX6dr61).
+3. Open the desired instance folder in Horizon Launcher. Create
+   `horizon-mods/create-resources` there and place **one** JAR inside. Its filename
+   is arbitrary; the extension must be `.jar`. There is no need to unpack or run it.
+4. Start the instance. Required resources are extracted automatically before models load.
 
 ```text
-<папка инстанса>/
+<instance-folder>/
   horizon-native-mods/
     create.hnmod
   horizon-mods/
@@ -23,44 +23,44 @@
       create-1.21.1-6.0.10.jar
 ```
 
-Например, для отдельного инстанса 0.5 на macOS папка ввода имеет вид:
+For example, the input folder for a separate 0.5 instance on macOS looks like:
 
 ```text
-~/Library/Application Support/horizon/instances/<id-инстанса>/horizon-mods/create-resources/
+~/Library/Application Support/horizon/instances/<instance-id>/horizon-mods/create-resources/
 ```
 
-Поддерживается конкретный проверенный JAR со следующим SHA-256:
+The supported, verified JAR has this SHA-256:
 
 ```text
 ef87fe5709f1ba1f5b8bb20a2925b5afb4669e178fd6d8bf10c167759eefe37a
 ```
 
-Другой релиз, Fabric-версия, аддон, sources/dev JAR и JAR с изменённым содержимым
-не принимаются. Переименование файла не меняет его контрольную сумму.
+Other releases, Fabric versions, addons, sources/dev JARs and modified JARs
+are not accepted. Renaming a file does not change its checksum.
 
-## Что происходит автоматически
+## What happens automatically
 
-В версии 0.5 импортируются ресурсы 24 реализованных блоков и всех 39 записей вкладки
-Create, включая жернов, вентилятор, бур, пропеллер, муку и тесто.
-Мод следует ссылкам на родительские модели и текстуры, сохраняет PNG-метаданные
-анимаций и импортирует исходный `sounds.json` вместе с 38 OGG-файлами звукового банка.
-Все 61 языковой файл Create, включая русский и английский, сохраняются без изменений.
-Из проверенного JAR импортируются 288 файлов, включая исходный файл лицензии.
-В приватном кэше создаются ещё 36 вариантов материалов колёс, наследующих
-исходную OBJ-геометрию. Итог — 324 файла; схема кэша 7 обновляет прежний набор.
-Horizon читает OBJ/MTL штатным загрузчиком, Java-загрузчики не запускаются.
-Наличие других ресурсов в JAR не добавляет остальные механизмы Create в игру.
-У жернова подключаются исходные `millstone/block` и `millstone/inner`, у вентилятора —
-`encased_fan/block` и `encased_fan/propeller`, а также существующая половина вала.
-Для бура добавлены `mechanical_drill/block` и вращающийся `mechanical_drill/head`.
-Импорт ограничен стандартными JSON-моделями и поддерживаемым Horizon форматом
-NeoForge OBJ/MTL; неизвестный Java-загрузчик модели отклоняется.
+Version 0.5 imports resources for 24 implemented blocks and all 39 Create tab entries,
+including the Millstone, fan, drill, Propeller, Flour and Dough.
+The mod follows parent model and texture references, preserves PNG animation
+metadata and imports original `sounds.json` with 38 OGG sound-bank files.
+All 61 Create language files, including Russian and English, are preserved unchanged.
+The verified JAR supplies 288 imported files, including the original license file.
+The private cache generates another 36 wheel material variants inheriting
+original OBJ geometry. The total is 324 files; cache schema 7 refreshes the previous set.
+Horizon reads OBJ/MTL through its standard loader; Java loaders are not run.
+Other resources in the JAR do not add the rest of Create's machines to the game.
+The Millstone uses original `millstone/block` and `millstone/inner`; the fan uses
+`encased_fan/block` and `encased_fan/propeller`, plus the existing half shaft.
+The drill adds `mechanical_drill/block` and rotating `mechanical_drill/head`.
+Import is limited to standard JSON models and Horizon's supported
+NeoForge OBJ/MTL format; unknown Java model loaders are rejected.
 
-Результат остаётся в **этом инстансе**:
+The result stays in **this instance**:
 
 ```text
 .horizon-cache/create-assets/
-  imports/<версия-импортера-и-хеш>/
+  imports/<importer-version-and-hash>/
     import.json
     pack/
       pack.mcmeta
@@ -69,46 +69,46 @@ NeoForge OBJ/MTL; неизвестный Java-загрузчик модели о
   overlay/...
 ```
 
-Horizon подключает этот набор своим стандартным загрузчиком ресурспаков.
-Оригинальный JAR, установленный `.hmod`, исходные ресурсы Minecraft и миры
-импортёр не изменяет. Java-классы, рецепты и посторонние файлы из JAR не извлекаются.
-Повторный запуск проверяет кэш и использует готовые файлы. Удалённые или
-повреждённые файлы импортируются заново. Запись нового набора публикуется после
-полной проверки; одновременные импорты защищены файловой блокировкой.
+Horizon loads this pack through its standard resource-pack loader.
+The importer does not modify the original JAR, installed `.hmod`, original
+Minecraft resources or worlds. Java classes, recipes and unrelated JAR files are not extracted.
+Later starts check the cache and reuse prepared files. Missing or
+damaged files are imported again. A new set is published only after
+complete validation; concurrent imports are protected by a file lock.
 
-Без JAR, при неподходящем файле или нескольких JAR игра использует временные
-ресурсы. Причина записывается в журнал Horizon; при первом запуске появляется
-`create-resources/README.txt` с инструкцией. Чтобы отключить оригинальные ресурсы,
-уберите JAR и перезапустите игру либо перезагрузите ресурспаки. Сам импорт
-выполняется на обоих путях; наличие старого кэша не включает его без JAR.
+Without a JAR, with an unsupported file or with multiple JARs, the game uses placeholder
+resources. The reason is written to the Horizon log; on first start,
+`create-resources/README.txt` appears with instructions. To disable original resources,
+remove the JAR and restart the game or reload resource packs. Import runs
+on both paths; an old cache does not enable it without the JAR.
 
-## Лицензия
+## License
 
-[Лицензия Create](https://github.com/Creators-of-Create/Create/blob/mc1.21.1/dev/LICENSE.md)
-отделяет MIT-код от `src/main/resources/assets/` с **All Rights Reserved**.
-Этот механизм исключает оригинальные ресурсы из нашего репозитория и релизов,
-но не предоставляет новых прав на их использование или распространение и не
-является гарантией юридической допустимости порта. Права на импортированные
-файлы остаются у их авторов. Не публикуйте JAR и сгенерированный кэш вместе с
-нашим модом. Для распространения самих ресурсов нужно отдельное разрешение.
+[Create's license](https://github.com/Creators-of-Create/Create/blob/mc1.21.1/dev/LICENSE.md)
+separates MIT code from **All Rights Reserved** `src/main/resources/assets/`.
+This mechanism excludes original resources from our repository and releases,
+but grants no new rights to use or distribute them and does not
+guarantee the port's legal acceptability. Rights to imported files
+remain with their authors. Do not publish the JAR or generated cache with
+our mod. Distributing the resources themselves requires separate permission.
 
-## Для разработчика
+## For developers
 
-Обычная сборка не требует оригинального JAR и не скачивает его:
+A normal build neither requires nor downloads the original JAR:
 
 ```sh
 python3 tools/package.py
 python3 tools/play.py --create-jar /absolute/path/to/create-1.21.1-6.0.10.jar
 ```
 
-Флаг `--create-jar` только копирует предоставленный файл в отдельный
-разработческий инстанс `.local/play-home/`. Дальше его импортирует сама игра.
-Для проверки импорта без запуска графики:
+`--create-jar` only copies the supplied file into a separate
+development instance, `.local/play-home/`. The game then imports it.
+To test import without starting graphics:
 
 ```sh
 python3 tools/cargo.py run --locked -p create-assets -- /absolute/path/to/instance 97 1
 ```
 
-Этот инструмент использует тот же импортёр, что и игра. Он создаёт локальный
-ресурспак, а не готовый к распространению архив мода. Прежняя упаковка оригинальных
-ресурсов через `package.py --with-original-assets` заменена этим механизмом.
+This tool uses the same importer as the game. It creates a local
+resource pack, not a distributable mod archive. This mechanism replaces the former
+original-resource packaging through `package.py --with-original-assets`.

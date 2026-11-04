@@ -4,6 +4,8 @@ The owner's primary requirement is observable parity with the pinned original
 Create release. Read `compatibility.json`, `COMPATIBILITY.md` and the current
 increment in `PLAN.md` before changing gameplay or presentation.
 
+- Maintain all public project documentation in English. Preserve original game
+  localizations and identifiers; the documentation language does not change them.
 - Port behavior into idiomatic, efficient Rust. Preserve recognizable subsystem
   boundaries and document the Java source mapping where useful; a class-for-class
   translation is not required.

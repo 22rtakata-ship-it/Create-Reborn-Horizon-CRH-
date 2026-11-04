@@ -1,4 +1,4 @@
-# Проверки и свидетельства
+# Checks and evidence
 
 ## Current review checkpoint: 0.6.0-alpha.2
 
@@ -55,364 +55,367 @@ The entries below describe earlier binaries and are not silently transferred
 to this checkpoint.
 
 
-## Производственные механизмы 0.5.0 (4 ноября 2026)
+## Production machinery 0.5.0 (4 November 2026)
 
-Закреплённые Horizon API 359 / Minecraft 26.3 и Create 6.0.10 сохранены.
-Официальная performance-сборка: `native-fc02103-722bc455fcbe`.
+The pinned Horizon API 359 / Minecraft 26.3 and Create 6.0.10 are unchanged.
+Official performance build: `native-fc02103-722bc455fcbe`.
 
-- **56 Rust-тестов**: 41 для независимой игровой логики и 15 для ресурсов.
-  Форматирование, Clippy с запретом предупреждений и контракты исходного пакета прошли.
-- **157 204 сравнения с Java** в восьми оракулах: прежние 75 145, жернова
-  24 409, вентилятор 17 680, стационарный бур 39 970. Оракул вентилятора также
-  проверяет 566 956 переходов таймера. Тела выбранных методов извлекаются через
-  JDK AST; окружение мира/рецептов ограничено явно описанными тестовыми адаптерами.
-- Нативный прогон жерновов и вентилятора прошёл:
-  `.local/smoke-omefnu7i/result.json`. Проверены фильтрация входов, компоненты,
-  воронки, вероятностные выходы, остановка при заполнении, передача вращения,
-  четыре среды, выброшенные предметы, препятствия, смена знака и настоящий restart.
-- Независимый аудит вентилятора: `.local/smoke-audit05-comjxyyz/audit-result.json`
-  и `.local/smoke-audit05-an8iwh2i/audit-result.json`. Все шесть входных граней,
-  обратный порядок сред, препятствия/полублоки, свежий прогресс после повторной
-  вставки, точные 153/303 вызова для 16/17 предметов и извлечение/заполнение
-  воронками за один тик без переноса старого таймера.
-- Сохранение выброшенных предметов проверено настоящим restart:
-  `.local/smoke-ri_t_bv9/result.json` и его transcript. Поля
-  `NeoForgeData.CreateData.Processing.Type/Time` продолжают оставшееся время,
-  сохраняют соседние неизвестные ключи и завершают обработку один раз.
-- Независимый нативный бур: `.local/drill-smoke-g4o3ujex/result.json`.
-  Все шесть направлений, 4 SU/RPM, обычная добыча камня/алмазной руды без
-  инструмента и независимо от creative игрока, бедрок, `block_drops`, пауза
-  сцеплением, очистка прогресса на неразрушаемой цели и restart с получением
-  ровно одного обсидиана. Это проверка стационарного бура.
-- Импорт ресурсов: 324 приватных файла, из них 288 исходных и 36 производных
-  вариантов материалов колёс. Все 61 локализация сохранены байт в байт,
-  корневые модели/текстуры новых механизмов сверены с исходным JAR.
-  `.local/content-05-import/validation.json`, схема кэша 7.
-- Все три архива приняты штатным валидатором Horizon; оригинальных ресурсов
-  Create и Minecraft в них нет.
-- **Полный итоговый прогон с Metal и звуком прошёл без пропусков**:
-  `.local/smoke-hd1a1k8a/result.json`, 2 729 контрольных команд. Включены все
-  предыдущие сценарии, 24 настоящих крафта, жернов, четыре вида потока,
-  стационарный бур, сброс fan-прогресса прессом и настоящий restart. Проверены
-  точные оставшиеся таймеры/неизвестные соседние NBT-поля выброшенного предмета,
-  сохранённые инвентари и завершение обработки ровно один раз. Повторный запуск
-  использовал проверенный кэш всех 324 ресурсов. Оба запуска открыли обычный
-  audio output MacBook Air Speakers; ошибок и предупреждений в журнале нет.
-  Это проверка аудиособытий/запуска, а не слуховая оценка звучания.
+- **56 Rust tests**: 41 for independent gameplay logic and 15 for assets.
+  Formatting, Clippy with warnings denied, and source-package contracts passed.
+- **157 204 Java comparisons** across eight oracles: the previous 75 145,
+  millstone 24 409, fan 17 680, and stationary drill 39 970. The fan oracle also
+  checks 566 956 timer transitions. Selected method bodies are extracted through
+  the JDK AST; world/recipe contexts use explicitly bounded test adapters.
+- The native millstone/fan run passed:
+  `.local/smoke-omefnu7i/result.json`. It checked input filtering, components,
+  hoppers, probabilistic outputs, full-output blocking, rotation transmission,
+  four media, dropped items, obstructions, sign changes, and a real restart.
+- Independent fan audit: `.local/smoke-audit05-comjxyyz/audit-result.json`
+  and `.local/smoke-audit05-an8iwh2i/audit-result.json`. All six input faces,
+  reversed media order, obstructions/slabs, fresh progress after reinsertion,
+  exact 153/303 calls for 16/17 items, and hopper extraction/filling within one
+  tick without carrying over the old timer.
+- Dropped-item persistence was checked with a real restart:
+  `.local/smoke-ri_t_bv9/result.json` and its transcript. The fields
+  `NeoForgeData.CreateData.Processing.Type/Time` resume the remaining time,
+  preserve unknown sibling keys, and complete processing exactly once.
+- Independent native drill: `.local/drill-smoke-g4o3ujex/result.json`.
+  All six directions, 4 SU/RPM, ordinary stone/diamond-ore loot without a tool
+  and regardless of the player's creative mode, bedrock, `block_drops`, clutch
+  pause, progress clearing on an unbreakable target, and a restart yielding
+  exactly one obsidian. This checks the stationary drill.
+- Asset import: 324 private files, including 288 original files and 36 derived
+  wheel-material variants. All 61 locales are preserved byte for byte;
+  root models/textures for the new machines were compared with the original JAR.
+  `.local/content-05-import/validation.json`, cache schema 7.
+- All three archives were accepted by Horizon's standard validator; they contain
+  no original Create or Minecraft assets.
+- **The complete final Metal/audio run passed without skips**:
+  `.local/smoke-hd1a1k8a/result.json`, 2 729 control commands. It includes all
+  previous scenarios, 24 actual crafts, the millstone, four airflow types,
+  stationary drill, press reset of fan progress, and a real restart. It checked
+  exact remaining timers/unknown sibling NBT fields on a dropped item, saved
+  inventories, and completion exactly once. The second launch reused the verified
+  cache of all 324 assets. Both launches opened the normal MacBook Air Speakers
+  audio output; the log contains no errors or warnings.
+  This checks audio events/startup, not perceived sound quality.
 
-Дополнительное ревью нашло отличие на стыке пресса и вентилятора:
-`BeltPressingCallbacks.whenItemHeld` очищает прежний fan-прогресс перед созданием
-результата и остатка. Адаптер теперь делает тот же сброс, сохраняя посторонние
-ключи `HeldItem`. Новый нативный сценарий воспроизводит ошибку на прежней сборке
-`389d0c06ae5e` и проверяет новый полный таймер после настоящего удара пресса.
-Сценарий прошёл на `722bc455fcbe` для одного входа и остатка стопки:
-`.local/smoke-audit05-frwj19pm/audit-result.json`. В обоих случаях новый таймер
-151→141 за десять тиков; постороннее поле транспортируемого предмета сохранено.
+Additional review found a difference at the press/fan boundary:
+`BeltPressingCallbacks.whenItemHeld` clears previous fan progress before creating
+results and remainders. The adapter now performs the same reset while preserving
+unrelated `HeldItem` keys. A new native scenario reproduces the bug on the earlier
+`389d0c06ae5e` build and checks a fresh full timer after a real press impact.
+It passed on `722bc455fcbe` for a single input and a stack remainder:
+`.local/smoke-audit05-frwj19pm/audit-result.json`. In both cases the new timer
+runs 151→141 over ten ticks; the transported item's unrelated field is preserved.
 
-Отдельный аудит готовой карты **CreateProcessing05** также прошёл на точной
-сборке `722bc455fcbe`: `.local/review-map-clone3-i_0qdnkc/review-map-result.json`.
-Восемь групп проверок включают все 39 позиций каталога, пресс/очистку рендера,
-приборы/компаратор, реверс обоих колёс, жернов с настоящими воронками,
-четыре потока с восемью результатами каждый, бур с одним новым булыжником,
-пять крафтов через настоящее меню и возврат пустого ведра. Семь игровых снимков
-просмотрены. Проверки выполнялись на копии: `final-integrity.json` подтверждает
-неизменность всех 29 файлов исходной карты. Пользовательский список действий:
+A separate audit of the prepared **CreateProcessing05** map also passed on the
+exact `722bc455fcbe` build: `.local/review-map-clone3-i_0qdnkc/review-map-result.json`.
+Eight check groups include all 39 catalog entries, press/render clearing,
+instruments/comparator, reversal of both wheels, millstone with real hoppers,
+four airflows with eight outputs each, drill with one new cobblestone,
+five crafts through the actual menu, and empty-bucket return. Seven gameplay
+screenshots were viewed. Checks ran on a copy: `final-integrity.json` confirms
+that all 29 source-map files are unchanged. The user walkthrough is in
 [TESTING_05.md](TESTING_05.md).
 
-Штатный **Add from GitHub** установил опубликованный исходный коммит
-`16c5d454b1b9860da01b78474ea5206f0664d384` в новый пустой тестовый instance.
-`native-build --profile performance` подтвердил **Up to date / 0 s** и точную
-сборку `722bc455fcbe`. Все 69 исходных файлов совпали с локальным пакетом байт
-в байт; JSON-поля манифеста идентичны, официальный экспортёр убирает конечный
-перевод строки. SHA-256 локального `.hnmod`:
+The standard **Add from GitHub** installed the published source commit
+`16c5d454b1b9860da01b78474ea5206f0664d384` into a new empty test instance.
+`native-build --profile performance` confirmed **Up to date / 0 s** and the exact
+`722bc455fcbe` build. All 69 source files matched the local package byte for
+byte; manifest JSON fields are identical, with the official exporter removing
+the final newline. SHA-256 of the local `.hnmod`:
 `f49534cc3d558eb6baca9b1479e48a8c1d2a33031b098c5fa037fa1c4d4e0c49`.
-SHA-256 установленного лаунчером GitHub-архива:
+SHA-256 of the GitHub archive installed by the Launcher:
 `6e88ee5b86f21fd756b09e8d9511516896d5cb4e2051214fbb73577ac2aa53f5`.
-[CI исходного коммита](https://github.com/Delete228/create-horizon/actions/runs/41732420020)
-успешен, включая все восемь Java-оракулов.
+[Source-commit CI](https://github.com/Delete228/create-horizon/actions/runs/41732420020)
+passed, including all eight Java oracles.
 
-В пользовательский **Create Processing 0.5** мод тоже установлен настоящей
-командой `mods add-github` по ссылке на этот точный коммит; есть подлинная origin
-квитанция. Обычная ссылка на репозиторий в этой попытке попала под лимит анонимного
-GitHub API, ссылка `/commit/…` сработала. Установленный пакет снова дал
-**Up to date / 0 s**, выбран `native-fc02103-722bc455fcbe`; прежняя глобальная
-Nightly и старые instance сохранены. После перезапуска GUI в окне подтверждены
-**Create Processing 0.5**, одна модификация, один мир и правильная native-версия.
-Свидетельства: `.local/05-github-fresh-install.log`,
+The mod was also installed into the user's **Create Processing 0.5** using the
+actual `mods add-github` command with a link to this exact commit; a genuine
+origin receipt exists. The ordinary repository URL hit the anonymous GitHub API
+limit in this attempt; the `/commit/…` URL worked. The installed package again
+reported **Up to date / 0 s**, selecting `native-fc02103-722bc455fcbe`; the previous
+global Nightly and old instances were preserved. After restarting the GUI, its
+window confirmed **Create Processing 0.5**, one mod, one world, and the correct
+native version. Evidence: `.local/05-github-fresh-install.log`,
 `.local/05-github-fresh-build.log`, `.local/05-github-byte-audit.json`,
 `.local/05-user-github-install.log`, `.local/05-installed-build.log`,
 `.local/05-install.json`.
 
-Обычный оконный `play` официального лаунчера открыл **CreateProcessing05**
-на итоговой сборке. Подтверждены 36 переносимых позиций, надетые очки,
-оригинальные модели/русские подписи, проверенный кэш 324 ресурсов и обычное
-аудиоустройство. Игра оставлена на паузе. Игровой снимок просмотрен;
-подтверждения — `.local/visible05-bpomhiqr/result.json`, `review.png` и
-`.local/05-visible.json`. Копии аудита не заменяют исходный пользовательский мир.
+The official Launcher's normal windowed `play` opened **CreateProcessing05**
+on the final build. It confirmed 36 carried entries, equipped goggles,
+original models/Russian labels, the verified 324-asset cache, and the normal
+audio device. The game was left paused. The gameplay screenshot was viewed;
+evidence is in `.local/visible05-bpomhiqr/result.json`, `review.png`, and
+`.local/05-visible.json`. Audit copies do not replace the original user world.
 
-Сопоставление фактически отправленных на рендер матриц новых механизмов использует
-Java-углы на **тех же дробных временах кадров**. Вычисление идеальной мгновенной
-скорости по двум кадрам даёт небольшие отклонения из-за исходного `float`; это
-проверено на сохранённых матрицах жерновов. Для теста используется исходный
-Java-метод, а не ослабленная проверка направления.
+Comparison of the new machines' matrices actually submitted for rendering uses
+Java angles at **the same fractional frame times**. Computing an ideal
+instantaneous speed from two frames gives small deviations due to the source
+`float`; this was checked on saved millstone matrices. The test uses the original
+Java method, rather than weakening the direction check.
 
-Свидетельства: `.local/05-{core,clippy,performance,package}.log`,
-`.local/05-oracles.json`; игровые протоколы лежат рядом с указанными результатами.
-Проверки не подтверждают полный Create, сетевой multi-client, перемещение
-contraptions или обмен Java/Horizon мирами между версиями.
+Evidence: `.local/05-{core,clippy,performance,package}.log`,
+`.local/05-oracles.json`; gameplay transcripts are beside the referenced results.
+These checks do not establish full Create support, networked multi-client play,
+moving contraptions, or cross-version Java/Horizon world exchange.
 
-## Инструменты и водяные колёса 0.4.0 (4 ноября 2026)
+## Instruments and water wheels 0.4.0 (4 November 2026)
 
-Те же закреплённые Horizon API 359 / Minecraft 26.3 и Create 6.0.10. Новая
-performance-сборка `native-fc02103-6533e4389288` получена официальным Launcher.
+The same pinned Horizon API 359 / Minecraft 26.3 and Create 6.0.10 apply. The new
+performance build `native-fc02103-6533e4389288` was produced by the official Launcher.
 
-- **39 Rust-тестов**, форматирование, Clippy и контракты исходного пакета прошли.
-- **75 145 Java-сравнений**: прежние четыре оракула и 6 388 новых случаев фаз,
-  углов (включая большие времена), разгона/реверса/выбега ручки, шкалы скорости
-  и ограничения RPM колёс. Тела методов берутся из закреплённых исходников через
-  JDK AST. Это изолированные контексты, а не полный запуск NeoForge.
-- Игровой сценарий инструментов `.local/smoke-7t9g60e4/result.json` прошёл с Metal
-  и звуком: три оси приборов, выход компаратора 4→15, настоящее надевание очков,
-  HUD, фактические матрицы трёх передач и ручки во всех шести ориентациях,
-  восемь латунных листов, течения/реверс/мощность колёс, смена дерева без расхода,
-  отказ установки без потери предмета, повторная попытка над полом, разрушение
-  структурной части с возвратом одного колеса и очисткой всех частей, восемь
-  новых настоящих крафтов и сохранение/перезапуск.
-- 258 импортированных файлов совпали с исходным JAR байт в байт, включая 61 язык,
-  четыре OBJ и три MTL. Ещё 36 вариантов материалов создаются только в приватном
-  кэше. Всего 294 файла, схема 5. Публичные архивы не содержат этих ресурсов.
-- Три архива 0.4.0 приняты штатным валидатором Horizon. SHA-256 `.hnmod`:
+- **39 Rust tests**, formatting, Clippy, and source-package contracts passed.
+- **75 145 Java comparisons**: the previous four oracles plus 6 388 new cases
+  covering phases, angles (including large times), crank acceleration/reversal/
+  coast-down, the speed scale, and wheel RPM limits. Method bodies come from the
+  pinned source through the JDK AST. These are isolated contexts, not a full NeoForge run.
+- The instrument gameplay scenario `.local/smoke-7t9g60e4/result.json` passed with
+  Metal and audio: three gauge axes, comparator output 4→15, actual equipping of
+  goggles, HUD, actual matrices of three transmissions and the crank in all six
+  orientations, eight brass sheets, wheel currents/reversal/power, wood changes
+  without consumption, placement refusal without item loss, retry above a floor,
+  breaking a structural part with one wheel returned and all parts cleared,
+  eight new actual crafts, and save/restart.
+- 258 imported files matched the original JAR byte for byte, including 61 languages,
+  four OBJ and three MTL files. Another 36 material variants are created only in
+  the private cache. Total: 294 files, schema 5. Public archives omit these assets.
+- Three 0.4.0 archives were accepted by Horizon's standard validator. `.hnmod` SHA-256:
   `b7e8c6ba112d02d25c572dbee12f8796b1608a5e8d07dd178337b6cfb41b8021`.
 
-Дополнительные свидетельства: `.local/04-{core,clippy,oracles,performance,packages}.log`,
+Additional evidence: `.local/04-{core,clippy,oracles,performance,packages}.log`,
 `.local/04-resource-audit.json`, `.local/visual-oracle/result.json`.
-Полный регрессионный прогон с Metal и звуком также прошёл:
-`.local/smoke-a6vb0yx3/result.json`, без пропусков. Отдельный instance
-**Create Engineering 0.4** и мир **CreateEngineering04** подготовлены;
-пакет побайтно сопоставлен с опубликованным исходным коммитом `2c9b9d8`.
-Эта промежуточная версия сохранена, владелец выбрал проверять сразу 0.5.
+The complete Metal/audio regression also passed:
+`.local/smoke-a6vb0yx3/result.json`, without skips. A separate **Create Engineering 0.4**
+instance and **CreateEngineering04** world were prepared; the package was compared
+byte for byte with the published source commit `2c9b9d8`.
+This intermediate version is preserved; the owner chose to review 0.5 directly.
 
 
-## Основа 0.3.0 (3 ноября 2026)
+## Foundation 0.3.0 (3 November 2026)
 
-Базовая среда: macOS arm64 / Apple M4, Rust 1.99.1, Horizon API 359 / Minecraft
+Base environment: macOS arm64 / Apple M4, Rust 1.99.1, Horizon API 359 / Minecraft
 26.3. Create 6.0.10, source `ac0c444d9828da3453ae8cc65338e8de063286fb`.
-Точные зависимости закреплены в `compatibility.json`.
+Exact dependencies are pinned in `compatibility.json`.
 
-| Проверка | Результат и граница |
+| Check | Result and scope |
 | --- | --- |
-| Rust | 34 теста: кинетические компоненты/половины муфты, приоритет скорости источников, редуктор, передачи, перегрузка, ограничение обхода, цикл пресса, количества/буфер, управление мотором, импорт/восстановление/изоляция ресурсов. Clippy без предупреждений. |
-| Оригинальная Java | 75 сценариев capacity/stress, 27 648 размещений, 31 752 уравнения соединений/портов, 9 282 сценария маршрутизации результата пресса/скорости/кривой головки. Использованы исходные тела методов через JDK AST; Minecraft/мир/рецепт заменены явно описанными адаптерами. Полный NeoForge не запускался. |
-| Ресурсы | Все 217 файлов `assets/create` из набора 218, включая 61 язык, `sounds.json` и 38 OGG, совпали с локальным JAR байт в байт. Схема кэша 3. Ни эти файлы, ни JAR не публикуются. |
-| Депо/клиент | Верхний обмен, замена/объединение, буфер, компоненты, Shift/боковой клик. Проверяется выбор предмета в реальном callback отрисовки: после извлечения он пуст, а не только серверный слот. Wire-снимок явно очищает `HeldItem`. |
-| Передачи | Реальный редстоун переключает муфту и направление gearshift. Четыре порта редуктора и перпендикулярные большие шестерни передают ожидаемые скорости. |
-| Взаимодействия | Рукоятка 32 RPM / Shift −32 / остановка; Survival-корпуса с расходованием материала, encasing без расходования корпуса, вращение/снятие ключом и возврат содержимого депо. |
-| Автоматизация | Воронка не объединяет вход со стопкой занятого депо; извлечение верхнего слота и буфера сохраняет количества. Упавший предмет подхватывается и возвращается с `custom_data`. Три выпавших слитка обработаны прессом без депо. |
-| Настоящие крафты | 11 рецептов выполнены через 3×3 меню верстака и серверные click-slot: сплав, вал, две шестерни, рукоятка, редуктор, муфта, переключатель, пресс, депо, ключ. Проверены результат и полученный инвентарь. |
-| Мотор | Реальные клики нативного экрана выбирают +128 / −64 RPM, колесо меняет до −63, скорость доходит до вала. Проверка значения после перезапуска. |
-| Пакеты | Три архива 0.3.0 приняты штатным `cargo-horizon-mod check`. Native-пакет содержит весь публичный контент; отдельный `.hmod` не нужен. |
+| Rust | 34 tests: kinetic components/clutch halves, source-speed priority, gearbox, transmissions, overload, traversal bounds, press cycle, quantities/buffer, motor controls, asset import/recovery/isolation. Clippy without warnings. |
+| Original Java | 75 capacity/stress scenarios, 27 648 placements, 31 752 connection/port equations, 9 282 press-result routing/speed/head-curve scenarios. Original method bodies were extracted through the JDK AST; Minecraft/world/recipe contexts use explicit adapters. Full NeoForge was not run. |
+| Assets | All 217 `assets/create` files from the set of 218, including 61 languages, `sounds.json`, and 38 OGG files, matched the local JAR byte for byte. Cache schema 3. Neither these files nor the JAR are published. |
+| Depot/client | Top exchange, replacement/merging, buffer, components, Shift/side click. Item selection is checked in the actual render callback: it is empty after extraction, beyond just the server slot. The wire snapshot explicitly clears `HeldItem`. |
+| Transmissions | Real redstone switches the clutch and gearshift direction. All four gearbox ports and perpendicular large cogs transmit the expected speeds. |
+| Interactions | Crank 32 RPM / Shift −32 / stop; Survival casings consume material, encasing does not consume the casing, wrench rotation/removal and return of depot contents. |
+| Automation | A hopper does not merge an input into a busy depot's stack; top-slot/buffer extraction preserves quantities. A fallen item is picked up and returned with `custom_data`. Three dropped ingots were pressed without a depot. |
+| Actual crafts | 11 recipes executed through the 3×3 crafting-table menu and server click-slot: alloy, shaft, two cogs, crank, gearbox, clutch, gearshift, press, depot, wrench. Result and final inventory were checked. |
+| Motor | Actual native-screen clicks select +128 / −64 RPM, scrolling changes it to −63, and speed reaches the shaft. The value is checked after restart. |
+| Packages | Three 0.3.0 archives were accepted by standard `cargo-horizon-mod check`. The native package includes all public content; no separate `.hmod` is needed. |
 
-Последний полный промежуточный Metal-прогон: `.local/smoke-0u4woeb4/result.json`.
-Дополнительно проверены воронки и world pressing в `.local/smoke-8rr__rei/transcript.json`;
-этот headless-прогон остановлен на меню верстака (`no renderer yet`). Headless-режим
-теперь явно пропускает проверки меню; Metal их выполняет. Результаты не скрываются
-и не засчитываются как полный headless-pass.
+Latest complete intermediate Metal run: `.local/smoke-0u4woeb4/result.json`.
+Hoppers and world pressing were also checked in `.local/smoke-8rr__rei/transcript.json`;
+that headless run stopped at the crafting-table menu (`no renderer yet`). Headless
+mode now explicitly skips menu checks; Metal executes them. Results are retained
+and are not counted as a complete headless pass.
 
-Performance-сборка: `native-fc02103-7ea49a8f5494`, собрана неизменённым официальным
-Launcher 0.2.37. Финальный расширенный Metal-прогон прошёл без пропусков: `.local/smoke-ncu3notg/result.json`.
-Проверены извлечение после первого удара (7 входов + 1 лист), отсутствие повторного
-результата, восемь звуковых событий/ударов для восьми входов, возврат всех восьми
-листов и очистка отрисовки, остановка/восстановление питания и золотой цикл через
-перезапуск. Штатный audio открыл MacBook Air Speakers; ошибок в журнале нет.
-Это проверка запуска/событий/ресурсов, а не оценка звучания на слух. Тестовые миры одноразовые, исходные пользовательские миры не использованы.
+Performance build: `native-fc02103-7ea49a8f5494`, built by the unmodified official
+Launcher 0.2.37. The final expanded Metal run passed without skips: `.local/smoke-ncu3notg/result.json`.
+It checked extraction after the first impact (7 inputs + 1 sheet), no duplicate
+result, eight sound events/impacts for eight inputs, return of all eight sheets
+and cleared rendering, power loss/restoration, and a gold cycle across restart.
+Standard audio opened MacBook Air Speakers; the log contains no errors.
+This checks startup/events/assets, not perceived sound quality. Test worlds were
+disposable; original user worlds were not used.
 
-Локальные свидетельства: `.local/foundation-unit.log`, `.local/foundation-clippy.log`,
+Local evidence: `.local/foundation-unit.log`, `.local/foundation-clippy.log`,
 `.local/{network,placement,rotation,processing}-oracle/result.json`,
 `.local/foundation-resource-audit.json`, `.local/foundation-packages.log`,
-`.local/foundation-performance.log`. Команды установки и тесты включены в репозиторий;
-локальные игровые ресурсы и результаты в Git не входят.
+`.local/foundation-performance.log`. Installation commands and tests are in the
+repository; local game assets and results are not in Git.
 
-Исходный пакет `12d83a0233317484b697292af0c7623ced074ec9` опубликован;
-[CI](https://github.com/Delete228/create-horizon/actions/runs/41701109989) прошёл
-все этапы, включая четыре Java-оракула. Native-архив SHA-256:
+Source package `12d83a0233317484b697292af0c7623ced074ec9` was published;
+[CI](https://github.com/Delete228/create-horizon/actions/runs/41701109989) passed
+all stages, including four Java oracles. Native archive SHA-256:
 `0dd5758a7db5e7955b295e881f8ebe51a24f01a947e4d7c809e546f0bd8b086d`.
 
-`mods add-github` для 0.3 заблокирован лимитом анонимного GitHub API в обычном и
-изолированном launcher home. Вместо него все файлы локального проверенного `.hnmod`
-сверены с source archive этого опубликованного коммита. Пакет установлен в новый
-**Create Foundation 0.3** без выдуманной GitHub origin-квитанции. Поэтому автоматическое
-GitHub-обновление этого конкретного instance пока не настроено; после снятия лимита
-можно выполнить обычный `mods add-github`. Это не успешная end-to-end установка из
-GitHub для 0.3; штатный маршрут ранее проверен для 0.2 (история ниже).
+`mods add-github` for 0.3 was blocked by the anonymous GitHub API limit in both
+the normal and isolated launcher homes. Instead, every file in the verified local
+`.hnmod` was compared with the source archive of this published commit. The package
+was installed into a new **Create Foundation 0.3** without a fabricated GitHub
+origin receipt. Automatic GitHub updates for this specific instance are therefore
+not yet configured; ordinary `mods add-github` can be used once the limit clears.
+This is not a successful end-to-end GitHub installation for 0.3; the standard path
+was previously verified for 0.2 (history below).
 
-Точная performance-сборка перенесена из кэша официального native-build. Новый
-`native-build --instance "Create Foundation 0.3" --profile performance` прочитал
-установленный пакет и подтвердил **Up to date (no build needed)** / ту же версию.
-Новый мир **CreateFoundation03** подготовлен через штатный `play` и контрольный API:
-26 предметов, редстоуновые передачи, редуктор, ручной привод пресса, корпуса,
-верстак и 8 готовых листов. Старые миры не открывались и не заменялись.
-Локальные подтверждения: `.local/foundation-source-install-audit.json`,
+The exact performance build was transferred from the official native-build cache.
+A new `native-build --instance "Create Foundation 0.3" --profile performance` read
+the installed package and confirmed **Up to date (no build needed)** / the same
+version. The new **CreateFoundation03** world was prepared through standard `play`
+and the control API: 26 items, redstone transmissions, gearbox, manually driven
+press, casings, crafting table, and 8 finished sheets. Old worlds were neither
+opened nor replaced. Local evidence: `.local/foundation-source-install-audit.json`,
 `.local/foundation-installed-build.log`, `.local/foundation-review-world-result.json`.
 
-Оригинальные модели редуктора, муфты, переключателя, ключа и депо с готовым листом
-просмотрены на игровых снимках нового стенда. Финальный обычный оконный запуск
-подтверждён API: мир `CreateFoundation03`, затем экран `paused`.
-macOS заблокирована, поэтому CUA не смог проверить окно/список instance в лаунчере;
-обычное окно под блокировкой не отдавало кадр по screenshot. Для осмотра использован
-отдельный offscreen-запуск **того же нового мира**, после него оставлен обычный
-оконный клиент на паузе. Подтверждение: `.local/foundation-visible-state.json`,
-снимки `.local/foundation-{gallery,transmissions,press-results}.png`.
+Original gearbox, clutch, gearshift, wrench and depot models with a finished sheet
+were viewed in gameplay screenshots of the new gallery. The final normal windowed
+launch was confirmed through the API: world `CreateFoundation03`, then `paused`.
+macOS was locked, so CUA could not check the Launcher window/instance list;
+the normal window did not return a screenshot while locked. A separate offscreen
+launch of **the same new world** was used for inspection, then the normal windowed
+client was left paused. Evidence: `.local/foundation-visible-state.json`,
+screenshots `.local/foundation-{gallery,transmissions,press-results}.png`.
 
-Автоматические тесты не доказывают полноту Create. Слуховая/визуальная оценка
-пользователем остаётся отдельной проверкой; точные частицы, случайные вариации звука,
-кинематическая атмосфера, сглаживание и исходный UI пока не завершены.
+Automated tests do not establish complete Create support. The owner's listening/
+visual review remains separate; exact particles, random sound variations,
+kinetic atmosphere, smoothing, and the original UI were not yet complete at this stage.
 
-# Проверки прототипа и установки
+# Prototype and installation checks
 
-## Итерация 0.2.0: размещение и прямое взаимодействие с депо
+## Iteration 0.2.0: placement and direct depot interaction
 
-Нативный пакет: `b839dcb0c9b6674367b6f05eaf50dc75d7234854`.
-Эталон поведения и ресурсов: Create **6.0.10**, исходники
-`ac0c444d9828da3453ae8cc65338e8de063286fb`. Соседний Java checkout не переключался:
-инструменты читают закреплённые файлы через Git.
+Native package: `b839dcb0c9b6674367b6f05eaf50dc75d7234854`.
+Behavior/asset reference: Create **6.0.10**, source
+`ac0c444d9828da3453ae8cc65338e8de063286fb`. The adjacent Java checkout was not
+switched: tools read pinned files through Git.
 
-| Проверка | Результат и предел проверки |
+| Check | Result and scope |
 | --- | --- |
-| Rust и CI | 24 теста (14 ядро, 10 импортёр), форматирование, контракт пакета и Clippy прошли. [CI исходного пакета](https://github.com/Delete228/create-horizon/actions/runs/41687537157) успешен. [Следующий CI](https://github.com/Delete228/create-horizon/actions/runs/41688429604) также успешно выполнил оба Java-оракула на JDK 25. |
-| Размещение против Java | 27 648 комбинаций для вала, шестерней и мотора совпали с AST-извлечёнными исходными методами. Контекст, соседние порты и Minecraft-типы заменены адаптерами. |
-| Нагрузка против Java | 75 сценариев повторно совпали с неизменённым `KineticNetwork.java` того же релиза. Это не полная проверка графа/NeoForge. |
-| Размещение в игре | 12 сценариев: оси X/Y/Z, соседний вал, Shift, наследование оси шестерни, мотор и горизонтальный пресс. |
-| Прямое депо | Верхний клик кладёт всю стопку без GUI, пустая рука забирает, другой предмет заменяет; одинаковые предметы объединяются после возврата. Количество сохраняется. Проверены боковая грань, Shift и возврат восьми выходных слотов. |
-| Компоненты и сохранение | `custom_data` свечи сохранилась после помещения/возврата и после сохранения, перезапуска и повторного извлечения. |
-| Клиентский результат | Cancellable HEAD на `remote_block_reacts` возвращает Success для верхнего клика по депо. Без него клиент посылал действие второй руки и сразу забирал положенное. Обмен инвентаря остаётся на серверном именованном hook. |
-| Оригинальные ресурсы | Все 110 импортированных файлов, включая 61 язык, сравнены с JAR байт в байт. Схема кэша 2 обновляет прежний набор. Оригинальные файлы не добавлены в Git или архивы порта. |
-| Полные игровые прогоны | Headless без JAR и Metal с JAR прошли: размещение/депо, железо, остановка питания, медь после восстановления и золотой цикл через перезапуск. Metal использует итоговую performance-сборку `native-fc02103-0554886ea08b`. Снимки просмотрены: оригинальные депо, свеча и медный лист видимы в мире. |
-| Штатный pipeline | Неизменённый Launcher 0.2.37 скачал пакет по GitHub-коммиту и собрал установленный `.hnmod`. Его SHA-256: `0f648187005c30879b40340b08b3401e63cc3356882923f65e8a41823a81ef80`. Все архивы 0.2.0 приняты штатным валидатором. |
-| Пользовательский стенд | Новый instance **Create Review 0.2**, мир **CreateReview02**: фабрика изготовила 8 железных листов, подготовлены ориентации, депо и предметы. Штатный performance `native-build` подтвердил Up to date. Обычный оконный запуск тем же лаунчером открыл мир с оригинальной графикой и русскими названиями; игра оставлена на паузе. |
+| Rust and CI | 24 tests (14 core, 10 importer), formatting, package contract, and Clippy passed. [Source-package CI](https://github.com/Delete228/create-horizon/actions/runs/41687537157) passed. [Next CI](https://github.com/Delete228/create-horizon/actions/runs/41688429604) also ran both Java oracles successfully on JDK 25. |
+| Placement versus Java | 27 648 combinations for shaft, cogs, and motor matched the AST-extracted original methods. Context, neighboring ports, and Minecraft types use adapters. |
+| Stress versus Java | 75 scenarios again matched unchanged `KineticNetwork.java` from the same release. This is not a complete graph/NeoForge check. |
+| In-game placement | 12 scenarios: X/Y/Z axes, adjacent shaft, Shift, inherited cog axis, motor, and horizontal press. |
+| Direct depot | A top click places the whole stack without a GUI, an empty hand collects it, another item replaces it; identical items merge after return. Quantity is conserved. Side face, Shift, and return of eight output slots were checked. |
+| Components and persistence | The candle's `custom_data` survived placement/return and save, restart, and extraction again. |
+| Client result | A cancellable HEAD on `remote_block_reacts` returns Success for a top depot click. Without it the client sent an offhand action and immediately took back the deposited item. Inventory exchange remains on the named server hook. |
+| Original assets | All 110 imported files, including 61 languages, were compared with the JAR byte for byte. Cache schema 2 refreshes the previous set. Original files were not added to Git or port archives. |
+| Complete gameplay runs | Headless without the JAR and Metal with the JAR passed: placement/depot, iron, power loss, copper after restoration, and a gold cycle across restart. Metal uses final performance build `native-fc02103-0554886ea08b`. Screenshots were viewed: original depot, candle, and copper sheet are visible in the world. |
+| Standard pipeline | Unmodified Launcher 0.2.37 downloaded the package by GitHub commit and built the installed `.hnmod`. Its SHA-256: `0f648187005c30879b40340b08b3401e63cc3356882923f65e8a41823a81ef80`. All 0.2.0 archives were accepted by the standard validator. |
+| User gallery | New **Create Review 0.2** instance, **CreateReview02** world: the factory produced 8 iron sheets; orientations, depots, and items were prepared. Standard performance `native-build` confirmed Up to date. A normal windowed launch through the same Launcher opened the world with original graphics and Russian names; the game was left paused. |
 
-При подготовке пользовательского instance анонимный GitHub API достиг rate limit:
-повторно использованы точный штатно скачанный пакет с подлинным origin и кэш
-проверенной сборки. Прежние instance и их миры не открывались и не заменялись.
-macOS была заблокирована при завершающей CUA-проверке окна лаунчера; его обновлённый
-список instance не подтверждён визуально. Выбор и версия подтверждены штатным CLI,
-открытый новый мир — контрольным API и игровым снимком.
+While preparing the user instance, the anonymous GitHub API hit its rate limit:
+the exact package downloaded through the standard pipeline, its genuine origin,
+and the verified build cache were reused. Previous instances/worlds were not
+opened or replaced. macOS was locked during the final CUA check of the Launcher
+window; its refreshed instance list was not visually confirmed. Selection and
+version were confirmed by the standard CLI, and the open new world by the
+control API and a gameplay screenshot.
 
-Фикстура посылает поворот/Shift заранее и ждёт доставки серверу перед кликом;
-после клика ждёт синхронизации. Java-оракул проверяет алгоритм, игровой прогон — адаптер.
-Headless-прогон предшествовал уточнению высоты коллизии депо до исходных 13/16;
-итоговый Metal-прогон включает это уточнение.
+The fixture sends rotation/Shift early and waits for server delivery before
+clicking, then waits for synchronization after the click. The Java oracle checks
+the algorithm; the gameplay run checks the adapter. The headless run preceded
+the depot collision-height correction to the original 13/16;
+the final Metal run includes that correction.
 
-Локальные результаты, не публикуемые в Git: `.local/placement-oracle/result.json`,
+Local results, not published in Git: `.local/placement-oracle/result.json`,
 `.local/network-oracle/result.json`, `.local/locale-check-result.json`,
 `.local/smoke-mhi4i1uo/result.json` (headless), `.local/smoke-yvme8bge/result.json`
 (Metal), `.local/review02-world-result.json`, `.local/review02-visible-state.json`.
 
-Сохранение проверено внутри Horizon. Межверсионный перенос Java-миров не входит
-в требование; полная схема Create ещё не перенесена. Исключения перечислены в
-[COMPATIBILITY.md](COMPATIBILITY.md). Анимации, вода, звуки, мультиплеер и остальные
-механизмы требуют следующих итераций.
+Persistence was checked within Horizon. Cross-version Java-world transfer is
+outside the requirement; the full Create system had not yet been ported.
+Exceptions are listed in [COMPATIBILITY.md](COMPATIBILITY.md). Animations, water,
+sound, multiplayer, and the remaining machinery required later iterations.
 
-## Результаты первого этапа (0.1.0)
+## First-stage results (0.1.0)
 
-Дата: 3 ноября 2026. macOS arm64, Apple M4, Rust 1.99.1.
-Точные коммиты и версии перечислены в [compatibility.json](compatibility.json).
+Date: 3 November 2026. macOS arm64, Apple M4, Rust 1.99.1.
+Exact commits and versions are listed in [compatibility.json](compatibility.json).
 
-| Проверка | Результат и предел проверки |
+| Check | Result and scope |
 | --- | --- |
-| `horizon-port-pack` | Выполнены `import`, `inventory --offline`, `carry`, `report`, `check`. 8913 файлов; покрытие Create помечено `partial`. Это импорт данных, Java-код не исполняется. |
-| Rust-ядро | 12 unit-тестов прошли: соединения, скорости, конфликт источников, перегрузка, разрыв, цикл пресса и кривая движения головки. |
-| Импортёр ресурсов | 9 unit-тестов прошли: подготовка публичного контента, его восстановление и изоляция, зависимости моделей и PNG-метаданные, повторный импорт и восстановление кэша, отсутствие JAR, несколько JAR, неверный SHA-256, обход путей, циклы моделей, отсутствующие ресурсы, Java loaders, лимит размера и симлинк входного файла. Все фикстуры синтетические. |
-| Clippy | `--workspace --all-targets -- -D warnings` прошёл для ядра и импортёра. |
-| Сравнение с Java | 75 сценариев мощности и нагрузки совпали с неизменённым `KineticNetwork.java`. Блок и мир заменены минимальными адаптерами; это не тест полного NeoForge. |
-| Нативная интеграция | Horizon с восемью именованными hooks и тремя закреплёнными mixin для контента и загрузки ресурсов прошёл `cargo check` и собрался в исполняемый клиент. |
-| Архивы | Официальный `cargo-horizon-mod check` принял контентный `.hmod`, нативный `.hnmod` и объединённый `.hmod`. Текущий пакет закрепляет опубликованный исправленный коммит Mixins; локальная поправка больше не нужна. |
-| Игра без графики | Цепочка мотор → вал → две шестерни → пресс → депо изготовила 8 железных пластин. |
-| Потеря питания | При удалённом вале 4 медных слитка остались необработанными; после восстановления вала получены 4 пластины. |
-| Сохранение мира | Игра закрыта во время цикла с 3 золотыми слитками; после повторного запуска того же тестового мира получены 3 золотые пластины. |
-| Графика и экран | Тот же сценарий прошёл с Metal в `--offscreen`; интерфейс депо открылся. Снимки просмотрены: предварительные модели и предмет в слоте видимы. Перетаскивание предметов мышью отдельно не проверялось. |
-| Автоматический импорт в игре | Новый изолированный Metal-сценарий запущен с обычным публичным контентом и JAR в `horizon-mods/create-resources/`. Игра сама импортировала и подключила 49 файлов; каждый из них дополнительно сравнен с исходным JAR байт в байт. Модели и текстура медной пластины проверены на снимках. Железо, медь, потеря питания и золотой цикл через сохранение снова прошли. Второй запуск использовал проверенный кэш. |
-| Перезагрузка ресурсов | F3+T прошла с оригинальным JAR, после его удаления и после возвращения. Журнал и снимки подтверждают переход на временные модели и обратно. Исходный JAR не изменился. |
-| Публичные архивы | После добавления импортёра все три архива повторно прошли официальный валидатор. В них нет PNG, OGG, JAR или Java-классов; оригинальные ресурсы не упаковываются. |
-| Официальный лаунчер | Создан отдельный Create Prototype, импортирован проверенный клиент и установлен публичный контентный архив. Новый мир CreateDemo запущен через `horizon-launcher play`; контент Create загружен, Metal работает, выбранный предмет игрока — `create:creative_motor`. |
-| Импортёр в установленном инстансе | Create Prototype обновлён до `imported-2026-11-03-78bafb5`. Через официальный `play --instance create-prototype` в offscreen-режиме открыт главный экран: 49 ресурсов импортированы из JAR рядом с модом, Metal отрисовал первый кадр. Состояние `screen: title`, `world: null`; CreateDemo не открывался. Обычная выбранная Nightly сохранена. |
+| `horizon-port-pack` | Ran `import`, `inventory --offline`, `carry`, `report`, `check`. 8913 files; Create coverage marked `partial`. This is data import; Java code is not executed. |
+| Rust core | 12 unit tests passed: connections, speeds, conflicting sources, overload, disconnection, press cycle, and head motion curve. |
+| Asset importer | 9 unit tests passed: public-content preparation, recovery and isolation, model dependencies and PNG metadata, repeated import and cache recovery, no JAR, multiple JARs, wrong SHA-256, path traversal, model cycles, missing assets, Java loaders, size limit, and input-file symlink. All fixtures are synthetic. |
+| Clippy | `--workspace --all-targets -- -D warnings` passed for the core and importer. |
+| Java comparison | 75 power/stress scenarios matched unchanged `KineticNetwork.java`. Block/world use minimal adapters; this is not a full NeoForge test. |
+| Native integration | Horizon with eight named hooks and three pinned mixins for content/resource loading passed `cargo check` and built into an executable client. |
+| Archives | Official `cargo-horizon-mod check` accepted the content `.hmod`, native `.hnmod`, and combined `.hmod`. The package now pins the published corrected Mixins commit; no local patch is needed. |
+| Headless game | Motor → shaft → two cogs → press → depot produced 8 iron sheets. |
+| Power loss | With the shaft removed, 4 copper ingots remained unprocessed; restoring the shaft yielded 4 sheets. |
+| World persistence | The game closed during a cycle with 3 gold ingots; restarting the same test world yielded 3 gold sheets. |
+| Graphics and screen | The same scenario passed with Metal in `--offscreen`; the depot interface opened. Screenshots were viewed: provisional models and the slotted item are visible. Mouse item dragging was not separately checked. |
+| Automatic in-game import | A new isolated Metal scenario ran with normal public content and the JAR in `horizon-mods/create-resources/`. The game imported and enabled 49 files itself; each was also compared with the original JAR byte for byte. Models and the copper-sheet texture were checked in screenshots. Iron, copper, power loss, and the gold cycle across save passed again. The second launch used the verified cache. |
+| Resource reload | F3+T passed with the original JAR, after its removal, and after its return. Logs/screenshots confirm switching to provisional models and back. The original JAR was unchanged. |
+| Public archives | After adding the importer, all three archives passed the official validator again. They contain no PNG, OGG, JAR, or Java classes; original assets are not packaged. |
+| Official Launcher | A separate Create Prototype was created, the verified client imported, and the public content archive installed. New world CreateDemo launched through `horizon-launcher play`; Create content loaded, Metal worked, and the player's selected item was `create:creative_motor`. |
+| Importer in the installed instance | Create Prototype updated to `imported-2026-11-03-78bafb5`. Official `play --instance create-prototype` opened the title screen offscreen: 49 assets imported from the JAR beside the mod, and Metal rendered its first frame. State `screen: title`, `world: null`; CreateDemo was not opened. The normal selected Nightly was preserved. |
 
-## Штатная установка из GitHub (3 ноября 2026)
+## Standard GitHub installation (3 November 2026)
 
-Проверен исходный пакет коммита `73a9ccba62f619c4a7d0288a7d42c1146a3a8f52`.
-[CI этого коммита](https://github.com/Delete228/create-horizon/actions/runs/41677935703)
-прошёл: форматирование, 21 Rust-тест, контракт исходной установки и Clippy.
+Source package at commit `73a9ccba62f619c4a7d0288a7d42c1146a3a8f52` was checked.
+[CI for this commit](https://github.com/Delete228/create-horizon/actions/runs/41677935703)
+passed: formatting, 21 Rust tests, source-installation contract, and Clippy.
 
-- Неизменённый установленный Horizon Launcher **0.2.37** собрал клиент штатной
-  командой `native-build`, профиль `dev`, с полным набором клиентских features.
-  Mixins установлен самим лаунчером через `cargo install --git` на коммите
-  `a1e13326306c6bc074b11e6a4926deb551c4083e`. Исходники инструментов не правились.
-- `mods add-github` установил точный опубликованный коммит в новый изолированный
-  instance. В установленном `.hnmod` проверены обе ревизии, весь публичный контент
-  и отсутствие оригинальных PNG/OGG/JAR/классов.
-- Затем собран именно установленный пакет, без указания папки рабочего checkout.
-  Получен `native-fc02103-0ac3c457cc78`. Повторная команда вывела
-  **Up to date (no build needed)** и использовала ту же сборку.
-- Оба полных игровых сценария запускались этим клиентом **без `--dev-mod` и без
-  отдельного контентного архива**. Без JAR прошли прессование железа и меди,
-  остановка питания, восстановление и золотой цикл через перезапуск.
-- Metal-сценарий с JAR также прошёл все операции, открыл депо и повторно использовал
-  проверенный кэш. Снимок интерфейса просмотрен: оригинальная медная пластина
-  отображается в слоте. Перед проверкой меню фикстура очищает руку и ждёт ответа
-  серверного потока, чтобы не зависеть от подбора выпавших при подготовке предметов.
+- Unmodified installed Horizon Launcher **0.2.37** built the client with standard
+  `native-build`, profile `dev`, and the full client feature set.
+  The Launcher itself installed Mixins through `cargo install --git` at commit
+  `a1e13326306c6bc074b11e6a4926deb551c4083e`. Tool source was not edited.
+- `mods add-github` installed the exact published commit into a new isolated
+  instance. Both revisions, all public content, and the absence of original
+  PNG/OGG/JAR/classes were checked in the installed `.hnmod`.
+- That installed package was then built, without specifying the working checkout
+  directory. The result was `native-fc02103-0ac3c457cc78`. Repeating the command
+  reported **Up to date (no build needed)** and used the same build.
+- Both complete gameplay scenarios used this client **without `--dev-mod` and
+  without a separate content archive**. Without the JAR, iron/copper pressing,
+  power loss, restoration, and the gold cycle across restart passed.
+- The Metal/JAR scenario also passed all operations, opened the depot, and reused
+  the verified cache. The interface screenshot was viewed: the original copper
+  sheet is visible in its slot. Before checking the menu, the fixture clears the
+  hand and waits for the server-thread response, avoiding dependence on picking
+  up items dropped during setup.
 
-- Проверены отдельные запуски на главный экран с ошибочным JAR, с выключенным
-  `mod.create` после предыдущего включения и с оригинальным JAR. Ошибка JAR даёт
-  диагностируемый fallback; выключенный мод не подключает контент и импортёр.
-- Дополнительно собран штатный **performance**-профиль:
-  `native-fc02103-1ba8788c96b6`. Он установлен в новый **Create Native** и запущен
-  обычной командой лаунчера `play`. В новом мире **CreateInstallCheck** изготовлены
-  8 железных листов; мир, стенд и девять предметов сохранены для визуального контроля.
-- Окно лаунчера обновлено после консольной установки. В интерфейсе проверены
-  выбранная Native-сборка и GitHub-мод `create` с состоянием **Up to date**.
-  Последующая подготовка пользовательского instance использовала подлинный пакет,
-  квитанцию GitHub и кэш этой проверенной сборки из-за ограничения анонимного API;
-  это не импорт отдельно собранного вручную игрового бинарника.
+- Separate title-screen launches checked an invalid JAR, `mod.create` disabled
+  after earlier enablement, and the original JAR. An invalid JAR produces a
+  diagnosable fallback; a disabled mod enables neither content nor the importer.
+- The standard **performance** profile was also built:
+  `native-fc02103-1ba8788c96b6`. It was installed into new **Create Native** and
+  launched with the ordinary Launcher `play` command. New **CreateInstallCheck**
+  produced 8 iron sheets; the world, rig, and nine items were saved for visual review.
+- The Launcher window was refreshed after CLI installation. Its UI confirmed the
+  selected Native build and GitHub mod `create` with **Up to date** status.
+  Later user-instance preparation reused the genuine package, GitHub receipt,
+  and verified build cache because of the anonymous API limit; this was not an
+  import of a separately hand-built game executable.
 
-Изоляция: новые launcher/game/XDG homes и одноразовые миры; ресурсы, проверенный
-компилятор и Cargo-кэш клонированы локально на APFS. Это чистая установка мода и
-проверка штатного сборочного пути с прогретыми кэшами, а не замер первой загрузки
-всех зависимостей на пустом компьютере. В игровых тестах звук отключён окружением;
-штатная сборка не отключает audio/controllers features.
+Isolation: new launcher/game/XDG homes and disposable worlds; assets, verified
+compiler, and Cargo cache were cloned locally on APFS. This is a clean mod install
+and a standard-build-path check with warm caches, not a measurement of first-time
+dependency downloads on an empty computer. Gameplay tests disable audio through
+the environment; the standard build retains audio/controllers features.
 
-Точность всех моделей и механик, многопользовательская игра и остальные блоки
-Create этой итерацией не заявляются. Подтверждённая цепочка пока остаётся ограниченным
-прототипом из плана.
+This iteration does not claim accuracy of every model/mechanic, multiplayer, or
+the remaining Create blocks. The verified chain remains the bounded prototype
+from the plan.
 
-Локальные свидетельства, не включаемые в Git:
+Local evidence, excluded from Git:
 
-- `.local/native-startup-hqgsf5ag/result.json` — ошибочный JAR, отключение и включение.
-- `.local/user-native-world-result.json` — performance, запуск лаунчером и сохранённый стенд.
-- `.local/user-native-build.log` — повторная штатная сборка из готового кэша.
+- `.local/native-startup-hqgsf5ag/result.json` — invalid JAR, disabling, and enabling.
+- `.local/user-native-world-result.json` — performance, Launcher launch, and saved rig.
+- `.local/user-native-build.log` — repeated standard build using the ready cache.
 
-- `.local/official-launcher-check.log` — первая сборка официальным лаунчером.
-- `.local/github-install-result.json` — ответ установки опубликованного коммита.
-- `.local/native-cache-check.log` — повторное использование готовой сборки.
-- `.local/smoke-346h0dtw/result.json` — весь цикл без оригинального JAR.
-- `.local/smoke-menojh3s/result.json` — весь цикл с оригинальным JAR и Metal.
-- `.local/smoke-menojh3s/depot.png` — открытый интерфейс и оригинальная медная пластина.
+- `.local/official-launcher-check.log` — first official Launcher build.
+- `.local/github-install-result.json` — installation response for the published commit.
+- `.local/native-cache-check.log` — reuse of the completed build.
+- `.local/smoke-346h0dtw/result.json` — complete cycle without the original JAR.
+- `.local/smoke-menojh3s/result.json` — complete cycle with the original JAR and Metal.
+- `.local/smoke-menojh3s/depot.png` — open interface and original copper sheet.
 
-Локальные свидетельства, не включаемые в Git:
+Local evidence, excluded from Git:
 
-- [Отчёт импорта](.local/port-work/coverage.md).
-- [Результат без графики](.local/smoke-3507mg3u/result.json).
-- [Результат с графикой](.local/smoke-8ekcjs2r/result.json).
-- [Механизмы](.local/smoke-8ekcjs2r/factory.png) и [экран депо](.local/smoke-8ekcjs2r/depot.png).
-- [Автоматический импорт и работа механизмов](.local/smoke-5_mrnj1k/result.json).
-- [Переключение ресурсов через F3+T](.local/smoke-5_mrnj1k/asset-cycle-result.json).
-- [Оригинальные модели](.local/smoke-5_mrnj1k/reload-restored.png) и [временные после удаления JAR](.local/smoke-5_mrnj1k/reload-without-jar.png).
+- [Import report](.local/port-work/coverage.md).
+- [Headless result](.local/smoke-3507mg3u/result.json).
+- [Graphics result](.local/smoke-8ekcjs2r/result.json).
+- [Machinery](.local/smoke-8ekcjs2r/factory.png) and [depot screen](.local/smoke-8ekcjs2r/depot.png).
+- [Automatic import and working machinery](.local/smoke-5_mrnj1k/result.json).
+- [Resource switching through F3+T](.local/smoke-5_mrnj1k/asset-cycle-result.json).
+- [Original models](.local/smoke-5_mrnj1k/reload-restored.png) and [provisional models after JAR removal](.local/smoke-5_mrnj1k/reload-without-jar.png).
 
-Игры запускались с отдельными рабочими папками, homes и копиями ресурсов. Каждый
-сценарий создал собственный мир в своей рабочей папке. Существующие пользовательские
-миры не использовались. Исходные репозитории `../Create` и `../horizon` остались
-без изменений.
+Games ran in separate working directories/homes with copied assets. Each scenario
+created its own world in its working directory. Existing user worlds were not
+used. Source repositories `../Create` and `../horizon` remained unchanged.
 
-До следующего этапа остаются проверка с двумя клиентами, большие сети и выгрузка
-чанков, полноценные взаимодействия с депо и воронками, дальнейшее сравнение
-анимаций и рендера с Java-версией.
-Остальные механизмы Create ещё не перенесены. Наличие рабочей цепочки не означает
-готовность всего мода или полную совместимость с Java-версией.
+At this point, the next stage still needed two-client checks, large networks and
+chunk unloading, full depot/hopper interactions, and further Java animation/render
+comparisons. Remaining Create machinery had not yet been ported. A working chain
+does not establish that the entire mod is ready or fully compatible with Java.

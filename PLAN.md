@@ -6,9 +6,9 @@ Rust implementation of Create for Horizon, delivered in reviewable increments.
 ## Working agreement
 
 Each increment has a bounded feature list, automated checks, a reproducible
-source commit and build, known limitations and a short visual checklist. Stop
-after delivering it and wait for the owner's feedback before starting the next
-increment. Automated verification is the developer's responsibility; the owner
+source commit and build, known limitations and a short visual checklist. Follow
+the latest owner instruction below for when to hand over or continue across
+increments. Automated verification is the developer's responsibility; the owner
 tests appearance and interactions. Record every observation as a defect, an
 unimplemented feature or a question; retain observations about later stages.
 
@@ -241,7 +241,7 @@ checked items only for completed, verified behavior and explicitly marking
 partial implementations and presentation differences. Preserve every existing
 player instance/world.
 
-## Current owner instruction: finish this checkpoint and stop
+## Previous owner instruction: finish this checkpoint and stop
 
 On 2026-11-04 the owner replaced the earlier quota/percentage work target with
 finishing the current development increment and handing it over. Close Stage10
@@ -249,3 +249,27 @@ item contact/material fixes and Stage11 Press/Basin/client pressing, preserve
 measured differences, run native regressions, publish reproducible source and
 prepare the review world. Do not start another subsystem after this handoff.
 The repository-wide acceptance checklist remains in ROADMAP.md.
+
+## Current owner instruction: resume systematic development
+
+On 2026-11-05 the owner resumed development. Maintain all public documentation
+in English and commit/push the documentation and implementation. Preserve the
+original game localizations. Defer a registry proposal to a later owner review;
+do not submit one during this development session.
+
+First verify the build, Java-reference, game-control and GitHub tools. Record
+available paths and concrete limitations; a failed optional browser/API write
+must not halt independent implementation or tests. During ongoing work, inspect
+the existing upstream PRs roughly once per hour, without creating a scheduled
+automation or merging changes automatically.
+
+Continue through coherent increments under the existing source-parity rules.
+Close measured behavior/data gaps before expanding the affected system. The
+Press/Basin one-tick startup difference is an open defect, not accepted parity.
+Then add the next supported processing/transport features from the subsystem
+plan, each with source-derived tests and actual integration checks. Moving
+contraptions were suggested as future scope, not the priority for this session.
+
+Do not stop merely because the previous checkpoint was delivered. Continue until
+the owner interrupts or a coherent handoff is necessary, with all partial work
+and remaining checks recorded accurately. Preserve existing worlds and instances.

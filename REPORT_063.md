@@ -1,123 +1,123 @@
-# Проверка отображения: кандидат 0.6.0-alpha.3
+# Presentation validation: 0.6.0-alpha.3 candidate
 
-Состояние на 5 ноября 2026. Это **кандидат из исходников**, а не новый
-установленный выпуск. Пользовательский instance **Create Factory 0.6**,
-мир **CreateFactory06** и его alpha.2 не заменялись. Объём реализованных
-механик остался прежним: 27 блоков, 20 отдельных предметов, 137 рецептов.
-Грубая оценка всего переноса — по-прежнему **8–10%**.
+Status as of 5 November 2026. This is a **source candidate**, not a newly
+installed release. The user instance **Create Factory 0.6**,
+world **CreateFactory06** and its alpha.2 were not replaced. Implemented scope
+remains unchanged: 27 blocks, 20 standalone items, 137 recipes.
+The rough estimate for the entire port remains **8–10%**.
 
-## Что исправлено
+## Fixes
 
-- Поворот поверхности ленты по оси X: восток теперь использует 90°, запад —
-  270°. Направление следует исходному `Catnip AngleHelper`, используемому
-  `BeltRenderer` Create 6.0.10. Особенно заметна поправка на наклонных лентах.
-- Development-сборка теперь сохраняет рядом с executable правдивый
-  `native-mods.json` и публичные `native-data`. Раньше переносился только
-  executable, поэтому мировой canvas мог быть выключен: подсказка клика
-  присутствовала, а белые цифры RPM и рамка на моторе отсутствовали.
-- Следующий пакет закрепляет принятое исправление Horizon Mixins:
+- Belt surface X-axis rotation: east now uses 90°, west uses
+  270°. Direction follows original `Catnip AngleHelper`, used by
+  Create 6.0.10's `BeltRenderer`. The correction is especially visible on sloped belts.
+- Development builds now preserve truthful `native-mods.json` and public
+  `native-data` beside the executable. Previously only the executable was copied,
+  so world canvas could be disabled: the click hint appeared,
+  but the motor's white RPM digits and frame were missing.
+- The next package pins the accepted Horizon Mixins fix:
   `e8cd0aa38cffef49cb2e088ef716baa107148c02`, [PR #25](https://github.com/horizon-rust/horizon-mixins/pull/25).
-  Наш дублирующий [PR #26](https://github.com/horizon-rust/horizon-mixins/pull/26)
-  закрыт как заменённый принятым исправлением.
-- Добавлена воспроизводимая проверка настоящих Game draw helpers с
-  импортированными приватными моделями. Она проверяет все четыре вершины
-  граней и их циклический порядок, а не только одну нормаль.
+  Our duplicate [PR #26](https://github.com/horizon-rust/horizon-mixins/pull/26)
+  is closed as superseded by the accepted fix.
+- Added a reproducible check of actual Game draw helpers with
+  imported private models. It checks all four face vertices
+  and their cyclic order, rather than just one normal.
 
-## Что показала проверка сообщения о лентах
+## Findings from the belt report
 
-Сохранение пользователя исследовалось только через отдельную копию. В его
-исходной камере глаза находятся ниже верхней поверхности ленты. У обычного
-соединителя оригинальный Java Create с такого ракурса тоже показывает две
-боковые полосы с открытой серединой; сверху середина видна. Это не отменяет
-найденную ошибку X-поворота наклонных поверхностей, которая исправлена отдельно.
-Нельзя объявить любой невидимый участок нормальным без сравнения его формы,
-направления и ракурса.
+The user's save was examined only through a separate copy. In the original
+camera position, the eyes are below the belt's top surface. Original Java Create
+also shows two side strips with an open center on a normal connector from this
+view; the center is visible from above. This does not negate
+the slope-surface X-rotation bug, which was fixed separately.
+A missing section cannot be declared normal without comparing its shape,
+direction and viewpoint.
 
-## Результаты и границы проверок
+## Results and validation limits
 
-| Проверка | Результат | Что она устанавливает |
+| Check | Result | What it establishes |
 |---|---|---|
-| Rust workspace | 124 теста; fmt и strict all-target Clippy прошли | Переносимая логика, импортёр и ограниченные схематики |
-| Python tools | 14 тестов, включая 4 новых packaging regression | Metadata/digest, сохранность артефакта и отказ при невыполненном post-build |
-| Исходный `BeltRenderer`/Catnip против Rust | 1600 случаев, 2560 кадров поверхности | Выбор частей и матрицы; прежний поворот отклонён в 800 случаях |
-| Исходная сторона настройки мотора | 36 случаев | Допустимая сторона hover; не результат рендера |
-| Настоящий Game, CPU draw | 60 разных комбинаций, 5088 вершин | 4 направления × 5 наклонов × 3 RPM; позиции, winding, свет, неизменность NBT |
-| Настоящий native-клиент | 20 кадров лент просмотрены | Ограниченные горизонтальные, наклонные, вертикальные и боковые конструкции |
-| Оригинальный Java-клиент | 3 контрольных ракурса просмотрены | Верх/бок горизонтальной ленты и восточный подъём |
-| Мотор, один executable без/с metadata | 6 направлений просмотрены | Metadata возвращает мировые белые цифры 128 и hover-рамку |
-| Установленный alpha.2 executable внутри приватной `.app`, без/с metadata | Оба кадра просмотрены | Симптом обычного app-bundle пути воспроизведён; менялся только companion-файл |
-| Принятый Mixins | Сборка инструмента и 3 профильных теста прошли | Исправление встроенных crate/tool attributes |
-| `.hnmod` | Официальная проверка точной ревизии Horizon прошла | Формат пакета; не чистая установка через GitHub |
+| Rust workspace | 124 tests; fmt and strict all-target Clippy passed | Portable logic, importer and bounded schematics |
+| Python tools | 14 tests, including 4 new packaging regressions | Metadata/digest, artifact preservation and refusal when post-build is incomplete |
+| Original `BeltRenderer`/Catnip against Rust | 1600 cases, 2560 surface frames | Part selection and matrices; old rotation rejected in 800 cases |
+| Original motor settings side | 36 cases | Eligible hover side; not rendering output |
+| Actual Game, CPU draw | 60 distinct combinations, 5088 vertices | 4 directions × 5 slopes × 3 RPM; positions, winding, light, unchanged NBT |
+| Actual native client | 20 belt images inspected | Bounded horizontal, sloped, vertical and sideways constructions |
+| Original Java client | 3 control views inspected | Top/side of horizontal belt and eastward ascent |
+| Motor, one executable without/with metadata | 6 directions inspected | Metadata restores white world digits 128 and hover frame |
+| Installed alpha.2 executable inside a private `.app`, without/with metadata | Both images inspected | Normal app-bundle path symptom reproduced; only the companion file changed |
+| Accepted Mixins | Tool build and 3 focused tests passed | Embedded crate/tool attribute fix |
+| `.hnmod` | Official check against exact Horizon revision passed | Package format; not a clean GitHub installation |
 
-CPU-проверка сравнивает импортированную native-геометрию с матрицами исходного
-Java-рендера. Она не проверяет Java model baker, полную UV/texture parity,
-шейдеры, сетевой callback или пиксели всего кадра. Старый build receipt ещё не
-содержал hash выходного `game.rs`: это явно записано как
-`build_stage_output_hash_verified=false`. Входной модуль ленты связан с build
-и Java oracle по SHA; тестовый stage после запуска восстановлен побайтно.
-Будущие сборки записывают и hash выходного `game.rs`.
+The CPU check compares imported native geometry with original Java rendering
+matrices. It does not check the Java model baker, full UV/texture parity,
+shaders, network callback or whole-frame pixels. The old build receipt did not yet
+contain the output `game.rs` hash: this is explicitly recorded as
+`build_stage_output_hash_verified=false`. The belt input module is linked to the build
+and Java oracle by SHA; the test stage was restored byte for byte afterward.
+Future builds also record the output `game.rs` hash.
 
-Не все группы тестов сводятся в один непрерывный прогон. Неудачные попытки и
-исходные журналы сохранены; дополнительные проверки не переписывают их результат.
-Полное совпадение всех интерфейсов, анимаций, эффектов и звука не заявляется.
+Not all test groups form one uninterrupted run. Failed attempts and
+original logs are preserved; additional checks do not rewrite their outcomes.
+Full parity of every interface, animation, effect and sound is not claimed.
 
-## Блокирующая проблема macOS Launcher
+## Blocking macOS Launcher issue
 
-Найдена отдельная причина того же симптома в обычном **Play**. Launcher
-запускает `Horizon.app/Contents/MacOS/horizon-client`, но `game_app::ensure`
-переносит туда только executable и `horizon-ctl`. Файл `native-mods.json`
-остаётся в корне версии. Игра ищет его рядом с фактически запущенным executable.
-Это подтверждено исходниками закреплённой версии, текущим upstream-файлом
-и установленной сборкой: executable в корне и `.app` — один inode, а metadata
-внутри `.app` отсутствует.
+A separate cause of the same symptom was found in normal **Play**. The Launcher
+starts `Horizon.app/Contents/MacOS/horizon-client`, but `game_app::ensure`
+puts only the executable and `horizon-ctl` there. `native-mods.json`
+stays in the version root. The game looks beside the actual running executable.
+This is confirmed by pinned source, the current upstream file
+and the installed build: the root and `.app` executables share an inode, but metadata
+inside `.app` is absent.
 
-Проверка отдельной приватной `.app` с тем же установленным executable
-`c640101923ecabea1400982c22935008a78d138e771700965b9b3d418d4eb9a3`
-воспроизвела отсутствие цифр/рамки. Копия правдивого alpha.2 receipt рядом с этим
-executable вернула `128` и рамку при той же камере и моторе. Это запуск именно
-app-bundle executable, но не автоматизация кнопки Play в окне Launcher.
+A separate private `.app` check with the same installed executable,
+`c640101923ecabea1400982c22935008a78d138e771700965b9b3d418d4eb9a3`,
+reproduced the missing digits/frame. Copying the truthful alpha.2 receipt beside that
+executable restored `128` and the frame with the same camera and motor. This launched
+the app-bundle executable itself, but did not automate Play in the Launcher window.
 
-Development packaging исправлен, но это **не исправляет установленный Launcher**.
-Для общей поправки опубликована [задача #9521](https://github.com/horizon-rust/horizon/issues/9521).
-Рядом найден такой же разрыв для `native-data`: post-build API тоже ищет эту
-папку рядом с фактическим executable. Общее исправление отправлено в
-[PR #9529](https://github.com/horizon-rust/horizon/pull/9529) и проверено с обоими
-сопутствующими ресурсами, включая их появление, замену и удаление. Прошли восемь
-профильных тестов в настоящем Launcher, strict all-target Clippy и 524 теста
-Launcher, 7 прежних ignored. Полный self-check сохраняет неизменённый Python
-installer-fixture failure, отдельно воспроизведённый на файлах main.
+Development packaging is fixed, but this **does not fix the installed Launcher**.
+[Issue #9521](https://github.com/horizon-rust/horizon/issues/9521) was published for the generic fix.
+The same gap was found for `native-data`: the post-build API also looks for that
+folder beside the actual executable. The generic fix was submitted in
+[PR #9529](https://github.com/horizon-rust/horizon/pull/9529) and tested with both
+companions, including creation, replacement and removal. Eight focused tests
+in the actual Launcher, strict all-target Clippy and 524 Launcher tests passed,
+with 7 pre-existing ignored tests. The full self-check retains an unchanged Python
+installer-fixture failure, separately reproduced using main's files.
 
-Дополнительный probe собрал неизменённый `game_app.rs` из commit `69e629890`
-с объявленными заглушками локализации/XML. Настоящий `ensure` сам создал
-companion-ресурсы внутри приватной `.app`. App-side процесс прочитал тестовые
-данные через исходный `native_data::built`; игровой executable из этой `.app`
-показал цифры 128 и белую рамку на моторе. Кадр просмотрен, камера точно совпала
-с прежним отрицательным контролем. Это не прогон кнопки Play пользовательского Launcher.
-После него нужно повторить настоящий путь Play. Пользовательский кэш версии
-вручную не изменялся. До этой проверки alpha.3 не обозначается готовым
-исправлением обычной установки на macOS.
+An additional probe compiled unchanged `game_app.rs` from commit `69e629890`
+with declared localization/XML stubs. Actual `ensure` created the
+companion resources inside a private `.app` itself. An app-side process read authored
+fixture data through original `native_data::built`; the game executable from that `.app`
+showed digits 128 and a white motor frame. The image was inspected, and the camera matched
+the earlier negative control exactly. This did not exercise Play in the user's Launcher.
+The actual Play route must still be repeated. The user's version cache
+was not manually modified. Until that check, alpha.3 is not presented as a ready
+fix for normal macOS installation.
 
-Это отдельная поправка **Launcher**. Закрепление нового Horizon commit в моде
-само по себе не обновляет установленный Launcher. Приватная проверка исправленного
-app helper и обновление обычного пути установки отмечаются раздельно.
+This is a separate **Launcher** fix. Pinning a new Horizon commit in the mod
+does not itself update the installed Launcher. The private corrected-app-helper check
+and the normal installation-path update are tracked separately.
 
-## Неизменяемые артефакты и локальные свидетельства
+## Immutable artifacts and local evidence
 
-- Исходники кандидата:
+- Candidate source:
   [`8b7cca1ce486e8b4297a46eabe817d3b7ed1a407`](https://github.com/Delete228/create-horizon/commit/8b7cca1ce486e8b4297a46eabe817d3b7ed1a407).
-- Horizon: `9c7f9b2215dfed497aba5522c44f38926628648d` — опубликованный форк,
-  а не обещание поддержки произвольной Nightly.
+- Horizon: `9c7f9b2215dfed497aba5522c44f38926628648d` — a published fork,
+  not a promise of arbitrary Nightly support.
 - Create: `ac0c444d9828da3453ae8cc65338e8de063286fb`, 6.0.10 / Java 1.21.1.
-- Пакет `dist/create-0.6.0-alpha.3.hnmod`, SHA-256
+- Package `dist/create-0.6.0-alpha.3.hnmod`, SHA-256
   `624b63d266131c5aecc803400a84f5c7e3c9da033e4a8ac030010fa19a0acd6e`.
 - Development executable SHA-256
   `f45b91d055e81e5d1eaf1c72c2ea1992b6f140e634142a3e6d24bd07c77af7ef`.
-  Полная developer-папка включает его companion metadata; одиночный executable
-  не является полным native-build артефактом.
-- Все 142 текущих файла native-пакета совпали по SHA с неизменяемым снимком сборки.
-  Оригинальные модели, текстуры, звук и JAR не входят в Git или публичный пакет.
+  The complete developer folder includes its companion metadata; the executable alone
+  is not a complete native-build artifact.
+- All 142 current native-package files matched the immutable build snapshot by SHA.
+  Original models, textures, sounds and JARs are not included in Git or the public package.
 
-Приватные receipts (не публикуют ресурсы):
+Private receipts (no resources published):
 `alpha3-core-lcs9yl56/result.json`, `alpha3-package-result.json`,
 `belt-render-oracle/result.json`, `belt-render-game-9vvqs0oi/result.json`,
 `accepted-mixins-28jdf_40/fresh-result.json`,
@@ -125,19 +125,19 @@ app helper и обновление обычного пути установки 
 `belt-fixed-native-rest-z7dapqow/companion-ab-image-review.json`,
 `motor-app-ab-goxkp7fj/{result,image-review}.json`,
 `pr9521-finish-7y3rmfbp/result.json`, `mac-ensure-probe-r8o3_j7o/result.json`,
-`mac-ensure-game-positive-o_7ej57w/aggregate-result.json` — в `.local/`.
+`mac-ensure-game-positive-o_7ej57w/aggregate-result.json` — under `.local/`.
 
-## Следующая остановка для визуального контроля
+## Next visual review checkpoint
 
-- [x] Исправить X-поворот и добавить независимые исходные/нативные проверки.
-- [x] Пересобрать с принятым Mixins и проверить полный developer-артефакт.
-- [x] Отправить общее исправление macOS Launcher и проверить созданную им приватную `.app`.
-- [ ] Обновить Launcher после принятия исправления и проверить обычную кнопку Play.
-- [ ] Пройти чистый Add from GitHub и штатный performance native-build кандидата.
-- [ ] Подготовить отдельный instance/мир для проверки, сохранив alpha.2.
-- [ ] Проверить моторы во всех направлениях: мировые цифры, рамка и меню.
-- [ ] Проверить ленты сверху и сбоку, подъём/спуск по X/Z, остановку и реверс.
-- [ ] Повторить маршрут [13 фабричных стендов](TESTING_06.md) и перезапуск мира.
+- [x] Fix X rotation and add independent source/native checks.
+- [x] Rebuild with accepted Mixins and verify the complete developer artifact.
+- [x] Submit the generic macOS Launcher fix and check the private `.app` it creates.
+- [ ] Update the Launcher after acceptance and check the normal Play button.
+- [ ] Complete a clean Add from GitHub and standard performance native-build of the candidate.
+- [ ] Prepare a separate review instance/world, preserving alpha.2.
+- [ ] Check motors in every direction: world digits, frame and menu.
+- [ ] Check belts from above and beside, X/Z ascent/descent, stopping and reversal.
+- [ ] Repeat the [13 factory stations](TESTING_06.md) and a world restart.
 
-Состояние общих PR — в [UPSTREAM_STATUS.md](UPSTREAM_STATUS.md).
-Полная очередь подсистем и критерии завершения — в [ROADMAP.md](ROADMAP.md).
+Generic PR status is in [UPSTREAM_STATUS.md](UPSTREAM_STATUS.md).
+The full subsystem queue and completion criteria are in [ROADMAP.md](ROADMAP.md).

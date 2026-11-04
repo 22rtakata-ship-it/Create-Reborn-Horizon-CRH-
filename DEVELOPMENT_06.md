@@ -1,425 +1,424 @@
-# Текущий этап: сравнение с оригиналом и фабричная основа
+# Current phase: original-reference comparison and factory foundations
 
-Текущий обзорный этап — **0.6.0-alpha.2**, ветка `stage/parity-06`.
-[REPORT_06.md](REPORT_06.md) содержит итог текущей остановки, установленную
-сборку и известные различия. Создан отдельный пользовательский instance
-**Create Factory 0.6**; прежние миры и Prism instances сохранены.
-Ниже отдельно записана история alpha.1 и последующих неизменяемых снимков: их
-результаты не приписываются автоматически более позднему бинарнику.
+The current review checkpoint is **0.6.0-alpha.2**, branch `stage/parity-06`.
+[REPORT_06.md](REPORT_06.md) records the result at the current stopping point,
+the installed build, and known differences. A separate user instance,
+**Create Factory 0.6**, was created; earlier worlds and Prism instances are preserved.
+The history of alpha.1 and later immutable snapshots is recorded separately below:
+their results are not automatically attributed to a later binary.
 
-Эталон — настоящий Create 6.0.10 на Minecraft 1.21.1 с исходниками из
-`compatibility.json`. Оригинальные ресурсы по-прежнему импортируются только
-из локального JAR игрока. Runtime целиком написан на Rust; Java bridge и
-оракулы используются только при разработке.
+The reference is actual Create 6.0.10 on Minecraft 1.21.1, with source pinned in
+`compatibility.json`. Original assets are still imported only from the player's
+local JAR. The runtime is entirely Rust; the Java bridge and oracles are used
+only during development.
 
-## Текущая проверка общей сборки
+## Combined-build validation
 
-Проверенный checkpoint `0.6.0-alpha.1` использовал Horizon
+The verified `0.6.0-alpha.1` checkpoint used Horizon
 `8438f415fb0fe3bee40c9cd0f29d4ca2ffe869be`
-из ветки `Delete228/horizon:create-port-runtime-06`. Это включает общий контракт
-жидкостей/отрисовки, создание block entity по состоянию, сохранение идентичности
-при `/data` и item interaction после обычного взаимодействия с мобом.
-Штатный Launcher уже скачал этот публичный коммит и собрал
-`native-8438f41-48caff0b4ee8` в профиле performance. SHA256 исполняемого файла:
+from `Delete228/horizon:create-port-runtime-06`. This includes the generic fluid/
+rendering contract, state-dependent block-entity creation, identity preservation
+across `/data`, and item interaction after ordinary mob interaction.
+The standard Launcher downloaded this public commit and built
+`native-8438f41-48caff0b4ee8` with the performance profile. Executable SHA256:
 `04cd9af73820dc9a808624d936d8cbf85e0eb4d4b7ba8440a2e05ce804aa8e63`.
-Сначала неизменённый `native-build` собрал локальный исходный bundle. Затем
-штатный Launcher установил опубликованный Create-коммит
-`a7d00881d4ac9385e32adfaae89885c67fcd8210` по GitHub URL в новый временный
-instance `Create GitHub Pipeline 0.6`. Его `native-build --profile performance`
-выбрал тот же ключ и готовый бинарник из общего кэша Launcher. Это подтверждает
-чистую установку исходного пакета из GitHub; повторная компиляция с пустым кэшем
-этим вторым запуском не заявляется. Пользовательская установка ещё не завершена.
+First, unmodified `native-build` built the local source bundle. Then the standard
+Launcher installed published Create commit
+`a7d00881d4ac9385e32adfaae89885c67fcd8210` by GitHub URL into a new temporary
+instance, `Create GitHub Pipeline 0.6`. Its `native-build --profile performance`
+selected the same key and ready binary from the Launcher's shared cache. This
+confirms a clean GitHub source-package installation; this second invocation does
+not claim recompilation with an empty cache. User installation was not yet complete.
 
-На этой performance-сборке прошли 14 обычных сценариев горелки с Metal:
-огниво/износ, лопата/гашение, огонь душ без расхода, ведро воды, варианты спавнера,
-захват живого ифрита, обе руки при поломке инструмента и правильная добыча ключом.
-Настоящий выход/новый процесс сохранил состояние огня душ и инвентарь.
-Оба native PNG просмотрены; это не приёмка попиксельного совпадения с Java.
+This performance build passed 14 ordinary burner scenarios with Metal:
+flint-and-steel/wear, shovel/extinguishing, soul fire without consumption, water
+bucket, spawner variants, living-blaze capture, both hands on tool breakage, and
+correct wrench loot. A real exit/new process preserved soul-fire state and inventory.
+Both native PNGs were viewed; this is not acceptance of pixel equality with Java.
 
-Закрытый исходный мир CreateFactory06 прошёл независимый прогон на одноразовой
-копии этой performance-сборки: 14 групп проверок на 12 стендах, шесть настоящих
-крафтов через survival-меню, работа собственноручно созданной схематики и два
-проверенных выхода/новых процесса с точным сохранением инвентарей и компонентов.
-31 файл исходного сохранения и 14 файлов собственных схематик остались неизменными.
-В ходе приёмки исправлены три проблемы самого сценария: обычный перенос пшеницы
-воронкой во время запуска, корова на луче использования ведра и незагруженные
-клиентские колонки у вентиляторов. Состояние уже проверенных механизмов не
-пополнялось и не ремонтировалось. Итог получен с двумя продолжениями сценария
-и пятью запусками процесса, поэтому непрерывный прогон с первого раза не заявляется.
-Все 16 PNG этого прогона просмотрены. Обзорные кадры ограничены дальностью
-прорисовки; это не проверка полного вида карты, звука или пиксельной parity с Java.
-Маршрут для пользователя записан в [TESTING_06.md](TESTING_06.md).
+The closed CreateFactory06 source world passed an independent run on a disposable
+copy using this performance build: 14 check groups across 12 stations, six actual
+crafts through survival menus, operation of an authored schematic, and two verified
+exits/new processes with exact inventory/component persistence.
+The 31 source-save files and 14 authored schematic files remained unchanged.
+Acceptance fixed three fixture problems: ordinary hopper transfer of wheat during
+startup, a cow blocking the bucket-use ray, and unloaded client columns near the
+fans. Previously checked machines were neither restocked nor repaired. The final
+result used two scenario continuations and five process starts, so it does not
+claim an uninterrupted first-attempt run. All 16 PNGs were viewed. Overview frames
+are limited by render distance; they do not establish the full map's appearance,
+audio, or pixel parity with Java. The walkthrough is in [TESTING_06.md](TESTING_06.md).
 
-Отдельная actual-draw регрессия на этой же сборке подтвердила исчезновение
-последнего листа на клиентском депо сразу после обычного извлечения воронкой:
-до перезапуска и без ожидания другого механизма. Оба кадра просмотрены.
+A separate actual-draw regression on the same build confirmed that the last sheet
+disappears from the client depot immediately after ordinary hopper extraction,
+before restart and without waiting for another machine. Both frames were viewed.
 
-## Изменения после проверенного checkpoint
+## Changes after the verified checkpoint
 
-На отдельной development-сборке с Horizon
-`edd52a269fb920d8531abcfa9e37c4d442b34694` и SHA256
+A separate development build using Horizon
+`edd52a269fb920d8531abcfa9e37c4d442b34694` and SHA256
 `13809ebef2b850ebc9c92cab0b8eac9a0e15aaaa9b94c399a60d27ae782e1036`
-прошло сравнение восьми подсказок миксера в настоящих Java/native клиентах.
-В очках показана исходная нагрузка: 128 SU при 32 RPM, 64 SU при ±16 RPM,
-120 SU при 30 RPM. Предупреждение о недостаточной скорости остаётся без очков;
-при остановке, заморозке и достаточной скорости без очков оно отсутствует.
-Совпали текст, унаследованные стили, ширины шрифта, переносы, положение и рамка.
-Все восемь пар PNG просмотрены. Отдельные 576 сравнений исходных методов с
-настоящими Game-провайдерами и CPU-виджетами покрывают перегрузку, граничные
-обороты и специальные float-значения; ещё восемь прежних UI-сценариев сохранены
-как регрессия. Перегрузка не заявляется отдельным новым live Java-сценарием:
-попытка задать её через `/data` сбрасывала кинетическое состояние оригинала.
-Совпадение всего кадра, освещения, фаз анимации и обучающих сообщений не заявляется.
+passed comparison of eight Mixer tooltips in actual Java/native clients.
+Goggles show the source stress: 128 SU at 32 RPM, 64 SU at ±16 RPM,
+120 SU at 30 RPM. The insufficient-speed warning remains without goggles;
+it is absent without goggles when stopped, frozen, or running fast enough.
+Text, inherited styles, font widths, wrapping, position, and border matched.
+All eight PNG pairs were viewed. Separate 576 comparisons of source methods with
+actual Game providers and CPU widgets cover overload, RPM boundaries, and special
+float values; another eight earlier UI scenarios remain as regressions. Overload
+is not claimed as a separate new live Java scenario: seeding it through `/data`
+reset the original's kinetic state. Full-frame, lighting, animation-phase, and
+tutorial-message equality are not claimed.
 
-Это историческая Stage9, а не итоговая сборка: более широкий Game-прогон нашёл
-лишнее уведомление о содержимом при первом автоматическом расширении пустого
-native-инвентаря. Следующий снимок включает общее исправление этого дефекта.
+This is historical Stage9, not the final build: a broader Game run found an extra
+contents-change notification during the first automatic expansion of an empty
+native inventory. The following snapshot includes the generic fix for that defect.
 
-### Stage10: физическое попадание предметов
+### Stage10: physical item intake
 
-Неизменяемый development-снимок использует Horizon
-`e0002eecd2f53f98423a7a85e6c3adcc130e1b2f`; SHA256 бинарника
+The immutable development snapshot uses Horizon
+`e0002eecd2f53f98423a7a85e6c3adcc130e1b2f`; binary SHA256
 `2291da322fdb8b879f96a50574bd9db3626ade162c3430a4f3c51c7323d4c4bc`.
-Это сборка официальным Horizon Mixins из локального source checkout,
-а не новая установленная версия Launcher.
+It was built from a local source checkout with official Horizon Mixins,
+not installed as a new Launcher version.
 
-В ней прошли 16 сценариев обычной физики предметов, сравнённых с настоящим
-Create 6.0.10: все 128 последовательных серверных снимков входных инвентарей,
-остатки стопок, компоненты и отдельные слоты совпали. Проверены центр/край чаши,
-отказ при опоре на плиту над ней, выбор жернова здесь/снизу, отказ заполненного
-первого обработчика и неподходящего предмета. Настоящий выход и второй процесс
-сохранили оба частичных переноса: полный вход 64 и остаток 12 с компонентом.
-Проверка проходит через движение и обычные команды; прямого вызова адаптера
-приёма или поиска предметов по AABB в этом сценарии нет.
+It passed 16 ordinary item-physics scenarios compared with actual Create 6.0.10:
+all 128 consecutive server snapshots of input inventories, stack remainders,
+components, and individual slots matched. Cases checked the Basin center/rim,
+refusal when supported by a slab above it, Millstone selection here/below, refusal
+by a full first handler, and an unsuitable item. A real exit and second process
+preserved both partial transfers: a full input of 64 and a remainder of 12 with a
+component. The check uses movement and ordinary commands; it neither calls the
+intake adapter directly nor searches for items by AABB.
 
-Исправление начального пустого инвентаря отдельно проверено реальным raw-mixin
-вызовом с пустым trait registry: прежний порядок снимка выдаёт ложное событие,
-новый не выдаёт; настоящие вставка/извлечение продолжают уведомлять обработчик.
-Для этой общей поправки пройдены strict Clippy обоих клиентских crates,
-форматирование и проверка публичного дерева. Это не утверждение о lint всей
-дополнительно внедрённой сборки Create.
+The initial-empty-inventory fix was separately verified through a real raw-mixin
+call with an empty trait registry: the previous snapshot order produces a false
+event; the new order does not, while actual insertion/extraction still notifies
+the handler. Both client crates passed strict Clippy, formatting, and public-tree
+checks for this generic fix. This does not claim lint success for the entire
+additionally injected Create build.
 
-Stage10 также содержит исправление материала пяти OBJ-частей горелки и
-регистрацию импортированных моделей шляп. Настоящая Game/CPU-проверка прошла
-14 исходных/native моделей и 128 кадров: при изменении shading сохранены
-геометрия, UV, цвет, свет, JSON-нормали и NBT. Две новые пары raw PNG 05/10
-просмотрены: яркость OBJ стала близкой к Java, золотые и красно-белые детали
-TrainHat появились. Фон, освещение пола/клетки и фазы частиц/анимации различаются;
-полное совпадение JSON-головы/очков, материалов, всех направлений и всего кадра
-не заявляется. Подробная граница доказательств —
+Stage10 also fixes the material of five burner OBJ parts and registers the imported
+hat models. The actual Game/CPU check passed 14 source/native models and 128 frames:
+geometry, UVs, color, light, JSON normals, and NBT were preserved while shading
+changed. Two new raw PNG pairs, 05/10, were viewed: OBJ brightness is now close to
+Java, and gold and red/white TrainHat details are visible. Background, floor/cage
+lighting, and particle/animation phases differ; complete equality of the JSON
+head/goggles, materials, all orientations, or the full frame is not claimed.
+The detailed evidence boundary is in
 [tools/BURNER_PRESENTATION.md](tools/BURNER_PRESENTATION.md).
 
-Рабочее дерево после снимка уже готовит следующий отдельный этап: общий кэш
-рецептов чаши для миксера и пресса, compacting и клиентский цикл пресса по
-настоящим сообщениям. Эти изменения не приписываются бинарнику Stage10.
+The working tree after this snapshot was preparing the next separate phase:
+a shared Basin recipe cache for Mixer and Press, compacting, and the Press client
+cycle driven by actual messages. These changes are not attributed to Stage10.
 
-### Stage11: пресс над чашей
+### Stage11: Press above a Basin
 
-Неизменяемый development-снимок использует Horizon
-`9c7f9b2215dfed497aba5522c44f38926628648d`; SHA256 бинарника
+The immutable development snapshot uses Horizon
+`9c7f9b2215dfed497aba5522c44f38926628648d`; binary SHA256
 `b7a6e07899b4fa1ab59ae0f9ef1e28ab3c32f1d32793c609635bff778e8d40a6`.
-Receipt сборки: `.local/dev-native-drbmbtkf/result.json`. Это локальная сборка
-с официальным Horizon Mixins, а не результат финальной установки Launcher.
+Build receipt: `.local/dev-native-drbmbtkf/result.json`. This is a local build with
+official Horizon Mixins, not the result of the final Launcher installation.
 
-[tools/press_basin_native_checks.py](tools/press_basin_native_checks.py) записал
-четыре последовательности по 180 обычных серверных тиков на тех же координатах
-и с теми же командами создания, что настоящий Create 6.0.10. Исходный receipt —
-`.local/press-basin-java-l4yhlfdi/result.json`, native —
-`.local/press-basin-native-zquk3sv2/result.json`. В обоих порядках создания
-чаши/пресса совпали конечные количества: восемь снежков дали два снежных блока,
-девять снежных блоков — один лёд. Проверены `Running`, `Ticks`, `Mode`,
-`Finished`, `NeedsUpdate`, `Speed` и оба предметных инвентаря на каждом тике.
+[tools/press_basin_native_checks.py](tools/press_basin_native_checks.py) recorded
+four sequences of 180 ordinary server ticks at the same coordinates and with the
+same setup commands as actual Create 6.0.10. The source receipt is
+`.local/press-basin-java-l4yhlfdi/result.json`; the native receipt is
+`.local/press-basin-native-zquk3sv2/result.json`. Both Basin/Press creation orders
+matched final quantities: eight snowballs yielded two snow blocks, and nine snow
+blocks yielded one ice. `Running`, `Ticks`, `Mode`, `Finished`, `NeedsUpdate`,
+`Speed`, and both item inventories were checked on every tick.
 
-Строгое сравнение этих 720 снимков **не прошло**: сохранены 414 несовпадений
-проверяемых полей и инвентарей без сдвига последовательностей. Native начинает
-цикл на первом тике (`Speed=32`, `Running=1`, `Ticks=4`, `NeedsUpdate=0`),
-Java на первом тике ещё имеет `Running=0`, `Ticks=0`, `NeedsUpdate=1` при
-тех же 32 RPM и начинает на втором. Поэтому удары native приходятся на тики
-31/93 против 32/94 в Java; для льда — 31 против 32. Интервал между повторными
-ударами равен 62 тикам в обоих клиентах. Порядок создания блоков не доказывает
-их внутренний порядок тиков; совпадение абсолютного запуска не заявляется.
+Strict comparison of these 720 snapshots **failed**: all 414 mismatches in the
+checked fields/inventories are retained without shifting the sequences. Native
+starts the cycle on the first tick (`Speed=32`, `Running=1`, `Ticks=4`, `NeedsUpdate=0`);
+on the first tick Java still has `Running=0`, `Ticks=0`, `NeedsUpdate=1` at the
+same 32 RPM and starts on the second. Native impacts therefore occur on ticks
+31/93 versus Java's 32/94; for ice, 31 versus 32. Repeat impacts are 62 ticks apart
+in both clients. Block creation order does not establish their internal tick
+order; absolute startup equality is not claimed.
 
-В том же полном native-прогоне отдельно прошли:
+The same complete native run separately passed:
 
-- остановка на нулевых оборотах, работа при −32 RPM и настоящая перегрузка
-  ручного привода двумя прессами с нулевой эффективной скоростью;
-- сохранение компонентов оставшегося входа и свежие выходные предметы без
-  компонента входной стопки;
-- настоящий compacting-рецепт: два кремня, гравий и 100 mB лавы дали андезит
-  без горелки; ингредиенты полностью израсходованы. Рецепт сплава только для
-  миксера этим прессом отклонён без расхода;
-- сохранение, выход и второй процесс: пауза на `Ticks=200` сохранила восемь
-  снежков, один готовый блок, компоненты, неизвестное поле NBT и
-  `Running`/`Mode`/`Finished`. После возобновления из исходных двенадцати
-  снежков получены ровно три блока.
+- stopping at zero RPM, operation at −32 RPM, and actual overload of a crank
+  driving two presses with zero effective speed;
+- preservation of remaining-input components and fresh output items without the
+  input stack's component;
+- an actual compacting recipe: two flint, gravel, and 100 mB lava yielded andesite
+  without a burner; ingredients were fully consumed. This Press rejected the
+  Mixer-only alloy recipe without consumption;
+- save, exit, and a second process: a pause at `Ticks=200` preserved eight
+  snowballs, one finished block, components, an unknown NBT field, and
+  `Running`/`Mode`/`Finished`. Resuming yielded exactly three blocks from the
+  original twelve snowballs.
 
-Оба процесса завершились штатно. В receipt явно различаются
-`completed=true`, `controls_passed=true` и `passed=false`: успешные контроли
-не превращают расхождение с исходной последовательностью в общий PASS.
-Две предыдущие попытки сохранены как ошибки сценария: неполный `Level`, затем
-отсутствующий `Fluid` внутри `TankContent`; native корректно отказал в обработке
-неподдержанного формата. Итоговый прогон использует канонические поля жидкости.
+Both processes exited normally. The receipt explicitly distinguishes
+`completed=true`, `controls_passed=true`, and `passed=false`: successful controls
+do not turn the difference from the source sequence into an overall PASS.
+Two earlier attempts are retained as fixture errors: incomplete `Level`, then
+missing `Fluid` inside `TankContent`; native correctly refused the unsupported
+format. The final run uses canonical fluid fields.
 
-Дополнительное наблюдение до первого тика —
-`.local/press-basin-prestart-2vwd19k_/result.json` — подтвердило в обоих
-порядках создания: после загрузки входа и замены мотора у native ещё
-`Speed=0`, `NeedsUpdate=0`, `Running=0`, `Ticks=0`. Разрешение RPM, уведомление
-и запуск происходят в первом обычном тике. Это локализует отличие к фазе
-запуска сети/оператора, но не устанавливает внутренний порядок Java block
-entities. Искусственная задержка не добавлялась; дальнейшее исследование общей
-фазы графа оставлено за пределами этого завершённого прогона. Звук, частицы,
-отрисовка и общий lint клиента этими проверками не подтверждаются.
+An additional observation before the first tick,
+`.local/press-basin-prestart-2vwd19k_/result.json`, confirmed both creation orders:
+after input loading and motor replacement, native still has
+`Speed=0`, `NeedsUpdate=0`, `Running=0`, `Ticks=0`. RPM resolution, notification,
+and startup occur on the first ordinary tick. This locates the difference in the
+network/operator startup phase but does not establish Java block entities'
+internal order. No artificial delay was added; further investigation of the
+shared graph phase was left outside this completed run. These checks do not
+establish audio, particles, rendering, or whole-client lint success.
 
-### Stage11: Game-регрессия и итоговая поставка
+### Stage11: Game regression and final delivery
 
-На снимке `b7a6e078…` прошли все шесть настоящих ресурсных Game-тестов:
-shared recipe compiler, клиент пресса с реальным particle admission, server
-Press/Basin lifecycle, scheduling/reload миксера и физический item contact.
-Receipt `.local/press-basin-adapter-bquz33pp/result.json`; stage восстановлен
-побайтно. Исправленные ошибки тестов сохранены отдельно: потерянный импорт
-ItemStack после выделения модуля и мотор, направленный от пресса. Проверки
-не ослаблялись; в тест добавлено явное подтверждение реальных RPM.
+Snapshot `b7a6e078…` passed all six actual prepared-resource Game tests:
+shared recipe compiler, Press client with real particle admission, server
+Press/Basin lifecycle, Mixer scheduling/reload, and physical item contact.
+Receipt `.local/press-basin-adapter-bquz33pp/result.json`; the stage was restored
+byte for byte. Corrected fixture errors are retained separately: a missing
+ItemStack import after module extraction and a motor facing away from the Press.
+Checks were not weakened; explicit confirmation of actual RPM was added.
 
-Переносимые библиотеки: 124 Rust-теста, 10 Python-тестов и workspace strict
-Clippy PASS. Полный внедрённый клиент по-прежнему выдаёт шесть ранее
-зафиксированных lint-диагностик вне новых модулей; его общий strict PASS не
-заявляется (`.local/final-stage-clippy-result.json`).
+Portable libraries: 124 Rust tests, 10 Python tests, and workspace strict Clippy
+PASS. The complete injected client still reports six previously recorded lint
+diagnostics outside the new modules; no overall strict PASS is claimed
+(`.local/final-stage-clippy-result.json`).
 
-Новая карта из 13 стендов проверена другим агентом на одноразовой копии
-этого dev-бинарника: 15 групп, шесть survival-крафтов, два настоящих перезапуска,
-все 19 PNG просмотрены. Все 31 файл исходного мира и 14 схем остались
-неизменными. Новые три чаши дали 2 снежных блока, 1 лёд и 1 андезит; лава
-1000→900 mB, за 190 обычных powered-тиков повторного результата не было.
-Receipts `.local/review06-audit-ao91u2a8/aggregate-result.json` и отдельный
-`image-review.json`. Vanilla recipe toast на обзоре и геометрия видимой
-поверхности жидкости с выбранного ракурса не объявляются pixel parity.
+Another agent checked the new 13-station map on a disposable copy using this
+dev binary: 15 groups, six survival crafts, two real restarts, and all 19 PNGs
+viewed. All 31 source-world files and 14 schematics remained unchanged. The three
+new Basins yielded 2 snow blocks, 1 ice, and 1 andesite; lava went
+1000→900 mB, with no duplicate result over 190 ordinary powered ticks.
+Receipts: `.local/review06-audit-ao91u2a8/aggregate-result.json` and separate
+`image-review.json`. The overview's vanilla recipe toast and the visible fluid
+surface geometry from the chosen angle are not claimed as pixel parity.
 
-Штатный Launcher собрал performance-клиент `native-9c7f9b2-b81e43cfc1d2`,
+The standard Launcher built performance client `native-9c7f9b2-b81e43cfc1d2`,
 SHA256 `c640101923ecabea1400982c22935008a78d138e771700965b9b3d418d4eb9a3`.
-На ней отдельно прошла station13: три результата, обычный ручной сбор,
-остаток 900 mB, отсутствие дублирования и один настоящий перезапуск с точными
-инвентарями/баками. Три PNG просмотрены; аудиоустройство открыто и исходные
-события пресса зарегистрированы. Это не acoustic/pixel parity и не повтор
-всех 15 dev-групп. Receipt `.local/final-performance-check-ejbjii2j/result.json`
-и `image-review.json`. Первый performance-сценарий остановился до запуска
-механизмов из-за незагруженных дальних колонок; новая копия после исправления
-положения камеры прошла. Полный 15-group dev-прогон не переименовывается
-в performance-прогон. Новая установка GitHub заблокирована
-анонимным API limit; локальный проверенный пакет сравнен со скачанным публичным
-коммитом `d6a82f59e7622d9ad74e5cc200699776fa7e0e66` по всем 143 файлам.
-Пользовательский native-build подтвердил готовый ключ без новой компиляции.
-Новая карта скопирована побайтно, SHA256 level.dat
+It separately passed station13: three results, ordinary manual pickup, a
+900 mB remainder, no duplication, and one real restart with exact inventories/
+tanks. Three PNGs were viewed; the audio device opened and source Press events
+were recorded. This is not acoustic/pixel parity or a repeat of all 15 dev groups.
+Receipt `.local/final-performance-check-ejbjii2j/result.json` and `image-review.json`.
+The first performance scenario stopped before machine startup because distant
+columns were unloaded; a new copy passed after the camera-position correction.
+The complete 15-group dev run is not relabeled as a performance run. A new GitHub
+installation was blocked by the anonymous API limit; the verified local package
+was compared with downloaded public commit
+`d6a82f59e7622d9ad74e5cc200699776fa7e0e66` across all 143 files.
+The user's native-build confirmed the ready key without recompilation.
+The new map was copied byte for byte; level.dat SHA256
 `b6dd3157e24c550459fff61f655c8d8dbbbd1b612f603f405ef9aa78c3f3f99a`.
 
-## Остальные проверки checkpoint
+## Other checkpoint checks
 
-До сборки отдельно проверены реальные datapack reload миксера, обновление тегов
-без custom mixing-рецептов, завершение уже начатого цикла старым объектом рецепта
-и правильный client-level RNG для запроса частиц. Две проверки с отключёнными
-исправлениями упали на нужных утверждениях. Защитный comparator чаши сохраняет
-неподдержанный короткий native-инвентарь без изменения NBT и идентичности.
-Переносимые библиотеки: 120 Rust-тестов и workspace Clippy `-D warnings`;
-экспорт рецептов: восемь Python-тестов. Это отдельная граница от lint всего клиента.
+Before the build, separate checks covered actual Mixer datapack reloads, tag
+updates without custom mixing recipes, completion of an already started cycle
+using the old recipe object, and the correct client-level RNG for particle
+requests. Two checks with the fixes disabled failed on the intended assertions.
+The defensive Basin comparator preserves an unsupported short native inventory
+without changing NBT or identity. Portable libraries: 120 Rust tests and workspace
+Clippy `-D warnings`; recipe export: eight Python tests. This scope is separate
+from whole-client lint.
 
-На общей development-сборке с SHA256
+The combined development build with SHA256
 `a277bbd824ea4ce052fae43c98bdac1b2cc4e56a216253a391d01a0c34ca76bb`
-проверены:
+checked:
 
-- канонические инвентари чаши и жернова до первого машинного тика, удаления
-  обеих половин, обычная воронка `3 + 5 = 8`, сохранение компонентов и полный
-  typed NBT через настоящий выход/новый процесс;
-- отказ изменять инвентарь с неподдержанным явным `Size`, включая тики,
-  разрушение и ключ; возврат исходного размера восстанавливает предметы;
-- пять настоящих rendered-подсказок чаши: пустая, предметы, предметы/жидкости
-  EN/RU и отсутствие очков. Совпали текст, стили, единицы, ширины шрифта и
-  раскладка; все пять PNG просмотрены. Геометрия содержимого чаши проверяется
-  отдельно, совпадение всего кадра не заявляется;
-- независимый прогон копии новой карты: 13 групп механизмов, шесть крафтов
-  в survival через обычные меню и точное сохранение инвентарей/компонентов при
-  повторном запуске. Исходные 31 файл подготовленного мира не изменились.
+- canonical Basin/Millstone inventories before the first machine tick, clearing
+  both halves, ordinary hopper `3 + 5 = 8`, preservation of components, and full
+  typed NBT across a real exit/new process;
+- refusal to alter inventories with an unsupported explicit `Size`, including
+  ticks, breaking, and wrench use; restoring the original size restores items;
+- five actual rendered Basin tooltips: empty, items, items/fluids EN/RU, and no
+  goggles. Text, styles, units, font widths, and layout matched; all five PNGs
+  were viewed. Basin-content geometry is checked separately; full-frame equality
+  is not claimed;
+- an independent run on a copy of the new map: 13 machinery groups, six survival
+  crafts through ordinary menus, and exact inventory/component persistence across
+  restart. The prepared source world's 31 files remained unchanged.
 
-Этот прежний прогон ещё **не являлся приёмкой выпуска**. Он обнаружил оставшийся
-лист на клиентском депо после опустошения воронкой и протечку воды из обзорного
-стенда. Отдельный сценарий захвата ифрита выявил, что удалённый моб остаётся
-виден селекторам до следующего тика. Депо исправлено немедленной синхронизацией
-последнего HeldItem и прошло отдельную actual-draw регрессию без перезапуска;
-удаление моба исправлено в runtime и проверено немедленными командами/сохранением.
-Физическое ограждение воды прошло отдельные обычные fluid ticks. Новый исходный
-мир с этими исправлениями и площадкой схематики создан заново и отдельно проверен
-на копии, как описано выше; результаты старой карты сохранены как история.
+That earlier run was **not yet release acceptance**. It found a sheet left on the
+client depot after hopper emptying and water leaking from the review station.
+A separate blaze-capture scenario found that a removed mob remained visible to
+selectors until the next tick. The depot was fixed by immediately synchronizing
+the last HeldItem and passed a separate actual-draw regression without restart;
+mob removal was fixed in the runtime and checked through immediate commands/save.
+Physical water containment passed separate ordinary fluid ticks. A new source
+world with these fixes and the schematic platform was rebuilt and separately
+checked on a copy as described above; earlier-map results are retained as history.
 
-Горелка и нагретая латунь уже прошли отдельные native-проверки топлива,
-установки, компонентов, потери нагрева, `2 меди + 2 цинка → 4 латуни` и
-реального перезапуска. Для её внешнего вида сняты 12 пар Java/native кадров:
-найдены отличия освещения динамических частей и отображения очков. Поэтому
-полное визуальное совпадение горелки пока не принято. Изолированные Java-оракулы
-проверяют выбранные численные методы, но не заменяют эти наблюдения.
+The burner and heated brass had already passed separate native checks of fuel,
+placement, components, heat loss, `2 copper + 2 zinc → 4 brass`, and a real restart.
+For its appearance, 12 Java/native frame pairs were captured: differences in
+dynamic-part lighting and goggles visibility were found. Full visual burner
+equality is therefore not accepted. Isolated Java oracles check selected numeric
+methods but do not replace these observations.
 
-Общий codec инвентарей и его проверка описаны в
-[tools/INVENTORY_CHECKS.md](tools/INVENTORY_CHECKS.md), взаимодействия и сетевые
-данные горелки — в [tools/BURNER_INTERACTIONS.md](tools/BURNER_INTERACTIONS.md)
-и [tools/BURNER_SYNC.md](tools/BURNER_SYNC.md).
+The shared inventory codec and its checks are described in
+[tools/INVENTORY_CHECKS.md](tools/INVENTORY_CHECKS.md); burner interactions and
+network definitions are described in [tools/BURNER_INTERACTIONS.md](tools/BURNER_INTERACTIONS.md)
+and [tools/BURNER_SYNC.md](tools/BURNER_SYNC.md).
 
-Ниже сохранены границы и доказательства предыдущих промежуточных сборок;
-они не означают, что весь новый набор уже прошёл общий финальный gate.
+The bounds and evidence from earlier intermediate builds are retained below;
+they do not mean the entire new set has passed a combined final gate.
 
-## Что уже проверено
+## What had been checked
 
-| Область | Подтверждённая граница |
+| Area | Verified scope |
 |---|---|
-| Схематики | Ограниченный GZIP/typed NBT, modified UTF-8, строгий preflight, ограниченная creative-вставка; 13 некорректных/неподдержанных файлов отклонены без изменений мира |
-| Общая схема | Один и тот же файл SHA256 `fe9cad9a8fcfa6895e84bce24335adfa7fad3826da7618dc4c26897ebd220d54`: мотор, вал, пресс, депо и опора; вставка и один медный лист в обоих клиентах |
-| Голые ленты | Соединитель и сегменты, исходные формы, RPM, перенос полных стопок, выход в депо/через воронку, обратное движение, разборка и сохранение после закрытия/запуска процесса |
-| Настройка мотора | Настоящий native экран: удержание, подтверждение отпусканием, направления, 128/-64 RPM, исходное применение нуля, Escape, предмет в руке и отсутствие прежнего wheel-shortcut |
-| Очки и мотор | Девять сценариев: восемь видимых EN/RU подсказок и экран мотора с исходным ракурсом; совпали текст, ширины шрифта, унаследованные стили, anchor и геометрия интерфейса; кадры обоих клиентов просмотрены |
-| Звуки | Реальные каналы аудиодвижка: ручка, мотор и шестерня; три цикла запуска/остановки, освобождение при переходе в Nether и восстановление после возврата. Отдельный NO_AUDIO-прогон проверяет точное число retained instances |
-| Частицы | Настоящие Metal-проверки rotation bursts, recovery, доставки 800 частиц, движения потока, сред, sprite/lifetime/light и очистки; числовые наблюдения настоящих Java particles проверены отдельно |
-| Вентилятор | Проверены сила/направление и ограничения движения игроков; у мобов — огонь, сопротивления, среды и преобразование лошади. Полный сценарий пользовательского урона игроку прошёл на исправленном runtime |
-| Пресс над лентой | Восемь слитков дают восемь листов поштучно; остановка привода, неподдержанный вход, независимая потеря питания пресса и настоящий перезапуск посреди цикла проверены |
-| Вентилятор над лентой | Остановленная лента, промывка17 предметов, неподдержанный вход, смена среды и уничтожение обжигом; настоящий перезапуск сохраняет таймер, позицию и компоненты. Очередь двух одновременно работающих вентиляторов проверена отдельно |
-| Контекстные формы | Настоящие ItemEntity и игрок используют разные исходные формы чаши; полый миксер/выбор верхней панели, пустая обычная форма с переопределением, граница секции и face-only interaction проверены, включая перезапуск |
-| Сухая чаша/миксер | Единый полный native-прогон восьми групп и настоящий перезапуск прошли; отдельный обычный серверный harness подтвердил исходные83/62 тика |
-| Переносимая логика | 82 Rust-теста механик, 16 тестов импортера ресурсов и 10 тестов схем проходят; независимые Java-оракулы дополняют игровые проверки |
+| Schematics | Bounded GZIP/typed NBT, modified UTF-8, strict preflight, bounded creative paste; 13 malformed/unsupported files rejected without world changes |
+| Shared schematic | Identical file SHA256 `fe9cad9a8fcfa6895e84bce24335adfa7fad3826da7618dc4c26897ebd220d54`: motor, shaft, Press, Depot, and support; paste and one copper sheet in both clients |
+| Bare belts | Connector and segments, source shapes, RPM, full-stack transport, output to a Depot/through a hopper, reverse motion, dismantling, and persistence across process close/start |
+| Motor settings | Actual native screen: hold, confirm on release, directions, 128/-64 RPM, source zero application, Escape, held item, and removal of the previous wheel shortcut |
+| Goggles and motor | Nine scenarios: eight visible EN/RU tooltips and the motor screen at the source camera pose; text, font widths, inherited styles, anchor, and UI geometry matched; both clients' frames were viewed |
+| Sounds | Actual audio-engine channels: crank, motor, and cog; three start/stop cycles, disposal on Nether transition, and recovery on return. A separate NO_AUDIO run checks the exact retained-instance count |
+| Particles | Actual Metal checks of rotation bursts, recovery, delivery of 800 particles, airflow motion, media, sprite/lifetime/light, and cleanup; numeric observations of actual Java particles were checked separately |
+| Fan | Player movement force/direction/limits checked; mobs: fire, resistances, media, and horse conversion. The complete custom player-damage scenario passed on the corrected runtime |
+| Press above a belt | Eight ingots yield eight sheets individually; drive stop, unsupported input, independent Press power loss, and a real mid-cycle restart checked |
+| Fan above a belt | Stopped belt, washing 17 items, unsupported input, media change, and blasting destruction; a real restart preserves timer, position, and components. The queue of two simultaneously active fans was checked separately |
+| Context shapes | Actual ItemEntity and player use different source Basin shapes; hollow Mixer/top-panel selection, an empty default shape with an override, section boundary, and face-only interaction checked, including restart |
+| Dry Basin/Mixer | One complete eight-group native run and a real restart passed; a separate ordinary-server harness confirmed source 83/62 ticks |
+| Portable logic | 82 Rust mechanic tests, 16 asset-importer tests, and 10 schematic tests pass; independent Java oracles supplement gameplay checks |
 
-Последняя проверенная development-сборка через штатный launcher:
+The latest development build checked through the standard Launcher at this point:
 `native-f6cdb73-56f914c2efb2`, Horizon
-`f6cdb73881546165f94bbdc4dc790248018dd701`. На ней прошли девять UI-сценариев,
-звуковой lifecycle и шесть числовых вариантов вместимости стопки на ленте.
-Более ранняя `native-cee7e60-a56e3358ca1c` прошла основную ленту, строгие
-схематики, сохранение/перезапуск, одинаковые координаты в двух измерениях,
-разборку после выгрузки чанка и возврат вала при полном инвентаре.
-Следующая development-сборка `native-b45ffd5-0d0847ae8f31` успешно собрана
-штатным launcher на Horizon `b45ffd5a670f20e66db7fc01f53fd94907563adc`.
-На ней прошли полный сценарий вентилятора с уроном игроку, передача числовых
-компонентов предметов клиенту, пресс над лентой и восемь групп проверок сухой
-чаши/смесителя, распределённых между двумя свежими мирами.
+`f6cdb73881546165f94bbdc4dc790248018dd701`. It passed nine UI scenarios,
+audio lifecycle, and six numeric belt stack-capacity variants.
+Earlier `native-cee7e60-a56e3358ca1c` passed the main belt, strict schematics,
+save/restart, identical coordinates in two dimensions, dismantling after chunk
+unload, and shaft return with a full inventory.
+The next development build, `native-b45ffd5-0d0847ae8f31`, was successfully built
+by the standard Launcher on Horizon `b45ffd5a670f20e66db7fc01f53fd94907563adc`.
+It passed the complete fan/player-damage scenario, numeric item-component
+transmission to the client, Press above a belt, and eight dry Basin/Mixer check
+groups split between two fresh worlds.
 
-Текущая development-сборка `native-08821fd-e710896f4b86`, Horizon
-`08821fdbce6b5d081f1e6cc5c4d0da5438861222`, также успешно собрана официальным
-launcher. На ней прошли полный вентилятор над лентой с двумя процессами,
-десять проверок контекстных форм и пресс над лентой с сохранением раннего цикла
-через настоящий перезапуск. Отдельный полный прогон пресса также проверил
-20 шагов замороженного мира: точные Inventory/Running/Ticks/Mode/Finished
-не изменились при сохранённых128/32RPM, а обычное время продолжило обработку
-ровно трёх листов. Такое же поведение проверено в настоящем Java Create.
-Это ещё не общий регрессионный gate выпуска.
-Единый полный прогон чаши/смесителя на этой сборке прошёл все восемь групп,
-реальный перезапуск и новый цикл после загрузки. Отдельный встроенный
-`HORIZON_COMMAND_SCRIPT` harness записал200 последовательных обычных серверных
-тиков: первый результат83 тика, повтор через62. Геометрия из общей схемы
-в этом harness поставлена40 обычными `setblock`; вставка файла проверяется
-отдельным игровым сценарием. Подача ингредиентов здесь идёт через canonical NBT
-и не доказывает пока не реализованный приём упавших предметов чашей.
+Development build `native-08821fd-e710896f4b86`, Horizon
+`08821fdbce6b5d081f1e6cc5c4d0da5438861222`, was also successfully built by the
+official Launcher. It passed a complete fan-above-belt run with two processes,
+ten context-shape checks, and Press above a belt with early-cycle persistence
+across a real restart. A separate complete Press run also checked
+20 frozen-world steps: exact Inventory/Running/Ticks/Mode/Finished remained
+unchanged with saved 128/32 RPM, while ordinary time continued processing exactly
+three sheets. The same behavior was checked in actual Java Create.
+This was not yet a combined release regression gate.
+One complete Basin/Mixer run on this build passed all eight groups,
+a real restart, and a new post-load cycle. A separate built-in
+`HORIZON_COMMAND_SCRIPT` harness recorded 200 consecutive ordinary server ticks:
+first result after 83 ticks, repeat after 62. In this harness the shared schematic's
+geometry was placed with 40 ordinary `setblock` calls; file paste is checked by a
+separate gameplay scenario. Ingredients are supplied through canonical NBT here;
+this does not prove the Basin's then-unimplemented fallen-item intake.
 
-## Найденные различия и текущие ограничения
+## Recorded differences and limits of those snapshots
 
-- Девятый UI-сценарий с точным Java ракурсом выявил неверную selection/collision
-  форму мотора. Исходная форма исправлена, сверена для шести направлений и
-  повторно проверена в native-клиенте. Полная pixel parity
-  всех интерфейсов не заявляется. Некорректные старые снимки с экраном загрузки
-  исключены из визуальных доказательств.
-- Оригинальные `create:fan_fire` / `create:fan_lava` отсутствовали в каталоге
-  типов урона игрока Horizon: поджог работал, сам удар потока пропускался.
-  Общее исправление загрузки world damage registry и тегов прошло полный
-  Rust-прогон Horizon; на новой сборке подтверждён настоящий удар
-  `create:fan_lava` с потерей четырёх единиц здоровья. Полный сценарий
-  прошёл с отключённой естественной регенерацией: здоровье20→16,
-  исходный обход надетой алмазной брони, отсутствие лишнего урона.
-  Прочие сущности, включая лодки/вагонетки/снаряды, ещё не полностью охвачены.
-- Звуковые state machines и lifecycle проверены отдельно. Субъективная точность
-  звукового микса и всех прочих звуков Create ещё не подтверждена.
-- Проверки лент в разных измерениях, при выгрузке частей цепи и с
-  переопределённым `max_stack_size` прошли. Найдена отдельная потеря этого
-  компонента при передаче инвентаря клиенту Horizon исправлена и проверена:
-  шесть числовых форм и явное удаление компонента сохраняются на клиенте.
-  Casings, dyes, passengers и funnels/tunnels предстоят.
-- Belt rendering пока не повторяет все детали legacy item presentation и
-  source client prediction. Ограниченный importer схем явно отклоняет ленты;
-  это не совместимость произвольной схематики Create.
-- Чаша/смеситель: переносимое ядро и Java-оракул работают, native адаптер
-  вошёл в общую сборку. Проверены18 слотов, hopper IO с полными компонентами,
-  взаимодействие обеих рук, сухие рецепты/остаток ведра, порог30RPM,
-  потеря питания, заблокированный выход и сохранение инвентарей. В настоящем Java
-  тот же файл схемы из 40 блоков дал два сплава андезита; после начала цикла
-  первый результат появился на 83-м обычном тике, второй — ещё через 62.
-  Точное серверное сравнение времени с Horizon подтвердило83/62 тика.
+- The ninth UI scenario at the exact Java camera pose found an incorrect motor
+  selection/collision shape. The source shape was corrected, verified for six
+  directions, and rechecked in the native client. Full pixel parity of every
+  interface is not claimed. Invalid old screenshots showing the loading screen
+  were excluded from visual evidence.
+- Original `create:fan_fire` / `create:fan_lava` were missing from Horizon's player
+  damage-type catalog: ignition worked but the airflow hit was skipped. The
+  generic world damage-registry/tag loading fix passed the complete Horizon Rust
+  run; the new build confirmed an actual `create:fan_lava` hit losing four health.
+  The complete scenario passed with natural regeneration disabled: health 20→16,
+  source bypass of equipped diamond armor, and no extra damage. Other entities,
+  including boats/minecarts/projectiles, were not yet fully covered.
+- Audio state machines and lifecycle were checked separately. Subjective accuracy
+  of the sound mix and all other Create sounds was not yet confirmed.
+- Belt checks across dimensions, with chain parts unloaded, and with overridden
+  `max_stack_size` passed. A separate loss of this component during Horizon's
+  client inventory synchronization was fixed and verified: six numeric forms and
+  explicit component removal survive on the client. Casings, dyes, passengers,
+  and funnels/tunnels remain future work.
+- Belt rendering did not yet reproduce all legacy item-presentation and source
+  client-prediction details. The bounded schematic importer explicitly rejects
+  belts; this is not arbitrary Create-schematic compatibility.
+- Basin/Mixer: the portable core and Java oracle worked, and the native adapter
+  entered the combined build. Checks covered 18 slots, full-component hopper IO,
+  both-hand interaction, dry recipes/bucket remainder, the 30 RPM threshold, power
+  loss, blocked output, and inventory persistence. In actual Java the same
+  40-block schematic file yielded two andesite alloys; after cycle start, the
+  first result appeared on ordinary tick 83 and the second another 62 later.
+  Exact server timing comparison with Horizon confirmed 83/62 ticks.
   `/tick sprint N`
-  в испытанных клиентах продвигает N+1 тиков, поэтому старый экспериментальный
-  sprint-сценарий исключён из доказательств точного времени.
-  Наполнение/отрисовка жидкостей, нагрев, фильтры, боковые выходы и приём упавших
-  предметов пока не реализованы. Неизвестные данные сохраняются и отклоняются.
-  Поле одноразового `Level.Force` требует правильной границы сериализации.
-  Сейчас каталог содержит 26 публичных блоков и 17 отдельных
-  предметов, 129 рецептов. Регистрация сама по себе не считается механикой.
-- Обработка прессом на ленте использует исходные удержание/копирование и очередь
-  transported results: отдельные Java-оракулы прошли17780 и1448 случаев.
-  Настоящий Java-механизм, собранный обычным соединителем, и native-механизм
-  дали восемь листов из восьми слитков через депо и воронку. Это проверка
-  ограниченного результата, без утверждения о совпадении каждого тика.
-- Вентилятор над лентой дополнен независимым AST-оракулом18500 случаев.
-  Его диагностический снимок с перекрывающими сцену чатом и водой исключён
-  из визуальных доказательств; механические проверки от этого не зависят.
-- Сохраняются ограничения 0.5 по canonical `Source`/`Network`, world item IO,
-  cross-version item codec и части collision shapes. Эффективный `getSpeed`
-  теперь возвращает0 при debug-freeze, сохраняя сетевой RPM; проверка всех
-  клиентских эффектов в этом режиме ещё предстоит.
+  advanced N+1 ticks in the tested clients, so the old experimental sprint scenario
+  was excluded from exact timing evidence. Fluid filling/rendering, heat, filters,
+  side outputs, and fallen-item intake were not yet implemented in that snapshot.
+  Unknown data is preserved and rejected. The one-shot `Level.Force` field needs
+  the correct serialization boundary. At that point the catalog contained
+  26 public blocks, 17 standalone items, and 129 recipes. Registration alone does
+  not count as a mechanic.
+- Press processing on belts uses source holding/copying and queued transported
+  results: separate Java oracles passed 17780 and 1448 cases. Actual Java machinery
+  built with the ordinary connector and native machinery both produced eight
+  sheets from eight ingots through a Depot and hopper. This checks a bounded
+  output, without claiming equality on every tick.
+- Fan above a belt has a separate AST oracle of 18500 cases. Its diagnostic frame
+  with chat and water obstructing the scene was excluded from visual evidence;
+  mechanical checks do not depend on that image.
+- The 0.5 limits for canonical `Source`/`Network`, world item IO, cross-version
+  item codec, and some collision shapes were retained. Effective `getSpeed` now
+  returns 0 during debug-freeze while preserving network RPM; checking all client
+  effects in that mode remained future work.
 
-## Upstream и дальнейшая проверка
+## Upstream and further validation
 
-Порт временно закрепляет необходимые API в собственном форке Horizon.
-Открыт [PR #8872](https://github.com/horizon-rust/horizon/pull/8872) для named
-mob damage и owned particle controllers; запущенные CI проверки прошли.
-Отдельный [draft PR #8918](https://github.com/horizon-rust/horizon/pull/8918)
-добавляет текст и atlas quads в мире. [Draft PR #8924](https://github.com/horizon-rust/horizon/pull/8924)
-добавляет звуки с native владельцем. Загрузка типов урона и их тегов из
-датапаков отправлена в [PR #9076](https://github.com/horizon-rust/horizon/pull/9076)
-по [issue #8917](https://github.com/horizon-rust/horizon/issues/8917);
-PR временно закрыт сопровождающим. Исправления замечаний и merge основного
-репозитория отправлены в ветку `Delete228/horizon:data-driven-damage`
-(`28b9f949ffe1dbff5cd1427f155f28611e8dbced`); повторная проверка и запрос
-открытия PR выполняются отдельно. Закрытый PR пока показывает прежний head.
-Pending API fragments не получают выдуманных номеров: пока используется
-точный source pin и узкий raw adapter.
+The port temporarily pins the required APIs in its own Horizon fork.
+[PR #8872](https://github.com/horizon-rust/horizon/pull/8872) was opened for named
+mob damage and owned particle controllers; the CI checks that ran passed.
+A separate [draft PR #8918](https://github.com/horizon-rust/horizon/pull/8918)
+adds world text and atlas quads. [Draft PR #8924](https://github.com/horizon-rust/horizon/pull/8924)
+adds native-owned sounds. Datapack loading of damage types and tags was submitted
+in [PR #9076](https://github.com/horizon-rust/horizon/pull/9076) for
+[issue #8917](https://github.com/horizon-rust/horizon/issues/8917);
+the maintainer temporarily closed the PR. Review fixes and an upstream-main merge
+were pushed to `Delete228/horizon:data-driven-damage`
+(`28b9f949ffe1dbff5cd1427f155f28611e8dbced`); revalidation and the reopen request
+are handled separately. The closed PR still showed the earlier head at this point.
+Pending API fragments receive no invented numbers: an exact source pin and narrow
+raw adapter remain in use until then.
 
-Официальный [tracker #4953](https://github.com/horizon-rust/horizon/issues/4953)
-направляет новую работу над mod API в `arismoko/horizon`. Его текущий API и
-формат пакетов отличаются от выпущенного launcher; готового выпуска launcher
-для этого API пока нет. Поэтому текущая сборка остаётся на собственном точном
-pin с прежним форматом установки. Контекстные формы блоков отдельно заявлены
-в [fork issue #516](https://github.com/arismoko/horizon/issues/516).
+The official [tracker #4953](https://github.com/horizon-rust/horizon/issues/4953)
+directs new mod-API work to `arismoko/horizon`. Its current API/package format
+differs from the released Launcher; no Launcher release for that API was yet
+available. The build therefore retained its own exact pin and previous installation
+format. Context-dependent block shapes were separately proposed in
+[fork issue #516](https://github.com/arismoko/horizon/issues/516).
 
-Следующий gate: исправленный общий native build → UI/звук/вентиляторы/границы
-лент → фабричная чаша/смеситель → полный регрессионный прогон → новая обзорная
-карта и публикация проверенного выпуска. Общая TODO по всему моду —
-[ROADMAP.md](ROADMAP.md). Совпадение отдельных тестов не означает завершения
-всей подсистемы и не переводится в точный процент готовности.
+The next gate was: corrected combined native build → UI/audio/fans/belt boundaries
+→ factory Basin/Mixer → full regression → new review map and verified publication.
+The module-wide TODO is in [ROADMAP.md](ROADMAP.md). Matching individual tests does
+not establish completion of a subsystem or translate into an exact coverage percentage.
 
 
-Разработка горелки и жидкостей (следующий незавершённый этап):
+Burner and fluid development (the next unfinished phase in this earlier record):
 
-- `[готова логика, интеграция проверяется]` Горелка:17 710 сравнений четырёх
-  неизменённых Java-методов и13 взаимодействий в настоящем Java-клиенте.
-  Пустая клетка не создаёт `create:blaze_heater`; уже существующий BE сохраняется
-  при смене свойства того же блока. Первый lava bucket даёт20 000 тиков;
-  переполнение обычного топлива ограничивает доливку10 000.
-- `[готова логика, игровой прогон ожидается]` Выбор режима вентилятора:
-  27 648 сочетаний fluid/block-тегов, lit/flame_type/blaze совпали с четырьмя
-  исходными `isValidAt`. Нагретая горелка обжигает, тлеющая коптит.
-- `[проверено в отдельной сборке]` Компоненты жидкостей сохраняются в канонических
-  `InputTanks`/`OutputTanks`. Пройдены девять обычных взаимодействий с вёдрами,
-  замешивание теста, четыре порции грязи, настоящий перезапуск процесса и
-  отрисовка воды/лавы через Metal. Это не утверждение о попиксельном совпадении
-  с Java. Ветки [контракта жидкостей](https://github.com/Delete228/horizon/tree/create-native-fluid-capabilities)
-  и [отрисовки](https://github.com/Delete228/horizon/tree/create-native-fluid-render)
-  опубликованы после явного разрешения владельца форка. Общая сборка с горелкой
-  ещё проверяется; публичный pin предыдущего этапа пока не заменён.
-- `[проверено в движке]` Отдельно опубликованы
-  [свет по состоянию](https://github.com/Delete228/horizon/tree/content-state-light)
-  и [несколько предметов для одного блока](https://github.com/Delete228/horizon/tree/content-item-alias).
-  Последний контракт сохраняет исходный ID пустой горелки при обычной установке
-  и расходе предмета, включая клиентское предсказание. Проверка конкретной
-  горелки во всех направлениях входит в следующий игровой прогон.
+- `[logic ready, integration under test]` Burner: 17 710 comparisons of four unchanged
+  Java methods and 13 interactions in the actual Java client. An empty cage creates
+  no `create:blaze_heater`; an existing BE survives a property change on the same
+  block. The first lava bucket gives 20 000 ticks; ordinary-fuel overflow caps the
+  top-up at 10 000.
+- `[logic ready, gameplay run pending]` Fan mode selection:
+  27 648 combinations of fluid/block tags, lit/flame_type/blaze matched four
+  original `isValidAt` methods. A heated burner blasts; a smouldering burner smokes.
+- `[checked in a separate build]` Fluid components are preserved in canonical
+  `InputTanks`/`OutputTanks`. Nine ordinary bucket interactions, dough mixing, four
+  mud portions, a real process restart, and Metal water/lava rendering passed.
+  This does not claim pixel equality with Java. The
+  [fluid-capability](https://github.com/Delete228/horizon/tree/create-native-fluid-capabilities)
+  and [rendering](https://github.com/Delete228/horizon/tree/create-native-fluid-render)
+  branches were published after the fork owner's explicit permission. The combined
+  burner build was still under test; the previous phase's public pin had not yet
+  been replaced.
+- `[checked in the engine]` Separate branches were published for
+  [state-dependent light](https://github.com/Delete228/horizon/tree/content-state-light)
+  and [multiple items for one block](https://github.com/Delete228/horizon/tree/content-item-alias).
+  The latter contract preserves the empty burner's source item ID during ordinary
+  placement/item consumption, including client prediction. The specific burner
+  checks in all directions were part of the next gameplay run.
 
-Ввод горелки в каталог и локальный импорт её моделей сами по себе не означают
-готовый игровой блок. Нагрев, материалы/анимация, звук и установка получают
-отдельные проверки до передачи следующего мира на визуальный контроль.
+Catalog registration and local model import alone do not make a completed burner
+block. Heat, materials/animation, audio, and placement receive separate checks
+before the next world is handed over for visual review.

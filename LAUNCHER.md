@@ -1,218 +1,218 @@
-> Кандидат из исходников — **0.6.0-alpha.3**, с принятым Mixins
+> The source candidate is **0.6.0-alpha.3**, with accepted Mixins
 > `e8cd0aa38cffef49cb2e088ef716baa107148c02` ([PR #25](https://github.com/horizon-rust/horizon-mixins/pull/25)).
-> Инструкции и квитанции alpha.2 ниже относятся к установленной версии.
-> Пакет и developer-клиент проверены; чистая установка кандидата и обычный Play
-> на macOS ещё не приняты. [Найденная причина и следующий контроль](REPORT_063.md).
-> Старый instance не заменялся.
+> The alpha.2 instructions and receipts below refer to the installed version.
+> The package and developer client are verified; a clean candidate installation and normal Play
+> on macOS are not yet accepted. [Identified cause and next check](REPORT_063.md).
+> The old instance was not replaced.
 
-Проверенный исходный пакет кандидата —
+The verified candidate source package is
 [`8b7cca1`](https://github.com/Delete228/create-horizon/commit/8b7cca1ce486e8b4297a46eabe817d3b7ed1a407).
-Это ссылка на воспроизводимый checkpoint; она не означает, что новый Play на
-macOS уже прошёл приёмку. Для текущей установленной карты используйте сведения ниже.
-Исправление macOS bundle отправлено в [PR #9529](https://github.com/horizon-rust/horizon/pull/9529).
-Оно относится к самому Launcher: изменение Horizon pin в моде его не обновляет.
+This is a reproducible checkpoint link; it does not mean a new macOS Play run
+has passed acceptance. Use the details below for the currently installed map.
+The macOS bundle fix was submitted in [PR #9529](https://github.com/horizon-rust/horizon/pull/9529).
+It changes the Launcher itself: changing the mod's Horizon pin does not update it.
 
-# Текущий этап: Create Factory 0.6
+# Current stage: Create Factory 0.6
 
-Подготовлен отдельный instance **Create Factory 0.6**, мир **CreateFactory06**,
-мод **0.6.0-alpha.2**, performance-сборка `native-9c7f9b2-b81e43cfc1d2`.
-Выберите этот instance, нажмите **Play** и откройте **CreateFactory06**. Если
-окно Launcher ещё показывает прежний список, перезапустите его. Маршрут
-13 стендов — [TESTING_06.md](TESTING_06.md), результат и границы —
-[REPORT_06.md](REPORT_06.md). Старые instances и миры сохранены.
+A separate instance, **Create Factory 0.6**, and world, **CreateFactory06**, are prepared,
+with mod **0.6.0-alpha.2**, performance build `native-9c7f9b2-b81e43cfc1d2`.
+Select this instance, press **Play** and open **CreateFactory06**. If the
+Launcher window still shows the old list, restart it. The 13-station route
+is in [TESTING_06.md](TESTING_06.md); results and limits are in
+[REPORT_06.md](REPORT_06.md). Older instances and worlds are preserved.
 
-Новая карта лежит в `instances/create-factory-0-6/saves/CreateFactory06/`
-внутри обычной папки Horizon. Файлы собственных схем — в `schematics/`
-этого же instance. Новая станция пресса над чашей: `68 64 27`.
+The new map is at `instances/create-factory-0-6/saves/CreateFactory06/`
+inside the normal Horizon folder. Authored schematic files are in `schematics/`
+in the same instance. The new press-over-Basin station is at `68 64 27`.
 
-Исходный пакет этапа:
+Stage source package:
 
 ```text
 https://github.com/Delete228/create-horizon/commit/d6a82f59e7622d9ad74e5cc200699776fa7e0e66
 ```
 
-Для следующей чистой установки создайте новый instance и добавьте эту ссылку
-через **Mods → Add from GitHub**, затем соберите native-моды и положите свой
-поддерживаемый Create JAR в `horizon-mods/create-resources/`. Через консоль:
+For the next clean installation, create a new instance and add this link
+through **Mods → Add from GitHub**, then build native mods and place your
+supported Create JAR in `horizon-mods/create-resources/`. From the console:
 
 ```sh
 horizon-launcher mods add-github https://github.com/Delete228/create-horizon/commit/d6a82f59e7622d9ad74e5cc200699776fa7e0e66 --instance "Create Factory 0.6" --trust-native-code
 horizon-launcher native-build --instance "Create Factory 0.6" --profile performance --trust-native-code
 ```
 
-В этой установке `add-github` упёрся в лимит анонимного GitHub API. Поэтому
-установлен проверенный локальный `.hnmod`: все 143 его файла побайтно сравнены
-со скачанным публичным коммитом. Штатный Launcher собрал performance-клиент,
-а в пользовательском instance его `native-build` подтвердил **Up to date**.
-Метаданные GitHub origin не подделывались. Свежая установка alpha.2 именно
-через `add-github` пока не подтверждена; у прежнего alpha.1 она проходила.
+In this installation, `add-github` hit the anonymous GitHub API rate limit. A
+verified local `.hnmod` was therefore installed: all 143 files were compared byte
+for byte with the downloaded public commit. The standard Launcher built a performance client,
+and its `native-build` reported **Up to date** in the user instance.
+GitHub origin metadata was not fabricated. A fresh alpha.2 installation specifically
+through `add-github` remains unverified; it passed for the previous alpha.1.
 
-Текущая версия требует закреплённого форка Horizon
-`9c7f9b2215dfed497aba5522c44f38926628648d` и Mixins
-`a1e13326306c6bc074b11e6a4926deb551c4083e`. Launcher получает их сам;
-совместимость с любой будущей Nightly не обещается. Исходники форка и пакет
-опубликованы, оригинальные игровые ресурсы остаются только на компьютере.
+This version requires the pinned Horizon fork
+`9c7f9b2215dfed497aba5522c44f38926628648d` and Mixins
+`a1e13326306c6bc074b11e6a4926deb551c4083e`. The Launcher obtains them automatically;
+compatibility with any future Nightly is not promised. Fork source and the package
+are published; original game resources remain only on the local computer.
 
-Ниже сохранены инструкции и проверенные идентификаторы предыдущего выпуска.
+Instructions and verified identifiers for the previous release are preserved below.
 
-# Историческая установка и проверка 0.5
+# Historical 0.5 installation and validation
 
-Версия 0.5 добавляет жернов, обработку предметов потоком вентилятора и стационарный
-бур. Проверенная performance-сборка — `native-fc02103-722bc455fcbe`.
-Полный прогон с Metal, звуком и перезапуском прошёл без пропусков; отдельный аудит
-проверил готовую карту. Подготовлены instance **Create Processing 0.5** и мир
-**CreateProcessing05**. Полный маршрут осмотра — [TESTING_05.md](TESTING_05.md),
-точные свидетельства — [VALIDATION.md](VALIDATION.md).
+Version 0.5 adds the Millstone, item processing by fan airflow and the stationary
+drill. The verified performance build is `native-fc02103-722bc455fcbe`.
+A full run with Metal, audio and restart passed without skips; a separate audit
+checked the prepared map. Instance **Create Processing 0.5** and world
+**CreateProcessing05** are prepared. The full review route is in [TESTING_05.md](TESTING_05.md),
+with precise evidence in [VALIDATION.md](VALIDATION.md).
 
-Создайте отдельный instance, например **Create Processing 0.5**, и новый мир для
-проверки. Прежний **Create Engineering 0.4**, мир **CreateEngineering04** и более
-ранние миры оставьте для сравнения. GitHub-адрес репозитория:
-`https://github.com/Delete228/create-horizon`. Лаунчер загружает исходный пакет и
-собирает нативный клиент для выбранного instance.
+Create a separate instance, such as **Create Processing 0.5**, and a new world for
+testing. Keep **Create Engineering 0.4**, world **CreateEngineering04**, and earlier
+worlds for comparison. Repository GitHub URL:
+`https://github.com/Delete228/create-horizon`. The Launcher downloads the source package
+and builds a native client for the selected instance.
 
-## Новый instance
+## New instance
 
-1. В официальном Horizon Launcher нажмите **+** рядом с **Instances**, создайте
-   обычный Horizon instance и выберите его слева.
-2. Подготовьте обычную версию Horizon кнопкой Play, если ресурсы Minecraft 26.3
-   ещё не подготовлены. Можно использовать уже подготовленную версию.
-3. Откройте **Mods → Add from GitHub**, вставьте
-   `https://github.com/Delete228/create-horizon` и установите мод `create`.
-   Лаунчер покажет точный коммит и запрос доверия к нативному коду. Сверьте версию
-   пакета: **0.5.0**. Для воспроизводимого исходного пакета можно вставить
+1. In the official Horizon Launcher, click **+** beside **Instances**, create
+   a normal Horizon instance and select it on the left.
+2. Prepare a normal Horizon version with Play if Minecraft 26.3 resources
+   have not yet been prepared. An already prepared version can be used.
+3. Open **Mods → Add from GitHub**, paste
+   `https://github.com/Delete228/create-horizon` and install mod `create`.
+   The Launcher shows the exact commit and asks you to trust native code. Check the package
+   version: **0.5.0**. For a reproducible source package, you can paste
    `https://github.com/Delete228/create-horizon/commit/16c5d454b1b9860da01b78474ea5206f0664d384`.
-4. Запустите сборку нативных модов. Первая сборка получает компилятор, исходники
-   и зависимости; повторные используют кэш. Отдельная версия `native-fc02103-…`
-   закрепляется за выбранным instance.
-5. Откройте папку instance и положите один оригинальный JAR **Create 6.0.10,
-   NeoForge, Minecraft 1.21.1** в `horizon-mods/create-resources/`.
-   [Поддерживаемый файл и SHA-256](ASSETS.md).
-6. Нажмите **Play**. Мод сам подготавливает публичный контент и импортирует
-   оригинальные ресурсы. Отдельный контентный архив копировать не нужно.
+4. Start the native mod build. The first build obtains the compiler, source
+   and dependencies; later builds reuse the cache. A separate `native-fc02103-…`
+   version is assigned to the selected instance.
+5. Open the instance folder and place one original **Create 6.0.10,
+   NeoForge, Minecraft 1.21.1** JAR in `horizon-mods/create-resources/`.
+   [Supported file and SHA-256](ASSETS.md).
+6. Press **Play**. The mod prepares public content and imports original
+   resources itself. No separate content archive needs to be copied.
 
-Без поддерживаемого JAR используются предварительные модели; причина пишется в
-журнал. GitHub-пакет не содержит оригинальных моделей, текстур и звуков. Java-код
-из JAR не запускается.
+Without the supported JAR, placeholder models are used; the reason is written
+to the log. The GitHub package contains no original models, textures or sounds.
+Java code from the JAR is not executed.
 
-Если сборка или instance добавлены через консоль при открытом окне лаунчера,
-перезапустите это окно: интерфейс может сохранять прежний список сборок.
-Проверьте выбранный instance, версию мода и пометку Native на странице запуска.
-Для нового стенда `tools/review_world.py` по умолчанию создаёт мир
-`CreateProcessing05`; существующий мир с таким именем скрипт не открывает.
-Новая зона жернова, четырёх потоков и бура находится при X=32…48; прежние
-стенды 0.4 сохраняются. В инвентарь помещаются 36 записей, остальные три —
-в обычную бочку у новых материалов; очки надеты отдельно.
+If a build or instance was added through the console while the Launcher window
+was open, restart that window: the UI may retain the old build list.
+Check the selected instance, mod version and Native marker on the launch page.
+For a new review setup, `tools/review_world.py` creates world
+`CreateProcessing05` by default; the script does not open an existing world of that name.
+The new Millstone, four-current and drill area is at X=32…48; earlier
+0.4 stations are preserved. The inventory holds 36 entries, with the other three
+in an ordinary barrel beside the new materials; goggles are equipped separately.
 
-## Сборка через консоль
+## Building from the console
 
-Нужны официальный лаунчер и уже созданный instance. Установленный из GitHub мод
-собирается без соседних репозиториев и отдельного Rust из этой рабочей копии:
+The official Launcher and an already created instance are required. A mod installed
+from GitHub builds without neighboring repositories or a separate Rust installation from this working copy:
 
 ```sh
 horizon-launcher mods add-github https://github.com/Delete228/create-horizon --instance "Create Processing 0.5" --trust-native-code
 horizon-launcher native-build --instance "Create Processing 0.5" --profile dev --trust-native-code
 ```
 
-На macOS бинарник находится в
-`/Applications/Horizon.app/Contents/MacOS/horizon-launcher` и может отсутствовать
-в PATH. Из рабочей копии те же команды вызывает помощник:
+On macOS, the binary is at
+`/Applications/Horizon.app/Contents/MacOS/horizon-launcher` and may not be
+in PATH. The helper invokes the same commands from a working copy:
 
 ```sh
 python3 tools/launcher.py --instance "Create Processing 0.5" --github https://github.com/Delete228/create-horizon
 ```
 
-Повторная сборка — без `--github`. Для разработки из локальной рабочей копии:
+To rebuild, omit `--github`. For development from a local working copy:
 
 ```sh
 python3 tools/launcher.py --instance "Create Processing 0.5" --source --profile performance
 ```
 
-Для `--source` мод Create должен быть установлен и включён в этом instance.
-Помощник передаёт только публичный нативный пакет, без `.git`, кэшей, JAR и
-подготовленных Minecraft-ресурсов. Это проверка рабочей копии, а не подтверждение
-свежей установки опубликованного коммита через GitHub.
+For `--source`, Create must be installed and enabled in that instance.
+The helper passes only the public native package, excluding `.git`, caches, JARs
+and prepared Minecraft resources. This validates the working copy, not a fresh
+GitHub installation of the published commit.
 
-`dev` удобен для частых итераций: зависимости оптимизированы, игровой код
-собирается быстрее. `performance` оптимизирует игровой код; первая сборка дольше.
-Звук и контроллеры обычной сборкой не отключаются. Автоматические прогоны могут
-использовать `HORIZON_NO_AUDIO=1`; проверять звучание нужно отдельным запуском.
+`dev` is convenient for frequent iterations: dependencies are optimized, while game
+code builds faster. `performance` optimizes game code; its first build takes longer.
+Normal builds do not disable audio or controllers. Automated runs may use
+`HORIZON_NO_AUDIO=1`; audible playback needs a separate run.
 
-В прошлых установочных проверках анонимный GitHub API достигал rate limit.
-Готовый кэш или локальный пакет позволяли продолжить native-build, но такой путь
-не подтверждает новую загрузку по GitHub. Если лаунчер сообщает этот лимит,
-сохраните его сообщение и повторите обычный `mods add-github` после восстановления
-доступа. Не создавайте вручную фиктивную квитанцию origin. История и границы
-уже выполненных проверок сохранены в `VALIDATION.md`.
-Для 0.5 новая установка по точной ссылке `/commit/…` прошла как в пустом тестовом,
-так и в подготовленном пользовательском instance; обычная ссылка на репозиторий
-в той же сессии попала под этот лимит.
+Earlier installation checks reached the anonymous GitHub API rate limit.
+An existing cache or local package allowed native-build to continue, but that route
+does not prove a fresh GitHub download. If the Launcher reports this limit,
+keep its message and repeat normal `mods add-github` once access recovers.
+Do not manually fabricate an origin receipt. The history and limits of
+completed checks are preserved in `VALIDATION.md`.
+For 0.5, fresh installation through an exact `/commit/…` link passed in both an empty test
+instance and the prepared user instance; the normal repository link
+hit this limit in the same session.
 
-## Что закреплено
+## Pinned versions
 
 - Horizon: `fc02103818c212920fd24aa34a2b2f91ba49e56f`, Minecraft 26.3, API 359.
-- Mixins: `a1e13326306c6bc074b11e6a4926deb551c4083e`, опубликованный коммит
+- Mixins: `a1e13326306c6bc074b11e6a4926deb551c4083e`, published commit from
   [PR #26](https://github.com/horizon-rust/horizon-mixins/pull/26).
-- Исходный Create: 6.0.10 для Minecraft 1.21.1,
+- Original Create: 6.0.10 for Minecraft 1.21.1,
   `ac0c444d9828da3453ae8cc65338e8de063286fb`.
-- Машинные параметры: [compatibility.json](compatibility.json) и
+- Machine-readable settings: [compatibility.json](compatibility.json) and
   [horizon-native.json](horizon-native.json).
 
-Лаунчер получает коммит Mixins из официального Git-репозитория. Вручную менять
-инструмент или исходники движка не требуется. После изменения закреплённых
-версий адаптер и все raw mixin проверяются повторно; другая Nightly Horizon
-автоматически совместимой не считается.
+The Launcher obtains the Mixins commit from the official Git repository. No manual
+changes to the tool or engine source are required. After pinned versions change,
+the adapter and all raw mixins are checked again; another Horizon Nightly
+is not automatically considered compatible.
 
-## Контент внутри нативного пакета
+## Content inside the native package
 
-`mixins/create/data/content.json` содержит публичные объявления, наши временные
-JSON-модели/подписи, MIT-рецепты и теги, манифест. `native_data!` включает его в
-клиент. Перед загрузкой контента мод подготавливает
-`horizon-mods/.create-native-content/` внутри instance. Папка восстанавливается
-из текущей сборки; вручную редактировать её не следует. Другие моды и настройки
-включения сохраняются. Один флаг `mod.create` включает код и его контент.
+`mixins/create/data/content.json` contains public declarations, our placeholder
+JSON models/labels, MIT recipes and tags, and the manifest. `native_data!` embeds it
+in the client. Before content loads, the mod prepares
+`horizon-mods/.create-native-content/` inside the instance. This folder is rebuilt
+from the current build; do not edit it manually. Other mods and enable/disable
+settings are preserved. One `mod.create` flag enables both code and content.
 
-Версия 0.5 содержит 24 блока, 15 отдельных предметов, 123 рецепта и 35 тегов:
-39 записей во вкладке Create. Локальный импортёр создаёт 324 ресурсных файла и
-использует схему кэша 7. Исходный пакет, оригинальный JAR и приватный кэш имеют
-разное назначение; JAR и кэш в публикуемый мод не входят.
+Version 0.5 contains 24 blocks, 15 standalone items, 123 recipes and 35 tags:
+39 entries in the Create tab. The local importer creates 324 resource files and
+uses cache schema 7. The source package, original JAR and private cache serve
+different purposes; the JAR and cache are not included in the published mod.
 
-## Визуальная и игровая проверка 0.5
+## Visual and gameplay checks for 0.5
 
-Это список действий для новой сборки, а не отчёт об уже пройденных проверках.
+This is an action checklist for a new build, not a report of completed checks.
 
-1. Откройте вкладку Create. Проверьте жернов, вентилятор, бур, пропеллер, муку и тесто
-   в инвентаре, руке и мире. С JAR должны использоваться исходные модели и языки.
-2. Соберите жернов с приводом снизу либо через шестерню. Бросьте пшеницу сверху
-   или подайте воронкой. Сравните вращение внутренней части и начало/остановку
-   обработки при изменении RPM. Результаты муки и семян вероятностные.
-3. Пустой рукой заберите готовое из жернова, затем входной остаток при пустом
-   выходе. Проверьте воронки, заполненный выход, снятие ключом и обычное разрушение.
-   Сохраните мир во время обработки и проверьте инвентари/таймер после загрузки.
-4. Поставьте вентилятор во всех шести направлениях. Вал подключается с тыльной
-   стороны; реверс меняет притягивание и выдувание выпавших предметов. Проверьте
-   поворот ключом, твёрдое препятствие и разрешённые исходными тегами решётки.
-5. Продуйте муку через воду на депо: получится тесто. Продуйте тесто через
-   зажжённый обычный костёр: получится хлеб. Повторите с выпавшими предметами;
-   стопки до 16 и больше 16 предметов обрабатываются за разное время.
-6. Проверьте призрачное преобразование песка через огонь душ и обжиг булыжника
-   через лаву. Обжиг может уничтожать неподходящие предметы и коптящуюся еду;
-   не используйте ценные стопки для первого опыта.
-7. На депо и у выпавших предметов проверьте сбор результатов и сохранение
-   прогресса через перезапуск мира. Новый путь сохранения полей
-   `NeoForgeData.CreateData.Processing` проверяется отдельным сценарием с
-   настоящим перезапуском и точным продолжением оставшегося времени.
-   Поток на игроков и мобов пока не действует.
-8. У бура переключите рычаг над муфтой: камень впереди должен разрушаться, добыча
-   попадает через воронку в сундук. В сундуке есть запас камня/булыжника для ручной
-   замены цели. Остановите привод в середине цикла и проверьте продолжение.
-9. Повторите основные проверки предыдущих этапов: отдельные удары пресса и
-   очистку картинки депо, муфту/переключатель, рукоятку с Shift-реверсом, настройку
-   мотора, очки/приборы и малое/большое водяные колёса.
+1. Open the Create tab. Inspect the Millstone, fan, drill, Propeller, Flour and Dough
+   in the inventory, hand and world. With the JAR, original models and languages should be used.
+2. Build a Millstone driven from below or through a cogwheel. Drop wheat on top
+   or feed it through a hopper. Compare inner-part rotation and processing
+   startup/stopping as RPM changes. Flour and seed outputs are probabilistic.
+3. Collect finished Millstone output with an empty hand, then the input remainder when
+   output is empty. Check hoppers, full output, Wrench removal and ordinary breaking.
+   Save during processing and check inventories/timer after loading.
+4. Place a fan in all six directions. The shaft connects at the rear;
+   reversal switches between pulling and pushing dropped items. Check
+   Wrench rotation, solid obstructions and grilles allowed by original tags.
+5. Blow through water onto flour on a Depot to make dough. Blow through a
+   lit ordinary campfire onto dough to make bread. Repeat with dropped items;
+   stacks up to 16 and larger than 16 take different processing times.
+6. Check sand haunting through soul fire and cobblestone blasting
+   through lava. Blasting can destroy unsuitable items and food intended for smoking;
+   do not use valuable stacks for the first trial.
+7. Check result collection and progress persistence on Depots and dropped
+   items through a world restart. The new persistence route for
+   `NeoForgeData.CreateData.Processing` fields is checked in a separate scenario with
+   an actual restart and exact continuation of the remaining time.
+   Airflow does not yet affect players or mobs.
+8. Toggle the lever above the drill's Clutch: the stone in front should break and drops
+   should enter the chest through a hopper. The chest holds spare stone/cobblestone for manual
+   target replacement. Stop the drive mid-cycle and check continuation.
+9. Repeat the main checks from earlier stages: individual press hits and
+   Depot image clearing, Clutch/Gearshift, Hand Crank with Shift reversal, motor settings,
+   goggles/gauges, and small/large Water Wheels.
 
-Нативные HUD, подсказки, звук и эффекты ещё требуют сравнения с оригиналом.
-Ленты, миксер, насадка вентилятора, движущиеся contraptions и Ponder не входят
-в эту итерацию. Границы данных описаны в [COMPATIBILITY.md](COMPATIBILITY.md).
+Native HUDs, hints, sounds and effects still need comparison with the original.
+Belts, Mixer, fan attachment, moving contraptions and Ponder are outside
+this iteration. Data limits are described in [COMPATIBILITY.md](COMPATIBILITY.md).
 
-Официальные руководства: [нативные моды и GitHub](https://github.com/horizon-rust/horizon/blob/main/docs/native-mods.md),
-[команды лаунчера](https://github.com/horizon-rust/horizon/blob/main/docs/launcher-commands.md),
+Official guides: [native mods and GitHub](https://github.com/horizon-rust/horizon/blob/main/docs/native-mods.md),
+[Launcher commands](https://github.com/horizon-rust/horizon/blob/main/docs/launcher-commands.md),
 [instances](https://github.com/horizon-rust/horizon/blob/main/launcher/README.md).
