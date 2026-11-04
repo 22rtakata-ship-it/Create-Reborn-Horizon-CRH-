@@ -234,7 +234,7 @@ fn providers(game: &Game<'_>, pos: Pos, block: &str, nbt: &Compound, goggles: bo
             _ => {
                 let impact = match node.kind {
                     Kind::Press => 8.0,
-                    Kind::Millstone => 4.0,
+                    Kind::Millstone | Kind::Mixer => 4.0,
                     Kind::Consumer { impact, .. } => impact,
                     _ => 0.0,
                 };
@@ -270,16 +270,44 @@ fn providers(game: &Game<'_>, pos: Pos, block: &str, nbt: &Compound, goggles: bo
     }
     // IHaveHoveringInformation is independent of goggles. Source adds a blank
     // separator only if the first provider contributed information.
-    if overstressed {
+    let running = crate::game::create_port::running_speed(game, nbt);
+    let minimum = if matches!(node.kind, Kind::Mixer) {
+        create_engine::basin::DEFAULT_MIXER_MINIMUM_RPM
+    } else {
+        0.0 // IRotate defaults to SpeedLevel.NONE.
+    };
+    let not_fast_enough = running != 0.0
+        && !matches!(
+            running.abs().partial_cmp(&minimum),
+            Some(std::cmp::Ordering::Equal | std::cmp::Ordering::Greater)
+        );
+    if overstressed || not_fast_enough {
         if !lines.is_empty() {
             lines.push(Text::empty());
         }
+        let (heading, hint) = if overstressed {
+            (
+                tr("gui.stressometer.overstressed"),
+                tr("gui.contraptions.network_overstressed"),
+            )
+        } else {
+            (
+                tr("tooltip.speedRequirement"),
+                Text::translate(
+                    "create.gui.contraptions.not_fast_enough",
+                    &[Text::translate(
+                        &format!("block.{}", block.replace(':', ".")),
+                        &[],
+                    )],
+                ),
+            )
+        };
         lines.push(indent(
             game,
-            tr("gui.stressometer.overstressed").with_style(&Style::color(text::GOLD)),
+            heading.with_style(&Style::color(text::GOLD)),
             0,
         ));
-        for line in warning_lines(game, &tr("gui.contraptions.network_overstressed").plain()) {
+        for line in warning_lines(game, &hint.plain()) {
             lines.push(indent(game, line, 0));
         }
     }
