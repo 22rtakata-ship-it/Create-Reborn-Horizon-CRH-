@@ -66,8 +66,10 @@ registry prohibition on fork commits.
 - [x] Official performance build and disposable-world checks recorded with limits.
 - [x] Document the latest presentation feedback and its bounded checks.
 - [x] Repin/revalidate the accepted Mixins revision in the alpha.3 candidate.
-- [ ] Fix and validate the ordinary macOS Launcher Play path, including metadata
-      replacement/removal and an actual app-bundle launch.
+- [x] Submit the generic macOS companion fix as [Horizon #9529](https://github.com/horizon-rust/horizon/pull/9529),
+      with real Launcher filesystem tests and a generated-app game launch.
+- [ ] Update the installed Launcher after acceptance and validate its ordinary Play
+      path. The isolated app proof does not claim that UI/install check.
 - [ ] Repeat the complete clean-instance GitHub installation for that exact candidate.
       The alpha.2 GitHub API attempt hit an anonymous rate limit; its bounded
       official-build fallback is recorded in `REPORT_06.md` and is not described

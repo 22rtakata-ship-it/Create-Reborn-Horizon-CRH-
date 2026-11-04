@@ -9,6 +9,8 @@
 [`8b7cca1`](https://github.com/Delete228/create-horizon/commit/8b7cca1ce486e8b4297a46eabe817d3b7ed1a407).
 Это ссылка на воспроизводимый checkpoint; она не означает, что новый Play на
 macOS уже прошёл приёмку. Для текущей установленной карты используйте сведения ниже.
+Исправление macOS bundle отправлено в [PR #9529](https://github.com/horizon-rust/horizon/pull/9529).
+Оно относится к самому Launcher: изменение Horizon pin в моде его не обновляет.
 
 # Текущий этап: Create Factory 0.6
 

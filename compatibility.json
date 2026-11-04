@@ -26,5 +26,8 @@
   "horizon_world_canvas_pull_request": "https://github.com/horizon-rust/horizon/pull/8918",
   "horizon_owned_sounds_pull_request": "https://github.com/horizon-rust/horizon/pull/8924",
   "horizon_damage_registry_issue": "https://github.com/horizon-rust/horizon/issues/8917",
-  "horizon_damage_registry_pull_request": "https://github.com/horizon-rust/horizon/pull/9076"
+  "horizon_damage_registry_pull_request": "https://github.com/horizon-rust/horizon/pull/9519",
+  "horizon_damage_registry_previous_pull_request": "https://github.com/horizon-rust/horizon/pull/9076",
+  "horizon_macos_native_metadata_issue": "https://github.com/horizon-rust/horizon/issues/9521",
+  "horizon_macos_native_metadata_pull_request": "https://github.com/horizon-rust/horizon/pull/9529"
 }

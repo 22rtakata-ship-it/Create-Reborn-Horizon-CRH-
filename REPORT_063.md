@@ -78,10 +78,28 @@ executable вернула `128` и рамку при той же камере и
 app-bundle executable, но не автоматизация кнопки Play в окне Launcher.
 
 Development packaging исправлен, но это **не исправляет установленный Launcher**.
-Нужно отдельное общее исправление Launcher с тестами появления, замены и удаления
-metadata, затем повторить настоящий путь Play. Пользовательский кэш версии
+Для общей поправки опубликована [задача #9521](https://github.com/horizon-rust/horizon/issues/9521).
+Рядом найден такой же разрыв для `native-data`: post-build API тоже ищет эту
+папку рядом с фактическим executable. Общее исправление отправлено в
+[PR #9529](https://github.com/horizon-rust/horizon/pull/9529) и проверено с обоими
+сопутствующими ресурсами, включая их появление, замену и удаление. Прошли восемь
+профильных тестов в настоящем Launcher, strict all-target Clippy и 524 теста
+Launcher, 7 прежних ignored. Полный self-check сохраняет неизменённый Python
+installer-fixture failure, отдельно воспроизведённый на файлах main.
+
+Дополнительный probe собрал неизменённый `game_app.rs` из commit `69e629890`
+с объявленными заглушками локализации/XML. Настоящий `ensure` сам создал
+companion-ресурсы внутри приватной `.app`. App-side процесс прочитал тестовые
+данные через исходный `native_data::built`; игровой executable из этой `.app`
+показал цифры 128 и белую рамку на моторе. Кадр просмотрен, камера точно совпала
+с прежним отрицательным контролем. Это не прогон кнопки Play пользовательского Launcher.
+После него нужно повторить настоящий путь Play. Пользовательский кэш версии
 вручную не изменялся. До этой проверки alpha.3 не обозначается готовым
 исправлением обычной установки на macOS.
+
+Это отдельная поправка **Launcher**. Закрепление нового Horizon commit в моде
+само по себе не обновляет установленный Launcher. Приватная проверка исправленного
+app helper и обновление обычного пути установки отмечаются раздельно.
 
 ## Неизменяемые артефакты и локальные свидетельства
 
@@ -105,13 +123,16 @@ metadata, затем повторить настоящий путь Play. Пол
 `accepted-mixins-28jdf_40/fresh-result.json`,
 `dev-native-hawp1q9n/companion-fix-result.json`,
 `belt-fixed-native-rest-z7dapqow/companion-ab-image-review.json`,
-`motor-app-ab-goxkp7fj/{result,image-review}.json` — в `.local/`.
+`motor-app-ab-goxkp7fj/{result,image-review}.json`,
+`pr9521-finish-7y3rmfbp/result.json`, `mac-ensure-probe-r8o3_j7o/result.json`,
+`mac-ensure-game-positive-o_7ej57w/aggregate-result.json` — в `.local/`.
 
 ## Следующая остановка для визуального контроля
 
 - [x] Исправить X-поворот и добавить независимые исходные/нативные проверки.
 - [x] Пересобрать с принятым Mixins и проверить полный developer-артефакт.
-- [ ] Исправить и проверить macOS Launcher через фактически запускаемый `.app`.
+- [x] Отправить общее исправление macOS Launcher и проверить созданную им приватную `.app`.
+- [ ] Обновить Launcher после принятия исправления и проверить обычную кнопку Play.
 - [ ] Пройти чистый Add from GitHub и штатный performance native-build кандидата.
 - [ ] Подготовить отдельный instance/мир для проверки, сохранив alpha.2.
 - [ ] Проверить моторы во всех направлениях: мировые цифры, рамка и меню.
