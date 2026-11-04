@@ -13,6 +13,15 @@ See [third-party notices](THIRD_PARTY_NOTICES.md).
 [маршрут 13 стендов](TESTING_06.md), [полная TODO-таблица](ROADMAP.md).
 Это ещё не полный Create; грубая оценка общего переноса — **8–10%**.
 
+Кандидат **0.6.0-alpha.3** исправляет X-поворот лент и development packaging,
+закрепляет уже принятое исправление Mixins. Он собран и прошёл профильные проверки,
+но пользовательский instance ещё не обновлялся: найден отдельный дефект macOS
+Launcher, теряющий metadata встроенных модов при запуске из `.app`.
+[Отчёт кандидата и оставшиеся проверки](REPORT_063.md),
+[объяснение и состояния upstream PR](UPSTREAM_STATUS.md).
+Исходный checkpoint кандидата:
+[`8b7cca1`](https://github.com/Delete228/create-horizon/commit/8b7cca1ce486e8b4297a46eabe817d3b7ed1a407).
+
 Для воспроизводимой установки экспериментального этапа вставьте в **Add from GitHub**:
 
 ```text
@@ -112,7 +121,9 @@ python3 tools/launcher.py --instance "Create Native" --github https://github.com
 Лаунчер обслуживает компилятор, исходники Horizon, Mixins и кэши. Закреплённые версии
 в `compatibility.json`; обновление Horizon требует повторной проверки адаптера.
 Оригинальный Horizon патчить вручную не нужно. Используется опубликованное
-исправление Mixins для `recursion_limit` из [PR #26](https://github.com/horizon-rust/horizon-mixins/pull/26).
+исправление Mixins для `recursion_limit`; следующая alpha.3 закрепляет уже принятое
+исправление [PR #25](https://github.com/horizon-rust/horizon-mixins/pull/25).
+Установленная alpha.2 сохраняет ранее проверенную ревизию; это исторический выпуск.
 
 ## Разработка и проверки
 
