@@ -4,7 +4,8 @@
 // Create 6.0.10 BeltConnectorItem/BeltBlock/BeltBlockEntity/BeltInventory adapter.
 // The portable transport module owns geometry and movement. This adapter owns
 // normal world writes, component-preserving NBT, controller lifetime and drawing.
-// Casings/dyes, passengers and processor callbacks are separate integrations.
+// Casings/dyes and passengers remain separate integrations. Processor callbacks
+// use the portable transport result/queue contract.
 use super::{Game, native_block_entity_draw::BlockEntityDraw};
 use crate::{
     containers::{BlockEntity, ModBlockEntity},
@@ -624,10 +625,10 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: Pos, _face: Pos) -> bool {
         && part(game, pos) == Part::Middle
     {
         game.native_set_block_property(pos, "part", "pulley");
-        if !game.creative {
-            if let Some(s) = game.held_mut().as_mut() {
-                s.count = s.count.saturating_sub(1);
-            }
+        if !game.creative
+            && let Some(s) = game.held_mut().as_mut()
+        {
+            s.count = s.count.saturating_sub(1);
         }
         super::create_port_kinetic_runtime::invalidate();
         return true;
@@ -1310,107 +1311,6 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity, r
         game.native_block_entity_sync(pos);
     }
     changed
-}
-
-/// Owned virtual slot data for the future ordinary container-capability hooks.
-/// No staging slot is exposed: the controller's transported inventory is truth.
-pub(super) fn item_slots(
-    game: &Game<'_>,
-    dimension: &str,
-    pos: Pos,
-    _face: WorldDirection,
-) -> Option<Vec<super::machines::native_items::NativeContainerSlot>> {
-    if dimension != game.dim.id() || game.native_block(pos) != ID || !slope(game, pos).transports()
-    {
-        return None;
-    }
-    let (controller, index) = node_data(game, pos)?;
-    let contents = controller_inventory(game, controller)?;
-    let stack = contents
-        .stack_at(index)
-        .map(|i| game_stack(&contents.items[i].stack));
-    Some(vec![super::machines::native_items::NativeContainerSlot {
-        slot: 0,
-        can_take: stack.is_some(),
-        stack,
-    }])
-}
-pub(super) fn item_insert(
-    game: &mut Game<'_>,
-    dimension: &str,
-    pos: Pos,
-    _face: WorldDirection,
-    stack: &mut Option<ItemStack>,
-    simulate: bool,
-    handled: &mut bool,
-) {
-    if dimension != game.dim.id() || game.native_block(pos) != ID {
-        return;
-    }
-    *handled = true;
-    let Some(input) = stack.clone() else { return };
-    let Some((controller, index)) = node_data(game, pos) else {
-        return;
-    };
-    let Some(mut contents) = controller_inventory(game, controller) else {
-        return;
-    };
-    let Some(BlockEntity::Mod(e)) =
-        game.world
-            .block_entities
-            .get(&(controller[0], controller[1], controller[2]))
-    else {
-        return;
-    };
-    let b = belt(game, controller, e, number(&e.nbt, "Speed"));
-    let random_angle = if simulate { 0 } else { angle(game, &input) };
-    let remainder = contents.insert_automation(
-        b,
-        index,
-        core_stack(game, input.clone()),
-        random_angle,
-        simulate,
-    );
-    *stack = (remainder.count > 0).then_some(ItemStack {
-        count: remainder.count,
-        ..input
-    });
-    if !simulate {
-        save_controller(game, controller, &mut contents);
-    }
-}
-#[allow(clippy::too_many_arguments)]
-pub(super) fn item_extract(
-    game: &mut Game<'_>,
-    dimension: &str,
-    pos: Pos,
-    _face: WorldDirection,
-    slot: usize,
-    count: u32,
-    simulate: bool,
-    result: &mut Option<ItemStack>,
-    handled: &mut bool,
-) {
-    if dimension != game.dim.id() || game.native_block(pos) != ID {
-        return;
-    }
-    *handled = true;
-    *result = None;
-    if slot != 0 || count == 0 {
-        return;
-    }
-    let Some((controller, index)) = node_data(game, pos) else {
-        return;
-    };
-    let Some(mut contents) = controller_inventory(game, controller) else {
-        return;
-    };
-    *result = contents
-        .extract(index, count, simulate)
-        .map(|stack| game_stack(&stack));
-    if !simulate {
-        save_controller(game, controller, &mut contents);
-    }
 }
 
 pub(super) fn models(models: &mut Vec<String>) {

@@ -599,14 +599,15 @@ pub(super) fn frame(game: &mut Game<'_>) {
     });
     if let Some(at) = cursor {
         game.cursor = (at[0], at[1]);
-        if game.focused && !game.options.offscreen {
-            if let (Some(window), Some(size)) = (&game.window, game.native_physical_window_size()) {
-                let scale = HudBatch::new(size).scale;
-                let _ = window.set_cursor_position(winit::dpi::PhysicalPosition::new(
-                    game.view_at[0] as f64 + f64::from(at[0] * scale),
-                    game.view_at[1] as f64 + f64::from(at[1] * scale),
-                ));
-            }
+        if game.focused
+            && !game.options.offscreen
+            && let (Some(window), Some(size)) = (&game.window, game.native_physical_window_size())
+        {
+            let scale = HudBatch::new(size).scale;
+            let _ = window.set_cursor_position(winit::dpi::PhysicalPosition::new(
+                game.view_at[0] as f64 + f64::from(at[0] * scale),
+                game.view_at[1] as f64 + f64::from(at[1] * scale),
+            ));
         }
     }
     if let Some(pitch) = sound {

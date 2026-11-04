@@ -109,26 +109,32 @@ fn block_tag(game: &Game<'_>, pos: [i32; 3], tag: &str) -> bool {
 }
 fn media(game: &Game<'_>, pos: [i32; 3]) -> Option<Type> {
     let name = game.native_block(pos);
-    // Match priority Splashing > Haunting > Smoking > Blasting.
     let water = name == "minecraft:water"
         || name == "minecraft:bubble_column"
         || game.native_block_property(pos, "waterlogged").as_deref() == Some("true");
-    if water || block_tag(game, pos, "create:fan_processing_catalysts/splashing") {
-        return Some(Type::Splashing);
+    fan::Medium {
+        // The bounded native fluid registry currently exposes vanilla water
+        // and lava; custom fluid-tag registration is a separate capability.
+        fluid: [name == "minecraft:lava", false, false, water],
+        block: [
+            "create:fan_processing_catalysts/blasting",
+            "create:fan_processing_catalysts/haunting",
+            "create:fan_processing_catalysts/smoking",
+            "create:fan_processing_catalysts/splashing",
+        ]
+        .map(|tag| block_tag(game, pos, tag)),
+        campfire: block_tag(game, pos, "minecraft:campfires"),
+        lit: game.native_block_property(pos, "lit").map(|v| v == "true"),
+        flame_soul: game
+            .native_block_property(pos, "flame_type")
+            .map(|v| v == "soul"),
+        heat: game
+            .native_block_property(pos, "blaze")
+            .and_then(|v| super::create_port_burner::heat(&v)),
     }
-    let lit = game.native_block_property(pos, "lit").as_deref() != Some("false");
-    if lit && block_tag(game, pos, "create:fan_processing_catalysts/haunting") {
-        return Some(Type::Haunting);
-    }
-    if lit && block_tag(game, pos, "create:fan_processing_catalysts/smoking") {
-        return Some(Type::Smoking);
-    }
-    if name == "minecraft:lava" || block_tag(game, pos, "create:fan_processing_catalysts/blasting")
-    {
-        return Some(Type::Blasting);
-    }
-    None
+    .processing()
 }
+
 fn flow_limit(game: &Game<'_>, pos: [i32; 3], d: Direction, max: f32) -> f32 {
     for i in 0..max.ceil() as i32 {
         let p = add(pos, d, i + 1);
@@ -236,15 +242,14 @@ fn plan(game: &Game<'_>, stack: &ItemStack, kind: Type) -> Option<Vec<(ItemStack
                         .cook("minecraft:blasting", stack)
                         .filter(|r| !r.id.ends_with("_manual_only"))
                 });
-            if let Some(recipe) = recipe {
-                if game
+            if let Some(recipe) = recipe
+                && game
                     .recipes()
                     .cook("minecraft:smoking", stack)
                     .filter(|r| !r.id.ends_with("_manual_only"))
                     .is_none_or(|smoke| smoke.result.item != recipe.result.item)
-                {
-                    return Some(vec![(recipe.result.clone(), 1.0)]);
-                }
+            {
+                return Some(vec![(recipe.result.clone(), 1.0)]);
             }
             // Blasting destroys smokeable food and non-resistant items with no furnace recipe.
             if recipe.is_some()
@@ -363,6 +368,9 @@ fn store_held(nbt: &mut Compound, state: Processing) {
     }
 }
 fn process_depot(game: &mut Game<'_>, pos: [i32; 3], kind: Type) {
+    if super::create_port::inventory_blocked(game, pos) {
+        return;
+    }
     let Some((stack, mut state)) = game
         .native_with_mod_block_entity(pos, |e| {
             Some((
@@ -706,7 +714,7 @@ fn decode_current(data: &[i32]) -> Option<SyncedCurrent> {
     }
     let mut segments = Vec::with_capacity(count);
     let push = fan::pushing(rpm, facing);
-    for pair in data[5..5 + 2 * count].chunks_exact(2) {
+    for pair in data[5..5 + 2 * count].as_chunks::<2>().0 {
         let end = pair[0];
         if !(0..=limit).contains(&end)
             || segments
@@ -737,7 +745,7 @@ fn decode_current(data: &[i32]) -> Option<SyncedCurrent> {
         return None;
     }
     let mut handlers = Vec::with_capacity(handler_count);
-    for row in data[6 + 2 * count..].chunks_exact(4) {
+    for row in data[6 + 2 * count..].as_chunks::<4>().0 {
         let kind = match row[3] {
             1 => Type::Blasting,
             2 => Type::Haunting,

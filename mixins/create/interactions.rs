@@ -52,7 +52,9 @@ pub(super) fn reacts(game: &Game<'_>, pos: [i32; 3]) -> bool {
     }
     let block = game.native_block(pos);
     let held = game.held().map(|s| s.item.as_ref());
-    if held == Some("create:wrench") && crate::game::create_port::owns(&block) {
+    if held == Some("create:wrench")
+        && (crate::game::create_port::owns(&block) || block == "create:lit_blaze_burner")
+    {
         return true;
     }
     if bypass(game) {
@@ -110,6 +112,9 @@ fn switch(game: &mut Game<'_>, pos: [i32; 3], block: &str) -> bool {
     true
 }
 pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3]) -> bool {
+    if super::create_port::inventory_blocked(game, pos) {
+        return true;
+    }
     if !reacts(game, pos) {
         return false;
     }
@@ -124,6 +129,37 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3]) ->
         .held()
         .is_some_and(|s| s.item.as_ref() == "create:wrench");
     if wrench {
+        if secondary(game)
+            && matches!(
+                block.as_str(),
+                "create:blaze_burner" | "create:lit_blaze_burner"
+            )
+        {
+            // IWrenchable.onSneakWrenched uses Block.getDrops, not the
+            // block's primary item or Ctrl+Pick data. Empty/lit cages drop
+            // the empty alias; captured burners drop a fresh filled item.
+            let drops = if game.creative {
+                Vec::new()
+            } else {
+                let state = game.world.block(pos[0], pos[1], pos[2]);
+                let tool = game.held().cloned();
+                let saved = game
+                    .world
+                    .block_entities
+                    .get(&(pos[0], pos[1], pos[2]))
+                    .map(|entity| {
+                        crate::save::encode_block_entity((pos[0], pos[1], pos[2]), entity, &block)
+                    });
+                game.block_loot_at(pos, state, tool.as_ref(), saved)
+            };
+            if switch(game, pos, "minecraft:air") {
+                for stack in drops {
+                    give(game, stack, pos);
+                }
+                crate::game::create_port_sounds::wrench(game, pos, true);
+            }
+            return true;
+        }
         let pickup = if block == "create:gearbox"
             && game.native_block_property(pos, "axis").as_deref() != Some("y")
         {
@@ -192,19 +228,19 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3]) ->
                 if changed {
                     crate::game::create_port_sounds::wrench(game, pos, false);
                 }
-            } else if let Some(direction) = game.native_block_property(pos, "facing") {
-                if block != "create:mechanical_press" || face.axis() == Axis::Y {
-                    let direction = Direction::ALL
-                        .into_iter()
-                        .find(|d| d.name() == direction)
-                        .unwrap();
-                    if game.native_set_block_property(
-                        pos,
-                        "facing",
-                        direction.clockwise(face.axis()).name(),
-                    ) {
-                        crate::game::create_port_sounds::wrench(game, pos, false);
-                    }
+            } else if let Some(direction) = game.native_block_property(pos, "facing")
+                && (block != "create:mechanical_press" || face.axis() == Axis::Y)
+            {
+                let direction = Direction::ALL
+                    .into_iter()
+                    .find(|d| d.name() == direction)
+                    .unwrap();
+                if game.native_set_block_property(
+                    pos,
+                    "facing",
+                    direction.clockwise(face.axis()).name(),
+                ) {
+                    crate::game::create_port_sounds::wrench(game, pos, false);
                 }
             }
             crate::game::create_port_kinetic_runtime::invalidate();
@@ -214,20 +250,19 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3]) ->
     if matches!(
         block.as_str(),
         "create:water_wheel" | "create:large_water_wheel"
-    ) {
-        if let Some(material) = wheel_material(game) {
-            game.native_with_mod_block_entity(pos, |e| {
-                e.nbt.insert(
-                    "Material".into(),
-                    Tag::Compound(horizon_world::nbt::Compound::from([(
-                        "Name".into(),
-                        Tag::String(material.as_str().into()),
-                    )])),
-                );
-            });
-            game.native_block_entity_sync(pos);
-            return true;
-        }
+    ) && let Some(material) = wheel_material(game)
+    {
+        game.native_with_mod_block_entity(pos, |e| {
+            e.nbt.insert(
+                "Material".into(),
+                Tag::Compound(horizon_world::nbt::Compound::from([(
+                    "Name".into(),
+                    Tag::String(material.as_str().into()),
+                )])),
+            );
+        });
+        game.native_block_entity_sync(pos);
+        return true;
     }
     if block == "create:hand_crank" {
         let back = secondary(game);
@@ -265,13 +300,13 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3]) ->
             return true;
         }
         let dim = game.dim.id().to_owned();
-        if let Some(state) = game.pack.assets.registry.default_state(&result) {
-            if game.native_set_block(&dim, pos, state, 3) {
-                if consume {
-                    game.consume_held();
-                }
-                crate::game::create_port_sounds::casing(game, pos);
+        if let Some(state) = game.pack.assets.registry.default_state(&result)
+            && game.native_set_block(&dim, pos, state, 3)
+        {
+            if consume {
+                game.consume_held();
             }
+            crate::game::create_port_sounds::casing(game, pos);
         }
         return true;
     }

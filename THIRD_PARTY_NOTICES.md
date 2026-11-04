@@ -43,6 +43,12 @@ The following MIT code informed or was adapted into the Rust engine:
   `content/kinetics/base/BlockBreakingKineticBlockEntity`: stationary front-block
   selection, break progress/retry timing, source NBT names, ordinary loot, rear
   shaft and rotating head. Contraption movement and entity damage are not ported.
+- `content/processing/burner/BlazeBurnerBlock`, `BlazeBurnerBlockEntity`,
+  `BlazeBurnerBlockItem`, `LitBlazeBurnerBlock` and `api/registry/CreateDataMaps`:
+  source state/factory identities, fuel precedence and transitions, consumption
+  and remainder rules, heat/comparator policy and canonical saved fields.
+  Native integration and presentation are validated separately from the pure
+  fuel oracle; incomplete capture/automation/contraption paths are not implied.
 - `AllSoundEvents` and infrastructure configs: selected composite sound events,
   default gains/pitches, stress and speed parameters.
 - `content/equipment/goggles/GoggleOverlayRenderer`,
@@ -62,7 +68,7 @@ The following MIT code informed or was adapted into the Rust engine:
   shared fixture state/NBT conventions and original creative-placement policy.
   The development Java bridge calls the original placement packet directly;
   the Rust schematic adapter is independently implemented and validated.
-- 123 MIT datapack recipes and 35 behavior/ingredient tags, exported from
+- Selected MIT datapack recipes, behavior/ingredient tags and fuel data maps, exported from
   `src/generated/resources/data/` at the pinned revision. Ingredient syntax is
   adapted to Horizon/Minecraft 26.3. Missing vanilla convention tags are our own
   definitions and supplement Create's tag additions with vanilla entries.
@@ -78,9 +84,10 @@ not one Rust type for every Java class.
 
 Ponder **1.0.82+mc1.21.1**, bundled in the player's pinned Create JAR, contains
 Catnip's `net.createmod.catnip.lang.LangBuilder`, `LangNumberFormat`,
-`FontHelper`, `gui.element.BoxElement`, `outliner.Outliner` and `theme.Color`. Their MIT code informs
+`FontHelper`, `animation.LerpedFloat` (linear/EXP tank levels),
+`gui.element.BoxElement`, `outliner.Outliner` and `theme.Color`. Their MIT code informs
 tooltip indentation, locale number formatting, highlighting, default colors and
-alpha behavior and world display expiry. The exact notice below is from the bundled JAR's `LICENSE_Ponder`.
+alpha behavior, world display expiry and fluid-level chase/interpolation. The exact notice below is from the bundled JAR's `LICENSE_Ponder`.
 This attribution concerns code; it does not change the resource license described
 below.
 

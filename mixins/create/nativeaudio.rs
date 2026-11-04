@@ -131,7 +131,7 @@ fn play_local(
             serde_json::json!({"event":event,"source":source,"position":position,"volume":volume,"pitch":pitch,"distance_delay":true,"game_time":game.world.game_time})
         );
     }
-    let random = horizon_core::random::LegacyRandom::new(game.world.random.next_long());
+    let random = horizon_core::random::LegacyRandom::new(game.particles.level_random().next_long());
     let instance = SoundInstance::at(event, source, volume, pitch, random, position);
     let distance_squared: f64 = (0..3)
         .map(|i| (game.audio.listener[i] - position[i]).powi(2))

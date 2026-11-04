@@ -32,7 +32,16 @@ def wait_loaded(call, positions, attempts=40):
 
 
 class NativeCheckSession:
-    def __init__(self, game, resources, ctl, create_jar, *, name='parity', graphics=True, audio=False, size=(1280, 720)):
+    def __init__(self, game, resources, ctl, create_jar, *, name='parity', graphics=True, audio=False,
+                 size=(1280, 720), world='CreateParity06', username=None):
+        if (not isinstance(world, str) or not world or world in ('.', '..')
+                or any(c in world for c in '/\\') or not world.isprintable()):
+            raise ValueError('The world must be one nonempty folder name, not a path')
+        if username is not None and (not isinstance(username, str) or not 1 <= len(username) <= 16
+                or any(c not in 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_' for c in username)):
+            raise ValueError('An offline username must contain 1..16 ASCII letters, digits or underscores')
+        self.world = world
+        self.username = username
         self.game = Path(game).resolve()
         self.ctl = Path(ctl).resolve()
         self.graphics = graphics
@@ -85,9 +94,13 @@ class NativeCheckSession:
         self.output = self.log.open('a')
         self.output.write(f'\nNativeCheckSession process start {self.starts}\n')
         self.output.flush()
-        command = [str(self.game), '--resources', str(self.resources), '--world', 'CreateParity06',
+        command = [str(self.game), '--resources', str(self.resources), '--world', self.world,
                    '--seed', '5', '--creative', '--render-distance', '2',
                    '--control-socket', str(self.socket), '--width', str(self.size[0]), '--height', str(self.size[1])]
+        # Args::parse in the pinned client maps --name to player_name. Vanilla's
+        # --username is not accepted here. Omitted keeps the old generated name.
+        if self.username is not None:
+            command += ['--name', self.username]
         command += ['--offscreen'] if self.graphics else ['--headless']
         self.process = subprocess.Popen(command, cwd=self.scratch, env=self.env,
                                         stdout=self.output, stderr=subprocess.STDOUT)

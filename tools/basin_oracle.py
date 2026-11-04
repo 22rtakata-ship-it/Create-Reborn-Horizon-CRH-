@@ -12,6 +12,7 @@ import itertools
 import json
 from pathlib import Path
 import random
+import re
 import shutil
 import subprocess
 
@@ -212,6 +213,14 @@ def cases():
         result.append('M ' + ' '.join(map(str,[rpm,30,duration,running,ticks,processing,160,-1,repeat,0,0])))
     for cut, remove, start in itertools.product([-1,0,1,10,19,20,21,80,100],range(2),range(2)):
         result.append('M ' + ' '.join(map(str,[32,30,0,1,10,0,180,cut,0,start,remove])))
+    # MechanicalMixer.read changes saved runningTicks on the existing object;
+    # it does not reconstruct its transient processingTicks/currentRecipe.
+    for name,case in [
+        ('mixer_tick40_before_same_entity_saved_counter_update','M 32 30 0 1 0 0 40 -1 0 0 0'),
+        ('mixer_same_entity_counter19_countdown_retained_before_completion','M 32 30 0 1 19 43 43 -1 0 0 0'),
+        ('mixer_same_entity_counter19_countdown_retained_completion_tick84','M 32 30 0 1 19 43 44 -1 0 0 0'),
+    ]:
+        named[name]=len(result);result.append(case)
     return result, named
 
 
@@ -248,7 +257,9 @@ def main():
     (work/'probe.rs').write_text(RUST.replace('@@BASIN@@',str(source)))
     rustc=ROOT/'.tools/rust/bin/rustc'
     subprocess.run([str(rustc),'--edition','2024','--test',str(source),'-o',str(work/'tests')],check=True)
-    subprocess.run([str(work/'tests')],check=True)
+    test_output = subprocess.check_output([str(work/'tests')], text=True)
+    print(test_output, end='')
+    portable_tests = int(re.search(r'test result: ok\. (\d+) passed', test_output)[1])
     subprocess.run([str(rustc),'--edition','2024',str(work/'probe.rs'),'-o',str(work/'probe')],check=True)
     inputs,named=cases();stdin='\n'.join(inputs)+'\n'
     expected=subprocess.check_output([java,'-cp',str(work),'BasinOracle'],input=stdin,text=True).splitlines()
@@ -256,7 +267,7 @@ def main():
     assert len(inputs)==len(expected)==len(actual),(len(inputs),len(expected),len(actual))
     for case,want,got in zip(inputs,expected,actual):
         assert want==got,{'case':case,'java':want,'rust':got}
-    report={'passed':True,'cases':len(inputs),'source_methods':13,'portable_tests':15,'reference':PINS['create_revision'],'named_cases':{name:{'input':inputs[i],'result':actual[i]} for name,i in named.items()},'scope':'unchanged AST source apply/output simulation/unique slots/fluid fill/RNG/dummy remainders/heat/server mixer tick; explicit host contexts, no native machine/fluids/effects or GUI'}
+    report={'passed':True,'cases':len(inputs),'source_methods':13,'portable_tests':portable_tests,'reference':PINS['create_revision'],'named_cases':{name:{'input':inputs[i],'result':actual[i]} for name,i in named.items()},'scope':'unchanged AST source apply/output simulation/unique slots/fluid fill/RNG/dummy remainders/heat/server mixer tick; explicit host contexts, no native machine/fluids/effects or GUI'}
     (work/'result.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps({k:v for k,v in report.items() if k!='named_cases'}))
     return report

@@ -28,6 +28,7 @@
     "create:mechanical_drill",
     "create:basin",
     "create:mechanical_mixer",
+    "create:blaze_burner",
     "create:iron_sheet",
     "create:golden_sheet",
     "create:copper_sheet",
@@ -44,6 +45,9 @@
     "create:wheat_flour",
     "create:dough",
     "create:belt_connector",
-    "create:whisk"
+    "create:whisk",
+    "create:empty_blaze_burner",
+    "create:blaze_cake",
+    "create:creative_blaze_cake"
   ]
 }

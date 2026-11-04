@@ -543,15 +543,17 @@ fn decode(data: &[u8]) -> Option<Vec<RotationEvent>> {
     if data.len() < 4
         || data.len() > 30_000
         || &data[..4] != PACKET_MAGIC
-        || (data.len() - 4) % RECORD_LEN != 0
+        || !(data.len() - 4).is_multiple_of(RECORD_LEN)
     {
         return None;
     }
     let mut events = Vec::with_capacity((data.len() - 4) / RECORD_LEN);
-    for row in data[4..].chunks_exact(RECORD_LEN) {
+    for row in data[4..].as_chunks::<RECORD_LEN>().0 {
         let words: Vec<_> = row
-            .chunks_exact(4)
-            .map(|w| u32::from_le_bytes(w.try_into().unwrap()))
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|w| u32::from_le_bytes(*w))
             .collect();
         let axis = *[Axis::X, Axis::Y, Axis::Z].get(words[7] as usize)?;
         let (speed, initial, target) = (
@@ -683,6 +685,11 @@ fn spawn_rotation(game: &mut Game<'_>, event: RotationEvent, world: usize) {
         game.particles.push(p);
     }
 }
+/// Catnip AnimationTickHolder.getRenderTime for an ordinary client level.
+pub(super) fn animation_time(partial: f32) -> f32 {
+    CLIENT.with(|client| client.borrow().ticks as f32 + partial)
+}
+
 pub(super) fn client_tick(game: &mut Game<'_>) {
     if !game.native_window() || game.remote.is_none() || !game.native_on("create") {
         return;
@@ -847,26 +854,24 @@ pub(super) fn client_tick(game: &mut Game<'_>) {
             (caught.items.clone(), caught.horses.clone())
         });
         for id in caught_items {
-            if let Some((position, _)) = items.get(&id) {
-                if let Some(kind) = type_at(pos, &flow, *position) {
-                    let extras = rules::processing_particles(
-                        kind,
-                        *position,
-                        &mut Random(&mut game.world.random),
-                    );
-                    emit(game, extras);
-                }
+            if let Some((position, _)) = items.get(&id)
+                && let Some(kind) = type_at(pos, &flow, *position)
+            {
+                let extras = rules::processing_particles(
+                    kind,
+                    *position,
+                    &mut Random(&mut game.world.random),
+                );
+                emit(game, extras);
             }
         }
         for id in caught_horses {
-            if let Some((position, previous, _)) = horses.get(&id) {
-                if type_at(pos, &flow, *position) == Some(ProcessingType::Haunting) {
-                    let extras = rules::horse_haunting_particles(
-                        *previous,
-                        &mut Random(&mut game.world.random),
-                    );
-                    emit(game, extras);
-                }
+            if let Some((position, previous, _)) = horses.get(&id)
+                && type_at(pos, &flow, *position) == Some(ProcessingType::Haunting)
+            {
+                let extras =
+                    rules::horse_haunting_particles(*previous, &mut Random(&mut game.world.random));
+                emit(game, extras);
             }
         }
         for (handler, kind) in &flow.handlers {
@@ -880,7 +885,7 @@ pub(super) fn client_tick(game: &mut Game<'_>) {
                 else {
                     continue;
                 };
-                if e.id != "create:depot" || e.nbt.get(&"HeldItem".into()).is_none() {
+                if e.id != "create:depot" || !e.nbt.contains_key(&"HeldItem".into()) {
                     continue;
                 }
                 vec![handler.map(|v| f64::from(v) + 0.5)]

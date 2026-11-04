@@ -29,6 +29,8 @@
   "block.create.mechanical_drill": "Механический бур",
   "block.create.basin": "Чаша",
   "block.create.mechanical_mixer": "Механический миксер",
+  "block.create.blaze_burner": "Горелка всполоха",
+  "block.create.lit_blaze_burner": "Зажжённая горелка всполоха",
   "item.create.andesite_alloy": "Andesite Alloy",
   "item.create.brass_ingot": "Brass Ingot",
   "item.create.brass_nugget": "Brass Nugget",
@@ -42,5 +44,8 @@
   "item.create.wheat_flour": "Пшеничная мука",
   "item.create.dough": "Тесто",
   "item.create.whisk": "Венчик",
+  "item.create.empty_blaze_burner": "Пустая горелка всполоха",
+  "item.create.blaze_cake": "Пирог всполоха",
+  "item.create.creative_blaze_cake": "Творческий пирог всполоха",
   "create.kinetics.creative_motor.rotation_speed": "Generated Speed in RPM"
 }

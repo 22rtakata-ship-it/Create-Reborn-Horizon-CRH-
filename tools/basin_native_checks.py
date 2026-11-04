@@ -50,7 +50,7 @@ def run(call, graphics=False, log=None, scratch=None, *, start_at=None):
     assert call('state')['world'] == 'CreateParity06', 'Only the harness disposable world is authorized'
     x, y, z = 384, 64, 16
     report = {'passed': False, 'checks': [], 'images': [], 'source': PINS['create_revision'],
-              'unsupported': ['nonempty fluid tanks', 'heated recipes', 'filters', 'side spouts',
+              'unsupported': ['unknown/malformed fluid tanks', 'heated recipes', 'filters', 'side spouts',
                               'falling-item intake until entity-sensitive contact hook is connected']}
     report['start_at'] = start_at
     report['timing_scope'] = 'bounded live integration; exact normal-tick timing is checked separately by basin_timing_checks.py'
@@ -321,7 +321,7 @@ def prepare_restart(call, scratch):
         fields[field] = call('command', 'data get block 384 64 16 ' + field)['chat']
     report = {'passed': False, 'before': fields, 'requires_actual_process_restart': True}
     (scratch / 'basin-restart-result.json').write_text(json.dumps(report, indent=2) + '\n')
-    call('command', 'save-all flush')
+    call('save-all')
     return report
 
 

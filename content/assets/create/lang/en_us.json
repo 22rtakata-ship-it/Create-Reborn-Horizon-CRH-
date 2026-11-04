@@ -29,6 +29,8 @@
   "block.create.mechanical_drill": "Mechanical Drill",
   "block.create.basin": "Basin",
   "block.create.mechanical_mixer": "Mechanical Mixer",
+  "block.create.blaze_burner": "Blaze Burner",
+  "block.create.lit_blaze_burner": "Lit Blaze Burner",
   "item.create.andesite_alloy": "Andesite Alloy",
   "item.create.brass_ingot": "Brass Ingot",
   "item.create.brass_nugget": "Brass Nugget",
@@ -42,5 +44,8 @@
   "item.create.wheat_flour": "Wheat Flour",
   "item.create.dough": "Dough",
   "item.create.whisk": "Whisk",
+  "item.create.empty_blaze_burner": "Empty Blaze Burner",
+  "item.create.blaze_cake": "Blaze Cake",
+  "item.create.creative_blaze_cake": "Creative Blaze Cake",
   "create.kinetics.creative_motor.rotation_speed": "Generated Speed in RPM"
 }

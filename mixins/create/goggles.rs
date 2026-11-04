@@ -23,7 +23,7 @@ thread_local! {
     static LAST_TRACE: RefCell<String> = const { RefCell::new(String::new()) };
 }
 
-fn tr(key: &str) -> Text {
+pub(super) fn tr(key: &str) -> Text {
     Text::translate(&format!("create.{key}"), &[])
 }
 
@@ -97,7 +97,7 @@ fn bar(filled: usize) -> String {
     format!(" {}{} ", "█".repeat(filled), "▒".repeat(3 - filled))
 }
 
-fn indent(game: &Game<'_>, value: Text, extra: usize) -> Text {
+pub(super) fn indent(game: &Game<'_>, value: Text, extra: usize) -> Text {
     let space = game.native_text_width(" ");
     let count = (4.0 * (4 + extra) as f32 / space).ceil() as usize;
     Text::literal(" ".repeat(count)).append(value)
@@ -171,6 +171,13 @@ fn current_stress(value: f32) -> Text {
 }
 
 fn providers(game: &Game<'_>, pos: Pos, block: &str, nbt: &Compound, goggles: bool) -> Vec<Text> {
+    if block == "create:basin" {
+        return if goggles {
+            super::create_port_basin_tooltip::lines(game, nbt)
+        } else {
+            Vec::new()
+        };
+    }
     let Some(node) = crate::game::create_port::node(game, pos) else {
         return Vec::new();
     };

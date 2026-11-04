@@ -30,6 +30,52 @@ impl ProcessingType {
         }
     }
 }
+/// The state/fluid predicates used by AllFanProcessingTypes.isValidAt.
+/// Arrays follow ProcessingType's order; tags are resolved by the platform.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Medium {
+    pub fluid: [bool; 4],
+    pub block: [bool; 4],
+    pub campfire: bool,
+    pub lit: Option<bool>,
+    pub flame_soul: Option<bool>,
+    pub heat: Option<crate::burner::Heat>,
+}
+impl Medium {
+    pub fn accepts(self, kind: ProcessingType) -> bool {
+        let i = kind as usize;
+        if self.fluid[i] {
+            return true;
+        }
+        if !self.block[i] {
+            return false;
+        }
+        match kind {
+            ProcessingType::Splashing => true,
+            ProcessingType::Blasting => self.heat.is_none_or(|h| h >= crate::burner::Heat::Fading),
+            ProcessingType::Haunting => {
+                !(self.campfire && self.lit == Some(false)) && self.flame_soul.is_none_or(|s| s)
+            }
+            ProcessingType::Smoking => {
+                !(self.campfire && self.lit == Some(false))
+                    && self.flame_soul.is_none_or(|s| !s)
+                    && self
+                        .heat
+                        .is_none_or(|h| h == crate::burner::Heat::Smouldering)
+            }
+        }
+    }
+    pub fn processing(self) -> Option<ProcessingType> {
+        [
+            ProcessingType::Splashing,
+            ProcessingType::Haunting,
+            ProcessingType::Smoking,
+            ProcessingType::Blasting,
+        ]
+        .into_iter()
+        .find(|kind| self.accepts(*kind))
+    }
+}
 pub fn max_distance(rpm: f32) -> f32 {
     3.0 + (rpm.abs() / 256.0).min(1.0) * 17.0
 }

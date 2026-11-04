@@ -1,5 +1,5 @@
 {
-  "horizon_revision": "08821fdbce6b5d081f1e6cc5c4d0da5438861222",
+  "horizon_revision": "8438f415fb0fe3bee40c9cd0f29d4ca2ffe869be",
   "horizon_mixins_revision": "a1e13326306c6bc074b11e6a4926deb551c4083e",
   "create_revision": "ac0c444d9828da3453ae8cc65338e8de063286fb",
   "create_version": "6.0.10",
@@ -14,9 +14,16 @@
   "horizon_api_fork": "https://github.com/Delete228/horizon/tree/create-port-runtime-06",
   "horizon_native_api_pull_request": "https://github.com/horizon-rust/horizon/pull/8872",
   "horizon_pending_hook_fragments": [
-    "world_canvas"
+    "world_canvas",
+    "custom_block_fluids",
+    "fluid_render",
+    "state_block_entity_factory",
+    "terrain_model",
+    "block_clone_item",
+    "item_interact_mob"
   ],
   "horizon_world_canvas_pull_request": "https://github.com/horizon-rust/horizon/pull/8918",
   "horizon_owned_sounds_pull_request": "https://github.com/horizon-rust/horizon/pull/8924",
-  "horizon_damage_registry_issue": "https://github.com/horizon-rust/horizon/issues/8917"
+  "horizon_damage_registry_issue": "https://github.com/horizon-rust/horizon/issues/8917",
+  "horizon_damage_registry_pull_request": "https://github.com/horizon-rust/horizon/pull/9076"
 }

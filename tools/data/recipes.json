@@ -1,6 +1,6 @@
 {
   "reference": "ac0c444d9828da3453ae8cc65338e8de063286fb",
-  "license": "MIT recipe data; original definitions of vanilla convention tags",
+  "license": "MIT recipe/data-map data; original definitions of vanilla convention tags",
   "recipes": {
     "create/recipe/crafting/appliances/dough.json": {
       "type": "minecraft:crafting_shapeless",
@@ -101,6 +101,27 @@
       "result": {
         "count": 1,
         "id": "create:depot"
+      }
+    },
+    "create/recipe/crafting/kinetics/empty_blaze_burner.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "A": {
+          "tag": "c:netherracks"
+        },
+        "I": {
+          "tag": "c:plates/iron"
+        }
+      },
+      "pattern": [
+        " I ",
+        "IAI",
+        " I "
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:empty_blaze_burner"
       }
     },
     "create/recipe/crafting/kinetics/encased_fan.json": {
@@ -1980,6 +2001,61 @@
         }
       ]
     },
+    "create/recipe/mixing/brass_ingot.json": {
+      "type": "create:mixing",
+      "heat_requirement": "heated",
+      "ingredients": [
+        {
+          "tag": "c:ingots/copper"
+        },
+        {
+          "tag": "c:ingots/zinc"
+        }
+      ],
+      "results": [
+        {
+          "count": 2,
+          "id": "create:brass_ingot"
+        }
+      ]
+    },
+    "create/recipe/mixing/dough_by_mixing.json": {
+      "type": "create:mixing",
+      "ingredients": [
+        {
+          "tag": "c:flours/wheat"
+        },
+        {
+          "type": "neoforge:single",
+          "amount": 1000,
+          "fluid": "minecraft:water"
+        }
+      ],
+      "results": [
+        {
+          "id": "create:dough"
+        }
+      ]
+    },
+    "create/recipe/mixing/mud_by_mixing.json": {
+      "type": "create:mixing",
+      "ingredients": [
+        {
+          "type": "neoforge:block_tag",
+          "tag": "minecraft:convertable_to_mud"
+        },
+        {
+          "type": "neoforge:single",
+          "amount": 250,
+          "fluid": "minecraft:water"
+        }
+      ],
+      "results": [
+        {
+          "id": "minecraft:mud"
+        }
+      ]
+    },
     "create/recipe/pressing/brass_ingot.json": {
       "type": "create:pressing",
       "ingredients": [
@@ -2294,6 +2370,11 @@
         "create:brass_ingot"
       ]
     },
+    "c/tags/item/ingots/zinc.json": {
+      "values": [
+        "create:zinc_ingot"
+      ]
+    },
     "c/tags/item/nuggets/zinc.json": {
       "values": [
         "create:zinc_nugget"
@@ -2338,11 +2419,6 @@
         "minecraft:cobblestone",
         "minecraft:mossy_cobblestone",
         "minecraft:cobbled_deepslate"
-      ]
-    },
-    "c/tags/item/ingots/zinc.json": {
-      "values": [
-        "create:zinc_ingot"
       ]
     },
     "c/tags/item/storage_blocks/zinc.json": {
@@ -2398,6 +2474,11 @@
     "c/tags/item/dusts/redstone.json": {
       "values": [
         "minecraft:redstone"
+      ]
+    },
+    "c/tags/item/netherracks.json": {
+      "values": [
+        "minecraft:netherrack"
       ]
     },
     "c/tags/item/foods/dough/wheat.json": {
@@ -2522,8 +2603,10 @@
         "create:gearbox",
         "create:clutch",
         "create:gearshift",
+        "create:belt",
         "create:water_wheel",
         "create:large_water_wheel",
+        "create:water_wheel_structure",
         "create:encased_fan",
         "create:hand_crank",
         "create:mechanical_press",
@@ -2546,15 +2629,19 @@
         "create:gearbox",
         "create:clutch",
         "create:gearshift",
+        "create:belt",
         "create:creative_motor",
         "create:water_wheel",
         "create:large_water_wheel",
+        "create:water_wheel_structure",
         "create:encased_fan",
         "create:hand_crank",
         "create:millstone",
         "create:mechanical_press",
         "create:mechanical_mixer",
         "create:basin",
+        "create:blaze_burner",
+        "create:lit_blaze_burner",
         "create:depot",
         "create:speedometer",
         "create:stressometer",
@@ -2568,6 +2655,8 @@
     },
     "create/tags/block/fan_transparent.json": {
       "values": [
+        "create:blaze_burner",
+        "create:lit_blaze_burner",
         "minecraft:iron_bars",
         "minecraft:mangrove_roots",
         "minecraft:copper_grate",
@@ -2584,16 +2673,31 @@
       ]
     },
     "create/tags/block/fan_processing_catalysts/blasting.json": {
-      "values": []
+      "values": [
+        "create:blaze_burner"
+      ]
+    },
+    "create/tags/block/passive_boiler_heaters.json": {
+      "values": [
+        "create:blaze_burner",
+        "create:lit_blaze_burner",
+        "minecraft:magma_block",
+        "minecraft:lava",
+        "#minecraft:campfires",
+        "#minecraft:fire"
+      ]
     },
     "create/tags/block/fan_processing_catalysts/haunting.json": {
       "values": [
+        "create:lit_blaze_burner",
         "minecraft:soul_fire",
         "minecraft:soul_campfire"
       ]
     },
     "create/tags/block/fan_processing_catalysts/smoking.json": {
       "values": [
+        "create:blaze_burner",
+        "create:lit_blaze_burner",
         "minecraft:fire",
         "minecraft:campfire"
       ]
@@ -2609,6 +2713,27 @@
         "minecraft:water",
         "minecraft:flowing_water"
       ]
+    },
+    "create/tags/entity_type/blaze_burner_capturable.json": {
+      "values": [
+        "minecraft:blaze"
+      ]
+    },
+    "minecraft/tags/block/convertable_to_mud.json": {
+      "values": [
+        "minecraft:dirt",
+        "minecraft:coarse_dirt",
+        "minecraft:rooted_dirt"
+      ]
+    }
+  },
+  "data_maps": {
+    "create/data_maps/item/superheated_blaze_burner_fuels.json": {
+      "values": {
+        "create:blaze_cake": {
+          "burn_time": 3200
+        }
+      }
     }
   }
 }

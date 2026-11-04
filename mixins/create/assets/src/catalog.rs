@@ -26,7 +26,10 @@ pub const BLOCKS: &[&str] = &[
     "mechanical_drill",
     "basin",
     "mechanical_mixer",
+    "blaze_burner",
 ];
+pub const EXTRA_BLOCKSTATES: &[&str] = &["lit_blaze_burner"];
+pub const EXTRA_MODELS: &[&str] = &["entity/train_hat", "entity/logistics_hat"];
 pub const ITEMS: &[&str] = &[
     "iron_sheet",
     "golden_sheet",
@@ -45,6 +48,9 @@ pub const ITEMS: &[&str] = &[
     "dough",
     "belt_connector",
     "whisk",
+    "empty_blaze_burner",
+    "blaze_cake",
+    "creative_blaze_cake",
 ];
 pub const PARTS: &[&str] = &[
     "shaft",
@@ -88,4 +94,17 @@ pub const PARTS: &[&str] = &[
     "mechanical_mixer/pole",
     "mechanical_mixer/head",
     "cogwheel_shaftless",
+    "blaze_burner/block",
+    "blaze_burner/blaze/inert",
+    "blaze_burner/blaze/idle",
+    "blaze_burner/blaze/active",
+    "blaze_burner/blaze/super",
+    "blaze_burner/blaze/super_active",
+    "blaze_burner/goggles",
+    "blaze_burner/goggles_small",
+    "blaze_burner/flame",
+    "blaze_burner/rods_small",
+    "blaze_burner/rods_large",
+    "blaze_burner/superheated_rods_small",
+    "blaze_burner/superheated_rods_large",
 ];

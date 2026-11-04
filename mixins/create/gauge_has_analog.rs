@@ -4,6 +4,9 @@ fn create_gauge_has_analog(
     output: &mut bool,
 ) {
     crate::game::create_port_basin::has_analog(game, state, output);
+    if game.native_state_block(state) == Some(crate::game::create_port_burner::BLOCK) {
+        *output = true;
+    }
     if matches!(
         game.facts.get(state).name.as_ref(),
         "create:speedometer" | "create:stressometer"

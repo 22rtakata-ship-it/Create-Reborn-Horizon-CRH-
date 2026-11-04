@@ -39,7 +39,7 @@ integrated server thread. Captures use Minecraft's original framebuffer API.
 | `command` | `{"command":"setblock ..."}` | Original permission-4 command execution as the isolated player, captured messages |
 | `block` | `{"pos":[x,y,z]}` | Actual state/properties and full original block-entity SNBT |
 | `entities` | `{"center":[x,y,z],"radius":16}` | Entity position/motion/fire/health and full SNBT; radius at most 128 |
-| `camera` | `{"position":[x,y,z],"target":[x,y,z],"gui_scale":4}` | Matching server/client player pose; alternatively yaw/pitch, optional fov/hide_gui |
+| `camera` | `{"position":[x,y,z],"target":[x,y,z],"gui_scale":4}` | Matching server/client player pose; alternatively yaw/pitch, optional fov/hide_gui. Optional `window_size:[1280,720]` restores a windowed reference to that logical size; wait for `state.framebuffer_size` before comparing captures (Retina uses twice the logical size). |
 | `tick` | `{"frozen":true,"step":3}` | Original tick freeze/unfreeze/step; step requires frozen and waits for exact game-time advancement |
 | `observe_ticks` | `{"ticks":180,"positions":[[0,64,0],[0,66,0]],"commands":["summon ..."]}` | Requires frozen, playing world; runs normal unfrozen simulation, records block/NBT state after each actual server tick, then freezes again. At most400 ticks,32 positions and16 bounded setup commands |
 | `capture` | `{"name":"x.png","frames":8}` | Original framebuffer PNG after frames; paths bounded to the isolated captures directory |
@@ -87,3 +87,10 @@ assuming the two clients share random seeds.
 The world-boot/frame integration derives from Horizon's MIT NeoForgeBench.
 The full notice is in `resources/META-INF/LICENSE`. This bridge contains no
 original textures/models/audio, no authentication data and no addon mods.
+
+`state.render_backend` records the public Flywheel current backend ID, support
+state and visualization support for the actual client level. For the current hit
+block entity it records the registered visualizer class, skip-vanilla policy and
+vanilla renderer class. These are read-only registration/backend observations;
+VisualManager exposes only an aggregate count, so individual visual presence is
+not inferred. No renderer/backend/configuration is changed by the observation.

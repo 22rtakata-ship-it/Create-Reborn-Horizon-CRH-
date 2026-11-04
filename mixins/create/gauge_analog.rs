@@ -5,6 +5,7 @@ fn create_gauge_analog(
     output: &mut i32,
 ) {
     crate::game::create_port_basin::analog(game, pos, state, output);
+    crate::game::create_port_burner::analog(game, state, output);
     if matches!(
         game.facts.get(state).name.as_ref(),
         "create:speedometer" | "create:stressometer"

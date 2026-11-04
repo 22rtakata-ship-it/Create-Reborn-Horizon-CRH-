@@ -16,8 +16,16 @@ public class ExportMethod {
             var source=Files.readString(Path.of(args[0]));
             var bodies=new ArrayList<String>();
             new TreeScanner<Void,Void>() {
+                private String enclosingClass = "";
+                public Void visitClass(ClassTree type, Void unused) {
+                    var previous = enclosingClass;
+                    enclosingClass = type.getSimpleName().toString();
+                    try { return super.visitClass(type, unused); }
+                    finally { enclosingClass = previous; }
+                }
                 public Void visitMethod(MethodTree method, Void unused) {
-                    if (method.getName().contentEquals(args[1]) && method.getBody()!=null) {
+                    if (method.getName().contentEquals(args[1]) && method.getBody()!=null
+                        && (args.length < 3 || enclosingClass.equals(args[2]))) {
                         var body=method.getBody();
                         bodies.add(source.substring((int)positions.getStartPosition(tree,body),
                             (int)positions.getEndPosition(tree,body)));

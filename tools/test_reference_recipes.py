@@ -1,8 +1,8 @@
-"""Native dry-mixing export must reject unsupported JSON instead of erasing it."""
+"""Native bounded mixing export must reject unsupported JSON instead of erasing it."""
 import copy
 import unittest
 
-from reference_recipes import dry_mixing
+from reference_recipes import dry_mixing, fluid_mixing, heated_mixing, burner_data_maps
 
 
 class DryMixing(unittest.TestCase):
@@ -54,6 +54,72 @@ class DryMixing(unittest.TestCase):
                 recipe = copy.deepcopy(self.recipe)
                 recipe['results'][0] = output
                 self.assertFalse(dry_mixing(recipe))
+
+
+class FluidMixing(unittest.TestCase):
+    def setUp(self):
+        self.recipe={'type':'create:mixing','ingredients':[
+            {'tag':'c:flours/wheat'},
+            {'type':'neoforge:single','fluid':'minecraft:water','amount':1000}],
+            'results':[{'id':'create:dough'}]}
+
+    def test_source_dough_and_actual_block_tag_mud_shape(self):
+        self.assertTrue(fluid_mixing(self.recipe))
+        self.recipe['ingredients'][0]={'type':'neoforge:block_tag','tag':'minecraft:convertable_to_mud'}
+        self.recipe['ingredients'][1]['amount']=250
+        self.recipe['results']=[{'id':'minecraft:mud'}]
+        before=copy.deepcopy(self.recipe)
+        self.assertTrue(fluid_mixing(self.recipe))
+        self.assertEqual(self.recipe,before)
+
+    def test_unknown_fluid_predicates_patch_and_amounts_are_rejected(self):
+        for ingredient in [
+            {'type':'neoforge:single','fluid':'test:unknown','amount':1000},
+            {'type':'neoforge:single','fluid':'minecraft:water','amount':1000,'components':{}},
+            {'type':'neoforge:tag','tag':'minecraft:water','amount':1000},
+            {'type':'neoforge:single','fluid':'minecraft:water','amount':True},
+            {'type':'neoforge:single','fluid':'minecraft:water','amount':0},
+            {'type':'neoforge:single','fluid':'minecraft:water','amount':1<<31},
+            {'type':'neoforge:block_tag','tag':'minecraft:convertable_to_mud','unknown':1},
+        ]:
+            with self.subTest(ingredient=ingredient):
+                r=copy.deepcopy(self.recipe);r['ingredients'][1]=ingredient
+                self.assertFalse(fluid_mixing(r))
+        r=copy.deepcopy(self.recipe);r['heat_requirement']='heated'
+        self.assertFalse(fluid_mixing(r))
+
+
+class BurnerDataMaps(unittest.TestCase):
+    def test_only_actual_source_files_are_exported(self):
+        path='src/generated/resources/data/create/data_maps/item/superheated_blaze_burner_fuels.json'
+        data={'values':{'create:blaze_cake':{'burn_time':3200}}}
+        result=burner_data_maps([path],lambda name:copy.deepcopy(data))
+        self.assertEqual(result,{'create/data_maps/item/superheated_blaze_burner_fuels.json':data})
+        self.assertFalse(any('regular_' in name for name in result))
+        self.assertEqual(burner_data_maps([],lambda name:self.fail('missing original file read')), {})
+
+    def test_declared_regular_map_accepts_source_integer_or_object_only(self):
+        path='src/generated/resources/data/create/data_maps/item/regular_blaze_burner_fuels.json'
+        for value in [1,{'burn_time':1},(1<<31)-1]:
+            self.assertTrue(burner_data_maps([path],lambda name:{'values':{'test:fuel':value}}))
+        for value in [0,-1,True,1<<31,1.5,{'burn_time':3200,'unknown':1}, {'burn_time':None}]:
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                burner_data_maps([path],lambda name:{'values':{'test:fuel':value}})
+
+
+class HeatedMixing(unittest.TestCase):
+    def test_source_brass_and_only_explicit_heat_levels(self):
+        recipe={'type':'create:mixing','heat_requirement':'heated','ingredients':[
+            {'tag':'c:ingots/copper'},{'tag':'c:ingots/zinc'}],
+            'results':[{'id':'create:brass_ingot','count':2}]}
+        before=copy.deepcopy(recipe)
+        self.assertTrue(heated_mixing(recipe));self.assertEqual(recipe,before)
+        recipe['heat_requirement']='superheated';self.assertTrue(heated_mixing(recipe))
+        for value in ['none','unknown',None,1,True]:
+            recipe['heat_requirement']=value;self.assertFalse(heated_mixing(recipe))
+        recipe['heat_requirement']='heated'
+        recipe['ingredients'].append({'type':'neoforge:single','fluid':'minecraft:water','amount':1000})
+        self.assertFalse(heated_mixing(recipe))
 
 
 if __name__ == '__main__':

@@ -41,3 +41,9 @@ pub mod audio;
 
 #[path = "core/basin.rs"]
 pub mod basin;
+
+#[path = "core/burner.rs"]
+pub mod burner;
+
+#[path = "core/burner_visual.rs"]
+pub mod burner_visual;

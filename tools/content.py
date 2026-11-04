@@ -146,6 +146,75 @@ def basin_mixer():
         ]})
 
 
+def burners():
+    # MIT BlazeBurnerBlock/LitBlazeBurnerBlock and AllShapes. The static
+    # fallback geometry below is ours; original models stay in the local JAR.
+    heats = ['none', 'smouldering', 'fading', 'kindled', 'seething']
+    outline = {'default': [[1/16, 0, 1/16, 15/16, 14/16, 15/16]]}
+    collision = {'default': [[0, 0, 0, 1, 4/16, 1]]}
+    common = {'template': 'minecraft:glass', 'shapes': outline, 'collision_shapes': collision,
+              'collision_context_shapes': {kind: outline for kind in ['player', 'item', 'living', 'other']}}
+    # Source emission is compiled once by Horizon's state_light selector.
+    write('data/create/horizon/block/blaze_burner.json', {
+        **common, 'item': True,
+        'properties': {'hardness': 3, 'explosion_resistance': 6, 'requires_tool': True,
+                       'map_color': 21, 'sounds': 'minecraft:gold_block', 'render_shape': 'MODEL'},
+        'state_properties': {'blaze': {'type': 'enum', 'values': heats},
+                             'facing': {'type': 'enum', 'values': ['north', 'south', 'west', 'east']}},
+        'default_state': {'blaze': 'none', 'facing': 'north'},
+        'state_light': {'property': 'blaze', 'values': dict(zip(heats, [0, 8, 15, 15, 15]))},
+    })
+    write('data/create/horizon/block/lit_blaze_burner.json', {
+        **common, 'item': False,
+        'properties': {'hardness': 3, 'explosion_resistance': 6, 'requires_tool': True,
+                       'map_color': 22, 'sounds': 'minecraft:gold_block', 'render_shape': 'MODEL'},
+        'state_properties': {'flame_type': {'type': 'enum', 'values': ['regular', 'soul']}},
+        'default_state': {'flame_type': 'regular'},
+        'state_light': {'property': 'flame_type', 'values': {'regular': 12, 'soul': 9}},
+    })
+    cage = [([0, 0, 0], [16, 2, 16])]
+    cage += [([x, 2, z], [x+2, 14, z+2]) for x in [1, 13] for z in [1, 13]]
+    model('blaze_burner/block', cage)
+    model('blaze_burner/block_with_blaze', cage + [([5, 5, 5], [11, 11, 11])])
+    for state in ['fire', 'soul_fire']:
+        model('blaze_burner/block_with_' + state, cage)
+    for part in ['inert', 'idle', 'active', 'super', 'super_active']:
+        model('blaze_burner/blaze/' + part, [([5, 5, 5], [11, 11, 11])], 'minecraft:block/gold_block')
+    for part in ['rods_small', 'rods_large', 'superheated_rods_small', 'superheated_rods_large']:
+        model('blaze_burner/' + part, [([3, 0, 3], [5, 8, 5]), ([11, 0, 11], [13, 8, 13])], 'minecraft:block/gold_block')
+    for part in ['goggles', 'goggles_small']:
+        model('blaze_burner/' + part, [([4, 0, 3], [7, 3, 4]), ([9, 0, 3], [12, 3, 4])], 'minecraft:block/gold_block')
+    model('blaze_burner/flame', [([7.99, 0, 0], [8.01, 16, 16])], 'minecraft:block/fire_0')
+    for hat in ['train_hat', 'logistics_hat']:
+        write('assets/create/models/entity/' + hat + '.json', {
+            'parent': 'minecraft:block/block', 'textures': {'all': 'minecraft:block/black_wool'},
+            'elements': [{'from': [3, 0, 3], 'to': [13, 3, 13], 'faces': {
+                face: {'texture': '#all'} for face in ['down', 'up', 'north', 'south', 'west', 'east']}}],
+        })
+    write('assets/create/blockstates/blaze_burner.json', {'variants': {'': {'model': 'create:block/blaze_burner/block'}}})
+    write('assets/create/blockstates/lit_blaze_burner.json', {'variants': {
+        'flame_type=regular': {'model': 'create:block/blaze_burner/block_with_fire'},
+        'flame_type=soul': {'model': 'create:block/blaze_burner/block_with_soul_fire'},
+    }})
+    for item, part in [('blaze_burner', 'block_with_blaze'), ('empty_blaze_burner', 'block')]:
+        write('assets/create/models/item/' + item + '.json', {'parent': 'create:block/blaze_burner/' + part})
+        write('assets/create/items/' + item + '.json', {'model': {'type': 'minecraft:model', 'model': 'create:item/' + item}})
+    # BlazeBurnerBlock.buildLootTable predicates are unchanged. Minecraft 26.3
+    # encodes each condition object's discriminator as `type`; the 1.21.1
+    # `condition` discriminator silently fails Horizon's ordinary evaluator.
+    write('data/create/loot_table/blocks/blaze_burner.json', {'type': 'minecraft:block', 'pools': [{
+        'rolls': 1, 'entries': [{'type': 'minecraft:item',
+            'name': 'create:empty_blaze_burner' if heat == 'none' else 'create:blaze_burner',
+            'conditions': [{'type': 'minecraft:survives_explosion'}, {
+                'type': 'minecraft:block_state_property', 'block': 'create:blaze_burner',
+                'properties': {'blaze': heat}}]} for heat in heats],
+    }]})
+    write('data/create/loot_table/blocks/lit_blaze_burner.json', {'type': 'minecraft:block', 'pools': [{
+        'rolls': 1, 'conditions': [{'type': 'minecraft:survives_explosion'}],
+        'entries': [{'type': 'minecraft:item', 'name': 'create:empty_blaze_burner'}],
+    }]})
+
+
 def belts():
     from belt_shapes import geometry
     shapes, collisions = geometry()
@@ -222,6 +291,9 @@ def foundation():
         if item in [name + '_sheet' for name in SHEETS]: continue
         item_decl={"template":"minecraft:iron_ingot","max_stack_size":1 if item in ['wrench','goggles'] else 64}
         if item=='goggles':item_decl['components']={'minecraft:equippable':{'slot':'head','equip_sound':'minecraft:item.armor.equip_generic','dispensable':True,'swappable':True,'damage_on_hurt':False}}
+        if item=='creative_blaze_cake':item_decl['rarity']='epic'
+        if item == 'empty_blaze_burner':
+            item_decl['place_block'] = 'create:blaze_burner'
         write("data/create/horizon/item/" + item + ".json", item_decl)
         sprite = {"wheat_flour": "sugar", "dough": "bread"}.get(item, "iron_ingot")
         write("assets/create/models/item/" + item + ".json", {"parent": "minecraft:item/generated", "textures": {"layer0": "minecraft:item/" + sprite}})
@@ -234,6 +306,7 @@ def foundation():
     model('goggles',[([4,6,3],[7,9,4]),([9,6,3],[12,9,4])],'minecraft:block/gold_block')
     processors()
     basin_mixer()
+    burners()
     belts()
     (CONTENT / 'assets/create/models/block/port_hint.json').unlink(missing_ok=True)
     # Only MIT recipe/tag data is distributed; original assets stay in the JAR.
@@ -252,6 +325,7 @@ def foundation():
             if path.relative_to(CONTENT / "data").as_posix() not in retained: path.unlink()
     for path, value in reference["recipes"].items(): write("data/" + path, current(value))
     for path, value in reference["tags"].items(): write("data/" + path, value)
+    for path, value in reference.get('data_maps', {}).items(): write('data/' + path, value)
     # MIT Create AllDamageTypes / generated data, pinned in compatibility.json.
     # Keep source IDs and data-driven fire/protection policy on both sides.
     for kind in ("fan_fire", "fan_lava"):
@@ -269,7 +343,9 @@ def foundation():
     extra_blocks = {"gearbox":"Gearbox","clutch":"Clutch","gearshift":"Gearshift","hand_crank":"Hand Crank","andesite_encased_shaft":"Andesite Encased Shaft","brass_encased_shaft":"Brass Encased Shaft","andesite_casing":"Andesite Casing","brass_casing":"Brass Casing","andesite_alloy_block":"Block of Andesite Alloy","brass_block":"Block of Brass","zinc_block":"Block of Zinc","speedometer":"Speedometer","stressometer":"Stressometer","water_wheel":"Water Wheel","large_water_wheel":"Large Water Wheel","millstone":"Millstone","encased_fan":"Encased Fan","mechanical_drill":"Mechanical Drill"}
     extra_items = {"andesite_alloy":"Andesite Alloy","brass_ingot":"Brass Ingot","brass_nugget":"Brass Nugget","zinc_ingot":"Zinc Ingot","zinc_nugget":"Zinc Nugget","wrench":"Wrench","brass_sheet":"Brass Sheet","vertical_gearbox":"Vertical Gearbox","goggles":"Engineer’s Goggles","propeller":"Propeller","wheat_flour":"Wheat Flour","dough":"Dough"}
     extra_blocks.update({'basin': 'Basin', 'mechanical_mixer': 'Mechanical Mixer'})
+    extra_blocks.update({'blaze_burner': 'Blaze Burner', 'lit_blaze_burner': 'Lit Blaze Burner'})
     extra_items['whisk'] = 'Whisk'
+    extra_items.update({'empty_blaze_burner': 'Empty Blaze Burner', 'blaze_cake': 'Blaze Cake', 'creative_blaze_cake': 'Creative Blaze Cake'})
     for locale in ["en_us","ru_ru"]:
         path=CONTENT / ("assets/create/lang/"+locale+".json")
         lang=json.loads(path.read_text())
@@ -279,6 +355,9 @@ def foundation():
             lang.update({"block.create.millstone": "Мельничный жернов", "block.create.encased_fan": "Вентилятор в корпусе", "block.create.mechanical_drill": "Механический бур",
                          "item.create.propeller": "Пропеллер", "item.create.wheat_flour": "Пшеничная мука", "item.create.dough": "Тесто"})
             lang.update({'block.create.basin': 'Чаша', 'block.create.mechanical_mixer': 'Механический миксер', 'item.create.whisk': 'Венчик'})
+            lang.update({'block.create.blaze_burner': 'Горелка всполоха', 'block.create.lit_blaze_burner': 'Зажжённая горелка всполоха',
+                         'item.create.empty_blaze_burner': 'Пустая горелка всполоха', 'item.create.blaze_cake': 'Пирог всполоха',
+                         'item.create.creative_blaze_cake': 'Творческий пирог всполоха'})
         lang["create.kinetics.creative_motor.rotation_speed"]="Generated Speed in RPM"
         path.write_text(json.dumps(lang,ensure_ascii=False,indent=2)+"\n")
     (NATIVE / "assets/src/catalog.rs").write_text(rust_catalog())
@@ -298,7 +377,7 @@ def main():
     CONTENT.mkdir(exist_ok=True)
     (CONTENT / "horizon-mod.toml").write_text('''id = "create"
 name = "Create for Horizon — prototype"
-version = "0.5.0"
+version = "0.6.0-alpha.1"
 description = "Experimental kinetic foundation with milling, bulk fan processing, stationary drilling, pressing, depots and crafting."
 authors = ["create-horizon contributors"]
 api = "0.2"

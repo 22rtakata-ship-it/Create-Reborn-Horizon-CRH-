@@ -21,7 +21,6 @@ use std::{
 };
 
 const ID: &str = "create:millstone";
-const BRIDGE: &str = "create_horizon:millstone";
 
 thread_local! {
     // Containers::can_place has the item registry but no recipe table at API
@@ -189,58 +188,34 @@ fn inventory(slots: &[Option<ItemStack>]) -> Tag {
     ]))
 }
 
-fn restore_slots(tag: &Tag, slots: &mut [Option<ItemStack>]) {
-    let Some(Tag::List(items)) = tag.get("Items") else {
-        return;
-    };
-    slots.fill(None);
-    for item in items {
-        let slot = match item.get("Slot") {
-            Some(Tag::Int(slot)) => *slot,
-            Some(Tag::Byte(slot)) => i32::from(*slot),
-            _ => continue,
-        };
-        if let Ok(slot) = usize::try_from(slot)
-            && let Some(destination) = slots.get_mut(slot)
-        {
-            *destination = horizon_items::item_nbt::item_from_nbt(item);
-        }
-    }
-}
-
 fn restore(entity: &mut ModBlockEntity) {
-    entity.items.resize(10, None);
-    for (key, range) in [("InputInventory", 0..1), ("OutputInventory", 1..10)] {
-        let key_nbt = key.into();
-        let Some(current) = entity.nbt.get(&key_nbt).cloned() else {
-            continue;
-        };
-        let previous = entity.nbt.get(&BRIDGE.into()).and_then(|t| t.get(key));
-        // On initial load honour original Create inventories. Thereafter the
-        // marker distinguishes /data changes from ordinary hopper slot edits.
-        if previous != Some(&current)
-            && (previous.is_some() || entity.items[range.clone()].iter().all(Option::is_none))
-        {
-            restore_slots(&current, &mut entity.items[range]);
-        }
+    // Canonical inventory is decoded before publication. Never re-read an old
+    // bridge snapshot after ordinary automation has already changed live slots.
+    if crate::game::create_port::inventory_supported(entity) {
+        entity.items.resize(10, None);
     }
 }
 
 pub(super) fn data(entity: &mut ModBlockEntity) -> bool {
-    if entity.id != ID {
+    if entity.id != ID || !crate::game::create_port::inventory_supported(entity) {
         return false;
     }
     entity.items.resize(10, None);
     let mut changed = false;
-    let mut snapshot = Compound::new();
     for (key, range) in [("InputInventory", 0..1), ("OutputInventory", 1..10)] {
-        let value = inventory(&entity.items[range]);
+        let Tag::Compound(updated) = inventory(&entity.items[range]) else {
+            unreachable!();
+        };
+        let mut value = match entity.nbt.get(&key.into()) {
+            Some(Tag::Compound(existing)) => existing.clone(),
+            _ => Compound::new(),
+        };
+        value.extend(updated);
+        let value = Tag::Compound(value);
         let key_nbt = key.into();
         changed |= entity.nbt.get(&key_nbt) != Some(&value);
         entity.nbt.insert(key_nbt, value.clone());
-        snapshot.insert(key.into(), value);
     }
-    entity.nbt.insert(BRIDGE.into(), Tag::Compound(snapshot));
     changed
 }
 
@@ -308,7 +283,7 @@ pub(super) fn tick(
     entity: &mut ModBlockEntity,
     rpm: f32,
 ) -> bool {
-    if entity.id != ID {
+    if entity.id != ID || !crate::game::create_port::inventory_supported(entity) {
         return false;
     }
     refresh_recipes(game);
@@ -382,6 +357,9 @@ pub(super) fn reacts(game: &Game<'_>, pos: [i32; 3]) -> bool {
 }
 
 pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3]) -> bool {
+    if crate::game::create_port::inventory_blocked(game, pos) {
+        return true;
+    }
     if !reacts(game, pos) {
         return false;
     }

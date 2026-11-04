@@ -13,6 +13,33 @@ pub const TANKS_PER_HALF: usize = 2;
 pub const TANK_CAPACITY: u32 = 1000;
 pub const DEFAULT_MIXER_MINIMUM_RPM: f32 = 30.0;
 
+/// Catnip LerpedFloat.linear/Chaser.EXP used by SmartFluidTankBehaviour.
+/// Persisted fields are float; Java promotes them to double for each operation
+/// and rounds the result back to float. Force is a serialization concern.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct FluidLevel {
+    pub previous: f32,
+    pub value: f32,
+    pub target: f32,
+    pub speed: f32,
+}
+impl FluidLevel {
+    pub fn tick(&mut self) {
+        self.previous = self.value;
+        let value = f64::from(self.value);
+        let target = f64::from(self.target);
+        self.value = if (target - value).abs() < f64::from(0.00001f32) {
+            self.target
+        } else {
+            (value + (target - value) * f64::from(self.speed)) as f32
+        };
+    }
+    pub fn at(&self, partial: f32) -> f32 {
+        let previous = f64::from(self.previous);
+        (previous + f64::from(partial) * (f64::from(self.value) - previous)) as f32
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Item<K> {
     pub key: K,
@@ -24,6 +51,30 @@ pub struct Fluid<K> {
     pub key: K,
     pub amount: u32,
 }
+/// The two IFluidHandler drain overloads. Keys include the complete component patch.
+#[derive(Clone, Copy, Debug)]
+pub enum FluidRequest<'a, K> {
+    Any(u32),
+    Exact(&'a Fluid<K>),
+}
+/// `consumed` is what execution removes (or simulation predicts), which may
+/// exceed the returned stack because the original nested CombinedTankWrapper
+/// discards unlike fluids during maximum-only drains. No rollback is invented.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DrainReport<K> {
+    pub returned: Option<Fluid<K>>,
+    pub consumed: u32,
+    pub source_discarded: u32,
+}
+impl<K> Default for DrainReport<K> {
+    fn default() -> Self {
+        Self {
+            returned: None,
+            consumed: 0,
+            source_discarded: 0,
+        }
+    }
+}
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Heat {
     None,
@@ -31,6 +82,49 @@ pub enum Heat {
     Fading,
     Kindled,
     Seething,
+}
+/// BlockHelper.isNotUnheated: a present campfire lit property takes priority.
+pub fn is_not_unheated(campfire: bool, lit: Option<bool>, blaze: Option<Heat>) -> bool {
+    if campfire && let Some(lit) = lit {
+        return lit;
+    }
+    blaze != Some(Heat::None)
+}
+/// BasinBlockEntity.getHeatLevelOf. A blaze property is authoritative even
+/// when NONE; a passive heater can provide only SMOULDERING, not recipe heat.
+pub fn heat_for_block(
+    blaze: Option<Heat>,
+    passive: bool,
+    campfire: bool,
+    lit: Option<bool>,
+) -> Heat {
+    blaze.unwrap_or_else(|| {
+        if passive && is_not_unheated(campfire, lit, blaze) {
+            Heat::Smouldering
+        } else {
+            Heat::None
+        }
+    })
+}
+#[derive(Clone, Copy, Debug, Default)]
+pub struct HeatCache(Option<Heat>);
+impl HeatCache {
+    pub fn reset(&mut self) {
+        self.0 = None;
+    }
+    /// An absent level returns NONE without caching it, as the original BE.
+    pub fn get_or_read(&mut self, read: impl FnOnce() -> Option<Heat>) -> Heat {
+        if let Some(heat) = self.0 {
+            return heat;
+        }
+        match read() {
+            Some(heat) => {
+                self.0 = Some(heat);
+                heat
+            }
+            None => Heat::None,
+        }
+    }
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum HeatRequirement {
@@ -209,6 +303,42 @@ impl<I: Clone + PartialEq, F: Clone + PartialEq> Basin<I, F> {
         } else {
             &mut self.input_fluids[tank - TANKS_PER_HALF]
         }
+    }
+    /// Basin's output handler forbids insertion. Its input handler's exact
+    /// enforceVariety algorithm allows a NEW fluid to span empty tanks in one
+    /// call, but a later matching full tank prevents filling its empty sibling.
+    pub fn fill_input_fluid(&mut self, fluid: &Fluid<F>, simulate: bool) -> u32 {
+        fill_varied(&mut self.input_fluids, fluid, simulate)
+    }
+    /// Canonical capability order: output half, then input half. Maximum-only
+    /// drain must preserve BOTH nested wrapper levels: the outer wrapper
+    /// subtracts each inner wrapper's RETURNED amount, not its actual removal.
+    pub fn drain_fluid(&mut self, request: FluidRequest<'_, F>, simulate: bool) -> DrainReport<F> {
+        let mut result = DrainReport::default();
+        let mut remaining = match request {
+            FluidRequest::Any(amount) => amount,
+            FluidRequest::Exact(fluid) => fluid.amount,
+        };
+        if remaining == 0 {
+            return result;
+        }
+        let selected = match request {
+            FluidRequest::Exact(fluid) => Some(&fluid.key),
+            _ => None,
+        };
+        for half in [&mut self.output_fluids, &mut self.input_fluids] {
+            let part = drain_half(half, remaining, selected, simulate);
+            let returned_amount = part.returned.as_ref().map_or(0, |fluid| fluid.amount);
+            remaining -= returned_amount;
+            result.consumed += part.consumed;
+            merge_drained(&mut result.returned, part.returned);
+            if remaining == 0 {
+                break;
+            }
+        }
+        result.source_discarded =
+            result.consumed - result.returned.as_ref().map_or(0, |fluid| fluid.amount);
+        result
     }
     pub fn insert_input(&mut self, slot: usize, stack: Item<I>, simulate: bool) -> Item<I> {
         if slot >= ITEM_SLOTS {
@@ -564,6 +694,57 @@ fn insert_stacked<K: Clone + PartialEq>(
     }
     stack
 }
+fn merge_drained<K: PartialEq>(total: &mut Option<Fluid<K>>, part: Option<Fluid<K>>) {
+    if let Some(part) = part {
+        match total {
+            Some(total) if total.key == part.key => total.amount += part.amount,
+            None => *total = Some(part),
+            _ => {} // Exact original wrapper: an unlike drained fluid is lost.
+        }
+    }
+}
+fn drain_half<K: Clone + PartialEq>(
+    tanks: &mut [Option<Fluid<K>>; TANKS_PER_HALF],
+    maximum: u32,
+    selected: Option<&K>,
+    simulate: bool,
+) -> DrainReport<K> {
+    let mut result = DrainReport::default();
+    let mut remaining = maximum;
+    for tank in tanks {
+        let Some(current) = tank.as_ref().filter(|fluid| fluid.amount > 0) else {
+            continue;
+        };
+        if selected.is_some_and(|key| *key != current.key) {
+            continue;
+        }
+        let amount = remaining.min(current.amount);
+        if amount == 0 {
+            break;
+        }
+        let part = Fluid {
+            key: current.key.clone(),
+            amount,
+        };
+        if !simulate {
+            let left = current.amount - amount;
+            *tank = (left > 0).then(|| Fluid {
+                amount: left,
+                ..part.clone()
+            });
+        }
+        remaining -= amount;
+        result.consumed += amount;
+        merge_drained(&mut result.returned, Some(part));
+        if remaining == 0 {
+            break;
+        }
+    }
+    result.source_discarded =
+        result.consumed - result.returned.as_ref().map_or(0, |fluid| fluid.amount);
+    result
+}
+
 fn fill_varied<K: Clone + PartialEq>(
     tanks: &mut [Option<Fluid<K>>; TANKS_PER_HALF],
     fluid: &Fluid<K>,
@@ -736,6 +917,102 @@ pub fn processing_time(speed: f32, duration: i32) -> i32 {
 
 #[cfg(test)]
 mod tests {
+    fn capability_basin() -> Basin<i32, (&'static str, bool)> {
+        Basin {
+            output_fluids: [
+                Some(Fluid {
+                    key: ("water", false),
+                    amount: 100,
+                }),
+                Some(Fluid {
+                    key: ("lava", false),
+                    amount: 100,
+                }),
+            ],
+            input_fluids: [
+                Some(Fluid {
+                    key: ("water", false),
+                    amount: 200,
+                }),
+                Some(Fluid {
+                    key: ("lava", false),
+                    amount: 200,
+                }),
+            ],
+            ..Basin::default()
+        }
+    }
+    #[test]
+    fn capability_fill_new_fluid_spans_tanks_but_a_later_matching_full_tank_blocks() {
+        let fluid = Fluid {
+            key: 1,
+            amount: 2000,
+        };
+        let mut fresh: Basin<i32, i32> = Basin::default();
+        let before = fresh.clone();
+        assert_eq!(fresh.fill_input_fluid(&fluid, true), 2000);
+        assert_eq!(fresh, before);
+        assert_eq!(fresh.fill_input_fluid(&fluid, false), 2000);
+        assert_eq!(fresh.input_fluids.map(|f| f.unwrap().amount), [1000, 1000]);
+        let mut sequential: Basin<i32, i32> = Basin::default();
+        let bucket = Fluid {
+            amount: 1000,
+            ..fluid
+        };
+        assert_eq!(sequential.fill_input_fluid(&bucket, false), 1000);
+        assert_eq!(sequential.fill_input_fluid(&bucket, false), 0);
+        assert!(sequential.input_fluids[1].is_none());
+    }
+    #[test]
+    fn capability_selected_drain_is_output_first_and_matches_component_removal() {
+        let mut basin = capability_basin();
+        let wrong = Fluid {
+            key: ("water", true),
+            amount: 250,
+        };
+        let before = basin.clone();
+        assert_eq!(
+            basin.drain_fluid(FluidRequest::Exact(&wrong), false),
+            DrainReport::default()
+        );
+        assert_eq!(basin, before);
+        let water = Fluid {
+            key: ("water", false),
+            amount: 250,
+        };
+        let report = basin.drain_fluid(FluidRequest::Exact(&water), false);
+        assert_eq!(report.returned, Some(water));
+        assert_eq!((report.consumed, report.source_discarded), (250, 0));
+        assert!(basin.output_fluids[0].is_none());
+        assert_eq!(basin.input_fluids[0].as_ref().unwrap().amount, 50);
+        assert_eq!(basin.output_fluids[1], before.output_fluids[1]);
+    }
+    #[test]
+    fn capability_maximum_drain_retains_nested_source_discard_and_simulation_is_read_only() {
+        let mut basin = capability_basin();
+        let before = basin.clone();
+        let predicted = basin.drain_fluid(FluidRequest::Any(250), true);
+        assert_eq!(basin, before);
+        let executed = basin.drain_fluid(FluidRequest::Any(250), false);
+        assert_eq!(predicted, executed);
+        assert_eq!(
+            executed.returned,
+            Some(Fluid {
+                key: ("water", false),
+                amount: 250
+            })
+        );
+        assert_eq!((executed.consumed, executed.source_discarded), (350, 100));
+        assert!(basin.output_fluids.iter().all(Option::is_none));
+        assert_eq!(basin.input_fluids[0].as_ref().unwrap().amount, 50);
+        assert_eq!(basin.input_fluids[1].as_ref().unwrap().amount, 200);
+        let unchanged = basin.clone();
+        assert_eq!(
+            basin.drain_fluid(FluidRequest::Any(0), false),
+            DrainReport::default()
+        );
+        assert_eq!(basin, unchanged);
+    }
     use super::*;
     fn item(key: u8, count: u32) -> Item<u8> {
         Item {

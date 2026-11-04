@@ -1,9 +1,9 @@
 [mod]
 id = "create"
-version = "0.5.0"
+version = "0.6.0-alpha.1"
 
 [compatibility]
-horizon_revision = "08821fdbce6b5d081f1e6cc5c4d0da5438861222"
+horizon_revision = "8438f415fb0fe3bee40c9cd0f29d4ca2ffe869be"
 
 [[crate]]
 id = "engine"
@@ -208,7 +208,7 @@ kind = "HEAD"
 cancellable = true
 helper = "depot_prediction.rs"
 bindings = [
-  { name = "game", ty = "&crate::game::Game<'_>", value = "&*self" },
+  { name = "game", ty = "&crate::game::Game<'_>", value = "self" },
   { name = "hit", ty = "&crate::game::Hit", value = "hit" },
   { name = "held", ty = "Option<&crate::items::ItemStack>", value = "held" },
 ]
@@ -336,7 +336,7 @@ hook_version = 1
 kind = "HEAD"
 helper = "motor_draw.rs"
 bindings = [
-  { name = "game", ty = "&crate::game::Game<'_>", value = "&*self" },
+  { name = "game", ty = "&crate::game::Game<'_>", value = "self" },
   { name = "batch", ty = "&mut horizon_client::hud::HudBatch", value = "&mut *batch" },
   { name = "screen", ty = "&crate::mod_api::NativeScreenView<'_>", value = "screen" },
 ]
@@ -348,7 +348,7 @@ hook_version = 1
 kind = "HEAD"
 helper = "motor_click.rs"
 bindings = [
-  { name = "game", ty = "&crate::game::Game<'_>", value = "&*self" },
+  { name = "game", ty = "&crate::game::Game<'_>", value = "self" },
   { name = "screen", ty = "&crate::mod_api::NativeScreenView<'_>", value = "screen" },
   { name = "button", ty = "i32", value = "button" },
   { name = "canceled", ty = "&mut bool", value = "&mut *canceled" },
@@ -361,7 +361,7 @@ hook_version = 1
 kind = "HEAD"
 helper = "motor_drag.rs"
 bindings = [
-  { name = "game", ty = "&crate::game::Game<'_>", value = "&*self" },
+  { name = "game", ty = "&crate::game::Game<'_>", value = "self" },
   { name = "screen", ty = "&crate::mod_api::NativeScreenView<'_>", value = "screen" },
   { name = "button", ty = "i32", value = "button" },
   { name = "canceled", ty = "&mut bool", value = "&mut *canceled" },
@@ -374,7 +374,7 @@ hook_version = 1
 kind = "HEAD"
 helper = "motor_release.rs"
 bindings = [
-  { name = "game", ty = "&crate::game::Game<'_>", value = "&*self" },
+  { name = "game", ty = "&crate::game::Game<'_>", value = "self" },
   { name = "screen", ty = "&crate::mod_api::NativeScreenView<'_>", value = "screen" },
   { name = "button", ty = "i32", value = "button" },
   { name = "canceled", ty = "&mut bool", value = "&mut *canceled" },
@@ -387,7 +387,7 @@ hook_version = 1
 kind = "HEAD"
 helper = "motor_key_release.rs"
 bindings = [
-  { name = "game", ty = "&crate::game::Game<'_>", value = "&*self" },
+  { name = "game", ty = "&crate::game::Game<'_>", value = "self" },
   { name = "screen", ty = "&crate::mod_api::NativeScreenView<'_>", value = "screen" },
   { name = "key", ty = "&str", value = "key" },
   { name = "canceled", ty = "&mut bool", value = "&mut *canceled" },
@@ -400,7 +400,7 @@ hook_version = 1
 kind = "HEAD"
 helper = "motor_scroll.rs"
 bindings = [
-  { name = "game", ty = "&crate::game::Game<'_>", value = "&*self" },
+  { name = "game", ty = "&crate::game::Game<'_>", value = "self" },
   { name = "screen", ty = "&crate::mod_api::NativeScreenView<'_>", value = "screen" },
   { name = "scroll", ty = "[f64; 2]", value = "scroll" },
   { name = "modifiers", ty = "u32", value = "modifiers" },
@@ -427,7 +427,7 @@ kind = "HEAD"
 cancellable = true
 helper = "depot_automation.rs"
 bindings = [
-  { name = "containers", ty = "&crate::game::machines::Containers<'_>", value = "&*self" },
+  { name = "containers", ty = "&crate::game::machines::Containers<'_>", value = "self" },
   { name = "view", ty = "&crate::game::machines::View", value = "view" },
   { name = "slot", ty = "usize", value = "slot" },
   { name = "stack", ty = "&crate::items::ItemStack", value = "stack" },
@@ -704,4 +704,286 @@ bindings = [
  {name="pos",ty="[i32;3]",value="pos"},
  {name="kind",ty="i32",value="kind"},
  {name="tag",ty="&horizon_world::nbt::Tag",value="tag"},
+]
+
+[[module]]
+id = "fluid-codec"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_fluid_codec"
+source = "fluid_codec.rs"
+
+[[injection]]
+id = "basin-custom-block-fluids"
+target = "horizon_client::game::native_hooks::Game<'_>::native_custom_block_fluids"
+kind = "HEAD"
+helper = "fluid-custom_block_fluids.rs"
+bindings = [
+ {name="block",ty="&str",value="block"},
+ {name="custom",ty="&mut bool",value="&mut *custom"},
+]
+
+[[injection]]
+id = "basin-custom-fluid-tanks"
+target = "horizon_client::game::native_hooks::Game<'_>::native_custom_fluid_tanks"
+kind = "HEAD"
+helper = "fluid-custom_fluid_tanks.rs"
+bindings = [
+ {name="game",ty="&crate::game::Game<'_>",value="self"},
+ {name="pos",ty="[i32; 3]",value="pos"},
+ {name="side",ty="Option<horizon_core::geometry::Direction>",value="side"},
+ {name="out",ty="&mut Option<Vec<crate::mod_api::NativeFluidTankView>>",value="&mut *out"},
+]
+
+[[injection]]
+id = "basin-custom-fluid-fill"
+target = "horizon_client::game::native_hooks::Game<'_>::native_custom_fluid_fill"
+kind = "HEAD"
+helper = "fluid-custom_fluid_fill.rs"
+bindings = [
+ {name="game",ty="&mut crate::game::Game<'_>",value="&mut *self"},
+ {name="pos",ty="[i32; 3]",value="pos"},
+ {name="side",ty="Option<horizon_core::geometry::Direction>",value="side"},
+ {name="resource",ty="&crate::mod_api::NativeFluidStack",value="resource"},
+ {name="action",ty="crate::mod_api::NativeFluidAction",value="action"},
+ {name="out",ty="&mut Option<i32>",value="&mut *out"},
+]
+
+[[injection]]
+id = "basin-custom-fluid-drain"
+target = "horizon_client::game::native_hooks::Game<'_>::native_custom_fluid_drain"
+kind = "HEAD"
+helper = "fluid-custom_fluid_drain.rs"
+bindings = [
+ {name="game",ty="&mut crate::game::Game<'_>",value="&mut *self"},
+ {name="pos",ty="[i32; 3]",value="pos"},
+ {name="side",ty="Option<horizon_core::geometry::Direction>",value="side"},
+ {name="request",ty="&crate::mod_api::NativeFluidDrain",value="request"},
+ {name="action",ty="crate::mod_api::NativeFluidAction",value="action"},
+ {name="out",ty="&mut Option<crate::mod_api::NativeFluidStack>",value="&mut *out"},
+]
+
+[[module]]
+id = "burner"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_burner"
+source = "burner.rs"
+
+[[module]]
+id = "burner-presentation"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_burner_presentation"
+source = "burner_presentation.rs"
+
+[[injection]]
+id = "burner-standalone-sprites"
+target = "horizon_client::game::native_hooks::Game<'_>::native_terrain_model_sprites"
+kind = "HEAD"
+helper = "burner_sprites.rs"
+bindings = [
+ {name="sprites",ty="&mut Vec<String>",value="&mut *sprites"},
+]
+
+[[injection]]
+id = "burner-stateful-entity"
+target = "horizon_client::game::native_hooks::Game<'_>::native_stateful_block_entity"
+kind = "HEAD"
+helper = "burner_stateful.rs"
+bindings = [
+ {name="block",ty="&str",value="block"},
+ {name="stateful",ty="&mut bool",value="&mut *stateful"},
+]
+
+[[injection]]
+id = "burner-entity-from-state"
+target = "horizon_client::game::native_hooks::GameLevel<'_>::native_block_entity_from_state"
+kind = "HEAD"
+helper = "burner_entity.rs"
+bindings = [
+ {name="block",ty="&str",value="block"},
+ {name="properties",ty="&crate::mod_api::BlockProperties",value="properties"},
+ {name="entity",ty="&mut Option<(String,horizon_world::nbt::Compound)>",value="&mut *entity"},
+]
+
+[[injection]]
+id = "burner-data-map-types"
+hook = "data_map_types"
+hook_version = 1
+kind = "HEAD"
+helper = "burner_data_maps.rs"
+bindings = [
+ {name="types",ty="&mut Vec<crate::mod_api::NativeDataMapType>",value="&mut *types"},
+]
+
+[[module]]
+id = "basin-tooltip"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_basin_tooltip"
+source = "basin_tooltip.rs"
+
+[[module]]
+id="burner-interactions"
+file="crates/horizon-client/src/game.rs"
+name="create_port_burner_interactions"
+source="burner_interactions.rs"
+
+[[module]]
+id="burner-prediction"
+file="crates/horizon-client/src/game/remote.rs"
+name="create_port_burner_prediction"
+source="burner_prediction.rs"
+
+[[injection]]
+id="burner-server-entity"
+target="horizon_client::game::native_hooks::Game<'_>::native_item_interact_mob"
+kind="HEAD"
+helper="burner_interact_entity.rs"
+bindings=[
+ {name="game",ty="&mut crate::game::Game<'_>",value="&mut *self"},
+ {name="entity",ty="i32",value="entity"},
+ {name="kind",ty="&str",value="kind"},
+ {name="swing",ty="&mut Option<bool>",value="&mut *swing"},
+]
+
+[[injection]]
+id="burner-client-block"
+target="horizon_client::game::remote::Game<'_>::remote_use_item_on"
+kind="HEAD"
+cancellable=true
+helper="burner_predict_block.rs"
+bindings=[{name="game",ty="&mut crate::game::Game<'_>",value="&mut *self"},{name="hand",ty="crate::game::Hand",value="hand"}]
+
+[[injection]]
+id="burner-client-entity"
+target="horizon_client::game::remote::Game<'_>::remote_use_entity"
+kind="HEAD"
+cancellable=true
+helper="burner_predict_entity.rs"
+bindings=[{name="game",ty="&mut crate::game::Game<'_>",value="&mut *self"},{name="hand",ty="crate::game::Hand",value="hand"}]
+
+[[injection]]
+id="burner-hand-operated"
+target="horizon_client::game::remote::hand_operated"
+kind="HEAD"
+cancellable=true
+helper="burner_hand_operated.rs"
+bindings=[{name="name",ty="&str",value="name"}]
+
+
+[[injection]]
+id="burner-random-animate-tick"
+target="horizon_client_lib::animate_tick::block_animate_tick"
+kind="HEAD"
+helper="burner_animate.rs"
+bindings=[
+{name="engine",ty="&mut crate::particles::ParticleEngine",value="&mut *engine"},
+{name="ctx",ty="&crate::animate_tick::AnimateContext<'_>",value="ctx"},
+{name="state",ty="horizon_world::registry::BlockStateId",value="state"},
+{name="pos",ty="[i32;3]",value="pos"},
+]
+
+[[injection]]
+id="burner-client-be-particles"
+target="horizon_client::game::block_entity_anims::Game<'_>::tick_block_entity_anims"
+kind="HEAD"
+helper="burner_particle_tick.rs"
+bindings=[{name="game",ty="&mut crate::game::Game<'_>",value="&mut *self"}]
+
+[[injection]]
+id = "burner-clone-item"
+target = "horizon_client::game::native_hooks::Game<'_>::native_block_clone_item"
+kind = "HEAD"
+helper = "burner_clone_item.rs"
+bindings = [
+ {name="game",ty="&crate::game::Game<'_>",value="self"},
+ {name="pos",ty="[i32; 3]",value="pos"},
+ {name="stack",ty="&mut Option<crate::items::ItemStack>",value="&mut *stack"},
+]
+
+[[injection]]
+id="burner-visual-resources-reloaded"
+hook="client_resources_reloaded"
+hook_version=1
+kind="HEAD"
+helper="burner_resources.rs"
+bindings=[{name="game",ty="&crate::game::Game<'_>",value="self"}]
+
+[[module]]
+id="burner-sync"
+file="crates/horizon-client/src/game.rs"
+name="create_port_burner_sync"
+source="burner_sync.rs"
+
+[[module]]
+id="burner-sync-protocol"
+file="crates/horizon-client/src/game.rs"
+name="create_port_burner_sync_protocol"
+source="burner_sync_protocol.rs"
+
+[[injection]]
+id="burner-pack-files"
+hook="data_pack_files"
+hook_version=1
+kind="HEAD"
+helper="burner_pack_files.rs"
+bindings=[
+ {name="files",ty="&mut Vec<(String, Vec<u8>)>",value="&mut *files"},
+]
+
+[[injection]]
+id="burner-sync-login"
+hook="player_logged_in"
+hook_version=1
+kind="HEAD"
+helper="burner_sync_login.rs"
+bindings=[
+ {name="game",ty="&mut crate::game::Game<'_>",value="&mut *self"},
+ {name="player",ty="u128",value="player"},
+]
+
+[[injection]]
+id="burner-sync-logout"
+hook="player_logged_out"
+hook_version=1
+kind="HEAD"
+helper="burner_sync_logout.rs"
+bindings=[
+ {name="game",ty="&crate::game::Game<'_>",value="self"},
+ {name="player",ty="u128",value="player"},
+]
+
+[[injection]]
+id="burner-sync-world"
+hook="world_lifecycle"
+hook_version=1
+kind="HEAD"
+helper="burner_sync_world.rs"
+bindings=[
+ {name="game",ty="&crate::game::Game<'_>",value="self"},
+ {name="phase",ty="crate::mod_api::WorldPhase",value="phase"},
+]
+
+# Shared save/client codec lives below gameplay, avoiding a client-lib -> Game edge.
+[[module]]
+id = "inventory-codec"
+file = "crates/horizon-client/src/save.rs"
+name = "create_inventory_codec"
+source = "inventory_codec.rs"
+visibility = "pub"
+
+[[module]]
+id = "inventory-packet"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_inventory_packet"
+source = "inventory_packet.rs"
+
+# Canonical Create inventories must load before same-tick inventory observers.
+[[injection]]
+id = "inventory-decode"
+target = "horizon_client_lib::save::decode_mod_block_entity"
+kind = "HEAD"
+cancellable = true
+helper = "inventory_decode.rs"
+bindings = [
+ { name = "id", ty = "&str", value = "&id" },
+ { name = "tag", ty = "&horizon_world::nbt::Tag", value = "tag" },
 ]

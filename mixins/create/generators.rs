@@ -125,6 +125,12 @@ pub(super) fn tick(
         let extension = game.native_block(at(pos, negative)) == "create:large_water_wheel";
         game.native_set_block_property(pos, "extension", if extension { "true" } else { "false" });
     }
+    // ModBlockEntity::DerefMut advances its content revision. entry() would
+    // therefore invalidate unchanged client geometry on every wheel tick.
+    #[expect(
+        clippy::map_entry,
+        reason = "entry would mutate an unchanged live BE revision"
+    )]
     if !entity.nbt.contains_key(&"Material".into()) {
         entity.nbt.insert(
             "Material".into(),

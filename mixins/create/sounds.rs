@@ -43,16 +43,7 @@ pub(super) fn wrench(game: &mut Game<'_>, pos: [i32; 3], remove: bool) {
         event(game, pos, "create:wrench_rotate", 0.25, 1.25);
     }
 }
-pub(super) fn crank(game: &mut Game<'_>, pos: [i32; 3]) {
-    event(game, pos, "create:cranking", 0.075 * 4.0, 0.5 * 0.65);
-    event(
-        game,
-        pos,
-        "minecraft:block.wooden_button.click_off",
-        0.025 * 4.0,
-        0.5 * 0.65,
-    );
-}
+
 
 pub(super) fn casing(game: &mut Game<'_>, pos: [i32; 3]) {
     event(game, pos, "minecraft:block.wood.place", 1.0, 0.8);

@@ -134,8 +134,8 @@ pub(super) fn tick(game: &mut Game<'_>) {
             state.crank.tick(speed);
             state.previous_dial = state.dial;
             state.dial += (number(&nbt, "Value") - state.dial) * 0.125;
-            if state.dial > 1.0 && game.world.random.next_float() < 0.5 {
-                state.dial -= (state.dial - 1.0) * game.world.random.next_float();
+            if state.dial > 1.0 && game.particles.level_random().next_float() < 0.5 {
+                state.dial -= (state.dial - 1.0) * game.particles.level_random().next_float();
             }
             let emit = applied && !state.applied;
             state.applied = applied;
@@ -148,36 +148,34 @@ pub(super) fn tick(game: &mut Game<'_>) {
             let stress = state.effects.tick(true, status == "Overstressed").stress;
             (emit, stress)
         });
-        if particles {
-            if let Some(Tag::List(items)) = nbt.get(&"ParticleItems".into()) {
-                for item in items
-                    .iter()
-                    .filter_map(horizon_items::item_nbt::item_from_nbt)
-                {
-                    let options = game.item_particle(&item);
-                    let y = if integer(&nbt, "Mode") == 1 {
-                        f64::from(pos[1]) - 1.25
-                    } else {
-                        f64::from(pos[1]) - 0.75
-                    };
-                    for _ in 0..15 {
-                        let mut velocity = particle_rules::offset_randomly(
-                            &mut Random(&mut game.world.random),
-                            0.125,
-                        );
-                        velocity[1] = 0.125;
-                        game.particles.add(
-                            &options,
-                            [f64::from(pos[0]) + 0.5, y, f64::from(pos[2]) + 0.5],
-                            velocity,
-                        );
-                    }
-                    trace(
-                        "press_particles",
-                        pos,
-                        serde_json::json!({"item":item.item.as_ref(),"count":15}),
+        if particles && let Some(Tag::List(items)) = nbt.get(&"ParticleItems".into()) {
+            for item in items
+                .iter()
+                .filter_map(horizon_items::item_nbt::item_from_nbt)
+            {
+                let options = game.item_particle(&item);
+                let y = if integer(&nbt, "Mode") == 1 {
+                    f64::from(pos[1]) - 1.25
+                } else {
+                    f64::from(pos[1]) - 0.75
+                };
+                for _ in 0..15 {
+                    let mut velocity = particle_rules::offset_randomly(
+                        &mut Random(game.particles.level_random()),
+                        0.125,
+                    );
+                    velocity[1] = 0.125;
+                    game.particles.add(
+                        &options,
+                        [f64::from(pos[0]) + 0.5, y, f64::from(pos[2]) + 0.5],
+                        velocity,
                     );
                 }
+                trace(
+                    "press_particles",
+                    pos,
+                    serde_json::json!({"item":item.item.as_ref(),"count":15}),
+                );
             }
         }
         if let Some(effect) = stress_effect {
@@ -188,7 +186,7 @@ pub(super) fn tick(game: &mut Game<'_>) {
             });
             for _ in 0..effect.amount {
                 let velocity = particle_rules::offset_randomly(
-                    &mut Random(&mut game.world.random),
+                    &mut Random(game.particles.level_random()),
                     effect.max_motion,
                 );
                 game.particles
@@ -267,12 +265,12 @@ fn stack(game: &Game<'_>, draw: &mut BlockEntityDraw, item: &ItemStack, angle: f
 pub(super) fn depot(game: &Game<'_>, _: Pos, entity: &ModBlockEntity, draw: &mut BlockEntityDraw) {
     draw.push();
     draw.translate([0.5, 15.0 / 16.0, 0.5]);
-    if let Some(Tag::Compound(held)) = entity.nbt.get(&"HeldItem".into()) {
-        if let Some(item) = saved_stack(held) {
-            draw.push();
-            stack(game, draw, &item, integer(held, "Angle") as f32);
-            draw.pop();
-        }
+    if let Some(Tag::Compound(held)) = entity.nbt.get(&"HeldItem".into())
+        && let Some(item) = saved_stack(held)
+    {
+        draw.push();
+        stack(game, draw, &item, integer(held, "Angle") as f32);
+        draw.pop();
     }
     if let Some(Tag::List(items)) = entity
         .nbt

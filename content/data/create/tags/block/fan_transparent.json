@@ -1,5 +1,7 @@
 {
   "values": [
+    "create:blaze_burner",
+    "create:lit_blaze_burner",
     "minecraft:iron_bars",
     "minecraft:mangrove_roots",
     "minecraft:copper_grate",

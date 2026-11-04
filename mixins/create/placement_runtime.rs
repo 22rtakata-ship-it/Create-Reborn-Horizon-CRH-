@@ -49,6 +49,27 @@ pub(super) fn state(
     answer: &mut Option<Option<BlockStateId>>,
 ) {
     let block = game.native_state_block(state).unwrap_or("");
+    if block == "create:blaze_burner" {
+        // BlazeBurnerBlock.getStateForPlacement reads the actual BlockItem,
+        // including the empty item alias. Other placement callers get the
+        // block default unchanged, as in the original instanceof guard.
+        let heat = match ctx.item.as_str() {
+            "create:blaze_burner" => "smouldering",
+            "create:empty_blaze_burner" => "none",
+            _ => {
+                *answer = Some(Some(state));
+                return;
+            }
+        };
+        state = game
+            .native_state_with_property(state, "blaze", heat)
+            .unwrap_or(state);
+        state = game
+            .native_state_with_property(state, "facing", horizontal(ctx.yaw).opposite().name())
+            .unwrap_or(state);
+        *answer = Some(Some(state));
+        return;
+    }
     if !matches!(
         block,
         "create:speedometer"

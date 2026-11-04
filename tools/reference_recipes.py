@@ -4,7 +4,7 @@ import json
 import math
 import subprocess
 from common import CREATE, PINS, ROOT
-from catalog import BLOCKS, ITEMS
+from catalog import BLOCKS, ITEMS, INTERNAL_BLOCKS
 
 
 def dry_mixing(recipe):
@@ -35,10 +35,70 @@ def dry_mixing(recipe):
             and all(output(o) for o in outputs))
 
 
+def fluid_mixing(recipe):
+    """Bounded unheated mixing: exact water/lava singles, ordinary items or
+    NeoForge block tags. Keep the original predicate, never rewrite block tags
+    as item tags or silently strip fluid/components/unknown codec fields.
+    """
+    ingredients = recipe.get('ingredients')
+    if not isinstance(ingredients, list): return False
+    items, fluids = [], []
+    for ingredient in ingredients:
+        if isinstance(ingredient, dict) and ingredient.get('type') == 'neoforge:single':
+            if (set(ingredient) != {'type', 'fluid', 'amount'}
+                    or ingredient['fluid'] not in ('minecraft:water', 'minecraft:lava')
+                    or type(ingredient['amount']) is not int
+                    or not 1 <= ingredient['amount'] < (1 << 31)): return False
+            fluids.append(ingredient)
+        elif isinstance(ingredient, dict) and ingredient.get('type') == 'neoforge:block_tag':
+            if (set(ingredient) != {'type', 'tag'} or not isinstance(ingredient['tag'], str)
+                    or ':' not in ingredient['tag']): return False
+            # Only the validation copy uses a plain tag; the exported original
+            # retains neoforge:block_tag for native BlockItem/default-state tests.
+            items.append({'tag': ingredient['tag']})
+        else: items.append(ingredient)
+    return (1 <= len(fluids) <= 2
+            and dry_mixing(dict(recipe, ingredients=items)))
+
+
+def heated_mixing(recipe):
+    """Source item-only heated/superheated codecs, using actual below-Basin heat.
+    Fluid recipes retain their separately bounded unheated export policy.
+    """
+    return (recipe.get('heat_requirement') in ('heated','superheated')
+            and dry_mixing(dict(recipe,heat_requirement='none')))
+
+
+def burner_data_maps(names, read):
+    """Actual MIT data maps declared by CreateDataMaps (not item fuel tags).
+
+    The pinned release has only the superheated file; regular fuel lookup uses
+    the ordinary furnace fallback unless a pack provides its declared data map.
+    Missing files stay missing. Do not synthesize an empty original definition.
+    """
+    result={}
+    for kind in ['regular', 'superheated']:
+        path='create/data_maps/item/'+kind+'_blaze_burner_fuels.json'
+        source='src/generated/resources/data/'+path
+        if source not in names: continue
+        data=read(source)
+        if set(data)!={'values'} or not isinstance(data['values'],dict):
+            raise ValueError('Unsupported burner data map structure: '+source)
+        for key,value in data['values'].items():
+            if not isinstance(key,str) or ':' not in key:
+                raise ValueError('Invalid burner fuel key: '+repr(key))
+            time=value.get('burn_time') if isinstance(value,dict) and set(value)=={'burn_time'} else value
+            if type(time) is not int or not 1<=time<(1<<31):
+                raise ValueError('Unsupported burner fuel value: '+repr(value))
+        result[path]=data
+    return result
+
+
 def main():
     base = 'src/generated/resources/data/'
     names = subprocess.check_output(['git', 'ls-tree', '-r', '--name-only', PINS['create_revision']], cwd=CREATE, text=True).splitlines()
     known = {'create:' + n for n in BLOCKS + ITEMS}
+    known_blocks = {'create:' + n for n in BLOCKS + INTERNAL_BLOCKS}
     def read(name):
         return json.loads(subprocess.check_output(['git', 'show', PINS['create_revision'] + ':' + name], cwd=CREATE))
     def dependencies(value):
@@ -56,7 +116,11 @@ def main():
         r = read(name)
         kind = r.get('type', '')
         if kind not in {'minecraft:crafting_shaped', 'minecraft:crafting_shapeless', 'create:pressing', 'create:item_application'} | processing | cooking: continue
-        if kind == 'create:mixing' and not dry_mixing(r): continue
+        if kind == 'create:mixing' and not (dry_mixing(r) or heated_mixing(r)):
+            # These two actual source flows are the bounded first native fluid
+            # integration. Other fluid/heat/component recipe codecs stay out.
+            if name not in {base+'create/recipe/mixing/dough_by_mixing.json',
+                            base+'create/recipe/mixing/mud_by_mixing.json'} or not fluid_mixing(r): continue
         # Conditional recipes depend on other mods and their ingredient codecs.
         if 'neoforge:conditions' in r: continue
         output = r.get('result', {})
@@ -82,6 +146,9 @@ def main():
     conventional['c:rods/wooden'] = ['minecraft:stick']
     conventional['c:dusts/redstone'] = ['minecraft:redstone']
     conventional['c:strings'] = ['minecraft:string']
+    # NeoForge's verified 1.21.1 convention contains this vanilla block item;
+    # its optional legacy #forge alias is unavailable here and is omitted.
+    conventional['c:netherracks'] = ['minecraft:netherrack']
     colors = ['white','orange','magenta','light_blue','yellow','lime','pink','gray','light_gray','cyan','purple','blue','brown','green','red','black']
     conventional['c:glass_blocks'] = ['minecraft:glass', 'minecraft:tinted_glass'] + ['minecraft:' + color + '_stained_glass' for color in colors]
     conventional['c:glass_panes'] = ['minecraft:glass_pane'] + ['minecraft:' + color + '_stained_glass_pane' for color in colors]
@@ -128,6 +195,8 @@ def main():
     def available(value, seen=()):
         if isinstance(value, list): return any(available(v, seen) for v in value)
         if isinstance(value, dict):
+            if value.get('type') == 'neoforge:single':
+                return value.get('fluid') in ('minecraft:water', 'minecraft:lava')
             if 'item' in value: return available(value['item'], seen)
             if 'tag' in value: return available('#'+value['tag'], seen)
             if 'id' in value: return available(value['id'], seen)
@@ -154,26 +223,33 @@ def main():
     for tool in ['axe', 'pickaxe']:
         dest = 'minecraft/tags/block/mineable/' + tool + '.json'
         tag = read(base + dest)
-        tag['values'] = [v for v in tag['values'] if isinstance(v, str) and v in known]
+        tag['values'] = [v for v in tag['values'] if isinstance(v, str) and v in known_blocks]
         tags[dest] = tag
     # Fan catalyst and permeability tags are MIT behavior data. Unimplemented
     # Create blocks must not become required tag entries in the port.
     for kind, paths in {
-        'block': ['fan_transparent', 'fan_processing_catalysts/blasting',
+        'block': ['fan_transparent', 'fan_processing_catalysts/blasting', 'passive_boiler_heaters',
                   'fan_processing_catalysts/haunting', 'fan_processing_catalysts/smoking'],
         'fluid': ['fan_processing_catalysts/blasting', 'fan_processing_catalysts/splashing'],
+        'entity_type': ['blaze_burner_capturable'],
     }.items():
         for path in paths:
             dest = 'create/tags/' + kind + '/' + path + '.json'
             tag = read(base + dest)
             def implemented(entry):
                 name = entry if isinstance(entry, str) else entry.get('id', '')
-                return name.startswith(('minecraft:', '#minecraft:')) or (kind == 'block' and name in known)
+                return name.startswith(('minecraft:', '#minecraft:')) or (kind == 'block' and name in known_blocks)
             tag['values'] = [entry for entry in tag['values'] if implemented(entry)]
             tags[dest] = tag
-    result = {'reference': PINS['create_revision'], 'license': 'MIT recipe data; original definitions of vanilla convention tags', 'recipes': recipes, 'tags': tags}
+    # 1.21.1's source ID uses "convertable"; 26.3 renamed the vanilla tag to
+    # "convertible". Keep the original recipe's actual BLOCK-tag predicate.
+    # This is our convention definition for its three verified source members.
+    tags['minecraft/tags/block/convertable_to_mud.json']={'values':[
+        'minecraft:dirt','minecraft:coarse_dirt','minecraft:rooted_dirt']}
+    maps=burner_data_maps(names,read)
+    result = {'reference': PINS['create_revision'], 'license': 'MIT recipe/data-map data; original definitions of vanilla convention tags', 'recipes': recipes, 'tags': tags, 'data_maps':maps}
     dest = ROOT / 'tools/data/recipes.json'; dest.parent.mkdir(exist_ok=True); dest.write_text(json.dumps(result, indent=2) + '\n')
-    print('Exported', len(recipes), 'recipes and', len(tags), 'tags from MIT datapack sources')
+    print('Exported', len(recipes), 'recipes,', len(tags), 'tags and',len(maps),'data maps from MIT datapack sources')
 
 
 if __name__ == '__main__': main()

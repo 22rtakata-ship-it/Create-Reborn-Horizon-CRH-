@@ -47,6 +47,11 @@ fn sine_table() -> &'static [f32; 65536] {
         std::array::from_fn(|i| ((i as f64 * std::f64::consts::PI * 2.0 / 65536.0).sin()) as f32)
     })
 }
+/// Pinned Minecraft 1.21.1 `Mth.sin(float)`. Its float index multiplication is
+/// different from the newer platform's double-index sine helper.
+pub fn source_sin(angle: f32) -> f32 {
+    sine_table()[((angle * 10430.378) as i32 & 65535) as usize]
+}
 fn rotate(offset: [f64; 3], degrees: f32, axis: Axis) -> [f64; 3] {
     if degrees == 0.0 {
         return offset;

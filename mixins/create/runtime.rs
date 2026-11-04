@@ -129,12 +129,13 @@ pub(super) fn owns(block: &str) -> bool {
             | "create:mechanical_drill"
             | "create:basin"
             | "create:mechanical_mixer"
+            | "create:blaze_burner"
             | "create:belt"
     )
 }
 
 pub(super) fn entity(block: &str, entity: &mut Option<(String, Compound)>) {
-    if owns(block) && entity.is_none() {
+    if owns(block) && block != "create:blaze_burner" && entity.is_none() {
         let id = match block {
             "create:creative_motor" => "create:motor",
             "create:mechanical_drill" => "create:drill",
@@ -314,7 +315,33 @@ pub(super) fn placed(game: &mut Game<'_>, stack: &ItemStack, pos: [i32; 3]) {
     }
 }
 
+/// Ordinary native inventories support only their pinned canonical sizes.
+/// An explicitly edited different handler size stays opaque until restored.
+pub(super) fn inventory_supported(entity: &ModBlockEntity) -> bool {
+    let inventories: &[(&str, i32)] = match entity.id.as_str() {
+        "create:depot" => &[("OutputBuffer", 8)],
+        "create:basin" => &[("InputItems", 9), ("OutputItems", 9)],
+        "create:millstone" => &[("InputInventory", 1), ("OutputInventory", 9)],
+        _ => return true,
+    };
+    inventories.iter().all(|&(key, count)| {
+        !matches!(entity.nbt.get(&key.into()).and_then(|v| v.get("Size")),
+            Some(Tag::Int(size)) if *size != count)
+    })
+}
+
+pub(super) fn inventory_blocked(game: &Game<'_>, pos: [i32; 3]) -> bool {
+    matches!(game.world.block_entities.get(&(pos[0],pos[1],pos[2])),
+        Some(BlockEntity::Mod(entity)) if !inventory_supported(entity))
+}
+
 pub(super) fn depot_reacts(game: &Game<'_>, pos: [i32; 3], face: [i32; 3]) -> bool {
+    if inventory_blocked(game, pos) {
+        return false;
+    }
+    if crate::game::create_port_burner::reacts(game, pos) {
+        return true;
+    }
     if crate::game::create_port_basin::reacts(game, pos) {
         return true;
     }
@@ -340,6 +367,20 @@ pub(super) fn depot_reacts(game: &Game<'_>, pos: [i32; 3], face: [i32; 3]) -> bo
 }
 
 pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3], canceled: &mut bool) {
+    if inventory_blocked(game, pos) {
+        *canceled = true;
+        return;
+    }
+    if crate::game::create_port_burner_interactions::right_click(game, pos) {
+        *canceled = true;
+        game.swing_arm();
+        return;
+    }
+    if crate::game::create_port_burner::right_click(game, pos) {
+        *canceled = true;
+        game.swing_arm();
+        return;
+    }
     if crate::game::create_port_basin::right_click(game, pos) {
         *canceled = true;
         game.swing_arm();
@@ -411,30 +452,47 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3], ca
 
 /// Match DepotBehaviour/TransportedItemStack's public data names. Horizon also
 /// saves its generic Items slots; Create ignores that additional container field.
+fn depot_field(fields: &mut Compound, key: &str, value: Tag) -> bool {
+    if fields.get(&key.into()) == Some(&value) {
+        false
+    } else {
+        fields.insert(key.into(), value);
+        true
+    }
+}
+
 pub(super) fn depot_data(entity: &mut ModBlockEntity) -> bool {
-    let old = entity.nbt.clone();
+    if !inventory_supported(entity) {
+        return false;
+    }
+    let mut changed = false;
     if let Some(item) = entity
         .items
         .first()
         .and_then(Option::as_ref)
         .map(horizon_items::item_nbt::item_to_nbt)
     {
-        let mut held = match entity.nbt.remove(&"HeldItem".into()) {
-            Some(Tag::Compound(tag)) => tag,
-            _ => Compound::from([
-                ("Pos".into(), Tag::Float(0.25f32.to_bits())),
-                ("PrevPos".into(), Tag::Float(0.25f32.to_bits())),
-                ("Offset".into(), Tag::Float(0.0f32.to_bits())),
-                ("PrevOffset".into(), Tag::Float(0.0f32.to_bits())),
-                ("InSegment".into(), Tag::Int(0)),
-                ("Angle".into(), Tag::Int(0)),
-                ("InDirection".into(), Tag::Int(3)),
-            ]),
-        };
-        held.insert("Item".into(), item);
-        entity.nbt.insert("HeldItem".into(), Tag::Compound(held));
+        let key: horizon_world::nbt::JavaString = "HeldItem".into();
+        if !matches!(entity.nbt.get(&key), Some(Tag::Compound(_))) {
+            entity.nbt.insert(
+                key.clone(),
+                Tag::Compound(Compound::from([
+                    ("Pos".into(), Tag::Float(0.25f32.to_bits())),
+                    ("PrevPos".into(), Tag::Float(0.25f32.to_bits())),
+                    ("Offset".into(), Tag::Float(0.0f32.to_bits())),
+                    ("PrevOffset".into(), Tag::Float(0.0f32.to_bits())),
+                    ("InSegment".into(), Tag::Int(0)),
+                    ("Angle".into(), Tag::Int(0)),
+                    ("InDirection".into(), Tag::Int(3)),
+                ])),
+            );
+            changed = true;
+        }
+        if let Some(Tag::Compound(held)) = entity.nbt.get_mut(&key) {
+            changed |= depot_field(held, "Item", item);
+        }
     } else {
-        entity.nbt.remove(&"HeldItem".into());
+        changed |= entity.nbt.remove(&"HeldItem".into()).is_some();
     }
     let buffer = entity
         .items
@@ -450,16 +508,20 @@ pub(super) fn depot_data(entity: &mut ModBlockEntity) -> bool {
             Some(Tag::Compound(tag))
         })
         .collect();
-    entity.nbt.insert(
-        "OutputBuffer".into(),
-        Tag::Compound(Compound::from([
-            ("Size".into(), Tag::Int(8)),
-            ("Items".into(), Tag::List(buffer)),
-        ])),
-    );
-    entity.nbt.remove(&"DisplayItem".into());
-    entity.nbt.remove(&"DisplayCount".into());
-    old != entity.nbt
+    let key: horizon_world::nbt::JavaString = "OutputBuffer".into();
+    if !matches!(entity.nbt.get(&key), Some(Tag::Compound(_))) {
+        entity
+            .nbt
+            .insert(key.clone(), Tag::Compound(Compound::new()));
+        changed = true;
+    }
+    if let Some(Tag::Compound(fields)) = entity.nbt.get_mut(&key) {
+        changed |= depot_field(fields, "Size", Tag::Int(8));
+        changed |= depot_field(fields, "Items", Tag::List(buffer));
+    }
+    changed |= entity.nbt.remove(&"DisplayItem".into()).is_some();
+    changed |= entity.nbt.remove(&"DisplayCount".into()).is_some();
+    changed
 }
 
 fn facing(value: &str) -> [i32; 3] {
@@ -688,12 +750,22 @@ fn depot_input(game: &Game<'_>, pos: [i32; 3]) -> Option<ItemStack> {
     let BlockEntity::Mod(depot) = game.world.block_entities.get(&(pos[0], pos[1], pos[2]))? else {
         return None;
     };
+    if !inventory_supported(depot) {
+        return None;
+    }
     depot.items.first()?.clone()
 }
 
 pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEntity) {
     let block = game.native_block(pos);
     if !owns(&block) {
+        return;
+    }
+    if !inventory_supported(entity) {
+        return;
+    }
+    if block == "create:blaze_burner" {
+        crate::game::create_port_burner::tick(game, pos, entity);
         return;
     }
     if block == "create:basin" {
@@ -703,6 +775,9 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
         return;
     }
     if block == "create:depot" {
+        if !inventory_supported(entity) {
+            return;
+        }
         crate::game::create_port_world_items::catch(game, pos, entity);
         if depot_data(entity) {
             game.native_block_entity_sync(pos);
@@ -775,10 +850,10 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
     for d in Direction::ALL {
         let delta = d.vector();
         let mut speed = network.port_speed(pos, delta);
-        if let Some(other) = &other_half {
-            if other.port_speed(pos, delta).abs() > speed.abs() {
-                speed = other.port_speed(pos, delta);
-            }
+        if let Some(other) = &other_half
+            && other.port_speed(pos, delta).abs() > speed.abs()
+        {
+            speed = other.port_speed(pos, delta);
         }
         ports.insert(d.name().into(), Tag::Float(speed.to_bits()));
     }
@@ -800,10 +875,10 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
         ])),
     );
     let mut rpm = network.speed(pos);
-    if let Some(other) = &other_half {
-        if other.speed(pos).abs() > rpm.abs() {
-            rpm = other.speed(pos);
-        }
+    if let Some(other) = &other_half
+        && other.speed(pos).abs() > rpm.abs()
+    {
+        rpm = other.speed(pos);
     }
 
     let old_rpm = number(&entity.nbt, "Speed");
@@ -923,7 +998,6 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
         if action == Action::Started {
             entity.nbt.remove(&"ParticleItems".into());
             entity.nbt.insert("Mode".into(), Tag::Int(mode));
-            entity.nbt.insert("Finished".into(), Tag::Byte(0));
         }
         if action == Action::Finished {
             entity.nbt.insert("Finished".into(), Tag::Byte(1));
@@ -988,12 +1062,19 @@ pub(super) fn update_tag(entity: &ModBlockEntity, tag: &mut Option<Compound>) {
     if (owns(&entity.id)
         || matches!(
             entity.id.as_str(),
-            "create:motor" | "create:simple_kinetic" | "create:encased_shaft" | "create:drill"
+            "create:motor"
+                | "create:simple_kinetic"
+                | "create:encased_shaft"
+                | "create:drill"
+                | "create:blaze_heater"
         ))
         && tag.is_none()
     {
         let mut snapshot = entity.nbt.clone();
-        if entity.id == "create:depot" && entity.items.first().is_none_or(Option::is_none) {
+        if entity.id == "create:depot"
+            && inventory_supported(entity)
+            && entity.items.first().is_none_or(Option::is_none)
+        {
             // Horizon merges update tags. Absence would leave the old rendered
             // stack alive; send an explicit empty value on the wire only.
             snapshot.insert("HeldItem".into(), Tag::Compound(Compound::new()));
@@ -1079,7 +1160,7 @@ pub(super) fn draw(
     game: &Game<'_>,
     pos: [i32; 3],
     block: &str,
-    _state: BlockStateId,
+    state: BlockStateId,
     entity: &ModBlockEntity,
     draw: &mut BlockEntityDraw,
 ) {
@@ -1087,6 +1168,10 @@ pub(super) fn draw(
         return;
     }
     let original = ORIGINAL_ASSETS.load(std::sync::atomic::Ordering::Relaxed);
+    if block == "create:blaze_burner" {
+        crate::game::create_port_burner_presentation::draw(game, pos, state, entity, draw);
+        return;
+    }
     if block == "create:depot" {
         // The depot's exposed top and displayed item are lit from the air above it.
         let (block_light, sky_light) = game.native_light([pos[0], pos[1] + 1, pos[2]]);

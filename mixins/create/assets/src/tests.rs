@@ -8,7 +8,7 @@ fn fixture(change: impl FnOnce(&mut BTreeMap<String, Vec<u8>>)) -> Vec<u8> {
     let mut json_file = |name: String, value: Value| {
         files.insert(name, serde_json::to_vec(&value).unwrap());
     };
-    for block in BLOCKS {
+    for block in BLOCKS.iter().chain(EXTRA_BLOCKSTATES) {
         json_file(
             format!("assets/create/blockstates/{block}.json"),
             json!({"variants": {"": {"model": "create:block/shared"}}}),
@@ -23,6 +23,12 @@ fn fixture(change: impl FnOnce(&mut BTreeMap<String, Vec<u8>>)) -> Vec<u8> {
     for part in PARTS {
         json_file(
             format!("assets/create/models/block/{part}.json"),
+            json!({"parent": "create:block/shared"}),
+        );
+    }
+    for model in EXTRA_MODELS {
+        json_file(
+            format!("assets/create/models/{model}.json"),
             json!({"parent": "create:block/shared"}),
         );
     }
@@ -56,6 +62,8 @@ fn fixture(change: impl FnOnce(&mut BTreeMap<String, Vec<u8>>)) -> Vec<u8> {
         "gui/icons",
         "block/belt_scroll",
         "block/belt_diagonal_scroll",
+        "block/blaze_burner_flame_scroll",
+        "block/blaze_burner_flame_superheated_scroll",
     ] {
         files.insert(
             format!("assets/create/textures/{texture}.png"),
@@ -162,6 +170,21 @@ fn processor_parts_and_ingredients_are_required_without_accepting_java_loaders()
         "assets/create/models/block/mechanical_mixer/pole.json",
         "assets/create/models/block/cogwheel_shaftless.json",
         "assets/create/models/item/whisk.json",
+        "assets/create/blockstates/blaze_burner.json",
+        "assets/create/blockstates/lit_blaze_burner.json",
+        "assets/create/models/item/blaze_burner.json",
+        "assets/create/models/item/empty_blaze_burner.json",
+        "assets/create/models/item/blaze_cake.json",
+        "assets/create/models/item/creative_blaze_cake.json",
+        "assets/create/models/block/blaze_burner/flame.json",
+        "assets/create/models/block/blaze_burner/blaze/inert.json",
+        "assets/create/models/block/blaze_burner/blaze/active.json",
+        "assets/create/models/block/blaze_burner/blaze/super_active.json",
+        "assets/create/models/block/blaze_burner/superheated_rods_large.json",
+        "assets/create/models/entity/train_hat.json",
+        "assets/create/models/entity/logistics_hat.json",
+        "assets/create/textures/block/blaze_burner_flame_scroll.png",
+        "assets/create/textures/block/blaze_burner_flame_superheated_scroll.png",
     ];
     for path in required {
         let missing = fixture(|files| {
@@ -190,7 +213,7 @@ fn processor_parts_and_ingredients_are_required_without_accepting_java_loaders()
 #[test]
 fn processor_catalog_uses_a_new_cache_schema() {
     const {
-        assert!(SCHEMA >= 10);
+        assert!(SCHEMA >= 11);
     }
     let home = Stage::new(&std::env::temp_dir()).unwrap();
     let bytes = fixture(|_| {});
@@ -212,7 +235,7 @@ fn processor_catalog_uses_a_new_cache_schema() {
     fs::remove_file(
         first
             .pack
-            .join("assets/create/models/block/mechanical_mixer/head.json"),
+            .join("assets/create/models/block/blaze_burner/flame.json"),
     )
     .unwrap();
     fs::rename(target, &old).unwrap();
@@ -242,10 +265,133 @@ fn processor_catalog_uses_a_new_cache_schema() {
         "assets/create/models/block/mechanical_mixer/pole.json",
         "assets/create/models/block/cogwheel_shaftless.json",
         "assets/create/models/item/whisk.json",
+        "assets/create/models/block/blaze_burner/flame.json",
+        "assets/create/blockstates/lit_blaze_burner.json",
+        "assets/create/models/entity/train_hat.json",
+        "assets/create/textures/block/blaze_burner_flame_superheated_scroll.png",
     ] {
         assert!(upgraded.pack.join(path).is_file(), "{path}");
     }
     assert!(import_fixture(&home.0, &bytes).unwrap().cached);
+}
+
+#[test]
+fn burner_models_and_scrolls_are_imported_without_a_lit_block_item() {
+    let scroll = b"\x89PNG\r\n\x1a\nprivate synthetic scrolling sprite";
+    let files = collect(fixture(|files| {
+        files.insert(
+            "assets/create/textures/block/blaze_burner_flame_scroll.png".into(),
+            scroll.to_vec(),
+        );
+    }))
+    .unwrap();
+    assert_eq!(
+        files["assets/create/textures/block/blaze_burner_flame_scroll.png"],
+        scroll
+    );
+    for path in [
+        "assets/create/blockstates/lit_blaze_burner.json",
+        "assets/create/models/block/blaze_burner/flame.json",
+        "assets/create/models/entity/train_hat.json",
+    ] {
+        assert!(files.contains_key(path), "{path}");
+    }
+    assert!(!files.contains_key("assets/create/models/item/lit_blaze_burner.json"));
+}
+
+#[test]
+fn bundled_burners_preserve_source_shapes_states_and_conditional_drops() {
+    let bundle: BTreeMap<String, String> =
+        serde_json::from_str(include_str!("../../data/content.json")).unwrap();
+    let read = |path: &str| -> Value { serde_json::from_str(&bundle[path]).unwrap() };
+    // Item declarations expose rarity separately: placing it in the component
+    // patch makes Horizon reject the complete content pack before registration.
+    // AllItems.CREATIVE_BLAZE_CAKE declares the source identity as Rarity.EPIC.
+    let creative_cake = read("data/create/horizon/item/creative_blaze_cake.json");
+    assert_eq!(creative_cake["rarity"], "epic");
+    assert!(
+        creative_cake["components"]
+            .get("minecraft:rarity")
+            .is_none()
+    );
+    let burner = read("data/create/horizon/block/blaze_burner.json");
+    let lit = read("data/create/horizon/block/lit_blaze_burner.json");
+    assert_eq!(
+        burner["default_state"],
+        json!({"blaze":"none","facing":"north"})
+    );
+    assert_eq!(lit["default_state"], json!({"flame_type":"regular"}));
+    assert_eq!(lit["item"], false);
+    assert!(!bundle.contains_key("data/create/horizon/item/lit_blaze_burner.json"));
+    for block in [&burner, &lit] {
+        assert_eq!(
+            block["shapes"],
+            json!({"default":[[0.0625,0,0.0625,0.9375,0.875,0.9375]]})
+        );
+        assert_eq!(
+            block["collision_shapes"],
+            json!({"default":[[0,0,0,1,0.25,1]]})
+        );
+        for kind in ["player", "item", "living", "other"] {
+            assert_eq!(block["collision_context_shapes"][kind], block["shapes"]);
+        }
+        assert!(
+            block["properties"].get("light").is_none(),
+            "state emission requires an engine extension"
+        );
+    }
+    let loot = read("data/create/loot_table/blocks/blaze_burner.json");
+    let entries = loot["pools"][0]["entries"].as_array().unwrap();
+    let mut actual = BTreeMap::new();
+    for entry in entries {
+        assert_eq!(
+            entry["conditions"][0]["type"],
+            "minecraft:survives_explosion"
+        );
+        assert_eq!(
+            entry["conditions"][1]["type"],
+            "minecraft:block_state_property"
+        );
+        assert_eq!(entry["conditions"][1]["block"], "create:blaze_burner");
+        for predicate in entry["conditions"].as_array().unwrap() {
+            assert!(
+                predicate.get("condition").is_none(),
+                "the 1.21 discriminator is not accepted by the target evaluator"
+            );
+        }
+        actual.insert(
+            entry["conditions"][1]["properties"]["blaze"]
+                .as_str()
+                .unwrap(),
+            entry["name"].as_str().unwrap(),
+        );
+    }
+    assert_eq!(
+        actual,
+        BTreeMap::from([
+            ("none", "create:empty_blaze_burner"),
+            ("smouldering", "create:blaze_burner"),
+            ("fading", "create:blaze_burner"),
+            ("kindled", "create:blaze_burner"),
+            ("seething", "create:blaze_burner"),
+        ])
+    );
+    let lit_loot = read("data/create/loot_table/blocks/lit_blaze_burner.json");
+    assert_eq!(
+        lit_loot["pools"][0]["conditions"],
+        json!([{"type":"minecraft:survives_explosion"}])
+    );
+    assert_eq!(
+        lit_loot["pools"][0]["entries"][0]["name"],
+        "create:empty_blaze_burner"
+    );
+    let tab = read("data/create/horizon/creative_tab/kinetics.json");
+    assert!(
+        !tab["items"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("create:lit_blaze_burner"))
+    );
 }
 
 #[test]
@@ -367,24 +513,36 @@ fn bundled_processors_have_source_states_collision_and_real_processing_recipes()
             .unwrap()
             .contains(&json!("#minecraft:fences"))
     );
-    assert!(
-        !transparent["values"]
+    assert_eq!(
+        transparent["values"]
             .as_array()
             .unwrap()
             .iter()
-            .any(|v| v.as_str().unwrap().starts_with("create:"))
+            .filter_map(Value::as_str)
+            .filter(|name| name.starts_with("create:"))
+            .collect::<BTreeSet<_>>(),
+        BTreeSet::from(["create:blaze_burner", "create:lit_blaze_burner"])
     );
     assert_eq!(
         read("data/create/tags/block/fan_processing_catalysts/blasting.json")["values"],
-        json!([])
+        json!(["create:blaze_burner"])
     );
     assert_eq!(
         read("data/create/tags/block/fan_processing_catalysts/haunting.json")["values"],
-        json!(["minecraft:soul_fire", "minecraft:soul_campfire"])
+        json!([
+            "create:lit_blaze_burner",
+            "minecraft:soul_fire",
+            "minecraft:soul_campfire"
+        ])
     );
     assert_eq!(
         read("data/create/tags/block/fan_processing_catalysts/smoking.json")["values"],
-        json!(["minecraft:fire", "minecraft:campfire"])
+        json!([
+            "create:blaze_burner",
+            "create:lit_blaze_burner",
+            "minecraft:fire",
+            "minecraft:campfire"
+        ])
     );
     assert_eq!(
         read("data/create/tags/fluid/fan_processing_catalysts/splashing.json")["values"],
@@ -397,7 +555,7 @@ fn bundled_processors_have_source_states_collision_and_real_processing_recipes()
 }
 
 #[test]
-fn basin_mixer_bundle_keeps_source_defaults_and_only_supported_dry_recipes() {
+fn basin_mixer_bundle_keeps_source_defaults_and_supported_recipes() {
     let bundle: BTreeMap<String, String> =
         serde_json::from_str(include_str!("../../data/content.json")).unwrap();
     let read = |path: &str| -> Value { serde_json::from_str(&bundle[path]).unwrap() };
@@ -499,20 +657,71 @@ fn basin_mixer_bundle_keeps_source_defaults_and_only_supported_dry_recipes() {
         .iter()
         .filter(|(name, _)| name.starts_with("data/create/recipe/mixing/"))
         .collect();
-    assert_eq!(recipes.len(), 2);
+    assert_eq!(recipes.len(), 5);
     for (name, raw) in recipes {
         let recipe: Value = serde_json::from_str(raw).unwrap();
         assert_eq!(recipe["type"], "create:mixing");
-        assert!(recipe.get("heat_requirement").is_none());
+        let brass = name.ends_with("/brass_ingot.json");
+        if brass {
+            assert_eq!(recipe["heat_requirement"], "heated");
+        } else {
+            assert!(recipe.get("heat_requirement").is_none());
+        }
         assert_eq!(recipe["ingredients"].as_array().unwrap().len(), 2);
-        assert_eq!(recipe["results"], json!([{"id":"create:andesite_alloy"}]));
-        assert!(
-            name.ends_with("andesite_alloy.json")
-                || name.ends_with("andesite_alloy_from_zinc.json")
-        );
+        match name.rsplit('/').next().unwrap() {
+            "andesite_alloy.json" | "andesite_alloy_from_zinc.json" => {
+                assert_eq!(recipe["results"], json!([{"id":"create:andesite_alloy"}]));
+            }
+            "dough_by_mixing.json" => {
+                assert_eq!(
+                    recipe["ingredients"],
+                    json!(["#c:flours/wheat", {"type":"neoforge:single","amount":1000,"fluid":"minecraft:water"}])
+                );
+                assert_eq!(recipe["results"], json!([{"id":"create:dough"}]));
+            }
+            "mud_by_mixing.json" => {
+                assert_eq!(
+                    recipe["ingredients"],
+                    json!([{"type":"neoforge:block_tag","tag":"minecraft:convertable_to_mud"}, {"type":"neoforge:single","amount":250,"fluid":"minecraft:water"}])
+                );
+                assert_eq!(recipe["results"], json!([{"id":"minecraft:mud"}]));
+            }
+            "brass_ingot.json" => {
+                assert_eq!(
+                    recipe["ingredients"],
+                    json!(["#c:ingots/copper", "#c:ingots/zinc"])
+                );
+                assert_eq!(
+                    recipe["results"],
+                    json!([{"id":"create:brass_ingot", "count":2}])
+                );
+            }
+            name => panic!("unsupported source mixing recipe {name}"),
+        }
     }
-    assert!(!bundle.contains_key("data/create/recipe/mixing/dough_by_mixing.json"));
-    assert!(!bundle.contains_key("data/create/recipe/mixing/brass_ingot.json"));
+    assert_eq!(
+        read("data/minecraft/tags/block/convertable_to_mud.json")["values"],
+        json!([
+            "minecraft:dirt",
+            "minecraft:coarse_dirt",
+            "minecraft:rooted_dirt"
+        ])
+    );
+    assert_eq!(
+        read("data/create/tags/block/passive_boiler_heaters.json")["values"],
+        json!([
+            "create:blaze_burner",
+            "create:lit_blaze_burner",
+            "minecraft:magma_block",
+            "minecraft:lava",
+            "#minecraft:campfires",
+            "#minecraft:fire"
+        ])
+    );
+    assert_eq!(
+        read("data/create/tags/entity_type/blaze_burner_capturable.json")["values"],
+        json!(["minecraft:blaze"])
+    );
 }
 
 #[test]

@@ -259,6 +259,7 @@ public final class ReferenceBridge {
         result.add("gui_size", vector(mc.getWindow().getGuiScaledWidth(), mc.getWindow().getGuiScaledHeight()));
         result.add("framebuffer_size", vector(mc.getWindow().getWidth(), mc.getWindow().getHeight()));
         result.addProperty("data_version", SharedConstants.getCurrentVersion().getDataVersion().getVersion());
+        result.add("render_backend", renderBackend(mc));
         if (mc.player != null) {
             result.add("position", vector(mc.player.getX(), mc.player.getY(), mc.player.getZ()));
             result.addProperty("yaw", mc.player.getYRot()); result.addProperty("pitch", mc.player.getXRot());
@@ -267,6 +268,36 @@ public final class ReferenceBridge {
             result.addProperty("head", BuiltInRegistries.ITEM.getKey(mc.player.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD).getItem()).toString());
             result.add("hit", Observations.hit(mc));
             result.addProperty("chunks", mc.level.getChunkSource().getLoadedChunksCount());
+        }
+        return result;
+    }
+
+    /** Read-only public Flywheel/vanilla registration observations, not a render override. */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static JsonObject renderBackend(Minecraft mc) {
+        JsonObject result = new JsonObject();
+        var backend = dev.engine_room.flywheel.api.backend.BackendManager.currentBackend();
+        var id = dev.engine_room.flywheel.api.backend.Backend.REGISTRY.getId(backend);
+        result.addProperty("backend", id == null ? "unregistered" : id.toString());
+        result.addProperty("backend_on", dev.engine_room.flywheel.api.backend.BackendManager.isBackendOn());
+        result.addProperty("backend_supported", backend.isSupported());
+        boolean supported = mc.level != null && dev.engine_room.flywheel.api.visualization.VisualizationManager.supportsVisualization(mc.level);
+        result.addProperty("supports_visualization", supported);
+        if (supported) {
+            var manager = dev.engine_room.flywheel.api.visualization.VisualizationManager.get(mc.level);
+            if (manager != null) result.addProperty("block_entity_visual_count", manager.blockEntities().visualCount());
+        }
+        result.addProperty("individual_visual_scope", "Public API exposes no per-block-entity visual lookup; registered visualizer and skip policy only");
+        if (mc.level != null && mc.hitResult instanceof net.minecraft.world.phys.BlockHitResult hit) {
+            var be = mc.level.getBlockEntity(hit.getBlockPos());
+            if (be != null) {
+                result.addProperty("hit_block_entity", BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(be.getType()).toString());
+                var renderer = mc.getBlockEntityRenderDispatcher().getRenderer(be);
+                result.addProperty("vanilla_renderer_class", renderer == null ? "none" : renderer.getClass().getName());
+                var visualizer = dev.engine_room.flywheel.api.visualization.VisualizerRegistry.getVisualizer((net.minecraft.world.level.block.entity.BlockEntityType) be.getType());
+                result.addProperty("visualizer_class", visualizer == null ? "none" : visualizer.getClass().getName());
+                if (visualizer != null) result.addProperty("skip_vanilla_render", visualizer.skipVanillaRender(be));
+            }
         }
         return result;
     }
@@ -411,6 +442,17 @@ public final class ReferenceBridge {
             Minecraft mc = Minecraft.getInstance();
             mc.player.setPos(position); mc.player.setYRot(angles.get("yaw").getAsFloat()); mc.player.setXRot(angles.get("pitch").getAsFloat());
             mc.player.setOldPosAndRot(); mc.player.setDeltaMovement(Vec3.ZERO);
+            if (body.has("window_size")) {
+                JsonArray size = body.getAsJsonArray("window_size");
+                if (size.size() != 2) throw new IllegalArgumentException("window_size needs width and height");
+                int width = size.get(0).getAsInt(), height = size.get(1).getAsInt();
+                if (width < 320 || width > 3840 || height < 200 || height > 2160)
+                    throw new IllegalArgumentException("Reference window size is outside the capture bounds");
+                if (mc.getWindow().isFullscreen())
+                    throw new IllegalArgumentException("window_size requires a windowed reference client");
+                GLFW.glfwRestoreWindow(mc.getWindow().getWindow());
+                GLFW.glfwSetWindowSize(mc.getWindow().getWindow(), width, height);
+            }
             if (body.has("fov")) mc.options.fov().set(integer(body, "fov", 70));
             if (body.has("gui_scale")) {mc.options.guiScale().set(integer(body, "gui_scale", 2)); mc.resizeDisplay();}
             if (body.has("hide_gui")) mc.options.hideGui = flag(body, "hide_gui", false);
