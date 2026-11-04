@@ -190,3 +190,53 @@ Horizon's existing persistent unknown-field storage; native save/reload validati
 has passed, including exact remaining time and unknown sibling fields.
 Depot-held progress uses its saved transported-item fields. Neither
 path stores entity state in item components or requires another raw hook.
+
+## Next increment: Java experience parity and shared schematic fixtures
+
+The owner's review of 0.5 found that matching block models and selected machine
+algorithms does not yet reproduce the Create experience. Exact observable
+behavior and presentation are the highest-priority acceptance criteria, including
+all interfaces. The arrow-model speed hints and simplified goggles overlay are
+reported mismatches, not accepted substitutes. `AGENTS.md` records these rules.
+
+1. Establish an isolated original reference: Create 6.0.10, Minecraft 1.21.1,
+   NeoForge 21.1.227 and Java 21, reusing the verified Prism caches. Keep the
+   existing CreateAERO instance and its worlds unchanged. Add a development-only
+   control bridge for commands, tick stepping, state/NBT, camera and captures.
+2. Implement strict original `.nbt` schematic reading and creative placement for
+   shared fixtures. Preserve source placement/safe-NBT policy. Preflight all
+   IDs/properties/required data and reject unsupported constructs before writes.
+   Produce comparable fixture reports for both clients. Initial scope is direct
+   creative placement; full schematic UI/printer/cannon features remain separate.
+3. Complete existing-system parity before counting catalog expansion: original
+   goggles tooltips and value settings, source rotation/airflow particles and
+   sounds, fan effects on players/mobs and source damage/effect semantics.
+   Compare exact UI content/layout and deterministic effect traces, with matching
+   camera, GUI scale, language, machine state and observation time.
+4. Refine the module boundaries into kinetic simulation, processing recipes,
+   transported items, UI/presentation, schematics and moving-structure adapters.
+   Preserve original identifiers and useful extension contracts for future Rust
+   addons. Plan a separate Sable physics backend and Create Aeronautics port;
+   do not implement speculative physics stubs or load Java addons as Rust code.
+5. Expand coherent factory systems, prioritizing item transport and basin/mixer
+   processing after the comparison foundation is operational. Port actual
+   mechanics and their UI/effects together, with original-Java and native checks.
+6. Deliver a substantial reviewed increment with a new map, complete checklist,
+   source/build identity, actual cross-client evidence and explicit remaining
+   differences. The requested 20–25% overall coverage is an informal scope goal;
+   report measurable completed systems rather than inventing a precise total.
+
+Historical Create releases are context rather than port milestones: their feature
+sets and behavior differ from the pinned modern reference. Passing the existing
+157,204 isolated Java comparisons does not replace full-client comparisons.
+
+### Work budget and final handoff
+
+Continue beyond the informal 20–25% scope estimate while useful work and account
+quota remain. Monitor the actual shared account limit; reserve time for a coherent
+build, regression checks, a separate review world, publication and the final
+checklist. Stop around 10% remaining quota as requested; do not consume reset
+credits. Publish a repository-wide subsystem checklist linked from README, using
+checked items only for completed, verified behavior and explicitly marking
+partial implementations and presentation differences. Preserve every existing
+player instance/world.
