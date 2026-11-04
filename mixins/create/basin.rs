@@ -264,11 +264,9 @@ pub(super) fn analog(
     if !crate::game::create_port::inventory_supported(e) {
         return;
     }
-    let mut e = e.clone();
-    restore(&mut e);
     let mut fullness = 0.0f32;
     let mut occupied = false;
-    for stack in e.items[..9].iter().flatten().filter(|s| s.count > 0) {
+    for stack in e.items.iter().take(9).flatten().filter(|s| s.count > 0) {
         let maximum = component_maximum(stack)
             .unwrap_or_else(|| game.items.get(&stack.item).map_or(64, |i| i.max_stack))
             .min(64);
@@ -319,18 +317,20 @@ pub(super) fn read(game: &Game<'_>, pos: Pos) -> Option<Basin> {
     if entity.id != ID || unsupported(game, pos, entity).is_some() {
         return None;
     }
-    let mut copy = entity.clone();
-    restore(&mut copy);
     Some(Basin {
         input: std::array::from_fn(|i| {
-            copy.items[i]
-                .as_ref()
+            entity
+                .items
+                .get(i)
+                .and_then(Option::as_ref)
                 .filter(|s| s.count > 0)
                 .map(|s| core_stack(game, s))
         }),
         output: std::array::from_fn(|i| {
-            copy.items[9 + i]
-                .as_ref()
+            entity
+                .items
+                .get(9 + i)
+                .and_then(Option::as_ref)
                 .filter(|s| s.count > 0)
                 .map(|s| core_stack(game, s))
         }),
@@ -866,7 +866,6 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: Pos) -> bool {
     true
 }
 
-
 pub(super) fn removed(game: &mut Game<'_>, pos: Pos) {
     SERVER.with(|cache| {
         cache
@@ -1011,8 +1010,7 @@ pub(super) fn draw(
     if entity.id != ID {
         return false;
     }
-    // ModBlockEntity::clone is a new identity. Validate against the original
-    // live BE before making the temporary inventory-restoration render copy.
+    // Retained motion belongs to this live BE, including ordinary NBT changes.
     MOTION.with(|cache| {
         let mut cache = cache.borrow_mut();
         let motions = cache.dimension(std::ptr::from_ref(&game.world) as usize, game.dim.id());
@@ -1023,16 +1021,17 @@ pub(super) fn draw(
             motions.remove(&pos);
         }
     });
-    let mut entity = entity.clone();
-    restore(&mut entity);
-    let fluid_height = draw_fluids(game, pos, &entity, draw);
+    // restore() truncates supported inventories to18, while opaque unsupported
+    // inventories retain every live slot. Borrow the same visible range.
+    let end = if crate::game::create_port::inventory_supported(entity) {
+        entity.items.len().min(18)
+    } else {
+        entity.items.len()
+    };
+    let items = &entity.items[..end];
+    let fluid_height = draw_fluids(game, pos, entity, draw);
     let item_height = (fluid_height - 0.3).clamp(0.125, 0.6);
-    let mut count = entity
-        .items
-        .iter()
-        .flatten()
-        .filter(|s| s.count > 0)
-        .count();
+    let mut count = items.iter().flatten().filter(|s| s.count > 0).count();
     if count == 0 {
         return true;
     }
@@ -1054,7 +1053,7 @@ pub(super) fn draw(
     draw.push();
     draw.translate([0.5, 0.2, 0.5]);
     draw.rotate_about([0.0, 1.0, 0.0], rotation, [0.0; 3]);
-    for item in entity.items.iter().flatten().filter(|s| s.count > 0) {
+    for item in items.iter().flatten().filter(|s| s.count > 0) {
         let angle = partition * count as f32;
         let at =
             crate::game::create_port_mixer::rotate_y([radius, f64::from(item_height), 0.0], angle);
