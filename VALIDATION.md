@@ -1,5 +1,60 @@
 # Проверки и свидетельства
 
+## Current review checkpoint: 0.6.0-alpha.2
+
+Source bundle `d6a82f59e7622d9ad74e5cc200699776fa7e0e66`; Horizon
+`9c7f9b2215dfed497aba5522c44f38926628648d`; official Mixins
+`a1e13326306c6bc074b11e6a4926deb551c4083e`. The unmodified Launcher built
+`native-9c7f9b2-b81e43cfc1d2` with the performance profile. Executable SHA256:
+`c640101923ecabea1400982c22935008a78d138e771700965b9b3d418d4eb9a3`.
+
+Installed **Create Factory 0.6**, world **CreateFactory06**. The GitHub
+installation attempt hit the anonymous API limit. The validated local native
+archive was compared byte for byte with all 143 corresponding files in the
+public commit; no GitHub origin receipt was fabricated. The user instance's
+official native-build confirmed Up to date. This is not a fresh successful
+alpha.2 add-github installation. Previous instances and saves were preserved.
+
+- Portable Rust: 124 tests; recipe exporter: 10 Python tests; workspace strict
+  Clippy, formatting, package contracts and pinned official archive checks PASS.
+- Shared compression predicate: 3015 pinned MIT source contexts PASS. Client
+  PressingBehaviour oracle: 6034 contexts / 13 original methods PASS, scoped
+  authored contexts and request traces, not full original gameplay.
+- Complete woven Game: 6 prepared-resource tests PASS, including actual recipe
+  IO/reload, press client receipt/RNG, press server lifecycle and previous
+  item-contact/Mixer regressions. Stage restored byte for byte.
+- Real item physics: 16 Java scenes / 128 native snapshots match, components,
+  partial transfer and a real restart PASS.
+- Press/Basin:four 180-tick original/native scenes have exact final outputs,
+  controls and a true cold restart PASS. Strict absolute equality FAIL: native
+  starts one tick earlier (impacts 31/93 vs 32/94; repeat interval 62). All 414
+  differing fields remain unshifted. No artificial startup delay was added.
+- New source world independently checked on a disposable dev-binary clone:
+  15 groups, 6 survival crafts, 2 verified process restarts PASS; all 19 PNGs viewed.
+  Source 31 save files and 14 schematic fixtures unchanged.
+- Final performance binary independently opens another copy: 3 new rigs,
+  ordinary pickup, native captures, audio-enabled device/events and a real
+  process restart PASS. Three PNGs viewed. This does not relabel the full
+  15-group dev audit as a performance audit or establish Java acoustic/pixel parity.
+- Full injected production client strict Clippy still reports 6 previously
+  recorded diagnostics outside the new modules; a whole-client green claim
+  is intentionally absent.
+
+The original world was copied unchanged to the user instance; level.dat SHA256
+`b6dd3157e24c550459fff61f655c8d8dbbbd1b612f603f405ef9aa78c3f3f99a`.
+Evidence: `.local/final-port-checks.json`,
+`.local/press-basin-adapter-bquz33pp/result.json`,
+`.local/press-basin-native-zquk3sv2/result.json`,
+`.local/review06-audit-ao91u2a8/aggregate-result.json` and separate image review,
+`.local/final-performance-check-ejbjii2j/result.json` and separate image review,
+`.local/final-user-install-result.json`. Failed fixture attempts are retained.
+
+The route and known differences are in [TESTING_06.md](TESTING_06.md),
+[REPORT_06.md](REPORT_06.md) and [DEVELOPMENT_06.md](DEVELOPMENT_06.md).
+The entries below describe earlier binaries and are not silently transferred
+to this checkpoint.
+
+
 ## Производственные механизмы 0.5.0 (4 ноября 2026)
 
 Закреплённые Horizon API 359 / Minecraft 26.3 и Create 6.0.10 сохранены.

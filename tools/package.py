@@ -2,6 +2,7 @@
 """Build and validate the documented native/content archive formats."""
 import argparse
 import json
+from pathlib import Path
 import shutil
 import subprocess
 import zipfile
@@ -9,9 +10,12 @@ from common import ROOT, NATIVE, PINS, check_horizon
 
 
 def main():
-    argparse.ArgumentParser(description=__doc__).parse_args()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--cli', type=Path, default=ROOT / 'target/debug/cargo-horizon-mod',
+                        help='Official cargo-horizon-mod built from the pinned Horizon revision')
+    args = parser.parse_args()
     check_horizon()
-    cli = ROOT / "target/debug/cargo-horizon-mod"
+    cli = args.cli.resolve()
     subprocess.run([str(cli), "build"], cwd=ROOT / "content", check=True)
     destination = ROOT / "dist"
     destination.mkdir(parents=True, exist_ok=True)

@@ -68,7 +68,11 @@ def cold_preflight(source):
         fluids.append(fluid['id']['value'])
     assert fluids==['minecraft:water','minecraft:lava'],fluids
     compacting=fields((72,64,20))['InputTanks']['value']
-    compacting_fluids=[segment['value']['TankContent']['value']['Fluid']['value'] for segment in compacting]
+    compacting_fluids=[]
+    for segment in compacting:
+        content=segment['value']['TankContent']['value']
+        assert not content or set(content)=={'Fluid'},content
+        compacting_fluids.append(content.get('Fluid',{}).get('value',{}))
     assert any(fluid.get('id',{}).get('value')=='minecraft:lava'
                and fluid.get('amount',{}).get('value')==1000 for fluid in compacting_fluids),compacting_fluids
     assert not _slots(display['InputItems']['value'].get('Items')),display

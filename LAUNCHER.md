@@ -1,4 +1,47 @@
-# Установка и визуальная проверка 0.5
+# Текущий этап: Create Factory 0.6
+
+Подготовлен отдельный instance **Create Factory 0.6**, мир **CreateFactory06**,
+мод **0.6.0-alpha.2**, performance-сборка `native-9c7f9b2-b81e43cfc1d2`.
+Выберите этот instance, нажмите **Play** и откройте **CreateFactory06**. Если
+окно Launcher ещё показывает прежний список, перезапустите его. Маршрут
+13 стендов — [TESTING_06.md](TESTING_06.md), результат и границы —
+[REPORT_06.md](REPORT_06.md). Старые instances и миры сохранены.
+
+Новая карта лежит в `instances/create-factory-0-6/saves/CreateFactory06/`
+внутри обычной папки Horizon. Файлы собственных схем — в `schematics/`
+этого же instance. Новая станция пресса над чашей: `68 64 27`.
+
+Исходный пакет этапа:
+
+```text
+https://github.com/Delete228/create-horizon/commit/d6a82f59e7622d9ad74e5cc200699776fa7e0e66
+```
+
+Для следующей чистой установки создайте новый instance и добавьте эту ссылку
+через **Mods → Add from GitHub**, затем соберите native-моды и положите свой
+поддерживаемый Create JAR в `horizon-mods/create-resources/`. Через консоль:
+
+```sh
+horizon-launcher mods add-github https://github.com/Delete228/create-horizon/commit/d6a82f59e7622d9ad74e5cc200699776fa7e0e66 --instance "Create Factory 0.6" --trust-native-code
+horizon-launcher native-build --instance "Create Factory 0.6" --profile performance --trust-native-code
+```
+
+В этой установке `add-github` упёрся в лимит анонимного GitHub API. Поэтому
+установлен проверенный локальный `.hnmod`: все 143 его файла побайтно сравнены
+со скачанным публичным коммитом. Штатный Launcher собрал performance-клиент,
+а в пользовательском instance его `native-build` подтвердил **Up to date**.
+Метаданные GitHub origin не подделывались. Свежая установка alpha.2 именно
+через `add-github` пока не подтверждена; у прежнего alpha.1 она проходила.
+
+Текущая версия требует закреплённого форка Horizon
+`9c7f9b2215dfed497aba5522c44f38926628648d` и Mixins
+`a1e13326306c6bc074b11e6a4926deb551c4083e`. Launcher получает их сам;
+совместимость с любой будущей Nightly не обещается. Исходники форка и пакет
+опубликованы, оригинальные игровые ресурсы остаются только на компьютере.
+
+Ниже сохранены инструкции и проверенные идентификаторы предыдущего выпуска.
+
+# Историческая установка и проверка 0.5
 
 Версия 0.5 добавляет жернов, обработку предметов потоком вентилятора и стационарный
 бур. Проверенная performance-сборка — `native-fc02103-722bc455fcbe`.

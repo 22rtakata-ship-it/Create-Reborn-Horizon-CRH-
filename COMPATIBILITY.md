@@ -1,9 +1,18 @@
 # Original Create identifiers and data
 
-The released behavior boundaries below describe 0.5 and its earlier increments.
-The development branch adds limited schematic placement and belt transport;
-its current evidence and unresolved differences are in
-[DEVELOPMENT_06.md](DEVELOPMENT_06.md). Development is not a completed 0.6 release.
+The sections marked 0.3–0.5 below retain the released historical boundaries.
+The current review checkpoint is **0.6.0-alpha.2**: see [REPORT_06.md](REPORT_06.md)
+and [DEVELOPMENT_06.md](DEVELOPMENT_06.md) for scoped integration evidence and
+remaining differences. It adds limited schematic placement, bare-belt transport,
+Basin/Mixer/fluid/heat processing and Press compacting, not complete Create parity.
+
+For the new Press adapter, `Mode` retains WORLD=0, BELT=1 and BASIN=2.
+`ParticleItems` is consumed once by client-update construction and is not saved;
+empty later updates clear the client's retained field. The active recipe object
+is transient and retained through datapack reload, not encoded as a new recipe
+field in the save. Canonical input/output inventories retain unknown sibling
+data; unsupported predicates/structures fail explicitly. The measured one-tick
+kinetic startup difference is recorded in the checkpoint report.
 
 The behavior reference is Create **6.0.10**, Minecraft **1.21.1**, source commit
 `ac0c444d9828da3453ae8cc65338e8de063286fb`. The target is Horizon's Minecraft
