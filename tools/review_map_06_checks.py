@@ -306,7 +306,21 @@ def run(call, graphics=False, log=None, scratch=None, *, resume_initial=False, r
     def clear(): cmd('clear @s');call('wait',4)
     def bucket(pos,item):
         clear();cmd('item replace entity @s weapon.mainhand with minecraft:'+item);call('wait',4)
-        click(pos,player=(pos[0]+2.5,64,pos[2]+2.5))
+        x,y,z=pos;attempts=[]
+        # A requested block interaction still obeys the real hit ray: a cow in
+        # front of the Basin legitimately milks into an empty bucket. Select a
+        # clear side before using the item, without removing the animal.
+        for player,face in [((x-2.5,64,z+.5),'west'),((x+.5,64,z+2.5),'south'),
+                            ((x+2.5,64,z+.5),'east'),((x+.5,64,z-2.5),'north')]:
+            stand(player);call('look-at','block',*pos,face);call('wait',3)
+            hit=call('state').get('looking_at')
+            attempts.append({'player':player,'face':face,'looking_at':hit})
+            if not hit or hit.get('kind')!='block' or hit.get('block',{}).get('pos')!=list(pos):continue
+            call('interact',*pos,face);call('wait',8)
+            assert call('screen')['screen']=='playing',pos
+            report.setdefault('bucket_targeting',[]).append({'pos':pos,'item':item,'attempts':attempts})
+            return
+        raise AssertionError(('No clear side for a real Basin bucket interaction',pos,attempts))
     def capture(name,player,target):
         if not graphics: return
         cmd('gamemode spectator');cmd('tp @s '+' '.join(map(str,player)));call('wait-ready',120)
@@ -498,6 +512,12 @@ def run(call, graphics=False, log=None, scratch=None, *, resume_initial=False, r
             record('Delivered empty cage: normal flint ignition, unconsumed soul conversion, shovel extinguish and real tool damage')
 
         clear()
+        fan_positions=[*[(6,64,z) for z,_,_ in FANS],
+            (4,64,32),(4,66,32),(4,65,31),(4,65,33),(5,65,32),(5,64,32),
+            (4,64,20),(4,66,20),(4,65,19),(4,65,21),(4,65,20),(5,65,20)]
+        stand((9.5,64,28.5));wait_loaded(call,fan_positions)
+        wait_for(lambda:all(call('block',*p)['loaded'] for p in fan_positions),
+            'client columns for fan enclosures and depots',ticks=400)
         for z,_,_ in FANS:power((1,65,z),32)
         wait_for(lambda:all(counts((6,64,z))=={out:8} for z,_,out in FANS),'five fan lines')
         for z,_,out in FANS:power((1,65,z),0)
@@ -555,9 +575,51 @@ def _inventory_snapshot(call, positions):
 
 def prepare_restart(call,scratch):
     scratch,marker=_clone(scratch);assert call('state')['world']==WORLD
+    wait_loaded(call,[*MILL_PIPELINE,(44,64,14)])
     call('command','tick freeze');call('wait',5)
+    # Restart startup permits ordinary ticks before the client is ready for
+    # another freeze command. Drain the stopped Millstone's feeding hopper
+    # normally first, so per-container restart equality compares a stable state.
+    motor=' '.join(call('command','data get block 42 64 14')['chat'])
+    speed=re.search(r'\bScrollValue\s*:\s*(-?[\d.]+)',motor)
+    assert speed and float(speed[1])==0,('Millstone must remain stopped while settling',motor)
+    pipeline=[*MILL_PIPELINE,(44,64,14)]
+    def pipe_slots():
+        return {' '.join(map(str,p)):call('container',*p)['slots'] for p in pipeline}
+    def totals(inventories):
+        result=collections.Counter()
+        for slots in inventories.values():
+            for stack in slots:
+                if stack and stack.get('item'):
+                    signature=json.dumps({k:v for k,v in stack.items() if k!='count'},sort_keys=True)
+                    result[signature]+=stack['count']
+        return dict(result)
+    def game_time():
+        text=' '.join(call('command','time query gametime')['chat'])
+        numbers=re.findall(r'\b\d+\b',text);assert len(numbers)==1,text
+        return int(numbers[0])
+    pipe_before=pipe_slots();total_before=totals(pipe_before)
+    started=game_time();waited=0
+    hoppers=[MILL_PIPELINE[0],MILL_PIPELINE[2]]
+    if any(_counts(pipe_before[' '.join(map(str,p))]) for p in hoppers):
+        call('command','tick unfreeze')
+        try:
+            while waited<600:
+                call('wait',10);waited+=10
+                if all(not _counts(call('container',*p)['slots']) for p in hoppers):break
+                if game_time()-started>=580:break
+        finally:
+            call('command','tick freeze');call('wait',5)
+    pipe_after=pipe_slots();elapsed=game_time()-started
+    assert 0<=elapsed<=600,('Millstone settling exceeded normal tick bound',elapsed,waited)
+    assert all(not _counts(pipe_after[' '.join(map(str,p))]) for p in hoppers),('Stopped mill pipeline did not settle',pipe_after)
+    assert totals(pipe_after)==total_before,('Mill pipeline lost/changed stacks while settling',pipe_before,pipe_after)
+    settling={'before':pipe_before,'after':pipe_after,'totals_before':total_before,
+        'totals_after':totals(pipe_after),'normal_ticks_waited':waited,'normal_game_ticks_elapsed':elapsed,
+        'motor_scroll_value':0,'scope':'Ordinary hopper transfer with stopped Millstone; no replenishment, redstone or NBT/timer edits.'}
     positions=[(2,64,0),(4,64,0),*CRAFT_BARRELS,*OUTPUTS,*MILL_PIPELINE,*[(6,64,z) for z,_,_ in FANS]]
     before={'source':marker['source'],'source_level_sha256':marker['source_level_sha256'],
+        'mill_pipeline_settling':settling,
         'containers':{' '.join(map(str,p)):call('container',*p)['slots'] for p in positions},
         'canonical_inventory_nbt':_inventory_snapshot(call,positions),
         'display':call('command','data get block 55 64 9 InputTanks')['chat'],
