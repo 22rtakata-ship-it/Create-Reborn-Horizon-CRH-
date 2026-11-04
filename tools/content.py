@@ -377,7 +377,7 @@ def main():
     CONTENT.mkdir(exist_ok=True)
     (CONTENT / "horizon-mod.toml").write_text('''id = "create"
 name = "Create for Horizon — prototype"
-version = "0.6.0-alpha.2"
+version = "0.6.0-alpha.3"
 description = "Experimental kinetic foundation with milling, bulk fan processing, stationary drilling, pressing, depots and crafting."
 authors = ["create-horizon contributors"]
 api = "0.2"

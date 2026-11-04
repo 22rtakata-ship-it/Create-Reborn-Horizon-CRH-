@@ -46,7 +46,7 @@ def main():
     content_target = destination / f"create-content-{manifest['version']}.hmod"
     shutil.copy2(content_archive, content_target)
     subprocess.run([str(cli), "check", str(content_target), "--json"], check=True)
-    print("Native archives include all public content and pin the published Mixins PR #26 commit; no local tool patch.")
+    print("Native archives include all public content and pin the accepted upstream Mixins revision; no local tool patch.")
     print("Original assets are never packaged. Place your own JAR in the instance's horizon-mods/create-resources/.")
 
 

@@ -1,6 +1,6 @@
 {
   "horizon_revision": "9c7f9b2215dfed497aba5522c44f38926628648d",
-  "horizon_mixins_revision": "a1e13326306c6bc074b11e6a4926deb551c4083e",
+  "horizon_mixins_revision": "e8cd0aa38cffef49cb2e088ef716baa107148c02",
   "create_revision": "ac0c444d9828da3453ae8cc65338e8de063286fb",
   "create_version": "6.0.10",
   "import_create_version": "6.0.10",
@@ -10,7 +10,7 @@
   "native_hooks_api": 359,
   "rust_version": "1.99.1",
   "rust_date": "2026-10-15",
-  "horizon_mixins_pull_request": "https://github.com/horizon-rust/horizon-mixins/pull/26",
+  "horizon_mixins_pull_request": "https://github.com/horizon-rust/horizon-mixins/pull/25",
   "horizon_api_fork": "https://github.com/Delete228/horizon/tree/create-port-runtime-06",
   "horizon_native_api_pull_request": "https://github.com/horizon-rust/horizon/pull/8872",
   "horizon_pending_hook_fragments": [

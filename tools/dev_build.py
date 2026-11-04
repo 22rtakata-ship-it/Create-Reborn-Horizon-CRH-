@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# Copyright (c) 2026 Ludovic Marie and the Horizon contributors
+# Copyright (c) 2026 create-horizon contributors
+# SPDX-License-Identifier: MIT
+# Native build record/digest format: Horizon launcher/src/native_mods.rs (MIT).
 """Build an unpublished local Horizon extension with the official mixins tool.
 
 The checkout is read-only input. All mod snapshots, transformed source, Cargo
@@ -19,7 +23,7 @@ import subprocess
 import tarfile
 import tempfile
 
-from common import ROOT, NATIVE, environment
+from common import ROOT, NATIVE, PINS, environment
 
 
 def sha(path):
@@ -91,10 +95,58 @@ def restore_unchanged_mtimes(previous, stage):
                 os.utime(new, ns=(metadata.st_atime_ns, metadata.st_mtime_ns))
 
 
+def package_artifacts(binary, bundle, stage, destination, revision, mixins_revision,
+                      profile, base='local-source'):
+    """Pair the executable with truthful native-build metadata and public data.
+
+    Horizon reads native-mods.json beside the executable to enable native
+    renderers. Follow launcher's native_mods::digest/install format while
+    identifying this as a developer build, outside Launcher-owned directories.
+    """
+    steps = json.loads((stage / 'native-post-build.json').read_text())
+    if steps:
+        raise ValueError('Developer artifact needs post-build steps; use the official Launcher')
+    manifest = (bundle / 'horizon-mixin.toml').read_text()
+    fields = {}
+    for name in ('id', 'version'):
+        match = re.search(r'(?m)^' + name + r' = "([^"\\]+)"$', manifest)
+        if not match:
+            raise ValueError('Expected a canonical native bundle ' + name)
+        fields[name] = match.group(1)
+    digest = hashlib.sha256()
+    # Launcher sorts normalized relative filename strings, not Path objects:
+    # a.rs sorts before a/z.rs even though Path component ordering differs.
+    for path in sorted(bundle.rglob('*'), key=lambda p: p.relative_to(bundle).as_posix()):
+        if not path.is_file():
+            continue
+        data = path.read_bytes()
+        digest.update(path.relative_to(bundle).as_posix().encode())
+        digest.update(len(data).to_bytes(8, 'little'))
+        digest.update(data)
+    about = {
+        'base': base, 'horizon': revision, 'horizon_mixins': mixins_revision,
+        'hooks': None, 'rust': PINS['rust_version'], 'profile': profile,
+        'target': 'client', 'mods': [{**fields, 'sha256': digest.hexdigest()}],
+        'developer_build': True,
+    }
+    destination.mkdir()
+    game = destination / 'horizon-client'
+    shutil.copy2(binary, game)
+    info = destination / 'native-mods.json'
+    info.write_text(json.dumps(about, indent=2) + '\n')
+    if (stage / 'native-data').is_dir():
+        shutil.copytree(stage / 'native-data', destination / 'native-data')
+    return {'game': str(game), 'game_sha256': sha(game),
+            'build_info': str(info), 'build_info_sha256': sha(info),
+            'native_source_digest': digest.hexdigest()}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--horizon',type=Path,required=True,help='Clean local Horizon checkout, with the required extensions committed')
     parser.add_argument('--mixins',type=Path,required=True,help='Pinned official horizon-mixins executable')
+    parser.add_argument('--mixins-revision', help='Known full Mixins commit for a tool without its source marker')
+    parser.add_argument('--base', default='local-source', help='Resource base label for the developer build record')
     parser.add_argument('--target-dir',type=Path,help='Reuse an owned .local Cargo target; never an official Launcher cache')
     parser.add_argument('--stage-dir',type=Path,help='Reuse an owned transformed source cache; inputs and copied binaries remain separate snapshots')
     parser.add_argument('--profile',choices=['dev','performance'],default='dev')
@@ -105,6 +157,18 @@ def main():
     source=args.horizon.resolve()
     mixins=args.mixins.resolve()
     if not source.is_dir() or not mixins.is_file(): parser.error('Existing source checkout and mixins executable required')
+    tool_source = mixins.parent.parent
+    marker = tool_source / '.horizon-revision'
+    mixins_revision = args.mixins_revision
+    tool_manifest = tool_source / 'Cargo.toml'
+    if (marker.is_file() and tool_manifest.is_file()
+            and 'crates/horizon-mixins-core' in tool_manifest.read_text()):
+        marked = marker.read_text().strip()
+        if mixins_revision is not None and marked != mixins_revision:
+            parser.error('Mixins source marker differs from --mixins-revision')
+        mixins_revision = marked
+    if mixins_revision is not None and not re.fullmatch(r'[0-9a-f]{40}', mixins_revision):
+        parser.error('Mixins revision must be a full commit hash')
     local=(ROOT/'.local').resolve();local.mkdir(exist_ok=True)
     target=(args.target_dir or local/'dev-native-target').resolve()
     stage=(args.stage_dir or local/'dev-native-stage').resolve()
@@ -130,6 +194,7 @@ def main():
     native={p.relative_to(bundle).as_posix():sha(p) for p in sorted(bundle.rglob('*')) if p.is_file()}
     result={'passed':False,'pipeline':'local developer source + official horizon-mixins; not Launcher native-build',
             'horizon':revision,'horizon_source':str(source),'mixins':str(mixins),'mixins_sha256':sha(mixins),
+            'mixins_revision':mixins_revision,
             'native_files':native,'profile':args.profile,'check_only':args.check_only,
             'target':str(target),'work':str(work)}
     result['stage_cache'] = str(stage)
@@ -174,6 +239,8 @@ def main():
             raise
         if previous is not None:
             restore_unchanged_mtimes(previous, stage)
+        result['stage_game_sha256'] = sha(stage/'crates/horizon-client/src/game.rs')
+        save()
         if clean_revision(source)!=revision: raise ValueError('Horizon source changed during staging')
         cargo=ROOT/'.tools/rust/bin/cargo'
         command=[cargo,'check' if args.check_only else 'build','--locked','--offline','-p','horizon-client']
@@ -184,9 +251,8 @@ def main():
         run(command,'cargo.log',stage)
         if not args.check_only:
             binary=target/'fast/horizon-client'
-            artifacts=work/'artifacts';artifacts.mkdir()
-            shutil.copy2(binary,artifacts/'horizon-client')
-            result['game']=str(artifacts/'horizon-client');result['game_sha256']=sha(artifacts/'horizon-client')
+            result.update(package_artifacts(binary, bundle, stage, work/'artifacts',
+                                            revision, mixins_revision, args.profile, args.base))
         result['passed']=True
     except Exception as error:
         result['error']=str(error)

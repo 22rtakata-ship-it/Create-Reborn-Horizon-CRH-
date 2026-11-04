@@ -9,6 +9,13 @@ use crate::game::{Audio, Options, Progress, Settings, World, load_resources};
 use horizon_client::{chunk::Chunk, containers::ModBlockEntityFields};
 use std::{collections::BTreeMap, path::PathBuf, sync::Arc, time::Instant};
 
+fn cyclic_quad_order(order: [usize; 4]) -> bool {
+    order
+        .iter()
+        .enumerate()
+        .all(|(index, &corner)| corner == (order[0] + index) % 4)
+}
+
 #[test]
 #[ignore = "requires the player's original models and private Java pose records"]
 fn belt_render_actual_game_mesh() {
@@ -134,7 +141,8 @@ fn belt_render_actual_game_mesh() {
                 // UV rectangle conversion may cyclically reorder a face; its
                 // geometric winding and all four unique corners must survive.
                 let mut matched = [false; 4];
-                for vertex in emitted {
+                let mut corner_order = [0; 4];
+                for (vertex_index, vertex) in emitted.iter().enumerate() {
                     let point = glam::Vec3::from_array(vertex.pos);
                     assert!(point.is_finite());
                     let index = expected
@@ -146,9 +154,14 @@ fn belt_render_actual_game_mesh() {
                         .map(|(index, _)| index)
                         .expect("native vertex disagrees with the original Java pose");
                     matched[index] = true;
+                    corner_order[vertex_index] = index;
                     assert!(vertex.uv.iter().all(|value| value.is_finite()));
                     assert_eq!(vertex.light, 0xf0f0);
                 }
+                assert!(
+                    cyclic_quad_order(corner_order),
+                    "native quad is not a winding-preserving cyclic reorder: {corner_order:?}"
+                );
                 let normal = |points: [glam::Vec3; 4]| {
                     (points[1] - points[0])
                         .cross(points[2] - points[0])

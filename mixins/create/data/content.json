@@ -448,5 +448,5 @@
   "data/minecraft/tags/damage_type/bypasses_armor.json": "{\n  \"values\": [\n    \"create:fan_fire\",\n    \"create:fan_lava\"\n  ]\n}\n",
   "data/minecraft/tags/damage_type/bypasses_shield.json": "{\n  \"values\": [\n    \"create:fan_fire\",\n    \"create:fan_lava\"\n  ]\n}\n",
   "data/minecraft/tags/damage_type/is_fire.json": "{\n  \"values\": [\n    \"create:fan_fire\",\n    \"create:fan_lava\"\n  ]\n}\n",
-  "horizon-mod.toml": "id = \"create\"\nname = \"Create for Horizon — prototype\"\nversion = \"0.6.0-alpha.2\"\ndescription = \"Experimental kinetic foundation with milling, bulk fan processing, stationary drilling, pressing, depots and crafting.\"\nauthors = [\"create-horizon contributors\"]\napi = \"0.2\"\nside = \"both\"\ncapabilities = [\"registries\"]\n"
+  "horizon-mod.toml": "id = \"create\"\nname = \"Create for Horizon — prototype\"\nversion = \"0.6.0-alpha.3\"\ndescription = \"Experimental kinetic foundation with milling, bulk fan processing, stationary drilling, pressing, depots and crafting.\"\nauthors = [\"create-horizon contributors\"]\napi = \"0.2\"\nside = \"both\"\ncapabilities = [\"registries\"]\n"
 }
