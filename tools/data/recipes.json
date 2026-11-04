@@ -233,6 +233,50 @@
         "id": "create:empty_blaze_burner"
       }
     },
+    "create/recipe/crafting/kinetics/encased_chain_drive.json": {
+      "type": "minecraft:crafting_shapeless",
+      "category": "misc",
+      "ingredients": [
+        {
+          "item": "create:andesite_casing"
+        },
+        {
+          "tag": "c:nuggets/iron"
+        },
+        {
+          "tag": "c:nuggets/iron"
+        },
+        {
+          "tag": "c:nuggets/iron"
+        }
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:encased_chain_drive"
+      }
+    },
+    "create/recipe/crafting/kinetics/encased_chain_drive_from_zinc.json": {
+      "type": "minecraft:crafting_shapeless",
+      "category": "misc",
+      "ingredients": [
+        {
+          "item": "create:andesite_casing"
+        },
+        {
+          "tag": "c:nuggets/zinc"
+        },
+        {
+          "tag": "c:nuggets/zinc"
+        },
+        {
+          "tag": "c:nuggets/zinc"
+        }
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:encased_chain_drive"
+      }
+    },
     "create/recipe/crafting/kinetics/encased_fan.json": {
       "type": "minecraft:crafting_shaped",
       "category": "misc",
@@ -2712,6 +2756,7 @@
         "create:gearbox",
         "create:clutch",
         "create:gearshift",
+        "create:encased_chain_drive",
         "create:belt",
         "create:water_wheel",
         "create:large_water_wheel",
@@ -2738,6 +2783,7 @@
         "create:gearbox",
         "create:clutch",
         "create:gearshift",
+        "create:encased_chain_drive",
         "create:belt",
         "create:creative_motor",
         "create:water_wheel",

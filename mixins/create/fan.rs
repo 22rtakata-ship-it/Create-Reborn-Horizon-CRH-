@@ -217,6 +217,45 @@ fn refresh(game: &Game<'_>) {
         cache.recipes_ready = true;
     });
 }
+/// Create 6.0.10 tests the effective 1.21.1 FIRE_RESISTANT unit component,
+/// not whether an item would survive one particular damage source. The target
+/// version replaced it with a selector: only its canonical full-fire tag maps
+/// to that unit flag here. Explicit removal wins over a prototype or value.
+/// Recognized direct partial/non-fire selectors override the prototype without
+/// granting the old full-fire flag. Other tags/values stay unsupported; callers
+/// must not destroy such a stack merely because its selector cannot be mapped.
+fn blasting_fire_resistance(stack: &ItemStack, prototype: bool) -> Option<bool> {
+    let Some(data) = stack.data() else {
+        return Some(prototype);
+    };
+    if data.other("!minecraft:damage_resistant").is_some() {
+        return Some(false);
+    }
+    let Some(value) = data.other("minecraft:damage_resistant") else {
+        return Some(prototype);
+    };
+    let partial = |value: &Tag| {
+        let Tag::String(id) = value else { return false };
+        let Ok(id) = id.to_string() else { return false };
+        matches!(
+            id.as_str(),
+            "minecraft:lava"
+                | "minecraft:in_fire"
+                | "minecraft:on_fire"
+                | "minecraft:cactus"
+                | "minecraft:explosion"
+                | "minecraft:player_explosion"
+        )
+    };
+    match value.get("types") {
+        Some(Tag::String(id)) if id.to_string().ok().as_deref() == Some("#minecraft:is_fire") => {
+            Some(true)
+        }
+        Some(selector) if partial(selector) => Some(false),
+        Some(Tag::List(selectors)) if selectors.iter().all(partial) => Some(false),
+        _ => None,
+    }
+}
 fn plan(game: &Game<'_>, stack: &ItemStack, kind: Type) -> Option<Vec<(ItemStack, f32)>> {
     match kind {
         Type::Haunting | Type::Splashing => CACHE.with(|cache| {
@@ -253,10 +292,12 @@ fn plan(game: &Game<'_>, stack: &ItemStack, kind: Type) -> Option<Vec<(ItemStack
             }
             // Blasting destroys smokeable food and non-resistant items with no furnace recipe.
             if recipe.is_some()
-                || !game
-                    .items()
-                    .get(&stack.item)
-                    .is_some_and(|i| i.fire_resistant)
+                || !blasting_fire_resistance(
+                    stack,
+                    game.items()
+                        .get(&stack.item)
+                        .is_some_and(|i| i.fire_resistant),
+                )?
             {
                 Some(Vec::new())
             } else {

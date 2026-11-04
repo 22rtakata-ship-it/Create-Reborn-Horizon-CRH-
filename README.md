@@ -24,6 +24,11 @@ updating the installed Launcher and cleanly installing the candidate are still p
 Candidate source checkpoint:
 [`8b7cca1`](https://github.com/Delete228/create-horizon/commit/8b7cca1ce486e8b4297a46eabe817d3b7ed1a407).
 
+Current development candidate **0.7.0-alpha.1** adds enclosed chain transmission
+and works on source-event timing and effective item-component behavior.
+[Development scope, checks and pending native acceptance](DEVELOPMENT_07.md).
+The installed review instance has not been replaced with this candidate.
+
 For a reproducible installation of the experimental stage, paste this into **Add from GitHub**:
 
 ```text

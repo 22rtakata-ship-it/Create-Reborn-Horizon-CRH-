@@ -1,6 +1,6 @@
 [mod]
 id = "create"
-version = "0.6.0-alpha.3"
+version = "0.7.0-alpha.1"
 
 [compatibility]
 horizon_revision = "9c7f9b2215dfed497aba5522c44f38926628648d"
@@ -22,6 +22,26 @@ id = "runtime"
 file = "crates/horizon-client/src/game.rs"
 name = "create_port"
 source = "runtime.rs"
+
+[[module]]
+id = "chain-drive"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_chain"
+source = "chain_runtime.rs"
+
+[[injection]]
+id = "chain-update-shape"
+hook = "update_shape"
+hook_version = 1
+kind = "HEAD"
+helper = "chain_shape.rs"
+bindings = [
+ {name="game",ty="&crate::game::GameLevel<'_>",value="self"},
+ {name="state",ty="horizon_world::registry::BlockStateId",value="state"},
+ {name="direction",ty="horizon_core::geometry::Direction",value="direction"},
+ {name="neighbour",ty="horizon_world::registry::BlockStateId",value="neighbour"},
+ {name="new",ty="&mut Option<horizon_world::registry::BlockStateId>",value="&mut *new"},
+]
 
 [[module]]
 id = "schematic-runtime"

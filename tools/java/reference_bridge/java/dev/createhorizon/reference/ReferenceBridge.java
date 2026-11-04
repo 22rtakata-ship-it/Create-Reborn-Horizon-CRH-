@@ -41,6 +41,7 @@ import net.minecraft.world.level.*;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.TickingBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.levelgen.WorldOptions;
@@ -76,10 +77,12 @@ public final class ReferenceBridge {
         final JsonArray samples = new JsonArray();
         final CompletableFuture<JsonObject> result = new CompletableFuture<>();
         final int requested;
+        final boolean includeTickerOrder;
         long previousTime;
         int remaining;
-        TickObservation(ServerLevel level, List<BlockPos> positions, int ticks) {
+        TickObservation(ServerLevel level, List<BlockPos> positions, int ticks, boolean includeTickerOrder) {
             this.level = level; this.positions = positions; this.requested = ticks;
+            this.includeTickerOrder = includeTickerOrder;
             this.remaining = ticks; this.previousTime = level.getGameTime();
         }
     }
@@ -192,6 +195,7 @@ public final class ReferenceBridge {
             case "/entities" -> await(server().submit(() -> Observations.entities(player(server()).serverLevel(), body)));
             case "/command" -> await(server().submit(() -> command(server(), body.get("command").getAsString())));
             case "/block" -> await(server().submit(() -> block(body)));
+            case "/ticker_order" -> await(server().submit(() -> tickerOrder(player(server()).serverLevel(), observationPositions(body))));
             case "/camera" -> camera(body);
             case "/tick" -> ticks(body);
             case "/observe_ticks" -> observeTicks(body);
@@ -356,10 +360,7 @@ public final class ReferenceBridge {
         return result;
     }
 
-    private JsonObject observeTicks(JsonObject body) throws Exception {
-        MinecraftServer server = server();
-        int count = integer(body, "ticks", 1);
-        if (count < 1 || count > 400) throw new IllegalArgumentException("Observation range is1..400 ticks");
+    private static List<BlockPos> observationPositions(JsonObject body) {
         JsonArray raw = body.getAsJsonArray("positions");
         if (raw == null || raw.isEmpty() || raw.size() > 32) throw new IllegalArgumentException("Provide1..32 block positions");
         List<BlockPos> positions = new ArrayList<>();
@@ -367,6 +368,44 @@ public final class ReferenceBridge {
             JsonObject holder = new JsonObject(); holder.add("pos", entry);
             positions.add(pos(holder, "pos"));
         }
+        return positions;
+    }
+
+    // Development-only observer: inspect vanilla's actual lists without sorting,
+    // inserting, removing, or invoking a block-entity ticker.
+    private static JsonObject tickerOrder(ServerLevel level, List<BlockPos> positions) {
+        JsonObject result = object("mode", "read-only Level ticker lists on the server thread");
+        result.addProperty("game_time", level.getGameTime());
+        Set<BlockPos> selected = new HashSet<>(positions);
+        for (String name : List.of("blockEntityTickers", "pendingBlockEntityTickers")) {
+            JsonArray rows = new JsonArray();
+            try {
+                var field = Level.class.getDeclaredField(name);
+                field.setAccessible(true);
+                if (!(field.get(level) instanceof List<?> tickers)) throw new IllegalStateException("Not a ticker list: " + name);
+                for (int index = 0; index < tickers.size(); index++) {
+                    if (!(tickers.get(index) instanceof TickingBlockEntity ticker)) throw new IllegalStateException("Unknown ticker entry: " + name);
+                    BlockPos position = ticker.getPos();
+                    if (!selected.contains(position)) continue;
+                    JsonObject row = object("type", ticker.getType());
+                    row.add("pos", vector(position.getX(), position.getY(), position.getZ()));
+                    row.addProperty("index", index);
+                    row.addProperty("removed", ticker.isRemoved());
+                    rows.add(row);
+                }
+            } catch (ReflectiveOperationException error) {
+                throw new IllegalStateException("Cannot observe " + name, error);
+            }
+            result.add(name, rows);
+        }
+        return result;
+    }
+
+    private JsonObject observeTicks(JsonObject body) throws Exception {
+        MinecraftServer server = server();
+        int count = integer(body, "ticks", 1);
+        if (count < 1 || count > 400) throw new IllegalArgumentException("Observation range is1..400 ticks");
+        List<BlockPos> positions = observationPositions(body);
         JsonArray commands = body.has("commands") ? body.getAsJsonArray("commands") : new JsonArray();
         if (commands.size() > 16) throw new IllegalArgumentException("At most16 setup commands");
         for (JsonElement entry : commands) if (!entry.isJsonPrimitive() || !entry.getAsJsonPrimitive().isString()
@@ -380,7 +419,7 @@ public final class ReferenceBridge {
             for (BlockPos position : positions) if (!level.hasChunkAt(position))
                 throw new IllegalArgumentException("Observation position is not loaded: " + position);
             for (JsonElement entry : commands) command(server, entry.getAsString());
-            TickObservation next = new TickObservation(level, positions, count);
+            TickObservation next = new TickObservation(level, positions, count, flag(body, "ticker_order", false));
             tickObservation = next;
             server.tickRateManager().setFrozen(false);
             return next;
@@ -409,6 +448,7 @@ public final class ReferenceBridge {
             JsonArray blocks = new JsonArray();
             for (BlockPos position : job.positions) blocks.add(blockAt(job.level, position));
             sample.add("blocks", blocks); job.samples.add(sample);
+            if (job.includeTickerOrder) sample.add("ticker_order", tickerOrder(job.level, job.positions));
             if (--job.remaining == 0) {
                 server.tickRateManager().setFrozen(true); tickObservation = null;
                 JsonObject result = object("mode", "normal simulation observed at ServerTickEvent.Post");

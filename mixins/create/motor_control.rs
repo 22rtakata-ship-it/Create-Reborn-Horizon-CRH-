@@ -134,7 +134,8 @@ pub(super) fn level_tick(game: &mut Game<'_>) {
             game.native_with_mod_block_entity(pos, |e| {
                 e.nbt.insert("ScrollValue".into(), Tag::Int(value));
             });
-            crate::game::create_port_kinetic_runtime::invalidate();
+            // ScrollValueBehaviour.setValue callback, unlike NBT read.
+            crate::game::create_port_kinetic_runtime::generated_changed(game, pos);
             game.native_block_entity_sync(pos);
         }
     }

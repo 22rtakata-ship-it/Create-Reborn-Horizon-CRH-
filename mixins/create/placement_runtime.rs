@@ -49,6 +49,10 @@ pub(super) fn state(
     answer: &mut Option<Option<BlockStateId>>,
 ) {
     let block = game.native_state_block(state).unwrap_or("");
+    if block == "create:encased_chain_drive" {
+        *answer = Some(super::create_port_chain::placement(game, state, ctx));
+        return;
+    }
     if block == "create:blaze_burner" {
         // BlazeBurnerBlock.getStateForPlacement reads the actual BlockItem,
         // including the empty item alias. Other placement callers get the
@@ -328,7 +332,7 @@ fn level_axis(game: &GameLevel<'_>, p: [i32; 3]) -> Axis {
         _ => facing.axis(),
     }
 }
-fn level_ports(game: &GameLevel<'_>, pos: [i32; 3]) -> [bool; 6] {
+pub(super) fn level_ports(game: &GameLevel<'_>, pos: [i32; 3]) -> [bool; 6] {
     Direction::ALL.map(|d| {
         let delta = d.vector();
         let p: [i32; 3] = std::array::from_fn(|i| pos[i] + delta[i]);

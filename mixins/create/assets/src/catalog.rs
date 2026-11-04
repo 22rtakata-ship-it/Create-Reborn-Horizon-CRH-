@@ -12,6 +12,7 @@ pub const BLOCKS: &[&str] = &[
     "hand_crank",
     "andesite_encased_shaft",
     "brass_encased_shaft",
+    "encased_chain_drive",
     "andesite_casing",
     "brass_casing",
     "andesite_alloy_block",

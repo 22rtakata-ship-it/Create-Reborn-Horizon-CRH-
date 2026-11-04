@@ -119,6 +119,7 @@ pub(super) fn owns(block: &str) -> bool {
             | "create:hand_crank"
             | "create:andesite_encased_shaft"
             | "create:brass_encased_shaft"
+            | "create:encased_chain_drive"
             | "create:speedometer"
             | "create:stressometer"
             | "create:water_wheel"
@@ -140,9 +141,9 @@ pub(super) fn entity(block: &str, entity: &mut Option<(String, Compound)>) {
             "create:creative_motor" => "create:motor",
             "create:mechanical_drill" => "create:drill",
             "create:shaft" | "create:cogwheel" | "create:large_cogwheel" => "create:simple_kinetic",
-            "create:andesite_encased_shaft" | "create:brass_encased_shaft" => {
-                "create:encased_shaft"
-            }
+            "create:andesite_encased_shaft"
+            | "create:brass_encased_shaft"
+            | "create:encased_chain_drive" => "create:encased_shaft",
             _ => block,
         };
         let mut nbt = Compound::new();
@@ -657,6 +658,12 @@ pub(super) fn node(game: &Game<'_>, pos: [i32; 3]) -> Option<Node> {
             Kind::Shaft
         }
         "create:gearbox" => Kind::Gearbox,
+        "create:encased_chain_drive" => Kind::Chain {
+            state: super::create_port_chain::read(
+                game.pack.assets.registry,
+                game.world.block(pos[0], pos[1], pos[2]),
+            )?,
+        },
         "create:clutch" => Kind::Clutch {
             powered: game.native_block_property(pos, "powered").as_deref() == Some("true"),
         },
@@ -756,6 +763,107 @@ fn depot_input(game: &Game<'_>, pos: [i32; 3]) -> Option<ItemStack> {
     depot.items.first()?.clone()
 }
 
+pub(super) fn network_rpm(
+    network: &create_engine::kinetics::Network,
+    other_half: Option<&create_engine::kinetics::Network>,
+    pos: [i32; 3],
+) -> f32 {
+    let rpm = network.speed(pos);
+    other_half
+        .filter(|other| other.speed(pos).abs() > rpm.abs())
+        .map_or(rpm, |other| other.speed(pos))
+}
+
+pub(super) fn network_matches(
+    entity: &ModBlockEntity,
+    network: &create_engine::kinetics::Network,
+    other_half: Option<&create_engine::kinetics::Network>,
+    pos: [i32; 3],
+) -> bool {
+    let Some(Tag::Compound(data)) = entity.nbt.get(&"create_horizon".into()) else {
+        return false;
+    };
+    let Some(Tag::Compound(ports)) = data.get(&"Ports".into()) else {
+        return false;
+    };
+    number(&entity.nbt, "Speed") == network_rpm(network, other_half, pos)
+        && number(&entity.nbt, "Capacity") == network.capacity
+        && number(&entity.nbt, "Stress") == network.stress
+        && number(data, "TheoreticalSpeed") == network.theoretical.get(&pos).copied().unwrap_or(0.0)
+        && entity.nbt.get(&"NetworkStatus".into())
+            == Some(&Tag::String(
+                format!("{:?}", network.status).as_str().into(),
+            ))
+        && Direction::ALL.into_iter().all(|d| {
+            let delta = d.vector();
+            let speed = network.port_speed(pos, delta);
+            let speed = other_half
+                .filter(|other| other.port_speed(pos, delta).abs() > speed.abs())
+                .map_or(speed, |other| other.port_speed(pos, delta));
+            number(ports, d.name()) == speed
+        })
+}
+
+/// A kinetic event updates neighbours before their own behaviour turns. Keep
+/// this operation separate from ticking a machine (no recursive BE tick).
+pub(super) fn apply_network(
+    entity: &mut ModBlockEntity,
+    network: &create_engine::kinetics::Network,
+    other_half: Option<&create_engine::kinetics::Network>,
+    pos: [i32; 3],
+) {
+    let old_theoretical = match entity.nbt.get(&"create_horizon".into()) {
+        Some(Tag::Compound(data)) => number(data, "TheoreticalSpeed"),
+        _ => number(&entity.nbt, "Speed"),
+    };
+    let mut ports = Compound::new();
+    for d in Direction::ALL {
+        let delta = d.vector();
+        let mut speed = network.port_speed(pos, delta);
+        if let Some(other) = &other_half
+            && other.port_speed(pos, delta).abs() > speed.abs()
+        {
+            speed = other.port_speed(pos, delta);
+        }
+        ports.insert(d.name().into(), Tag::Float(speed.to_bits()));
+    }
+    entity.nbt.insert(
+        "create_horizon".into(),
+        Tag::Compound(Compound::from([
+            ("Ports".into(), Tag::Compound(ports)),
+            (
+                "TheoreticalSpeed".into(),
+                Tag::Float(
+                    network
+                        .theoretical
+                        .get(&pos)
+                        .copied()
+                        .unwrap_or(0.0)
+                        .to_bits(),
+                ),
+            ),
+        ])),
+    );
+    let old_rpm = number(&entity.nbt, "Speed");
+    let rpm = network_rpm(network, other_half, pos);
+    entity.nbt.insert("Speed".into(), Tag::Float(rpm.to_bits()));
+    entity
+        .nbt
+        .insert("Capacity".into(), Tag::Float(network.capacity.to_bits()));
+    entity
+        .nbt
+        .insert("Stress".into(), Tag::Float(network.stress.to_bits()));
+    entity.nbt.insert(
+        "NetworkStatus".into(),
+        Tag::String(format!("{:?}", network.status).as_str().into()),
+    );
+    let theoretical = network.theoretical.get(&pos).copied().unwrap_or(0.0);
+    crate::game::create_port_mixer::on_speed_changed(entity, old_theoretical, theoretical);
+    crate::game::create_port_press_basin::on_speed_changed(entity, old_theoretical, theoretical);
+    crate::game::create_port_mixer::on_speed_changed(entity, old_rpm, rpm);
+    crate::game::create_port_press_basin::on_speed_changed(entity, old_rpm, rpm);
+}
+
 pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEntity) {
     let block = game.native_block(pos);
     if !owns(&block) {
@@ -785,6 +893,7 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
         return;
     }
     crate::game::create_port_belt::prepare(game, pos, entity);
+    let old_flow_score = integer(&entity.nbt, "FlowScore");
     if crate::game::create_port_generators::tick(game, pos, entity, &block) {
         return;
     }
@@ -793,15 +902,6 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
         let powered = game.native_neighbor_signal(&dim, pos) > 0;
         if game.native_set_block_property(pos, "powered", if powered { "true" } else { "false" }) {
             crate::game::create_port_kinetic_runtime::invalidate();
-        }
-    }
-    if block == "create:hand_crank" {
-        let in_use = integer(&entity.nbt, "InUse");
-        if in_use > 0 {
-            entity.nbt.insert("InUse".into(), Tag::Int(in_use - 1));
-            if in_use == 1 {
-                crate::game::create_port_kinetic_runtime::invalidate();
-            }
         }
     }
     let Some(mut start) = node(game, pos) else {
@@ -843,62 +943,69 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
             block == "create:large_water_wheel",
         );
     }
+    let mut publish_source = false;
+    if let Kind::Motor { rpm, .. } | Kind::WaterWheel { rpm, .. } = &mut start.kind {
+        (*rpm, publish_source) = crate::game::create_port_kinetic_runtime::source_turn(
+            game,
+            pos,
+            entity,
+            *rpm,
+            block == "create:creative_motor",
+            old_flow_score != integer(&entity.nbt, "FlowScore"),
+        );
+    }
     let network = crate::game::create_port_kinetic_runtime::network(game, start, 0);
     let other_half = matches!(start.kind, Kind::Clutch { powered: true })
         .then(|| crate::game::create_port_kinetic_runtime::network(game, start, 1));
-    let mut ports = Compound::new();
-    for d in Direction::ALL {
-        let delta = d.vector();
-        let mut speed = network.port_speed(pos, delta);
-        if let Some(other) = &other_half
-            && other.port_speed(pos, delta).abs() > speed.abs()
-        {
-            speed = other.port_speed(pos, delta);
-        }
-        ports.insert(d.name().into(), Tag::Float(speed.to_bits()));
-    }
-    entity.nbt.insert(
-        "create_horizon".into(),
-        Tag::Compound(Compound::from([
-            ("Ports".into(), Tag::Compound(ports)),
-            (
-                "TheoreticalSpeed".into(),
-                Tag::Float(
-                    network
-                        .theoretical
-                        .get(&pos)
-                        .copied()
-                        .unwrap_or(0.0)
-                        .to_bits(),
-                ),
-            ),
-        ])),
+    let (first_attachment, blocked_attachment) = crate::game::create_port_kinetic_runtime::attach(
+        game,
+        start,
+        entity,
+        network_rpm(&network, other_half.as_deref(), pos),
     );
-    let mut rpm = network.speed(pos);
-    if let Some(other) = &other_half
-        && other.speed(pos).abs() > rpm.abs()
-    {
-        rpm = other.speed(pos);
-    }
-
+    let blocked_attachment = blocked_attachment && !publish_source;
     let old_rpm = number(&entity.nbt, "Speed");
     let old_running_rpm = running_speed(game, &entity.nbt);
-    entity.nbt.insert("Speed".into(), Tag::Float(rpm.to_bits()));
+    let rpm = if blocked_attachment {
+        0.0
+    } else {
+        network_rpm(&network, other_half.as_deref(), pos)
+    };
+    if !blocked_attachment {
+        apply_network(entity, &network, other_half.as_deref(), pos);
+    } else {
+        entity
+            .nbt
+            .insert("Speed".into(), Tag::Float(0.0f32.to_bits()));
+    }
+    if publish_source || first_attachment && !blocked_attachment {
+        crate::game::create_port_kinetic_runtime::publish(game, &network, pos);
+        if let Some(other) = &other_half {
+            crate::game::create_port_kinetic_runtime::publish(game, other, pos);
+        }
+    }
     let generated = match start.kind {
         Kind::Motor { rpm, .. } | Kind::WaterWheel { rpm, .. } => Some(rpm),
         _ => None,
     };
     crate::game::create_port_particles::server_tick(game, pos, entity, old_rpm, rpm, generated);
-    entity
-        .nbt
-        .insert("Capacity".into(), Tag::Float(network.capacity.to_bits()));
-    entity
-        .nbt
-        .insert("Stress".into(), Tag::Float(network.stress.to_bits()));
-    entity.nbt.insert(
-        "NetworkStatus".into(),
-        Tag::String(format!("{:?}", network.status).as_str().into()),
-    );
+    if block == "create:hand_crank" {
+        let in_use = integer(&entity.nbt, "InUse");
+        if in_use > 0 {
+            entity.nbt.insert("InUse".into(), Tag::Int(in_use - 1));
+            if in_use == 1 {
+                if let Kind::Motor { rpm, .. } = &mut start.kind {
+                    (*rpm, _) = crate::game::create_port_kinetic_runtime::source_turn(
+                        game, pos, entity, 0.0, false, true,
+                    );
+                }
+                let stopped = crate::game::create_port_kinetic_runtime::network(game, start, 0);
+                apply_network(entity, &stopped, None, pos);
+                crate::game::create_port_kinetic_runtime::publish(game, &stopped, pos);
+                game.native_block_entity_sync(pos);
+            }
+        }
+    }
     let mut sync = old_rpm != rpm;
     let running_rpm = running_speed(game, &entity.nbt);
     sync |= crate::game::create_port_belt::tick(game, pos, entity, running_rpm);

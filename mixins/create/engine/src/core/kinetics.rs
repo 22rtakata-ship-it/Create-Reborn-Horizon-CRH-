@@ -53,6 +53,11 @@ pub enum Kind {
         impact: f32,
     },
     Gearbox,
+    /// Enclosed chains link along their state-defined connection axis at 1:1,
+    /// including links between different shaft axes (ChainDriveBlock).
+    Chain {
+        state: crate::chain_drive::State,
+    },
     Clutch {
         powered: bool,
     },
@@ -126,6 +131,13 @@ pub fn ratio(from: Node, to: Node) -> Option<f32> {
     let distance: i32 = delta.iter().map(|n| n.abs()).sum();
     if distance == 1 && from.shaft_port(delta) && to.shaft_port(delta.map(|v| -v)) {
         return Some(from.port_modifier(delta) / to.port_modifier(delta.map(|v| -v)));
+    }
+    if distance == 1
+        && let (Kind::Chain { state: a }, Kind::Chain { state: b }) = (from.kind, to.kind)
+        && let Some(direction) = crate::placement::Direction::from_vector(delta)
+        && a.connected(b, direction)
+    {
+        return Some(1.0);
     }
     // BeltBlockEntity.propagateRotationTo: custom, non-axis links carry 1:1
     // rotation, including sloped neighbors. There is no slope sign inversion.
@@ -418,6 +430,78 @@ mod tests {
     }
     fn network(nodes: &[Node]) -> Network {
         solve(nodes[0], |p| nodes.iter().copied().find(|n| n.pos == p))
+    }
+
+    #[test]
+    fn enclosed_chain_transmits_without_inversion_between_different_shaft_axes() {
+        use crate::chain_drive::{Part, State};
+        let nodes = [
+            motor([0, 0, 0], -32.0, 16384.0),
+            Node {
+                pos: [1, 0, 0],
+                axis: Axis::X,
+                kind: Kind::Chain {
+                    state: State {
+                        axis: Axis::X,
+                        first: false,
+                        part: Part::Start,
+                    },
+                },
+            },
+            Node {
+                pos: [1, 0, 1],
+                axis: Axis::Y,
+                kind: Kind::Chain {
+                    state: State {
+                        axis: Axis::Y,
+                        first: false,
+                        part: Part::End,
+                    },
+                },
+            },
+            Node {
+                pos: [1, 1, 1],
+                axis: Axis::Y,
+                kind: Kind::Shaft,
+            },
+            Node {
+                pos: [1, 2, 1],
+                axis: Axis::Y,
+                kind: Kind::Consumer {
+                    facing: [0, -1, 0],
+                    impact: 2.0,
+                },
+            },
+        ];
+        let connected = network(&nodes);
+        assert_eq!(connected.status, Status::Running);
+        assert_eq!(connected.speed([1, 2, 1]), -32.0);
+        assert_eq!(connected.stress, 64.0);
+        let disconnected = network(&[nodes[0], nodes[1], nodes[3], nodes[4]]);
+        assert_eq!(disconnected.speed([1, 2, 1]), 0.0);
+        assert!(!disconnected.theoretical.contains_key(&[1, 2, 1]));
+    }
+
+    #[test]
+    fn enclosed_chain_uses_shaft_ports_and_does_not_mesh_with_cogs() {
+        use crate::chain_drive::State;
+        let chain = Node {
+            pos: [0, 0, 0],
+            axis: Axis::X,
+            kind: Kind::Chain {
+                state: State::new(Axis::X),
+            },
+        };
+        let shaft = node([1, 0, 0], Kind::Shaft);
+        assert_eq!(ratio(chain, shaft), Some(1.0));
+        assert_eq!(ratio(shaft, chain), Some(1.0));
+        let cog = Node {
+            pos: [0, 0, 1],
+            axis: Axis::X,
+            kind: Kind::Cog { large: false },
+        };
+        assert_eq!(ratio(chain, cog), None);
+        assert_eq!(ratio(cog, chain), None);
     }
 
     #[test]

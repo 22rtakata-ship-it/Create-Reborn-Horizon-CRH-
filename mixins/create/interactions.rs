@@ -204,7 +204,11 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3]) ->
         } else if block == "create:large_water_wheel" {
             return false;
         } else if let Some(face) = Direction::from_vector(face) {
-            if let Some(axis) = game.native_block_property(pos, "axis") {
+            if block == "create:encased_chain_drive" {
+                if super::create_port_chain::wrench(game, pos, face) {
+                    crate::game::create_port_sounds::wrench(game, pos, false);
+                }
+            } else if let Some(axis) = game.native_block_property(pos, "axis") {
                 let axis = match axis.as_str() {
                     "x" => Axis::X,
                     "y" => Axis::Y,
@@ -274,7 +278,7 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3]) ->
             e.nbt.insert("Backwards".into(), Tag::Byte(i8::from(back)));
         });
         if update {
-            crate::game::create_port_kinetic_runtime::invalidate();
+            crate::game::create_port_kinetic_runtime::generated_changed(game, pos);
             game.native_block_entity_sync(pos);
         }
         if let Some(player) = game.player.as_mut() {

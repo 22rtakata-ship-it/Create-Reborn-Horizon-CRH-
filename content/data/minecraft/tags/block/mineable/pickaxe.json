@@ -8,6 +8,7 @@
     "create:gearbox",
     "create:clutch",
     "create:gearshift",
+    "create:encased_chain_drive",
     "create:belt",
     "create:creative_motor",
     "create:water_wheel",

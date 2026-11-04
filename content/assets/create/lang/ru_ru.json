@@ -31,6 +31,7 @@
   "block.create.mechanical_mixer": "Механический миксер",
   "block.create.blaze_burner": "Горелка всполоха",
   "block.create.lit_blaze_burner": "Зажжённая горелка всполоха",
+  "block.create.encased_chain_drive": "Encased Chain Drive",
   "item.create.andesite_alloy": "Andesite Alloy",
   "item.create.brass_ingot": "Brass Ingot",
   "item.create.brass_nugget": "Brass Nugget",

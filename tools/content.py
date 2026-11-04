@@ -247,6 +247,47 @@ def belts():
     ]})
 
 
+def chain_drives():
+    # MIT ChainDriveBlock / RotatedPillarKineticBlock: 24 states, full collision.
+    # Original visual resources are imported privately from the player's JAR.
+    write('data/create/horizon/block/encased_chain_drive.json', {
+        'template': 'minecraft:glass', 'item': True,
+        'properties': {'hardness': 1.5, 'explosion_resistance': 6, 'map_color': 34,
+                       'render_shape': 'MODEL', 'sounds': 'minecraft:stone'},
+        'state_properties': {'axis': {'type': 'enum', 'values': ['x', 'y', 'z']},
+                             'axis_along_first': {'type': 'boolean'},
+                             'part': {'type': 'enum', 'values': ['start', 'middle', 'end', 'none']}},
+        'default_state': {'axis': 'y', 'axis_along_first': 'false', 'part': 'none'},
+        'shapes': {'default': [[0, 0, 0, 1, 1, 1]]},
+        'collision_shapes': {'default': [[0, 0, 0, 1, 1, 1]]},
+    })
+    variants = {}
+    # ChainDriveGenerator rotations. These fallback boxes are our own simple
+    # geometry; no original asset JSON is copied into the public bundle.
+    for axis in ['x', 'y', 'z']:
+        for first in [False, True]:
+            for part in ['start', 'middle', 'end', 'none']:
+                if part == 'none':
+                    suffix, x, y = 'single', 90 if axis == 'y' else 0, 90 if axis == 'x' else 0
+                else:
+                    suffix = ('middle' if part == 'middle' else 'end') + ('_vertical' if axis == 'y' else '_horizontal')
+                    if axis == 'x':
+                        x = (90 if first else 0) + (180 if part == 'start' else 0)
+                    elif axis == 'z':
+                        x = 0 if first else (270 if part == 'start' else 90)
+                    else:
+                        x = 0
+                    flip = part == 'end' and not first or part == 'start' and first
+                    y = (270 if first and part == 'end' else 90) if axis == 'z' else ((90 if first else 0) + (180 if flip else 0) if axis == 'y' else 0)
+                key = f'axis={axis},axis_along_first={str(first).lower()},part={part}'
+                variants[key] = {'model': 'create:block/encased_chain_drive/' + suffix,
+                                 **({'x': x} if x else {}), **({'y': y} if y else {})}
+    for suffix in ['single', 'middle_vertical', 'end_vertical', 'middle_horizontal', 'end_horizontal']:
+        model('encased_chain_drive/' + suffix, [([0, 0, 0], [16, 16, 16])], 'minecraft:block/andesite')
+    write('assets/create/blockstates/encased_chain_drive.json', {'variants': variants})
+    write('assets/create/models/item/encased_chain_drive.json', {'parent': 'create:block/encased_chain_drive/single'})
+
+
 def foundation():
     from catalog import BLOCKS as all_blocks, ITEMS, TRANSMISSIONS, STATIC_BLOCKS, INSTRUMENTS, GENERATORS, INTERNAL_BLOCKS, rust_catalog
     for block in TRANSMISSIONS + STATIC_BLOCKS + INSTRUMENTS + GENERATORS:
@@ -308,6 +349,7 @@ def foundation():
     basin_mixer()
     burners()
     belts()
+    chain_drives()
     (CONTENT / 'assets/create/models/block/port_hint.json').unlink(missing_ok=True)
     # Only MIT recipe/tag data is distributed; original assets stay in the JAR.
     reference = json.loads((ROOT / "tools/data/recipes.json").read_text())
@@ -344,6 +386,7 @@ def foundation():
     extra_items = {"andesite_alloy":"Andesite Alloy","brass_ingot":"Brass Ingot","brass_nugget":"Brass Nugget","zinc_ingot":"Zinc Ingot","zinc_nugget":"Zinc Nugget","wrench":"Wrench","brass_sheet":"Brass Sheet","vertical_gearbox":"Vertical Gearbox","goggles":"Engineer’s Goggles","propeller":"Propeller","wheat_flour":"Wheat Flour","dough":"Dough"}
     extra_blocks.update({'basin': 'Basin', 'mechanical_mixer': 'Mechanical Mixer'})
     extra_blocks.update({'blaze_burner': 'Blaze Burner', 'lit_blaze_burner': 'Lit Blaze Burner'})
+    extra_blocks['encased_chain_drive'] = 'Encased Chain Drive'
     extra_items['whisk'] = 'Whisk'
     extra_items.update({'empty_blaze_burner': 'Empty Blaze Burner', 'blaze_cake': 'Blaze Cake', 'creative_blaze_cake': 'Creative Blaze Cake'})
     for locale in ["en_us","ru_ru"]:
@@ -377,7 +420,7 @@ def main():
     CONTENT.mkdir(exist_ok=True)
     (CONTENT / "horizon-mod.toml").write_text('''id = "create"
 name = "Create for Horizon — prototype"
-version = "0.6.0-alpha.3"
+version = "0.7.0-alpha.1"
 description = "Experimental kinetic foundation with milling, bulk fan processing, stationary drilling, pressing, depots and crafting."
 authors = ["create-horizon contributors"]
 api = "0.2"
