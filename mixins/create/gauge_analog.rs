@@ -4,6 +4,7 @@ fn create_gauge_analog(
     state: horizon_world::registry::BlockStateId,
     output: &mut i32,
 ) {
+    crate::game::create_port_basin::analog(game, pos, state, output);
     if matches!(
         game.facts.get(state).name.as_ref(),
         "create:speedometer" | "create:stressometer"

@@ -1,9 +1,38 @@
 #!/usr/bin/env python3
 """Export MIT datapack recipes/tags from the pinned Create source, never assets."""
 import json
+import math
 import subprocess
 from common import CREATE, PINS, ROOT
 from catalog import BLOCKS, ITEMS
+
+
+def dry_mixing(recipe):
+    """The native Basin adapter's explicit item-only, unheated JSON contract.
+
+    Do not drop unsupported fluid ingredients or accept a malformed ingredient
+    as a simpler one. Original fluids/heated recipes belong to their own port.
+    """
+    def item_ingredient(value):
+        if isinstance(value, str): return ':' in value
+        if isinstance(value, list): return bool(value) and all(item_ingredient(v) for v in value)
+        return (isinstance(value, dict) and set(value) in ({'item'}, {'tag'})
+                and isinstance(next(iter(value.values())), str))
+    def output(value):
+        return (isinstance(value, dict) and set(value) <= {'id', 'count', 'chance', 'components'}
+                and isinstance(value.get('id'), str) and ':' in value['id']
+                and type(value.get('count', 1)) is int and 1 <= value.get('count', 1) <= 99
+                and type(value.get('chance', 1)) in (int, float)
+                and math.isfinite(value.get('chance', 1)) and 0 <= value.get('chance', 1) <= 1
+                and isinstance(value.get('components', {}), dict))
+    inputs, outputs = recipe.get('ingredients'), recipe.get('results')
+    return (recipe.get('heat_requirement', 'none') == 'none'
+            and type(recipe.get('processing_time', 0)) is int
+            and -(1 << 31) <= recipe.get('processing_time', 0) < (1 << 31)
+            and isinstance(inputs, list) and 1 <= len(inputs) <= 64
+            and all(item_ingredient(i) for i in inputs)
+            and isinstance(outputs, list) and 1 <= len(outputs) <= 4
+            and all(output(o) for o in outputs))
 
 
 def main():
@@ -20,13 +49,14 @@ def main():
         elif isinstance(value, list):
             for child in value: yield from dependencies(child)
     recipes = {}
-    processing = {'create:milling', 'create:splashing', 'create:haunting'}
+    processing = {'create:milling', 'create:splashing', 'create:haunting', 'create:mixing'}
     cooking = {'minecraft:smelting', 'minecraft:smoking', 'minecraft:blasting'}
     for name in names:
         if not name.startswith(base + 'create/recipe/') or not name.endswith('.json'): continue
         r = read(name)
         kind = r.get('type', '')
         if kind not in {'minecraft:crafting_shaped', 'minecraft:crafting_shapeless', 'create:pressing', 'create:item_application'} | processing | cooking: continue
+        if kind == 'create:mixing' and not dry_mixing(r): continue
         # Conditional recipes depend on other mods and their ingredient codecs.
         if 'neoforge:conditions' in r: continue
         output = r.get('result', {})
@@ -121,6 +151,11 @@ def main():
         if dest in required or dest not in tags: continue
         required.add(dest);pending.extend(tag_refs(tags[dest]))
     tags={name:t for name,t in tags.items() if name in required}
+    for tool in ['axe', 'pickaxe']:
+        dest = 'minecraft/tags/block/mineable/' + tool + '.json'
+        tag = read(base + dest)
+        tag['values'] = [v for v in tag['values'] if isinstance(v, str) and v in known]
+        tags[dest] = tag
     # Fan catalyst and permeability tags are MIT behavior data. Unimplemented
     # Create blocks must not become required tag entries in the port.
     for kind, paths in {

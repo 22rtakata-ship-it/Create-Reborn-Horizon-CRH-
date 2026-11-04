@@ -11,8 +11,8 @@ use crate::{
     particles::{ParticleOptions, ParticleType},
 };
 use create_engine::{
-    kinetics::{Axis, Pos},
-    placement::Direction,
+    kinetics::Pos,
+    particles::{self as particle_rules, KineticEffects, ParticleRandom},
     visual::{self, CrankMotion},
 };
 use horizon_core::random::{LegacyRandom, RandomSource};
@@ -28,9 +28,19 @@ struct Motion {
     speed: f32,
     status: String,
     applied: bool,
-    indicator: i64,
+    effects: KineticEffects,
 }
+thread_local! {static MOTION_WORLD:std::cell::Cell<(usize,usize)>=const{std::cell::Cell::new((0,0))};}
 thread_local! {static MOTION: RefCell<BTreeMap<(String,Pos),Motion>> = const {RefCell::new(BTreeMap::new())};}
+struct Random<'a>(&'a mut LegacyRandom);
+impl ParticleRandom for Random<'_> {
+    fn next_float(&mut self) -> f32 {
+        self.0.next_float()
+    }
+    fn next_int(&mut self, bound: i32) -> i32 {
+        self.0.next_int_bound(bound).unwrap_or(0)
+    }
+}
 fn text(nbt: &Compound, key: &str) -> String {
     match nbt.get(&key.into()) {
         Some(Tag::String(s)) => s.to_string().unwrap_or_default(),
@@ -58,10 +68,35 @@ pub(super) fn dial(game: &Game<'_>, pos: Pos, partial: f32) -> f32 {
         })
     })
 }
+// KineticBlockEntityVisual.applyOverstressEffect / standardKineticRotationTransform:
+// only the rotating instances receive this fading red/spring-green tint.
+pub(super) fn kinetic_tint(game: &Game<'_>, pos: Pos) -> u32 {
+    MOTION.with(|m| {
+        let effect = m
+            .borrow()
+            .get(&key(game, pos))
+            .map_or(0.0, |v| v.effects.overstressed_effect);
+        particle_rules::mix_colors(
+            0xFFFFFF,
+            if effect > 0.0 { 0xFF0000 } else { 0x00FFBB },
+            effect.abs(),
+        ) & 0xFFFFFF
+    })
+}
 pub(super) fn tick(game: &mut Game<'_>) {
-    if !game.native_window() || !game.native_on("create") {
+    if !game.native_window() || game.remote.is_none() || !game.native_on("create") {
         return;
     }
+    let identity = (
+        std::ptr::from_ref(game) as usize,
+        std::ptr::from_ref(&game.world) as usize,
+    );
+    MOTION_WORLD.with(|id| {
+        if id.replace(identity) != identity {
+            MOTION.with(|m| m.borrow_mut().clear());
+        }
+    });
+    crate::game::create_port_particles::client_tick(game);
     let time = game.world.game_time;
     let entries: Vec<_> = game
         .world
@@ -77,16 +112,16 @@ pub(super) fn tick(game: &mut Game<'_>) {
         .collect();
     for (pos, block, nbt) in entries {
         let speed = number(&nbt, "Speed");
+        crate::game::create_port_nativeaudio::block(game, pos, &block, &nbt, speed);
         let status = text(&nbt, "NetworkStatus");
         let applied = integer(&nbt, "Applied") != 0;
         let (particles, stress_effect) = MOTION.with(|m| {
             let mut m = m.borrow_mut();
             let state = m.entry(key(game, pos)).or_default();
-            if state.block != block {
+            if state.block != block || state.tick > time {
                 *state = Motion {
                     tick: -1,
                     block: block.clone(),
-                    indicator: -100,
                     ..Motion::default()
                 };
             }
@@ -94,9 +129,6 @@ pub(super) fn tick(game: &mut Game<'_>) {
                 return (false, None);
             }
             let previous_status = state.status.clone();
-            if state.speed != speed && speed != 0.0 {
-                state.indicator = time;
-            }
             state.speed = speed;
             state.status = status.clone();
             state.crank.tick(speed);
@@ -108,13 +140,12 @@ pub(super) fn tick(game: &mut Game<'_>) {
             let emit = applied && !state.applied;
             state.applied = applied;
             state.tick = time;
-            let stress = if previous_status != status
+            if previous_status != status
                 && (previous_status == "Overstressed" || status == "Overstressed")
             {
-                Some(status == "Overstressed")
-            } else {
-                None
-            };
+                state.effects.trigger_overstress();
+            }
+            let stress = state.effects.tick(true, status == "Overstressed").stress;
             (emit, stress)
         });
         if particles {
@@ -127,14 +158,14 @@ pub(super) fn tick(game: &mut Game<'_>) {
                     let y = if integer(&nbt, "Mode") == 1 {
                         f64::from(pos[1]) - 1.25
                     } else {
-                        f64::from(pos[1]) - 1.0
+                        f64::from(pos[1]) - 0.75
                     };
                     for _ in 0..15 {
-                        let velocity = [
-                            (game.world.random.next_double() - 0.5) * 0.25,
+                        let mut velocity = particle_rules::offset_randomly(
+                            &mut Random(&mut game.world.random),
                             0.125,
-                            (game.world.random.next_double() - 0.5) * 0.25,
-                        ];
+                        );
+                        velocity[1] = 0.125;
                         game.particles.add(
                             &options,
                             [f64::from(pos[0]) + 0.5, y, f64::from(pos[2]) + 0.5],
@@ -149,24 +180,24 @@ pub(super) fn tick(game: &mut Game<'_>) {
                 }
             }
         }
-        if let Some(over) = stress_effect {
-            let options = ParticleOptions::simple(if over {
+        if let Some(effect) = stress_effect {
+            let options = ParticleOptions::simple(if effect.smoke {
                 ParticleType::Smoke
             } else {
                 ParticleType::Cloud
             });
-            let amount = if over { 5 } else { 2 };
-            let spread = if over { 0.2 } else { 0.075 };
-            for _ in 0..amount {
-                let velocity =
-                    std::array::from_fn(|_| (game.world.random.next_double() - 0.5) * spread * 2.0);
+            for _ in 0..effect.amount {
+                let velocity = particle_rules::offset_randomly(
+                    &mut Random(&mut game.world.random),
+                    effect.max_motion,
+                );
                 game.particles
                     .add(&options, pos.map(|v| f64::from(v) + 0.5), velocity);
             }
             trace(
                 "stress_particles",
                 pos,
-                serde_json::json!({"overstressed":over,"count":amount}),
+                serde_json::json!({"overstressed":effect.smoke,"count":effect.amount}),
             );
         }
     }
@@ -274,134 +305,9 @@ pub(super) fn depot(game: &Game<'_>, _: Pos, entity: &ModBlockEntity, draw: &mut
     }
     draw.pop();
 }
-pub(super) fn hints(game: &Game<'_>, pos: Pos, draw: &mut BlockEntityDraw) {
-    let Some(node) = crate::game::create_port::node(game, pos) else {
-        return;
-    };
-    let age = MOTION.with(|m| {
-        m.borrow()
-            .get(&key(game, pos))
-            .map(|v| draw.game_time - v.indicator)
-    });
-    if let Some(age) = age.filter(|a| *a >= 0 && *a < 10) {
-        let radius = 0.5 + age as f32 / 10.0 * 0.125;
-        let speed = number_from_game(game, pos, "Speed");
-        if speed != 0.0 {
-            for i in 0..20 {
-                let a = (i as f32 * 18.0 + age as f32 * speed.signum() * 8.0).to_radians();
-                let (u, v) = (radius * a.cos(), radius * a.sin());
-                let offset = match node.axis {
-                    Axis::X => [0.0, u, v],
-                    Axis::Y => [u, 0.0, v],
-                    Axis::Z => [u, v, 0.0],
-                };
-                draw.push();
-                draw.translate(offset.map(|v| v + 0.5));
-                draw.scale([0.10; 3]);
-                draw.translate([-0.5; 3]);
-                game.native_draw_model(draw, "create:block/port_hint", 0xB4F06A);
-                draw.pop();
-            }
-        }
-    }
-    let Some(hit) = game.native_raycast(6.0) else {
-        return;
-    };
-    if [hit.block_x, hit.block_y, hit.block_z] != pos {
-        return;
-    }
-    let held = game.held().map(|s| s.item.as_ref()).unwrap_or("");
-    if !matches!(
-        held,
-        "create:shaft"
-            | "create:cogwheel"
-            | "create:large_cogwheel"
-            | "create:wrench"
-            | "create:vertical_gearbox"
-            | "create:gearbox"
-    ) {
-        return;
-    }
-    for d in Direction::ALL {
-        if node.shaft_port(d.vector()) {
-            draw.push();
-            super::create_port::face_south(draw, d);
-            draw.translate([0.0, 0.0, 0.35]);
-            game.native_draw_model(draw, "create:block/port_hint", 0x80D8FF);
-            draw.pop();
-        }
-    }
-}
-fn number_from_game(game: &Game<'_>, pos: Pos, name: &str) -> f32 {
-    match game.world.block_entities.get(&(pos[0], pos[1], pos[2])) {
-        Some(BlockEntity::Mod(e)) => number(&e.nbt, name),
-        _ => 0.0,
-    }
-}
+// Placement guides require the original Create outliner implementation. The
+// previous port_hint arrow models were invented substitutes and are removed.
+pub(super) fn hints(_: &Game<'_>, _: Pos, _: &mut BlockEntityDraw) {}
 pub(super) fn hud(game: &Game<'_>, batch: &mut HudBatch) {
-    if game.native_mod_screen().is_some() || !game.native_on("create") {
-        return;
-    }
-    if !game.armor[0]
-        .as_ref()
-        .is_some_and(|s| s.item.as_ref() == "create:goggles")
-    {
-        return;
-    }
-    let Some(hit) = game.native_raycast(8.0) else {
-        return;
-    };
-    let pos = [hit.block_x, hit.block_y, hit.block_z];
-    let Some(BlockEntity::Mod(entity)) = game.world.block_entities.get(&(pos[0], pos[1], pos[2]))
-    else {
-        return;
-    };
-    if crate::game::create_port::node(game, pos).is_none() {
-        return;
-    }
-    let rpm = number(&entity.nbt, "Speed");
-    let capacity = number(&entity.nbt, "Capacity");
-    let stress = number(&entity.nbt, "Stress");
-    let tr = |key: &str, fallback: &str| horizon_client::lang::get_or(key, fallback);
-    let mut lines = vec![
-        tr("create.gui.goggles.kinetic_stats", "Kinetic Stats:"),
-        format!(
-            "{}: {:.0} {}",
-            tr("create.gui.speedometer.title", "Rotation Speed"),
-            rpm.abs(),
-            tr("create.generic.unit.rpm", "RPM")
-        ),
-        format!(
-            "{}: {:.0} / {:.0} {}",
-            tr("create.gui.stressometer.title", "Network Stress"),
-            stress,
-            capacity,
-            tr("create.generic.unit.stress", "su")
-        ),
-    ];
-    if text(&entity.nbt, "NetworkStatus") == "Overstressed" {
-        lines.push(tr("create.gui.stressometer.overstressed", "Overstressed"));
-    }
-    let x = batch.width / 2.0 + 18.0;
-    let y = batch.height / 2.0 - 18.0;
-    let width = lines.iter().map(|s| s.chars().count()).max().unwrap_or(20) as f32 * 6.0 + 16.0;
-    game.native_fill(
-        batch,
-        [x, y, width, lines.len() as f32 * 12.0 + 12.0],
-        0xE0101729,
-    );
-    for (i, line) in lines.iter().enumerate() {
-        game.native_text(
-            batch,
-            line,
-            [x + 8.0, y + 6.0 + i as f32 * 12.0],
-            if i == 0 { 0xFFDA94 } else { 0xD3DBEE },
-            true,
-        );
-    }
-    trace(
-        "goggles_hud",
-        pos,
-        serde_json::json!({"rpm":rpm,"capacity":capacity,"stress":stress}),
-    );
+    crate::game::create_port_goggles::hud(game, batch);
 }

@@ -46,5 +46,21 @@
         "name": "minecraft:entity.item.pickup"
       }
     ]
+  },
+  "mixing": {
+    "sounds": [
+      {
+        "type": "event",
+        "name": "minecraft:block.gilded_blackstone.break",
+        "volume": 0.125,
+        "pitch": 0.5
+      },
+      {
+        "type": "event",
+        "name": "minecraft:block.netherrack.break",
+        "volume": 0.125,
+        "pitch": 0.5
+      }
+    ]
   }
 }

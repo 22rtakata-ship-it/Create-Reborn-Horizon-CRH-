@@ -24,6 +24,8 @@ pub const BLOCKS: &[&str] = &[
     "millstone",
     "encased_fan",
     "mechanical_drill",
+    "basin",
+    "mechanical_mixer",
 ];
 pub const ITEMS: &[&str] = &[
     "iron_sheet",
@@ -41,6 +43,8 @@ pub const ITEMS: &[&str] = &[
     "propeller",
     "wheat_flour",
     "dough",
+    "belt_connector",
+    "whisk",
 ];
 pub const PARTS: &[&str] = &[
     "shaft",
@@ -67,4 +71,21 @@ pub const PARTS: &[&str] = &[
     "encased_fan/propeller",
     "mechanical_drill/block",
     "mechanical_drill/head",
+    "belt_pulley",
+    "belt/particle",
+    "belt/start",
+    "belt/middle",
+    "belt/end",
+    "belt/start_bottom",
+    "belt/middle_bottom",
+    "belt/end_bottom",
+    "belt/diagonal_start",
+    "belt/diagonal_middle",
+    "belt/diagonal_end",
+    "basin/block",
+    "basin/block_directional",
+    "mechanical_mixer/block",
+    "mechanical_mixer/pole",
+    "mechanical_mixer/head",
+    "cogwheel_shaftless",
 ];

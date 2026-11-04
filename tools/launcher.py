@@ -38,7 +38,8 @@ def main():
     with tempfile.TemporaryDirectory(prefix="create-native-source-") as temporary:
         source = Path(temporary)
         shutil.copy2(ROOT / "horizon-native.json", source / "horizon-native.json")
-        shutil.copytree(NATIVE, source / "mixins/create")
+        shutil.copytree(NATIVE, source / "mixins/create",
+                        ignore=shutil.ignore_patterns("target", "Cargo.lock", "__pycache__", "*.pyc"))
         subprocess.run([*command, str(source)], check=True)
 
 

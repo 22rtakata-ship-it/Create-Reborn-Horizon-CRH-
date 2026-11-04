@@ -14,6 +14,11 @@ fn event(game: &mut Game<'_>, pos: [i32; 3], sound: &str, volume: f32, pitch: f3
     }
 }
 pub(super) fn press(game: &mut Game<'_>, pos: [i32; 3], speed: f32) {
+    if game.native_block([pos[0], pos[1] - 2, pos[2]]) == "create:belt" {
+        event(game, pos, "minecraft:block.wool.hit", 0.75, 1.0);
+        event(game, pos, "minecraft:entity.item.break", 0.15, 0.75);
+        return;
+    }
     let pitch = 0.75 + speed.abs() / 1024.0;
     event(
         game,

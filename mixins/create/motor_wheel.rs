@@ -1,3 +1,3 @@
-fn motor_wheel(game: &mut crate::game::Game<'_>, steps: f32, claimed: &mut bool) {
-    crate::game::create_port_motor_control::wheel(game, steps, claimed);
-}
+// There is no gameplay wheel-to-RPM interaction in pinned Create 6.0.10.
+// Wheel input belongs to ValueSettingsScreen while its board is open.
+fn motor_wheel(_game: &mut crate::game::Game<'_>, _steps: f32, _claimed: &mut bool) {}

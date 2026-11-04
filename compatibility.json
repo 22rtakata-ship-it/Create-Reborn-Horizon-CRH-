@@ -1,5 +1,5 @@
 {
-  "horizon_revision": "fc02103818c212920fd24aa34a2b2f91ba49e56f",
+  "horizon_revision": "b45ffd5a670f20e66db7fc01f53fd94907563adc",
   "horizon_mixins_revision": "a1e13326306c6bc074b11e6a4926deb551c4083e",
   "create_revision": "ac0c444d9828da3453ae8cc65338e8de063286fb",
   "create_version": "6.0.10",
@@ -10,5 +10,13 @@
   "native_hooks_api": 359,
   "rust_version": "1.99.1",
   "rust_date": "2026-10-15",
-  "horizon_mixins_pull_request": "https://github.com/horizon-rust/horizon-mixins/pull/26"
+  "horizon_mixins_pull_request": "https://github.com/horizon-rust/horizon-mixins/pull/26",
+  "horizon_api_fork": "https://github.com/Delete228/horizon/tree/create-port-runtime-06",
+  "horizon_native_api_pull_request": "https://github.com/horizon-rust/horizon/pull/8872",
+  "horizon_pending_hook_fragments": [
+    "world_canvas"
+  ],
+  "horizon_world_canvas_pull_request": "https://github.com/horizon-rust/horizon/pull/8918",
+  "horizon_owned_sounds_pull_request": "https://github.com/horizon-rust/horizon/pull/8924",
+  "horizon_damage_registry_issue": "https://github.com/horizon-rust/horizon/issues/8917"
 }

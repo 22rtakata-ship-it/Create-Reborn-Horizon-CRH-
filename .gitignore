@@ -9,3 +9,5 @@ __pycache__/
 *.jar
 create-resources/
 .DS_Store
+/logs/
+/mixins/create/engine/Cargo.lock

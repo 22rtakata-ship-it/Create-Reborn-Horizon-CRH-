@@ -16,7 +16,7 @@ The following MIT code informed or was adapted into the Rust engine:
 - `content/kinetics/simpleRelays/GearboxBlockEntity`, `ClutchBlockEntity`,
   `GearshiftBlockEntity`, `crank/HandCrankBlock[Entity]`, `motor/CreativeMotorBlockEntity`,
   `foundation/block/IWrenchable` and encasing behaviors: implemented transmission,
-  placement, wrench, hand crank and motor controls. Native UI drawing is our own.
+  placement, wrench, hand crank and motor controls.
 - `base/KineticBlockEntityRenderer`, `KineticBlockEntityVisual`, `gearbox/GearboxRenderer`,
   `transmission/SplitShaftRenderer`, `crank/HandCrankRenderer`, `logistics/depot/DepotRenderer`:
   positive world-axis transforms, phase, crank interpolation and item piles.
@@ -45,6 +45,23 @@ The following MIT code informed or was adapted into the Rust engine:
   shaft and rotating head. Contraption movement and entity damage are not ported.
 - `AllSoundEvents` and infrastructure configs: selected composite sound events,
   default gains/pitches, stress and speed parameters.
+- `content/equipment/goggles/GoggleOverlayRenderer`,
+  `foundation/gui/RemovedGuiUtils`, `foundation/item/TooltipHelper`,
+  `content/kinetics/base/IRotate`, `KineticBlockEntity`,
+  `GeneratingKineticBlockEntity`, `foundation/blockEntity/behaviour/ValueSettingsScreen`,
+  `ValueSettingsClient`, `ValueSettingsBoard`, `ValueBox`, `ValueBoxTransform`,
+  `scrollValue/ScrollValueRenderer` and `motor/KineticScrollValueBehaviour`:
+  original tooltip providers, text styles, thresholds, layout, hover fade and
+  value-board geometry and interaction ordering, motor world value display poses.
+- `content/kinetics/base/KineticEffectHandler`, `RotationIndicatorParticle`,
+  `RotationIndicatorParticleData`, `content/kinetics/fan/AirFlowParticle` and
+  `AirFlowParticleData`: rotation indicators and fan particle motion, appearance
+  and processing-type transformations.
+- `content/schematics/SchematicItem`, `SchematicPrinter`,
+  `packet/SchematicPlacePacket`, and `foundation/utility/BlockHelper`:
+  shared fixture state/NBT conventions and original creative-placement policy.
+  The development Java bridge calls the original placement packet directly;
+  the Rust schematic adapter is independently implemented and validated.
 - 123 MIT datapack recipes and 35 behavior/ingredient tags, exported from
   `src/generated/resources/data/` at the pinned revision. Ingredient syntax is
   adapted to Horizon/Minecraft 26.3. Missing vanilla convention tags are our own
@@ -58,6 +75,38 @@ Version 0.5 remains incomplete and does not claim full behavioral parity.
 Validation evidence and its limits are recorded in `VALIDATION.md`.
 Rust code organization is native to Horizon; source behavior is the reference,
 not one Rust type for every Java class.
+
+Ponder **1.0.82+mc1.21.1**, bundled in the player's pinned Create JAR, contains
+Catnip's `net.createmod.catnip.lang.LangBuilder`, `LangNumberFormat`,
+`FontHelper`, `gui.element.BoxElement`, `outliner.Outliner` and `theme.Color`. Their MIT code informs
+tooltip indentation, locale number formatting, highlighting, default colors and
+alpha behavior and world display expiry. The exact notice below is from the bundled JAR's `LICENSE_Ponder`.
+This attribution concerns code; it does not change the resource license described
+below.
+
+```text
+MIT License
+
+Copyright (c) 2022 The Create Team
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
 
 Create's original `src/main/resources/assets/` has a separate All Rights Reserved
 license. Development inputs and port-pack carry-over stay under `.local/`.

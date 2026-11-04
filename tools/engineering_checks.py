@@ -5,6 +5,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from common import ROOT
 import foundation_checks
 
@@ -55,9 +56,26 @@ def run(call,graphics,log,scratch):
     assert 'power=15' in block(1,65,2)['state'],block(1,65,2)
     if graphics:
         tp(1.5,65,3.5);clear();call('command','item replace entity @s armor.head with minecraft:air');give('create:goggles');call('look',0,-80);call('mouse','right','click');call('wait',5)
-        call('look-at','block',X+1,65,0,'south');call('wait',5);call('screenshot',scratch/'goggles.png')
-        rows=[json.loads(s.split('Create visual: ',1)[1]) for s in log.read_text().splitlines() if 'Create visual: ' in s]
-        assert any(r['event']=='goggles_hud' and r['details']['rpm']==256 for r in rows),rows[-5:]
+        hud_start=log.stat().st_size
+        call('look-at','block',X+1,65,0,'south')
+        deadline=time.monotonic()+12
+        while True:
+            with log.open() as stream:
+                stream.seek(hud_start)
+                rows=[]
+                for line in stream:
+                    if 'Create visual: ' not in line:
+                        continue
+                    try:
+                        rows.append(json.loads(line.split('Create visual: ',1)[1]))
+                    except json.JSONDecodeError:
+                        continue  # The renderer may still be finishing its last line.
+            if any(r.get('event')=='goggles_hud' and r.get('pos')==[X+1,65,0]
+                   and any(re.search(r'(?<!\d)256(?!\d)',line.get('text','')) for line in r.get('lines',[])) for r in rows):
+                break
+            assert time.monotonic()<deadline,rows[-5:]
+            call('wait',2)
+        call('screenshot',scratch/'goggles.png')
         setblock(4,68,5,'minecraft:stone');tp(4.5,69,5.5);call('look',90,0);call('key','f5','tap');call('key','f5','tap');call('key','f1','tap');call('wait',5);call('screenshot',scratch/'goggles-worn.png');call('key','f1','tap');call('key','f5','tap');call('wait',3)
     print('Engineering: gauge dial targets, network SU, actual comparator 4->15 and goggles HUD passed',flush=True)
     if graphics:

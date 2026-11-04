@@ -17,7 +17,7 @@ def main():
     args = parser.parse_args()
     check_horizon()
     setup_mixins.main()
-    source = ROOT / ".local" / "horizon-source"
+    source = ROOT / ".local" / ("horizon-source-" + PINS["horizon_revision"])
     if not source.exists():
         source.mkdir(parents=True)
         archive = ROOT / ".local" / "horizon-source.tar"
@@ -48,7 +48,8 @@ def main():
         mods = ROOT / ".local" / "mixin-input"
         if mods.exists():
             shutil.rmtree(mods)
-        shutil.copytree(NATIVE, mods / "create")
+        shutil.copytree(NATIVE, mods / "create",
+                        ignore=shutil.ignore_patterns("target", "Cargo.lock", "__pycache__", "*.pyc"))
         subprocess.run([str(mixins), "plan", "--workspace", str(source), "--mods", str(mods),
                         "--out", str(ROOT / ".local/plan.json")], env=environment(), check=True)
         # Mixins' atomic replacement works on Linux only. Like Horizon's launcher,

@@ -24,5 +24,20 @@ pub mod milling;
 #[path = "core/fan.rs"]
 pub mod fan;
 
+#[path = "core/fan_entities.rs"]
+pub mod fan_entities;
+
+#[path = "core/particles.rs"]
+pub mod particles;
+
+#[path = "core/transport.rs"]
+pub mod transport;
+
 #[path = "core/drilling.rs"]
 pub mod drilling;
+
+#[path = "core/audio.rs"]
+pub mod audio;
+
+#[path = "core/basin.rs"]
+pub mod basin;

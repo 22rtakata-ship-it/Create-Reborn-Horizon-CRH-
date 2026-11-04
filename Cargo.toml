@@ -9,12 +9,18 @@ description = "Experimental Create foundation: kinetics, pressing and item inter
 [lib]
 path = "mixins/create/engine/src/lib.rs"
 
+[dependencies]
+create-schematics = { path = "mixins/create/schematics" }
+
+[dev-dependencies]
+serde_json = "1"
+
 [[example]]
 name = "factory"
 path = "examples/factory.rs"
 
 [workspace]
-members = ["mixins/create/assets"]
+members = ["mixins/create/assets", "mixins/create/schematics"]
 exclude = ["mixins/create/engine", ".local", ".tools"]
 
 [lints.rust]

@@ -27,6 +27,8 @@
   "block.create.millstone": "Мельничный жернов",
   "block.create.encased_fan": "Вентилятор в корпусе",
   "block.create.mechanical_drill": "Механический бур",
+  "block.create.basin": "Чаша",
+  "block.create.mechanical_mixer": "Механический миксер",
   "item.create.andesite_alloy": "Andesite Alloy",
   "item.create.brass_ingot": "Brass Ingot",
   "item.create.brass_nugget": "Brass Nugget",
@@ -39,5 +41,6 @@
   "item.create.propeller": "Пропеллер",
   "item.create.wheat_flour": "Пшеничная мука",
   "item.create.dough": "Тесто",
+  "item.create.whisk": "Венчик",
   "create.kinetics.creative_motor.rotation_speed": "Generated Speed in RPM"
 }

@@ -16,7 +16,7 @@ pub const CREATE_VERSION: &str = "6.0.10+mc1.21.1 (NeoForge)";
 pub const JAR_SHA256: &str = "ef87fe5709f1ba1f5b8bb20a2925b5afb4669e178fd6d8bf10c167759eefe37a";
 // Bump whenever the import catalog changes: the cache key pins the JAR, not
 // BLOCKS/ITEMS/PARTS, so an older valid cache lacks newly required resources.
-const SCHEMA: u32 = 7;
+const SCHEMA: u32 = 10;
 const MAX_JAR: u64 = 128 << 20;
 const MAX_FILE: u64 = 16 << 20;
 const MAX_TOTAL: usize = 64 << 20;
@@ -51,6 +51,14 @@ pub fn bundled_content(game_dir: &Path, bytes: &[u8]) -> io::Result<PathBuf> {
                 || !(name == "horizon-mod.toml"
                     || name.starts_with("assets/create/")
                     || name.starts_with("data/create/")
+                    || matches!(
+                        name.as_str(),
+                        "data/minecraft/tags/damage_type/is_fire.json"
+                            | "data/minecraft/tags/damage_type/bypasses_armor.json"
+                            | "data/minecraft/tags/damage_type/bypasses_shield.json"
+                            | "data/minecraft/tags/block/mineable/axe.json"
+                            | "data/minecraft/tags/block/mineable/pickaxe.json"
+                    )
                     || name.starts_with("data/c/tags/item/"))
                 || value.len() > MAX_FILE as usize
         })
@@ -536,6 +544,26 @@ fn collect(bytes: Vec<u8>) -> io::Result<BTreeMap<String, Vec<u8>>> {
         reader.json(&locale)?;
     }
     reader.json("assets/create/sounds.json")?;
+    reader.texture("create:gui/value_settings")?;
+    reader.texture("create:gui/icons")?;
+    reader.texture("create:block/belt_scroll")?;
+    reader.texture("create:block/belt_diagonal_scroll")?;
+    for particle in ["rotation_indicator", "air_flow"] {
+        let definition = reader.json(&format!("assets/create/particles/{particle}.json"))?;
+        let textures = definition["textures"]
+            .as_array()
+            .ok_or_else(|| invalid("Particle sprite set has no textures"))?;
+        if textures.is_empty() || textures.len() > 64 {
+            return Err(invalid("Invalid particle sprite count"));
+        }
+        for texture in textures {
+            let texture = texture
+                .as_str()
+                .ok_or_else(|| invalid("Invalid particle sprite ID"))?;
+            let (namespace, path) = texture.split_once(':').unwrap_or(("minecraft", texture));
+            reader.texture(&format!("{namespace}:particle/{path}"))?;
+        }
+    }
     let sounds: Vec<String> = reader
         .zip
         .file_names()

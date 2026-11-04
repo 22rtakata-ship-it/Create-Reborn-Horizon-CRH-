@@ -27,11 +27,15 @@ struct Current {
 struct Cache {
     cleanup: BTreeMap<String, i64>,
     currents: BTreeMap<(String, [i32; 3]), Current>,
+    client_origins: std::collections::BTreeSet<(String, [i32; 3])>,
+    client_game: Option<usize>,
+    client_tick: Option<(String, i64)>,
     recipes: BTreeMap<Type, BTreeMap<String, Vec<(ItemStack, f32)>>>,
     recipes_ready: bool,
 }
 thread_local! {static CACHE:RefCell<Cache>=RefCell::new(Cache::default());}
 pub(super) fn reset(reload: bool) {
+    super::create_port_fan_entities::reset(reload);
     CACHE.with(|cache| {
         let mut cache = cache.borrow_mut();
         if !reload {
@@ -42,11 +46,15 @@ pub(super) fn reset(reload: bool) {
     });
 }
 pub(super) fn changed(dimension: &str, pos: [i32; 3]) {
+    super::create_port_fan_entities::clear(dimension, pos);
     CACHE.with(|cache| {
         let mut cache = cache.borrow_mut();
         cache
             .currents
             .retain(|(dim, origin), _| dim != dimension || *origin != pos);
+        cache
+            .client_origins
+            .retain(|(dim, origin)| dim != dimension || *origin != pos);
         for ((dim, origin), current) in &mut cache.currents {
             if dim != dimension {
                 continue;
@@ -64,6 +72,7 @@ pub(super) fn changed(dimension: &str, pos: [i32; 3]) {
     });
 }
 pub(super) fn maintenance(game: &Game<'_>) {
+    super::create_port_fan_entities::maintenance(game);
     CACHE.with(|cache| {
         let mut cache = cache.borrow_mut();
         if cache.cleanup.get(game.dim.id()) == Some(&game.world.game_time) {
@@ -429,7 +438,7 @@ fn process_depot(game: &mut Game<'_>, pos: [i32; 3], kind: Type) {
         game.native_block_entity_sync(pos);
     }
 }
-pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], _entity: &mut ModBlockEntity, rpm: f32) {
+pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEntity, rpm: f32) {
     refresh(game);
     let dim = game.dim.id().to_owned();
     let key = (dim.clone(), pos);
@@ -437,7 +446,10 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], _entity: &mut ModBlockEnt
         CACHE.with(|cache| cache.borrow_mut().currents.remove(&key).unwrap_or_default());
     let facing = facing(game, pos);
     let push = fan::pushing(rpm, facing);
-    let rebuild = current.facing != Some(facing) || current.rpm != rpm || current.cooldown <= 0;
+    let rebuild = current.facing != Some(facing)
+        || current.rpm != rpm
+        || current.cooldown <= 0
+        || entity.data.first() != Some(&AIR_CURRENT_VERSION);
     current.cooldown -= 1;
     if rebuild {
         current.facing = Some(facing);
@@ -463,6 +475,18 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], _entity: &mut ModBlockEnt
                 }
             }
         }
+    }
+    if rebuild {
+        let data = encode_current(
+            facing,
+            rpm,
+            current.distance,
+            &current.segments,
+            &current.handlers,
+        );
+        entity.data = data;
+        // The transport payload is added by update_tag, never to saved BE NBT.
+        game.native_block_entity_sync(pos);
     }
     if rpm != 0.0 && current.distance >= 0.25 {
         let (min, max) = bounds(pos, facing, current.distance);
@@ -548,7 +572,241 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], _entity: &mut ModBlockEnt
             process_depot(game, *p, *kind);
         }
     }
+    super::create_port_fan_entities::server_tick(
+        game,
+        pos,
+        facing,
+        rpm,
+        current.distance,
+        &current.segments,
+    );
     CACHE.with(|cache| cache.borrow_mut().currents.insert(key, current));
+}
+
+const AIR_CURRENT_VERSION: i32 = 2;
+const AIR_CURRENT_KEY: &str = "CreateHorizonAirCurrent";
+
+/// Protocol-only state for the native client adapter, not canonical Create NBT.
+/// API359 does not retain server block tags on a client. Sending the resolved
+/// current keeps datapack media/obstructions authoritative across that boundary.
+#[derive(Clone, Debug)]
+pub(super) struct SyncedCurrent {
+    pub facing: Direction,
+    pub rpm: f32,
+    pub distance: f32,
+    pub segments: Vec<Segment>,
+    pub handlers: Vec<([i32; 3], Type)>,
+}
+fn encode_current(
+    facing: Direction,
+    rpm: f32,
+    distance: f32,
+    segments: &[Segment],
+    handlers: &[([i32; 3], Type)],
+) -> Vec<i32> {
+    let mut data = vec![
+        AIR_CURRENT_VERSION,
+        Direction::ALL.iter().position(|d| *d == facing).unwrap() as i32,
+        rpm.to_bits() as i32,
+        distance.to_bits() as i32,
+        segments.len() as i32,
+    ];
+    for segment in segments {
+        data.push(segment.end);
+        data.push(match segment.kind {
+            None => 0,
+            Some(Type::Blasting) => 1,
+            Some(Type::Haunting) => 2,
+            Some(Type::Smoking) => 3,
+            Some(Type::Splashing) => 4,
+        });
+    }
+    data.push(handlers.len() as i32);
+    for (pos, kind) in handlers {
+        data.extend_from_slice(pos);
+        data.push(match kind {
+            Type::Blasting => 1,
+            Type::Haunting => 2,
+            Type::Smoking => 3,
+            Type::Splashing => 4,
+        });
+    }
+    data
+}
+fn decode_current(data: &[i32]) -> Option<SyncedCurrent> {
+    if data.len() < 5 || data[0] != AIR_CURRENT_VERSION {
+        return None;
+    }
+    let facing = *Direction::ALL.get(usize::try_from(data[1]).ok()?)?;
+    let rpm = f32::from_bits(data[2] as u32);
+    let distance = f32::from_bits(data[3] as u32);
+    if !rpm.is_finite()
+        || !distance.is_finite()
+        || distance < 0.0
+        || distance > fan::max_distance(rpm)
+    {
+        return None;
+    }
+    let count = usize::try_from(data[4]).ok()?;
+    let limit = distance.ceil() as i32;
+    if count > limit as usize || data.len() < 6 + 2 * count {
+        return None;
+    }
+    let mut segments = Vec::with_capacity(count);
+    let push = fan::pushing(rpm, facing);
+    for pair in data[5..5 + 2 * count].chunks_exact(2) {
+        let end = pair[0];
+        if !(0..=limit).contains(&end)
+            || segments
+                .last()
+                .is_some_and(|s: &Segment| if push { end <= s.end } else { end >= s.end })
+        {
+            return None;
+        }
+        let kind = match pair[1] {
+            0 => None,
+            1 => Some(Type::Blasting),
+            2 => Some(Type::Haunting),
+            3 => Some(Type::Smoking),
+            4 => Some(Type::Splashing),
+            _ => return None,
+        };
+        segments.push(Segment { end, kind });
+    }
+    if distance > 0.0
+        && segments
+            .last()
+            .is_none_or(|s| s.end != if push { limit } else { 0 })
+    {
+        return None;
+    }
+    let handler_count = usize::try_from(data[5 + 2 * count]).ok()?;
+    if handler_count > (limit as usize) * 2 || data.len() != 6 + 2 * count + 4 * handler_count {
+        return None;
+    }
+    let mut handlers = Vec::with_capacity(handler_count);
+    for row in data[6 + 2 * count..].chunks_exact(4) {
+        let kind = match row[3] {
+            1 => Type::Blasting,
+            2 => Type::Haunting,
+            3 => Type::Smoking,
+            4 => Type::Splashing,
+            _ => return None,
+        };
+        handlers.push(([row[0], row[1], row[2]], kind));
+    }
+    Some(SyncedCurrent {
+        facing,
+        rpm,
+        distance,
+        segments,
+        handlers,
+    })
+}
+pub(super) fn update_tag(entity: &ModBlockEntity, tag: &mut Option<Compound>) {
+    if entity.id != "create:encased_fan" {
+        return;
+    }
+    // ModBlockEntity.data is explicitly unsaved ContainerData. Fans have no
+    // container/menu, so it holds this compact current only until serialization.
+    let base = &entity.data;
+    let data = if decode_current(base).is_some() {
+        base.to_vec()
+    } else {
+        Vec::new()
+    };
+    tag.get_or_insert_with(|| entity.nbt.clone())
+        .insert(AIR_CURRENT_KEY.into(), Tag::IntArray(data));
+}
+pub(super) fn synced_current(entity: &ModBlockEntity) -> Option<SyncedCurrent> {
+    let Tag::IntArray(data) = entity.nbt.get(&AIR_CURRENT_KEY.into())? else {
+        return None;
+    };
+    let current = decode_current(data)?;
+    (current.rpm == super::create_port::number(&entity.nbt, "Speed")).then_some(current)
+}
+
+/// Clients consume only validated authoritative flow. An absent/stale payload
+/// applies no force; neither thread-local server state nor default client tags
+/// can supply an assumed current before the first synchronization.
+pub(super) fn client_tick(game: &mut Game<'_>) {
+    if game.remote.is_none() || !game.native_on("create") {
+        return;
+    }
+    let dimension = game.dim.id().to_owned();
+    let time = game.world.game_time;
+    let run = CACHE.with(|cache| {
+        let mut cache = cache.borrow_mut();
+        let id = std::ptr::from_ref(game) as usize;
+        if cache.client_game != Some(id)
+            || cache
+                .client_tick
+                .as_ref()
+                .is_some_and(|(_, previous)| *previous > time)
+        {
+            cache.client_origins.clear();
+            cache.client_tick = None;
+            cache.client_game = Some(id);
+            super::create_port_fan_entities::reset(false);
+        }
+        let stamp = (dimension.clone(), time);
+        if cache.client_tick.as_ref() == Some(&stamp) {
+            return false;
+        }
+        cache.client_tick = Some(stamp);
+        true
+    });
+    if !run {
+        return;
+    }
+    super::create_port_fan_entities::maintenance(game);
+    let fans: Vec<_> = game
+        .world
+        .block_entities
+        .iter()
+        .filter_map(|(&(x, y, z), e)| {
+            let crate::containers::BlockEntity::Mod(e) = e else {
+                return None;
+            };
+            (e.id == "create:encased_fan").then(|| ([x, y, z], synced_current(e)))
+        })
+        .collect();
+    let live: std::collections::BTreeSet<_> = fans.iter().map(|(pos, _)| *pos).collect();
+    let removed = CACHE.with(|cache| {
+        let mut cache = cache.borrow_mut();
+        let mut removed = Vec::new();
+        cache.client_origins.retain(|(dim, pos)| {
+            let keep = dim == &dimension && live.contains(pos);
+            if !keep {
+                removed.push((dim.clone(), *pos));
+            }
+            keep
+        });
+        removed
+    });
+    for (dim, pos) in removed {
+        super::create_port_fan_entities::clear(&dim, pos);
+    }
+    for (pos, current) in fans {
+        let Some(current) = current.filter(|c| c.facing == facing(game, pos)) else {
+            super::create_port_fan_entities::clear(&dimension, pos);
+            continue;
+        };
+        super::create_port_fan_entities::client_tick(
+            game,
+            pos,
+            current.facing,
+            current.rpm,
+            current.distance,
+            &current.segments,
+        );
+        CACHE.with(|cache| {
+            cache
+                .borrow_mut()
+                .client_origins
+                .insert((dimension.clone(), pos))
+        });
+    }
 }
 pub(super) fn draw(
     game: &Game<'_>,

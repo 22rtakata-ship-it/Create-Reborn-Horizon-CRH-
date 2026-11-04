@@ -15,6 +15,18 @@ fn create_depot_prediction(
         })
         || crate::game::create_port::depot_reacts(game, hit.pos, hit.face)
     {
+        let bypass = game.keys.contains(&winit::keyboard::KeyCode::ShiftLeft)
+            && (game
+                .inventory
+                .get(game.selected)
+                .is_some_and(Option::is_some)
+                || game.offhand.is_some());
+        if game.native_block(hit.pos) == "create:hand_crank"
+            && !held.is_some_and(|s| s.item.as_ref() == "create:wrench")
+            && !bypass
+        {
+            crate::game::create_port_nativeaudio::predict_crank(game, hit.pos);
+        }
         std::ops::ControlFlow::Break((InteractionResult::Success, DryUse::default()))
     } else {
         std::ops::ControlFlow::Continue(())

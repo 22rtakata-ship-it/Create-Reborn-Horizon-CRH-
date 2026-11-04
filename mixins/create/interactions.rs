@@ -231,13 +231,17 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3]) ->
     }
     if block == "create:hand_crank" {
         let back = secondary(game);
+        let mut update = false;
         game.native_with_mod_block_entity(pos, |e| {
+            update = crate::game::create_port::integer(&e.nbt, "InUse") == 0
+                || (crate::game::create_port::integer(&e.nbt, "Backwards") != 0) != back;
             e.nbt.insert("InUse".into(), Tag::Int(10));
             e.nbt.insert("Backwards".into(), Tag::Byte(i8::from(back)));
         });
-        crate::game::create_port_kinetic_runtime::invalidate();
-        game.native_block_entity_sync(pos);
-        crate::game::create_port_sounds::crank(game, pos);
+        if update {
+            crate::game::create_port_kinetic_runtime::invalidate();
+            game.native_block_entity_sync(pos);
+        }
         if let Some(player) = game.player.as_mut() {
             player.cause_food_exhaustion(32.0 * 0.01);
         }

@@ -65,6 +65,17 @@ dependencies = [
 [[package]]
 name = "create-horizon-core"
 version = "0.5.0"
+dependencies = [
+ "create-schematics",
+ "serde_json",
+]
+
+[[package]]
+name = "create-schematics"
+version = "0.5.0"
+dependencies = [
+ "flate2",
+]
 
 [[package]]
 name = "crypto-common"

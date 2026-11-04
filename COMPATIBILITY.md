@@ -1,5 +1,10 @@
 # Original Create identifiers and data
 
+The released behavior boundaries below describe 0.5 and its earlier increments.
+The development branch adds limited schematic placement and belt transport;
+its current evidence and unresolved differences are in
+[DEVELOPMENT_06.md](DEVELOPMENT_06.md). Development is not a completed 0.6 release.
+
 The behavior reference is Create **6.0.10**, Minecraft **1.21.1**, source commit
 `ac0c444d9828da3453ae8cc65338e8de063286fb`. The target is Horizon's Minecraft
 **26.3** implementation. Cross-version Java world interchange is outside the

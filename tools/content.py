@@ -88,6 +88,88 @@ def processors():
         write("data/create/loot_table/blocks/" + block + ".json", {"type": "minecraft:block", "pools": [{"rolls": 1, "entries": [{"type": "minecraft:item", "name": "create:" + block}]}]})
 
 
+def basin_mixer():
+    # MIT AllShapes defaults. Entity-sensitive ItemEntity basin collision,
+    # filled interaction raytrace and player-only mixer shape require a normal
+    # context-aware native hook; these static declarations do not fake them.
+    basin = {'default': [[0, 2/16, 0, 2/16, 1, 1],
+                         [14/16, 2/16, 0, 1, 1, 1],
+                         [2/16, 2/16, 0, 14/16, 1, 2/16],
+                         [2/16, 2/16, 14/16, 14/16, 1, 1],
+                         [2/16, 0, 2/16, 14/16, 2/16, 14/16]]}
+    mixer = {'default': [[0, 0, 0, 4/16, 1, 1], [12/16, 0, 0, 1, 1, 1],
+                         [4/16, 0, 0, 12/16, 1, 4/16], [4/16, 0, 12/16, 12/16, 1, 1]]}
+    write('data/create/horizon/block/basin.json', {
+        'template': 'minecraft:glass', 'item': True,
+        'properties': {'hardness': 1.5, 'explosion_resistance': 6, 'requires_tool': True,
+                       'map_color': 21, 'sounds': 'minecraft:netherite_block', 'render_shape': 'MODEL'},
+        'state_properties': {'facing': {'type': 'enum', 'values': ['down', 'north', 'south', 'west', 'east']}},
+        'default_state': {'facing': 'down'}, 'shapes': basin, 'collision_shapes': basin,
+    })
+    write('data/create/horizon/block/mechanical_mixer.json', {
+        'template': 'minecraft:glass', 'item': True,
+        'properties': {'hardness': 1.5, 'explosion_resistance': 6, 'requires_tool': True,
+                       'map_color': 11, 'sounds': 'minecraft:stone', 'render_shape': 'MODEL'},
+        'shapes': mixer, 'collision_shapes': mixer,
+    })
+    # Our provisional geometry uses vanilla textures and contains no original
+    # model bytes. The local JAR importer replaces it with the genuine parts.
+    bowl = [([1, 2, 1], [3, 15, 15]), ([13, 2, 1], [15, 15, 15]),
+            ([3, 2, 1], [13, 15, 3]), ([3, 2, 13], [13, 15, 15]), ([3, 0, 3], [13, 2, 13])]
+    model('basin/block', bowl, 'minecraft:block/iron_block')
+    model('basin/block_directional', bowl + [([5, 9, 14], [11, 12, 18])], 'minecraft:block/iron_block')
+    model('mechanical_mixer/block', [([0, 10, 0], [4, 16, 16]), ([12, 10, 0], [16, 16, 16]),
+                                     ([4, 10, 0], [12, 16, 4]), ([4, 10, 12], [12, 16, 16])], 'minecraft:block/andesite')
+    model('mechanical_mixer/pole', [([7, 2, 7], [9, 15, 9])])
+    model('mechanical_mixer/head', [([4, 0, 7], [12, 2, 9]), ([7, 0, 4], [9, 2, 12]), ([7, 2, 7], [9, 8, 9])])
+    model('cogwheel_shaftless', [([2, 6, 2], [14, 10, 14]), ([0, 5, 6], [16, 11, 10]),
+                                ([6, 5, 0], [10, 11, 16])], 'minecraft:block/oak_planks')
+    write('assets/create/blockstates/basin.json', {'variants': {
+        'facing=down': {'model': 'create:block/basin/block'},
+        **{'facing=' + face: {'model': 'create:block/basin/block_directional', **({'y': angle} if angle else {})}
+           for face, angle in [('south', 0), ('west', 90), ('north', 180), ('east', 270)]},
+    }})
+    write('assets/create/blockstates/mechanical_mixer.json', {'variants': {'': {'model': 'create:block/mechanical_mixer/block'}}})
+    for block in ['basin', 'mechanical_mixer']:
+        write('assets/create/models/item/' + block + '.json', {'parent': 'create:block/' + block + '/block'})
+        write('assets/create/items/' + block + '.json', {'model': {'type': 'minecraft:model', 'model': 'create:item/' + block}})
+        write('data/create/loot_table/blocks/' + block + '.json', {'type': 'minecraft:block', 'pools': [
+            {'rolls': 1, 'entries': [{'type': 'minecraft:item', 'name': 'create:' + block}]},
+        ]})
+
+
+def belts():
+    from belt_shapes import geometry
+    shapes, collisions = geometry()
+    write('data/create/horizon/block/belt.json', {
+        'template': 'minecraft:glass', 'item': False,
+        'properties': {'hardness': .8, 'explosion_resistance': .8,
+                       'sounds': 'minecraft:white_wool', 'render_shape': 'ENTITYBLOCK_ANIMATED',
+                       'map_color': 22},
+        'state_properties': {
+            'facing': {'type': 'enum', 'values': ['north', 'south', 'west', 'east']},
+            'slope': {'type': 'enum', 'values': ['horizontal', 'upward', 'downward', 'vertical', 'sideways']},
+            'part': {'type': 'enum', 'values': ['start', 'middle', 'end', 'pulley']},
+            'casing': {'type': 'boolean'}, 'waterlogged': {'type': 'boolean'}},
+        'default_state': {'facing': 'north', 'slope': 'horizontal', 'part': 'start',
+                          'casing': 'false', 'waterlogged': 'false'},
+        'shapes': shapes, 'collision_shapes': collisions,
+    })
+    # Bare source belts have an empty static particle model; the native renderer
+    # supplies original moving parts. Do not run Create's Java BeltModel loader.
+    write('assets/create/blockstates/belt.json', {
+        'variants': {'': {'model': 'create:block/belt/particle'}}})
+    write('assets/create/models/block/belt/particle.json', {
+        'textures': {'particle': 'minecraft:block/black_wool'}, 'elements': []})
+    write('data/create/loot_table/blocks/belt.json', {'type': 'minecraft:block', 'pools': [
+        {'rolls': 1, 'entries': [{'type': 'minecraft:item', 'name': 'create:belt_connector'}]},
+        {'rolls': 1, 'conditions': [{'condition': 'minecraft:inverted', 'term': {
+            'condition': 'minecraft:block_state_property', 'block': 'create:belt',
+            'properties': {'part': 'middle'}}}],
+         'entries': [{'type': 'minecraft:item', 'name': 'create:shaft'}]},
+    ]})
+
+
 def foundation():
     from catalog import BLOCKS as all_blocks, ITEMS, TRANSMISSIONS, STATIC_BLOCKS, INSTRUMENTS, GENERATORS, INTERNAL_BLOCKS, rust_catalog
     for block in TRANSMISSIONS + STATIC_BLOCKS + INSTRUMENTS + GENERATORS:
@@ -143,13 +225,9 @@ def foundation():
     model("hand_crank/handle", [([6, 5, 6], [10, 10, 16])], "minecraft:block/oak_planks")
     model('goggles',[([4,6,3],[7,9,4]),([9,6,3],[12,9,4])],'minecraft:block/gold_block')
     processors()
-    # A native world-space hint: our own geometry and vanilla sprite reference.
-    model('port_hint',[([7.6,7.6,5],[8.4,8.4,14]),([6,7.5,11],[10,8.5,12]),([7,7.5,12],[9,8.5,13])],'minecraft:block/white_concrete')
-    hint=CONTENT/'assets/create/models/block/port_hint.json'
-    value=json.loads(hint.read_text())
-    for element in value['elements']:
-        for face in element['faces'].values():face['tintindex']=0
-    hint.write_text(json.dumps(value,indent=2)+'\n')
+    basin_mixer()
+    belts()
+    (CONTENT / 'assets/create/models/block/port_hint.json').unlink(missing_ok=True)
     # Only MIT recipe/tag data is distributed; original assets stay in the JAR.
     reference = json.loads((ROOT / "tools/data/recipes.json").read_text())
     def current(value):
@@ -166,10 +244,24 @@ def foundation():
             if path.relative_to(CONTENT / "data").as_posix() not in retained: path.unlink()
     for path, value in reference["recipes"].items(): write("data/" + path, current(value))
     for path, value in reference["tags"].items(): write("data/" + path, value)
+    # MIT Create AllDamageTypes / generated data, pinned in compatibility.json.
+    # Keep source IDs and data-driven fire/protection policy on both sides.
+    for kind in ("fan_fire", "fan_lava"):
+        write("data/create/damage_type/" + kind + ".json", {
+            "effects": "burning", "exhaustion": 0.0,
+            "message_id": "create." + kind,
+            "scaling": "when_caused_by_living_non_player",
+        })
+    for tag in ("is_fire", "bypasses_armor", "bypasses_shield"):
+        write("data/minecraft/tags/damage_type/" + tag + ".json", {
+            "values": ["create:fan_fire", "create:fan_lava"],
+        })
     write("data/create/horizon/creative_tab/kinetics.json", {"title": "itemGroup.create.base", "icon": "create:cogwheel", "items": ["create:" + name for name in all_blocks + ITEMS]})
     # These fallback labels are ours; the JAR replaces them with all upstream locales.
     extra_blocks = {"gearbox":"Gearbox","clutch":"Clutch","gearshift":"Gearshift","hand_crank":"Hand Crank","andesite_encased_shaft":"Andesite Encased Shaft","brass_encased_shaft":"Brass Encased Shaft","andesite_casing":"Andesite Casing","brass_casing":"Brass Casing","andesite_alloy_block":"Block of Andesite Alloy","brass_block":"Block of Brass","zinc_block":"Block of Zinc","speedometer":"Speedometer","stressometer":"Stressometer","water_wheel":"Water Wheel","large_water_wheel":"Large Water Wheel","millstone":"Millstone","encased_fan":"Encased Fan","mechanical_drill":"Mechanical Drill"}
     extra_items = {"andesite_alloy":"Andesite Alloy","brass_ingot":"Brass Ingot","brass_nugget":"Brass Nugget","zinc_ingot":"Zinc Ingot","zinc_nugget":"Zinc Nugget","wrench":"Wrench","brass_sheet":"Brass Sheet","vertical_gearbox":"Vertical Gearbox","goggles":"Engineer’s Goggles","propeller":"Propeller","wheat_flour":"Wheat Flour","dough":"Dough"}
+    extra_blocks.update({'basin': 'Basin', 'mechanical_mixer': 'Mechanical Mixer'})
+    extra_items['whisk'] = 'Whisk'
     for locale in ["en_us","ru_ru"]:
         path=CONTENT / ("assets/create/lang/"+locale+".json")
         lang=json.loads(path.read_text())
@@ -178,15 +270,20 @@ def foundation():
         if locale == "ru_ru":
             lang.update({"block.create.millstone": "Мельничный жернов", "block.create.encased_fan": "Вентилятор в корпусе", "block.create.mechanical_drill": "Механический бур",
                          "item.create.propeller": "Пропеллер", "item.create.wheat_flour": "Пшеничная мука", "item.create.dough": "Тесто"})
+            lang.update({'block.create.basin': 'Чаша', 'block.create.mechanical_mixer': 'Механический миксер', 'item.create.whisk': 'Венчик'})
         lang["create.kinetics.creative_motor.rotation_speed"]="Generated Speed in RPM"
         path.write_text(json.dumps(lang,ensure_ascii=False,indent=2)+"\n")
     (NATIVE / "assets/src/catalog.rs").write_text(rust_catalog())
     # Provisional aliases derived from MIT AllSoundEvents registrations.
-    write("assets/create/sounds.json", {key: {"sounds": [{"type": "event", "name": event}]} for key,event in {
+    sounds = {key: {"sounds": [{"type": "event", "name": event}]} for key,event in {
         "depot_slide": "minecraft:block.sand.break", "depot_plop": "minecraft:entity.item_frame.add_item",
         "mechanical_press_activation": "minecraft:block.anvil.land", "cranking": "minecraft:block.wood.place",
         "wrench_rotate": "minecraft:block.wooden_trapdoor.close", "wrench_remove": "minecraft:entity.item.pickup",
-    }.items()})
+    }.items()}
+    # Exact MIT AllSoundEvents.MIXING registration, not bundled sound bytes.
+    sounds['mixing'] = {'sounds': [{'type': 'event', 'name': 'minecraft:block.' + name + '.break', 'volume': .125, 'pitch': .5}
+                                  for name in ['gilded_blackstone', 'netherrack']]}
+    write('assets/create/sounds.json', sounds)
 
 
 def main():
@@ -222,6 +319,20 @@ capabilities = ["registries"]
             if block == "creative_motor": values += ["up", "down"]
             declaration["state_properties"] = {"facing": {"type": "enum", "values": values}}
             declaration["default_state"] = {"facing": "east"}
+            if block == "creative_motor":
+                # AllShapes.MOTOR_BLOCK: box(3,0,3,13,14,13), forDirectional(UP).
+                # Selection and collision must share the original shape: the
+                # value-box hit test uses the selected face's actual hit point.
+                shapes = {"property": "facing", "values": {
+                    "down": [[3/16, 2/16, 3/16, 13/16, 1, 13/16]],
+                    "up": [[3/16, 0, 3/16, 13/16, 14/16, 13/16]],
+                    "north": [[3/16, 3/16, 2/16, 13/16, 13/16, 1]],
+                    "south": [[3/16, 3/16, 0, 13/16, 13/16, 14/16]],
+                    "west": [[2/16, 3/16, 3/16, 1, 13/16, 13/16]],
+                    "east": [[0, 3/16, 3/16, 14/16, 13/16, 13/16]],
+                }}
+                declaration["shapes"] = shapes
+                declaration["collision_shapes"] = shapes
         else:
             # Create's depot is not an inventory screen or a directional barrel.
             declaration["state_properties"] = {"waterlogged": {"type": "boolean"}}

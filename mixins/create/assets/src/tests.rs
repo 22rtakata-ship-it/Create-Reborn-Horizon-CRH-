@@ -45,6 +45,23 @@ fn fixture(change: impl FnOnce(&mut BTreeMap<String, Vec<u8>>)) -> Vec<u8> {
         "assets/create/sounds.json".into(),
         json!({"fixture":{"sounds":["create:fixture"]}}),
     );
+    for particle in ["rotation_indicator", "air_flow"] {
+        json_file(
+            format!("assets/create/particles/{particle}.json"),
+            json!({"textures":["minecraft:generic_0"]}),
+        );
+    }
+    for texture in [
+        "gui/value_settings",
+        "gui/icons",
+        "block/belt_scroll",
+        "block/belt_diagonal_scroll",
+    ] {
+        files.insert(
+            format!("assets/create/textures/{texture}.png"),
+            b"\x89PNG\r\n\x1a\nsynthetic fixture".to_vec(),
+        );
+    }
     files.insert(
         "assets/create/sounds/fixture.ogg".into(),
         b"OggSsynthetic fixture".to_vec(),
@@ -119,6 +136,15 @@ fn imports_every_locale_byte_for_byte() {
 fn processor_parts_and_ingredients_are_required_without_accepting_java_loaders() {
     let home = Stage::new(&std::env::temp_dir()).unwrap();
     let required = [
+        "assets/create/particles/rotation_indicator.json",
+        "assets/create/particles/air_flow.json",
+        "assets/create/textures/gui/value_settings.png",
+        "assets/create/textures/gui/icons.png",
+        "assets/create/textures/block/belt_scroll.png",
+        "assets/create/textures/block/belt_diagonal_scroll.png",
+        "assets/create/models/block/belt/diagonal_middle.json",
+        "assets/create/models/block/belt_pulley.json",
+        "assets/create/models/item/belt_connector.json",
         "assets/create/blockstates/millstone.json",
         "assets/create/blockstates/encased_fan.json",
         "assets/create/models/block/millstone/inner.json",
@@ -129,6 +155,13 @@ fn processor_parts_and_ingredients_are_required_without_accepting_java_loaders()
         "assets/create/blockstates/mechanical_drill.json",
         "assets/create/models/block/mechanical_drill/head.json",
         "assets/create/models/item/mechanical_drill.json",
+        "assets/create/blockstates/basin.json",
+        "assets/create/blockstates/mechanical_mixer.json",
+        "assets/create/models/block/basin/block_directional.json",
+        "assets/create/models/block/mechanical_mixer/head.json",
+        "assets/create/models/block/mechanical_mixer/pole.json",
+        "assets/create/models/block/cogwheel_shaftless.json",
+        "assets/create/models/item/whisk.json",
     ];
     for path in required {
         let missing = fixture(|files| {
@@ -142,6 +175,8 @@ fn processor_parts_and_ingredients_are_required_without_accepting_java_loaders()
         "assets/create/models/block/millstone/inner.json",
         "assets/create/models/block/encased_fan/propeller.json",
         "assets/create/models/block/mechanical_drill/head.json",
+        "assets/create/models/block/mechanical_mixer/head.json",
+        "assets/create/models/block/mechanical_mixer/pole.json",
     ] {
         let java = fixture(|files| {
             files.insert(path.into(), br#"{"loader":"create:java_loader"}"#.to_vec());
@@ -154,6 +189,9 @@ fn processor_parts_and_ingredients_are_required_without_accepting_java_loaders()
 
 #[test]
 fn processor_catalog_uses_a_new_cache_schema() {
+    const {
+        assert!(SCHEMA >= 10);
+    }
     let home = Stage::new(&std::env::temp_dir()).unwrap();
     let bytes = fixture(|_| {});
     let first = import_fixture(&home.0, &bytes).unwrap();
@@ -174,7 +212,7 @@ fn processor_catalog_uses_a_new_cache_schema() {
     fs::remove_file(
         first
             .pack
-            .join("assets/create/models/block/mechanical_drill/head.json"),
+            .join("assets/create/models/block/mechanical_mixer/head.json"),
     )
     .unwrap();
     fs::rename(target, &old).unwrap();
@@ -199,6 +237,14 @@ fn processor_catalog_uses_a_new_cache_schema() {
             .is_file()
     );
     assert!(old.is_dir());
+    for path in [
+        "assets/create/models/block/mechanical_mixer/head.json",
+        "assets/create/models/block/mechanical_mixer/pole.json",
+        "assets/create/models/block/cogwheel_shaftless.json",
+        "assets/create/models/item/whisk.json",
+    ] {
+        assert!(upgraded.pack.join(path).is_file(), "{path}");
+    }
     assert!(import_fixture(&home.0, &bytes).unwrap().cached);
 }
 
@@ -348,6 +394,81 @@ fn bundled_processors_have_source_states_collision_and_real_processing_recipes()
         read("data/create/tags/fluid/fan_processing_catalysts/blasting.json")["values"],
         json!(["minecraft:lava", "minecraft:flowing_lava"])
     );
+}
+
+#[test]
+fn basin_mixer_bundle_keeps_source_defaults_and_only_supported_dry_recipes() {
+    let bundle: BTreeMap<String, String> =
+        serde_json::from_str(include_str!("../../data/content.json")).unwrap();
+    let read = |path: &str| -> Value { serde_json::from_str(&bundle[path]).unwrap() };
+    let basin = read("data/create/horizon/block/basin.json");
+    assert_eq!(basin["default_state"], json!({"facing":"down"}));
+    assert_eq!(basin["state_properties"].as_object().unwrap().len(), 1);
+    assert_eq!(
+        basin["state_properties"]["facing"]["values"],
+        json!(["down", "north", "south", "west", "east"])
+    );
+    let mixer = read("data/create/horizon/block/mechanical_mixer.json");
+    assert!(mixer.get("state_properties").is_none());
+    assert!(mixer.get("default_state").is_none());
+    let contains = |shape: &Value, p: [f64; 3]| {
+        shape["default"].as_array().unwrap().iter().any(|b| {
+            (0..3).all(|axis| {
+                b[axis].as_f64().unwrap() <= p[axis] && p[axis] < b[axis + 3].as_f64().unwrap()
+            })
+        })
+    };
+    // AllShapes.BASIN_BLOCK_SHAPE, not the shorter ItemEntity collision.
+    assert!(contains(&basin["collision_shapes"], [0.5, 0.0625, 0.5]));
+    assert!(!contains(&basin["collision_shapes"], [0.5, 0.5, 0.5]));
+    assert!(contains(&basin["collision_shapes"], [0.0625, 0.95, 0.5]));
+    // AllShapes.MECHANICAL_PROCESSOR_SHAPE, not the player-only casing.
+    assert!(!contains(&mixer["collision_shapes"], [0.5, 0.5, 0.5]));
+    assert!(contains(&mixer["collision_shapes"], [0.125, 0.0625, 0.5]));
+    assert_eq!(basin["collision_shapes"], basin["shapes"]);
+    assert_eq!(mixer["collision_shapes"], mixer["shapes"]);
+    for id in ["basin", "mechanical_mixer"] {
+        assert_eq!(
+            read(&format!("data/create/loot_table/blocks/{id}.json"))["pools"][0]["entries"][0]["name"],
+            format!("create:{id}")
+        );
+        assert!(
+            read("data/minecraft/tags/block/mineable/pickaxe.json")["values"]
+                .as_array()
+                .unwrap()
+                .contains(&json!(format!("create:{id}")))
+        );
+    }
+    assert!(
+        read("data/minecraft/tags/block/mineable/axe.json")["values"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("create:mechanical_mixer"))
+    );
+    for id in ["whisk", "basin", "mechanical_mixer"] {
+        assert_eq!(
+            read(&format!("data/create/recipe/crafting/kinetics/{id}.json"))["result"]["id"],
+            format!("create:{id}")
+        );
+    }
+    let recipes: Vec<_> = bundle
+        .iter()
+        .filter(|(name, _)| name.starts_with("data/create/recipe/mixing/"))
+        .collect();
+    assert_eq!(recipes.len(), 2);
+    for (name, raw) in recipes {
+        let recipe: Value = serde_json::from_str(raw).unwrap();
+        assert_eq!(recipe["type"], "create:mixing");
+        assert!(recipe.get("heat_requirement").is_none());
+        assert_eq!(recipe["ingredients"].as_array().unwrap().len(), 2);
+        assert_eq!(recipe["results"], json!([{"id":"create:andesite_alloy"}]));
+        assert!(
+            name.ends_with("andesite_alloy.json")
+                || name.ends_with("andesite_alloy_from_zinc.json")
+        );
+    }
+    assert!(!bundle.contains_key("data/create/recipe/mixing/dough_by_mixing.json"));
+    assert!(!bundle.contains_key("data/create/recipe/mixing/brass_ingot.json"));
 }
 
 #[test]

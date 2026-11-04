@@ -127,6 +127,9 @@ pub(super) fn owns(block: &str) -> bool {
             | "create:millstone"
             | "create:encased_fan"
             | "create:mechanical_drill"
+            | "create:basin"
+            | "create:mechanical_mixer"
+            | "create:belt"
     )
 }
 
@@ -170,6 +173,30 @@ pub(super) fn integer(nbt: &Compound, key: &str) -> i32 {
         Some(Tag::Byte(n)) => i32::from(*n),
         _ => 0,
     }
+}
+
+/// ItemStack.getMaxStackSize after the component patch. Persistent numeric
+/// values use Number.intValue; removing the prototype component defaults to1.
+pub(super) fn stack_maximum_override(stack: &ItemStack) -> Option<u32> {
+    let data = stack.data()?;
+    if data.other("!minecraft:max_stack_size").is_some() {
+        return Some(1);
+    }
+    let value = match data.other("minecraft:max_stack_size")? {
+        Tag::Byte(v) => i32::from(*v),
+        Tag::Short(v) => i32::from(*v),
+        Tag::Int(v) => *v,
+        Tag::Long(v) => *v as i32,
+        Tag::Float(v) => f32::from_bits(*v) as i32,
+        Tag::Double(v) => f64::from_bits(*v) as i32,
+        _ => return None,
+    };
+    (1..=99).contains(&value).then_some(value as u32)
+}
+
+pub(super) fn stack_maximum(game: &Game<'_>, stack: &ItemStack) -> u32 {
+    stack_maximum_override(stack)
+        .unwrap_or_else(|| game.native_max_stack_size(&stack.item).unwrap_or(64))
 }
 
 thread_local! {
@@ -277,6 +304,9 @@ pub(super) fn placed(game: &mut Game<'_>, stack: &ItemStack, pos: [i32; 3]) {
 }
 
 pub(super) fn depot_reacts(game: &Game<'_>, pos: [i32; 3], face: [i32; 3]) -> bool {
+    if crate::game::create_port_basin::reacts(game, pos) {
+        return true;
+    }
     if crate::game::create_port_millstone::reacts(game, pos) {
         return true;
     }
@@ -299,6 +329,16 @@ pub(super) fn depot_reacts(game: &Game<'_>, pos: [i32; 3], face: [i32; 3]) -> bo
 }
 
 pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3], canceled: &mut bool) {
+    if crate::game::create_port_basin::right_click(game, pos) {
+        *canceled = true;
+        game.swing_arm();
+        return;
+    }
+    if crate::game::create_port_belt::right_click(game, pos, face) {
+        *canceled = true;
+        game.swing_arm();
+        return;
+    }
     if crate::game::create_port_interactions::right_click(game, pos, face) {
         game.swing_arm();
         *canceled = true;
@@ -467,11 +507,37 @@ pub(super) fn node(game: &Game<'_>, pos: [i32; 3]) -> Option<Node> {
             }
         };
     }
-    if block == "create:millstone" {
+    if matches!(
+        block.as_str(),
+        "create:millstone" | "create:mechanical_mixer"
+    ) {
         axis = Axis::Y;
     }
+    if block == "create:belt" {
+        axis = if game.native_block_property(pos, "slope").as_deref() == Some("sideways") {
+            Axis::Y
+        } else if direction[0] != 0 {
+            Axis::Z
+        } else {
+            Axis::X
+        };
+    }
     let kind = match block.as_str() {
+        "create:belt" => {
+            let (controller, index) =
+                crate::game::create_port_belt::node_data(game, pos).unwrap_or((pos, 0));
+            Kind::Belt {
+                controller,
+                index,
+                pulley: game.native_block_property(pos, "part").as_deref() != Some("middle"),
+                diagonal: matches!(
+                    game.native_block_property(pos, "slope").as_deref(),
+                    Some("upward" | "downward")
+                ),
+            }
+        }
         "create:millstone" => Kind::Millstone,
+        "create:mechanical_mixer" => Kind::Mixer,
         "create:encased_fan" | "create:mechanical_drill" => Kind::Consumer {
             facing: direction.map(|v| -v),
             impact: if block == "create:mechanical_drill" {
@@ -569,7 +635,7 @@ pub(super) fn ingredient(json: &Value) -> Option<Value> {
         .map(|values| Value::Array(values.iter().filter_map(ingredient).collect()))
 }
 
-fn result(game: &Game<'_>, stack: &ItemStack) -> Option<ItemStack> {
+pub(super) fn result(game: &Game<'_>, stack: &ItemStack) -> Option<ItemStack> {
     for recipe in game.native_recipes_of_type("create:pressing") {
         let Some(inputs) = recipe.json["ingredients"].as_array() else {
             continue;
@@ -619,6 +685,12 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
     if !owns(&block) {
         return;
     }
+    if block == "create:basin" {
+        if crate::game::create_port_basin::tick(game, pos, entity) {
+            game.native_block_entity_sync(pos);
+        }
+        return;
+    }
     if block == "create:depot" {
         crate::game::create_port_world_items::catch(game, pos, entity);
         if depot_data(entity) {
@@ -626,6 +698,7 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
         }
         return;
     }
+    crate::game::create_port_belt::prepare(game, pos, entity);
     if crate::game::create_port_generators::tick(game, pos, entity, &block) {
         return;
     }
@@ -700,7 +773,20 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
     }
     entity.nbt.insert(
         "create_horizon".into(),
-        Tag::Compound(Compound::from([("Ports".into(), Tag::Compound(ports))])),
+        Tag::Compound(Compound::from([
+            ("Ports".into(), Tag::Compound(ports)),
+            (
+                "TheoreticalSpeed".into(),
+                Tag::Float(
+                    network
+                        .theoretical
+                        .get(&pos)
+                        .copied()
+                        .unwrap_or(0.0)
+                        .to_bits(),
+                ),
+            ),
+        ])),
     );
     let mut rpm = network.speed(pos);
     if let Some(other) = &other_half {
@@ -711,6 +797,11 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
 
     let old_rpm = number(&entity.nbt, "Speed");
     entity.nbt.insert("Speed".into(), Tag::Float(rpm.to_bits()));
+    let generated = match start.kind {
+        Kind::Motor { rpm, .. } | Kind::WaterWheel { rpm, .. } => Some(rpm),
+        _ => None,
+    };
+    crate::game::create_port_particles::server_tick(game, pos, entity, old_rpm, rpm, generated);
     entity
         .nbt
         .insert("Capacity".into(), Tag::Float(network.capacity.to_bits()));
@@ -722,8 +813,12 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
         Tag::String(format!("{:?}", network.status).as_str().into()),
     );
     let mut sync = old_rpm != rpm;
+    sync |= crate::game::create_port_belt::tick(game, pos, entity, rpm);
     if block == "create:millstone" {
         sync |= crate::game::create_port_millstone::tick(game, pos, entity, rpm);
+    }
+    if block == "create:mechanical_mixer" {
+        sync |= crate::game::create_port_mixer::tick(game, pos, entity, rpm);
     }
     if block == "create:encased_fan" {
         crate::game::create_port_fan::tick(game, pos, entity, rpm);
@@ -790,7 +885,10 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
         let mode = if cycle.running {
             integer(&entity.nbt, "Mode")
         } else {
-            i32::from(game.native_block(depot) == "create:depot")
+            i32::from(matches!(
+                game.native_block(depot).as_str(),
+                "create:depot" | "create:belt"
+            ))
         };
         let plan = if mode == 1 {
             depot_input(game, depot)
@@ -889,6 +987,7 @@ pub(super) fn update_tag(entity: &ModBlockEntity, tag: &mut Option<Compound>) {
 }
 
 pub(super) fn container(block: &str, container: &mut Option<ModContainer>) {
+    crate::game::create_port_basin::container(block, container);
     crate::game::create_port_millstone::container(block, container);
     if block == "create:depot" && container.is_none() {
         *container = Some(ModContainer {
@@ -902,7 +1001,8 @@ pub(super) fn container(block: &str, container: &mut Option<ModContainer>) {
 }
 
 pub(super) fn models(models: &mut Vec<String>) {
-    models.push("create:block/port_hint".into());
+    crate::game::create_port_mixer::models(models);
+    crate::game::create_port_belt::models(models);
     for part in create_assets::WHEEL_PARTS {
         for wood in create_assets::WOODS {
             models.push(format!("create:block/{part}_material_{wood}"));
@@ -984,6 +1084,14 @@ pub(super) fn draw(
             .and_then(horizon_items::item_nbt::item_from_nbt);
         trace_depot(pos, stack.as_ref());
         crate::game::create_port_presentation::depot(game, pos, entity, draw);
+        return;
+    }
+    if crate::game::create_port_belt::draw(game, pos, entity, draw) {
+        return;
+    }
+    if crate::game::create_port_basin::draw(game, pos, entity, draw)
+        || crate::game::create_port_mixer::draw(game, pos, entity, draw)
+    {
         return;
     }
     if crate::game::create_port_millstone::draw(game, pos, entity, draw) {
@@ -1161,6 +1269,10 @@ pub(super) fn draw(
         Kind::Cog { large: true } => "create:block/large_cogwheel",
         _ => "create:block/shaft",
     };
-    game.native_draw_model(draw, model, 0xFFFFFF);
+    game.native_draw_model(
+        draw,
+        model,
+        crate::game::create_port_presentation::kinetic_tint(game, pos),
+    );
     draw.pop();
 }

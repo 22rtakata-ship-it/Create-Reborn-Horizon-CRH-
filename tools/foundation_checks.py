@@ -101,23 +101,9 @@ def run(call, graphics, log_path, scratch):
     else: print("Headless: crafting and motor screen checks require the Horizon renderer and are skipped",flush=True)
     call('command','gamemode creative');clear();reset();motor();tp(.5,64,2.5)
     if graphics:
-        call('look-at','block',OFFSET,64,0,'south');call('wait',3)
-        call('interact',OFFSET,64,0,'south');call('wait',10)
-        assert call('screen')['screen']=='mod'
-        rows=[json.loads(line.split('Create motor board: ',1)[1]) for line in log_path.read_text().splitlines() if 'Create motor board: ' in line]
-        assert rows, 'Motor board did not render'
-        x,y=rows[-1]['origin']
-        call('click-at',x+18+128,y+54+8);call('wait',10)
-        assert number(0,64,0,'ScrollValue')==128;speed(1,128)
-        call('click-at',x+18+64,y+30+8);call('wait',10)
-        assert number(0,64,0,'ScrollValue')==-64;speed(1,-64)
-        call('screenshot',scratch/'motor-settings.png')
-        call('click-at',x+240,y+105);call('wait',5)
-        assert call('screen')['screen']=='playing'
-        call('look-at','block',OFFSET,64,0,'south');call('wait',3)
-        call('scroll-at',100,100,1);call('wait',10)
-        assert number(0,64,0,'ScrollValue')==-63;speed(1,-63)
-        print('Foundation: real motor board clicks and wheel update server RPM and downstream shafts',flush=True)
+        import value_settings_checks
+        result=value_settings_checks.run(call,graphics,log_path,scratch,[OFFSET,64,0])
+        speed(1,result['speed'])
     # Keep the selected signed speed as a save/reload fixture.
     return {'motor_pos':[OFFSET,64,0],'speed':number(0,64,0,'ScrollValue')}
 

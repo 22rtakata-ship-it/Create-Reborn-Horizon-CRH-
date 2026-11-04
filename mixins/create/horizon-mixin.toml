@@ -3,7 +3,7 @@ id = "create"
 version = "0.5.0"
 
 [compatibility]
-horizon_revision = "fc02103818c212920fd24aa34a2b2f91ba49e56f"
+horizon_revision = "b45ffd5a670f20e66db7fc01f53fd94907563adc"
 
 [[crate]]
 id = "engine"
@@ -13,11 +13,45 @@ path = "engine"
 id = "assets"
 path = "assets"
 
+[[crate]]
+id = "schematics"
+path = "schematics"
+
 [[module]]
 id = "runtime"
 file = "crates/horizon-client/src/game.rs"
 name = "create_port"
 source = "runtime.rs"
+
+[[module]]
+id = "schematic-runtime"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_schematic_runtime"
+source = "schematic_runtime.rs"
+
+[[injection]]
+id = "schematic-register"
+hook = "register_commands"
+hook_version = 1
+kind = "HEAD"
+helper = "schematic_register.rs"
+bindings = [
+ {name="game",ty="&mut crate::game::Game<'_>",value="&mut *self"},
+ {name="commands",ty="&mut Vec<crate::mod_api::NativeCommand>",value="&mut *commands"},
+]
+
+[[injection]]
+id = "schematic-command"
+hook = "perform_command"
+hook_version = 1
+kind = "HEAD"
+helper = "schematic_command.rs"
+bindings = [
+ {name="game",ty="&mut crate::game::Game<'_>",value="&mut *self"},
+ {name="player",ty="&crate::mod_api::NativeServerPlayer",value="player"},
+ {name="command",ty="&str",value="command"},
+ {name="ran",ty="&mut bool",value="&mut *ran"},
+]
 
 [[injection]]
 id = "bundled-content"
@@ -209,6 +243,45 @@ file = "crates/horizon-client/src/game.rs"
 name = "create_port_motor_control"
 source = "motor_control.rs"
 
+[[module]]
+id = "motor-value-ui"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_motor_value_ui"
+source = "motor_value_ui.rs"
+
+[[module]]
+id = "motor-value-world"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_motor_value_world"
+source = "motor_value_world.rs"
+
+[[injection]]
+id = "motor-world-display"
+# world_canvas is pending upstream API stamping; exact source pin above applies.
+target = "horizon_client::game::native_hooks::Game<'_>::native_world_submit"
+kind = "HEAD"
+helper = "motor_world.rs"
+bindings = [
+  {name="game",ty="&crate::game::Game<'_>",value="self"},
+  {name="draw",ty="&mut crate::game::native_world_draw::NativeWorldDraw",value="&mut *draw"},
+]
+
+[[injection]]
+id = "motor-world-reset"
+hook = "client_level_unload"
+hook_version = 1
+kind = "HEAD"
+helper = "motor_world_reset.rs"
+bindings = [{name="game",ty="&mut crate::game::Game<'_>",value="&mut *self"}]
+
+[[injection]]
+id = "motor-value-client-tick"
+hook = "tick"
+hook_version = 1
+kind = "HEAD"
+helper = "motor_tick.rs"
+bindings = [{ name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" }]
+
 [[injection]]
 id = "motor-open"
 hook = "interaction_key"
@@ -221,18 +294,6 @@ bindings = [
   { name = "hand", ty = "horizon_client::first_person::Hand", value = "hand" },
   { name = "swing", ty = "&mut bool", value = "&mut *swing_hand" },
   { name = "canceled", ty = "&mut bool", value = "&mut *canceled" },
-]
-
-[[injection]]
-id = "motor-wheel"
-hook = "wheel"
-hook_version = 1
-kind = "HEAD"
-helper = "motor_wheel.rs"
-bindings = [
-  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
-  { name = "steps", ty = "f32", value = "steps" },
-  { name = "claimed", ty = "&mut bool", value = "&mut *claimed" },
 ]
 
 [[injection]]
@@ -307,6 +368,46 @@ bindings = [
 ]
 
 [[injection]]
+id = "motor-release"
+hook = "screen_mouse_button_released_pre"
+hook_version = 1
+kind = "HEAD"
+helper = "motor_release.rs"
+bindings = [
+  { name = "game", ty = "&crate::game::Game<'_>", value = "&*self" },
+  { name = "screen", ty = "&crate::mod_api::NativeScreenView<'_>", value = "screen" },
+  { name = "button", ty = "i32", value = "button" },
+  { name = "canceled", ty = "&mut bool", value = "&mut *canceled" },
+]
+
+[[injection]]
+id = "motor-key-release"
+hook = "screen_key_released_pre"
+hook_version = 1
+kind = "HEAD"
+helper = "motor_key_release.rs"
+bindings = [
+  { name = "game", ty = "&crate::game::Game<'_>", value = "&*self" },
+  { name = "screen", ty = "&crate::mod_api::NativeScreenView<'_>", value = "screen" },
+  { name = "key", ty = "&str", value = "key" },
+  { name = "canceled", ty = "&mut bool", value = "&mut *canceled" },
+]
+
+[[injection]]
+id = "motor-board-scroll"
+hook = "screen_mouse_scrolled_pre"
+hook_version = 1
+kind = "HEAD"
+helper = "motor_scroll.rs"
+bindings = [
+  { name = "game", ty = "&crate::game::Game<'_>", value = "&*self" },
+  { name = "screen", ty = "&crate::mod_api::NativeScreenView<'_>", value = "screen" },
+  { name = "scroll", ty = "[f64; 2]", value = "scroll" },
+  { name = "modifiers", ty = "u32", value = "modifiers" },
+  { name = "canceled", ty = "&mut bool", value = "&mut *canceled" },
+]
+
+[[injection]]
 id = "motor-hud"
 hook = "hud"
 hook_version = 1
@@ -333,16 +434,59 @@ bindings = [
 ]
 
 [[module]]
+id = "belt"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_belt"
+source = "belt.rs"
+
+[[module]]
+id = "belt-press"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_belt_press"
+source = "belt_press.rs"
+
+[[module]]
 id = "millstone"
 file = "crates/horizon-client/src/game.rs"
 name = "create_port_millstone"
 source = "millstone.rs"
 
 [[module]]
+id = "basin"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_basin"
+source = "basin.rs"
+
+[[module]]
+id = "mixer"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_mixer"
+source = "mixer.rs"
+
+[[injection]]
+id = "basin-mixer-survival"
+hook = "can_survive"
+hook_version = 1
+kind = "HEAD"
+helper = "basin_survival.rs"
+bindings = [
+ {name="game",ty="&crate::game::GameLevel<'_>",value="self"},
+ {name="pos",ty="horizon_core::position::BlockPos",value="pos"},
+ {name="state",ty="horizon_world::registry::BlockStateId",value="state"},
+ {name="survives",ty="&mut Option<bool>",value="&mut *survives"},
+]
+
+[[module]]
 id = "fan"
 file = "crates/horizon-client/src/game.rs"
 name = "create_port_fan"
 source = "fan.rs"
+
+[[module]]
+id = "fan-entities"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_fan_entities"
+source = "fan_entities.rs"
 
 [[module]]
 id = "drill"
@@ -389,10 +533,45 @@ name = "create_port_world_items"
 source = "world_items.rs"
 
 [[module]]
+id = "particles"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_particles"
+source = "particles.rs"
+
+[[injection]]
+id = "particle-events-received"
+hook = "net_from_server"
+hook_version = 1
+kind = "HEAD"
+helper = "particles_packet.rs"
+bindings = [
+ {name="game",ty="&mut crate::game::Game<'_>",value="&mut *self"},
+ {name="channel",ty="&str",value="channel"},
+ {name="data",ty="&[u8]",value="data"},
+]
+
+[[injection]]
+id = "particle-events-flush"
+hook = "level_tick_post"
+hook_version = 1
+kind = "HEAD"
+helper = "particles_flush.rs"
+bindings = [
+ {name="game",ty="&mut crate::game::Game<'_>",value="&mut *self"},
+ {name="dimension",ty="&str",value="dimension"},
+]
+
+[[module]]
 id = "presentation"
 file = "crates/horizon-client/src/game.rs"
 name = "create_port_presentation"
 source = "presentation.rs"
+
+[[module]]
+id = "goggles"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_goggles"
+source = "goggles.rs"
 
 [[module]]
 id = "instruments"
@@ -488,6 +667,34 @@ hook_version = 1
 kind = "HEAD"
 helper = "render_bounds.rs"
 bindings = [
+ {name="game",ty="&crate::game::Game<'_>",value="self"},
+ {name="pos",ty="[i32;3]",value="pos"},
  {name="block",ty="&str",value="block"},
+ {name="entity",ty="&crate::containers::ModBlockEntity",value="entity"},
  {name="bounds",ty="&mut [f32;6]",value="&mut *bounds"},
+]
+
+# Pinned access to native_as_player; no replacement player or reach model.
+[[module]]
+id = "motor-configuration-reach"
+file = "crates/horizon-client/src/game/native_server.rs"
+name = "create_port_motor_reach"
+source = "motor_reach.rs"
+
+[[module]]
+id = "native-audio"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_nativeaudio"
+source = "nativeaudio.rs"
+
+[[injection]]
+id = "crank-client-data"
+target = "horizon_client::game::remote::Game<'_>::remote_block_entity_data"
+kind = "HEAD"
+helper = "crank_packet.rs"
+bindings = [
+ {name="game",ty="&mut crate::game::Game<'_>",value="&mut *self"},
+ {name="pos",ty="[i32;3]",value="pos"},
+ {name="kind",ty="i32",value="kind"},
+ {name="tag",ty="&horizon_world::nbt::Tag",value="tag"},
 ]

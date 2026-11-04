@@ -26,6 +26,8 @@
     "create:millstone",
     "create:encased_fan",
     "create:mechanical_drill",
+    "create:basin",
+    "create:mechanical_mixer",
     "create:iron_sheet",
     "create:golden_sheet",
     "create:copper_sheet",
@@ -40,6 +42,8 @@
     "create:goggles",
     "create:propeller",
     "create:wheat_flour",
-    "create:dough"
+    "create:dough",
+    "create:belt_connector",
+    "create:whisk"
   ]
 }

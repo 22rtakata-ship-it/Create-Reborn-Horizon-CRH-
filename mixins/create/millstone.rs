@@ -245,13 +245,7 @@ pub(super) fn data(entity: &mut ModBlockEntity) -> bool {
 }
 
 fn max_stack(game: &Game<'_>, stack: &ItemStack) -> u32 {
-    if let Some(Tag::Int(limit)) = stack
-        .data()
-        .and_then(|d| d.other("minecraft:max_stack_size"))
-    {
-        return (*limit).clamp(1, 99) as u32;
-    }
-    game.native_max_stack_size(&stack.item).unwrap_or(64)
+    super::create_port::stack_maximum(game, stack)
 }
 
 fn catch(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEntity) {
@@ -447,7 +441,11 @@ pub(super) fn draw(
     );
     draw.push();
     draw.rotate_about([0.0, 1.0, 0.0], angle, [0.5; 3]);
-    game.native_draw_model(draw, "create:block/millstone/inner", 0xFFFFFF);
+    game.native_draw_model(
+        draw,
+        "create:block/millstone/inner",
+        crate::game::create_port_presentation::kinetic_tint(game, pos),
+    );
     draw.pop();
     true
 }

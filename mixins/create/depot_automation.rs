@@ -19,6 +19,14 @@ fn create_depot_can_place(
                 local == 0 && crate::game::create_port_millstone::automation_accepts(stack),
             );
         }
+        if entity.id == "create:basin" {
+            return std::ops::ControlFlow::Break(crate::game::create_port_basin::can_place(
+                &entity.items,
+                local,
+                stack,
+                containers.max_stack(stack),
+            ));
+        }
         if entity.id == "create:depot" {
             return std::ops::ControlFlow::Break(
                 local == 0 && entity.items.iter().all(Option::is_none),
