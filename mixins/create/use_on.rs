@@ -1,3 +1,6 @@
+// Copyright (c) 2026 create-horizon contributors
+// SPDX-License-Identifier: MIT
+
 fn create_use_on(
     game: &mut crate::game::Game<'_>,
     stack: &crate::items::ItemStack,

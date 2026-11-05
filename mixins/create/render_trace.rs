@@ -1,3 +1,6 @@
+// Copyright (c) 2026 create-horizon contributors
+// SPDX-License-Identifier: MIT
+
 // Test instrumentation of the actual pose used by Horizon's model submit path.
 fn create_render_trace(draw: &crate::game::native_block_entity_draw::BlockEntityDraw, model: &str) {
     static TRACE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();

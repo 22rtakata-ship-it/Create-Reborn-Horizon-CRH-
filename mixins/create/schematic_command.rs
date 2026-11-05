@@ -1,3 +1,6 @@
+// Copyright (c) 2026 create-horizon contributors
+// SPDX-License-Identifier: MIT
+
 fn create_schematic_command(
     game: &mut crate::game::Game<'_>,
     player: &crate::mod_api::NativeServerPlayer,

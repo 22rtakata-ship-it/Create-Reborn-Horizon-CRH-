@@ -1,3 +1,6 @@
+// Copyright (c) 2026 create-horizon contributors
+// SPDX-License-Identifier: MIT
+
 use super::*;
 
 struct Registry;

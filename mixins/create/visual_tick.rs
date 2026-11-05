@@ -1,3 +1,6 @@
+// Copyright (c) 2026 create-horizon contributors
+// SPDX-License-Identifier: MIT
+
 fn create_visual_tick(game: &mut crate::game::Game<'_>) {
     crate::game::create_port_burner_sync::tick(game);
     crate::game::create_port_nativeaudio::begin_tick(game);

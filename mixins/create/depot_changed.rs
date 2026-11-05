@@ -1,3 +1,6 @@
+// Copyright (c) 2026 create-horizon contributors
+// SPDX-License-Identifier: MIT
+
 // A successful automation transfer ending the exposed stack destroys its
 // transported identity immediately, even if another hopper refills this tick.
 fn create_depot_changed(game: &mut crate::game::Game<'_>, pos: (i32, i32, i32)) {

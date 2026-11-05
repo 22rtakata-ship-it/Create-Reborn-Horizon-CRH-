@@ -1,3 +1,6 @@
+// Copyright (c) 2026 create-horizon contributors
+// SPDX-License-Identifier: MIT
+
 //! Game-independent parts, also compiled as the native bundle's engine crate.
 #[path = "core/chain_drive.rs"]
 pub mod chain_drive;

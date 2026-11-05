@@ -1,3 +1,6 @@
+// Copyright (c) 2026 create-horizon contributors
+// SPDX-License-Identifier: MIT
+
 fn create_gauge_analog(
     game: &crate::game::GameLevel<'_>,
     pos: horizon_core::position::BlockPos,

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 create-horizon contributors
+// SPDX-License-Identifier: MIT
+
 // Pinned pending native fragment: the actual active stack is owned by the
 // movement caller. Setting discard removes that entity without undoing collision.
 fn create_item_after_vertical_collision(

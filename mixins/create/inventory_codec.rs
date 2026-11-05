@@ -1,3 +1,6 @@
+// Copyright (c) 2026 create-horizon contributors
+// SPDX-License-Identifier: MIT
+
 // Independently authored from pinned MIT Create schemas and recorded public-API
 // observations. This module has no gameplay dependency: save and client receipt
 // share the same canonical item decoding.

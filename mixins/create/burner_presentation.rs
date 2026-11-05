@@ -1,3 +1,6 @@
+// Copyright (c) 2026 create-horizon contributors
+// SPDX-License-Identifier: MIT
+
 // Source burner presentation and opt-in observation of the actual client renderer input.
 // No original resources are bundled; models/textures come from the player's pinned JAR.
 use super::Game;

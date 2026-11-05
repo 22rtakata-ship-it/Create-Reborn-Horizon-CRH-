@@ -1,3 +1,6 @@
+// Copyright (c) 2026 create-horizon contributors
+// SPDX-License-Identifier: MIT
+
 fn create_placement_state(
     game: &crate::game::GameLevel<'_>,
     state: horizon_world::registry::BlockStateId,
