@@ -71,7 +71,10 @@ fn decode(saved: &Compound) -> Result<Mounted, AttachmentError> {
             return Err(error);
         };
         let bounds = glue::decode(bounds)?;
-        if bounds.is_empty() || mounted.insert([x, y, z], bounds).is_some() {
+        if bounds.is_empty()
+            || bounds.iter().any(|volume| volume.is_single_block())
+            || mounted.insert([x, y, z], bounds).is_some()
+        {
             return Err(error);
         }
     }
@@ -147,7 +150,9 @@ pub(super) fn capture(
     let mut retained = Vec::new();
     let mut moving = Vec::new();
     for &volume in static_volumes.iter() {
-        if !positions.iter().any(|&position| volume.contains(position)) {
+        // Create's face lookup never captures an entity with only one cell.
+        if volume.is_single_block() || !positions.iter().any(|&position| volume.contains(position))
+        {
             retained.push(volume);
             continue;
         }
@@ -219,7 +224,11 @@ pub(super) fn blocked(
         return false;
     }
     match glue::read(game, key) {
-        Ok(volumes) => cells.any(|position| volumes.iter().any(|volume| volume.contains(position))),
+        Ok(volumes) => cells.any(|position| {
+            volumes
+                .iter()
+                .any(|volume| !volume.is_single_block() && volume.contains(position))
+        }),
         Err(_) => true,
     }
 }

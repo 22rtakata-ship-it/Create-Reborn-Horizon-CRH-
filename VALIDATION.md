@@ -1,5 +1,39 @@
 # Checks and evidence
 
+## 0.8.0-alpha.5 chassis, saw and Deployer crafting
+
+The Linear, Secondary Linear and Radial Chassis retain their sticky faces
+and saved ranges on a vertical Mechanical Bearing. Two matching Java layouts
+cover adjacency, axis and radial reach. The native fixtures exercise
+obstructed recovery, real process restarts, rotated states, placement by hand
+and drops. Both resource modes ran the chassis fixtures.
+
+An upward Saw processes oak logs and stripped oak logs on the same ticks as
+the original in the 24-tick fixture. An unmatched Diamond passes through
+unchanged. Ejection and cold restart midway through the cycle passed in
+Horizon. The original-asset capture shows the input stack on the blade.
+
+The survival fixture crafts Sand Paper, Red Sand Paper, Rose Quartz, an
+Electron Tube, a Brass Hand and the Deployer in the ordinary crafting menu.
+Real input checks the 32-tick polish, either hand, dropped quartz, early
+release with components intact, final durability and an invalid item. The
+original JAR fixture verifies the six item models and two sanding sounds.
+
+Native block drops cover both Gearbox orientations, Encased Chain Drive,
+the colored sail, Mechanical Saw and Deployer. The exporter now translates
+legacy loot condition discriminators for Horizon's 26.3 evaluator.
+Super Glue's restart fixture also checks a one-cell volume and verifies that
+one click selects the first corner without duplicating the offhand action.
+
+The separate grounded tree-farm fixture on alpha.4 generated a vanilla oak,
+cut 14 trunk blocks and 233 leaves, then resumed after a cold restart and
+replanted the original cell. The chest retained all 14 logs. A second run
+used real bone meal to grow a planted sapling and repeated cutting and
+replanting. The test uses a lower Saw arm attached with Super Glue.
+
+All 242 Rust tests, 15 Python tests, strict Clippy and the pinned native
+archive check passed.
+
 ## 0.8.0-alpha.4 farm actors and Super Glue
 
 The Deployer matches the reference angle and planted cells over 40 ticks

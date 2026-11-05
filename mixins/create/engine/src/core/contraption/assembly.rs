@@ -68,6 +68,10 @@ pub trait CaptureView {
     fn inspect(&self, pos: Pos) -> Cell;
     fn snapshot(&self, pos: Pos) -> Option<Self::Block>;
     fn glued(&self, pos: Pos, face: Direction) -> bool;
+    /// Structured attachments may select more than one adjacent block.
+    fn expand(&self, _: Pos, _: Option<Direction>) -> Result<Vec<Pos>, CaptureError> {
+        Ok(Vec::new())
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -153,6 +157,22 @@ impl<B> Assembly<B> {
                 local,
                 world.snapshot(pos).ok_or(CaptureError::Unsupported(pos))?,
             ));
+            for extra in world.expand(pos, forced)? {
+                if fixed(extra) || seen.contains(&extra) {
+                    continue;
+                }
+                match world.inspect(extra) {
+                    Cell::Unloaded => return Err(CaptureError::Unloaded(extra)),
+                    Cell::Block(rules) => {
+                        if seen.len() == max_blocks {
+                            return Err(CaptureError::TooLarge { limit: max_blocks });
+                        }
+                        seen.insert(extra);
+                        frontier.push_back((extra, rules));
+                    }
+                    _ => {}
+                }
+            }
             for face in Direction::ALL {
                 let neighbour = checked_zip(pos, face.vector(), i32::checked_add)
                     .ok_or(CaptureError::CoordinateOverflow)?;

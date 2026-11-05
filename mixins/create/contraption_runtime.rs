@@ -1,6 +1,7 @@
 // Copyright (c) 2026 create-horizon contributors
 // SPDX-License-Identifier: MIT
 
+use super::create_port_chassis as chassis;
 use super::create_port_contraption_actors as actors;
 use super::create_port_contraption_storage as storage;
 use super::create_port_deployer as deployer;
@@ -415,7 +416,9 @@ impl CaptureView for BearingCapture<'_, '_> {
         let game = self.base.0;
         let block = game.pack.assets.registry.state(state(game, p))?;
         if self.allow_inventory
-            && (storage::can_capture(game, p, block) || deployer::can_capture(game, p, block))
+            && (storage::can_capture(game, p, block)
+                || deployer::can_capture(game, p, block)
+                || chassis::can_capture(game, p, block))
         {
             return Some(block.clone());
         }
@@ -424,6 +427,17 @@ impl CaptureView for BearingCapture<'_, '_> {
 
     fn glued(&self, p: Pos, face: Direction) -> bool {
         self.glue.iter().any(|volume| volume.glues(p, face))
+    }
+
+    fn expand(
+        &self,
+        p: Pos,
+        forced: Option<Direction>,
+    ) -> Result<Vec<Pos>, create_engine::contraption::CaptureError> {
+        if !self.allow_inventory {
+            return Ok(Vec::new());
+        }
+        chassis::expansion(self.base.0, p, forced, |target| self.base.inspect(target))
     }
 }
 
@@ -503,6 +517,7 @@ fn assemble(
     };
     let chest = storage::capture(game, anchor, shape.blocks()).ok()?;
     let deployer = deployer::capture(game, anchor, shape.blocks()).ok()?;
+    let chassis = chassis::capture(game, anchor, shape.blocks()).ok()?;
     let record = Record {
         controller,
         anchor,
@@ -518,7 +533,9 @@ fn assemble(
     let glue = super::create_port_glue_transfer::capture(game, key, &record).ok()?;
     records.push(record);
     if !super::create_port_glue_transfer::commit(game, key, glue, |game| {
-        deployer::commit_capture(game, key, records, &edits, controller, chest, deployer)
+        chassis::commit_capture(game, key, controller, chassis, |game| {
+            deployer::commit_capture(game, key, records, &edits, controller, chest, deployer)
+        })
     }) {
         return None;
     }
@@ -527,6 +544,9 @@ fn assemble(
 }
 
 fn rotate_state(state: &BlockState, turn: QuarterTurn) -> Option<BlockState> {
+    if chassis::is_chassis(&state.name) {
+        return chassis::rotate_state(state, turn);
+    }
     if !supported(state) && !storage::chest_state(state) && !deployer::block_state(state) {
         return None;
     }
@@ -599,7 +619,9 @@ fn land(game: &mut Game<'_>, controller: Pos, angle: f32) -> bool {
         return false;
     };
     if !super::create_port_glue_transfer::commit(game, key, glue, |game| {
-        deployer::commit_landing(game, key, records, &edits, &record, turn)
+        chassis::commit_landing(game, key, &record, turn, &edits, |game| {
+            deployer::commit_landing(game, key, records, &edits, &record, turn)
+        })
     }) {
         return false;
     }

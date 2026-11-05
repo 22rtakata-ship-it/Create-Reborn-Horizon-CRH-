@@ -12,7 +12,7 @@
               "name": "create:gearbox",
               "conditions": [
                 {
-                  "condition": "minecraft:block_state_property",
+                  "type": "minecraft:block_state_property",
                   "block": "create:gearbox",
                   "properties": {
                     "axis": "y"

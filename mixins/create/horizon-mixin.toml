@@ -1,6 +1,6 @@
 [mod]
 id = "create"
-version = "0.8.0-alpha.4"
+version = "0.8.0-alpha.5"
 
 [compatibility]
 horizon_revision = "9c7f9b2215dfed497aba5522c44f38926628648d"
@@ -22,6 +22,108 @@ id = "runtime"
 file = "crates/horizon-client/src/game.rs"
 name = "create_port"
 source = "runtime.rs"
+
+[[module]]
+id = "sandpaper-runtime"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_sandpaper"
+source = "sandpaper_runtime.rs"
+
+[[injection]]
+id = "sandpaper-duration"
+hook = "use_duration"
+hook_version = 1
+kind = "HEAD"
+helper = "sandpaper_duration.rs"
+bindings = [
+  { name = "game", ty = "&crate::game::Game<'_>", value = "self" },
+  { name = "stack", ty = "&crate::items::ItemStack", value = "stack" },
+  { name = "duration", ty = "&mut i32", value = "&mut *duration" },
+]
+
+[[injection]]
+id = "sandpaper-animation"
+hook = "use_animation"
+hook_version = 1
+kind = "HEAD"
+helper = "sandpaper_animation.rs"
+bindings = [
+  { name = "game", ty = "&crate::game::Game<'_>", value = "self" },
+  { name = "stack", ty = "&crate::items::ItemStack", value = "stack" },
+  { name = "animation", ty = "&mut horizon_world::consumable::UseAnimation", value = "&mut *animation" },
+]
+
+[[injection]]
+id = "sandpaper-start"
+hook = "living_entity_use_item_start"
+hook_version = 1
+kind = "RETURN"
+helper = "sandpaper_start.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "stack", ty = "&crate::items::ItemStack", value = "stack" },
+  { name = "hand", ty = "horizon_client::first_person::Hand", value = "hand" },
+  { name = "duration", ty = "&i32", value = "&*duration" },
+  { name = "canceled", ty = "&mut bool", value = "&mut *canceled" },
+  { name = "_value", ty = "()", value = "$value" },
+]
+
+[[injection]]
+id = "sandpaper-finish"
+hook = "living_entity_use_item_finish"
+hook_version = 1
+kind = "HEAD"
+helper = "sandpaper_finish.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "stack", ty = "&crate::items::ItemStack", value = "stack" },
+  { name = "hand", ty = "horizon_client::first_person::Hand", value = "hand" },
+  { name = "result", ty = "&mut Option<crate::items::ItemStack>", value = "&mut *result" },
+]
+
+[[injection]]
+id = "sandpaper-release"
+hook = "release_using"
+hook_version = 1
+kind = "HEAD"
+helper = "sandpaper_release.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "stack", ty = "&crate::items::ItemStack", value = "stack" },
+]
+
+[[injection]]
+id = "sandpaper-effects"
+hook = "on_use_tick"
+hook_version = 1
+kind = "HEAD"
+helper = "sandpaper_effects.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "stack", ty = "&crate::items::ItemStack", value = "stack" },
+  { name = "remaining", ty = "i32", value = "remaining" },
+]
+
+[[injection]]
+id = "sandpaper-component"
+hook = "component_types"
+hook_version = 1
+kind = "HEAD"
+helper = "sandpaper_component.rs"
+bindings = [
+  { name = "types", ty = "&mut Vec<String>", value = "&mut *types" },
+]
+
+[[injection]]
+id = "sandpaper-sync"
+hook = "datapack_sync"
+hook_version = 1
+kind = "HEAD"
+helper = "sandpaper_sync.rs"
+bindings = [
+  { name = "game", ty = "&crate::game::Game<'_>", value = "self" },
+  { name = "recipe_types", ty = "&mut Vec<String>", value = "&mut *recipe_types" },
+]
 
 [[module]]
 id = "chain-drive"
@@ -515,6 +617,26 @@ id = "belt"
 file = "crates/horizon-client/src/game.rs"
 name = "create_port_belt"
 source = "belt.rs"
+
+[[module]]
+id = "saw-processing"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_saw_processing"
+source = "saw_processing_runtime.rs"
+
+[[injection]]
+id = "saw-processing-landing"
+target = "horizon_client::game::native_hooks::Game<'_>::native_item_after_vertical_collision"
+kind = "HEAD"
+helper = "saw_landing.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "client", ty = "bool", value = "client" },
+  { name = "pos", ty = "[i32; 3]", value = "block_pos" },
+  { name = "item_pos", ty = "[f64; 3]", value = "item_pos" },
+  { name = "stack", ty = "&mut crate::items::ItemStack", value = "&mut *stack" },
+  { name = "discard", ty = "&mut bool", value = "&mut *discard" },
+]
 
 [[module]]
 id = "belt-press"
@@ -1179,6 +1301,12 @@ id = "contraption-deployer-runtime"
 file = "crates/horizon-client/src/game.rs"
 name = "create_port_deployer"
 source = "contraption_deployer_runtime.rs"
+
+[[module]]
+id = "contraption-chassis-runtime"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_chassis"
+source = "contraption_chassis_runtime.rs"
 
 [[module]]
 id = "sail-runtime"

@@ -31,6 +31,10 @@ impl Volume {
         [self.min, self.max]
     }
 
+    pub fn is_single_block(self) -> bool {
+        self.min == self.max
+    }
+
     pub fn contains(self, pos: Pos) -> bool {
         (0..3).all(|axis| (self.min[axis]..=self.max[axis]).contains(&pos[axis]))
     }

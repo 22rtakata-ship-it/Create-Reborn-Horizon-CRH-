@@ -18,8 +18,9 @@ loaded chunk column. This keeps the source, target and persistent record in the
 same chunk save. It refuses unsupported snapshots and occupied landing cells
 instead of discarding blocks. Capture is limited to an allowlist of stateless
 blocks, idle tools and a single ordinary chest and Deployer on a vertical
-Mechanical Bearing. Chassis, other inventories and fluid-containing payloads
-still need adapters. The supported Gantry path has a fixed loaded rail span.
+Mechanical Bearing. The three chassis variants can expand a vertical bearing's
+capture. Other inventories and fluid-containing payloads still need adapters.
+The supported Gantry path has a fixed loaded rail span.
 The Rope Pulley supports dry rope and cargo. The clockwork hands are captured
 and restored together and currently accept vanilla payloads only.
 
@@ -40,8 +41,15 @@ pauses its platform while cutting supported vanilla trees, fungi and stalks.
 A horizontal stationary Saw also fells trees. The moving Drill breaks eligible
 vanilla blocks and drops their loot. The Plough tills exposed soil, clears
 snow and protects crops rooted in farmland. Cut progress on moving tools resets
-across restarts. Plough entity throws, block breaking damage to passengers
-and stationary Saw processing recipes remain open.
+across restarts. Plough entity throws and block breaking damage to passengers
+remain open.
+
+An upward stationary Saw strips ordinary vanilla logs, bark blocks, stems,
+hyphae and Bamboo Blocks. It cuts their stripped forms into planks. Drop the
+item on the powered blade. The Saw holds one input at a time, saves the
+current cycle and ejects the output in the direction set by the shaft and
+rotation. The current slice covers these wood recipes. Stonecutting, other
+recipe types, automation, the filter UI and cutting particles remain open.
 
 A downward Deployer on a vertical Mechanical Bearing plants ordinary saplings
 from its hand and refills one at a time from a single mounted chest. The plain
@@ -88,6 +96,13 @@ the attached sails in its rotation plane. Eight sails or frames generate 1 RPM.
 The optional local Create JAR supplies original models and textures. The built-in
 pack supplies sail shapes and vanilla-derived materials. Placement previews,
 canvas bounce and fall damping remain open.
+
+## Chassis
+
+Linear, Secondary Linear and Radial Chassis expand the capture of a vertical
+Mechanical Bearing. Sticky faces and ranges remain attached through a
+quarter turn, a restart and an obstructed landing.
+[Chassis rules and verification](chassis.md)
 
 ## Minecart contraptions
 
@@ -143,6 +158,13 @@ controller motion. The current implementation is exercised by Rust unit tests.
 - `tools/deployer_farm_checks.py` and `tools/deployer_refill_checks.py --combined`
   compare planting ticks and chest slots, then test a restart and a shared
   Saw and Deployer rotor in Horizon.
+- `tools/deployer_grounded_farm_checks.py` grows an oak through vanilla
+  worldgen, joins a low Saw to the rotor by ordinary Super Glue clicks and
+  checks same-cell replanting, stock and the cut tree across a restart.
+- `tools/saw_processing_checks.py` compares 24 ticks for three stationary Saw
+  inputs and checks ejection and resumption after a process restart.
+- `tools/loot_dialect_checks.py` checks ordinary drops after converting the
+  pinned Create loot condition format to the Horizon runtime's format.
 - `tools/actor_reference_checks.py` runs the original Java Create and Catnip
   classes against the Rust actor rules. `tools/actor_native_checks.py` verifies
   crop resets and drops, tree felling, drilling and motion after a cut.

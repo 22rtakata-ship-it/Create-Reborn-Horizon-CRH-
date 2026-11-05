@@ -34,6 +34,11 @@ The following MIT code informed or was adapted into the Rust engine:
 - `content/contraptions/glue` and `content/kinetics/deployer` inform the
   engine rules for glue selection and transfer and for Deployer action timing,
   targeting, hand pose and filtered inventory.
+- `content/contraptions/chassis` informs chassis grouping, block reach, sticky
+  faces and retained ranges during capture and landing.
+- `content/equipment/sandPaper` informs polishing, the held-item component,
+  cancellation and durability. `foundation/data/RuntimeDataGenerator` informs
+  the upward Saw's original vanilla wood recipes.
 - `content/kinetics/press/PressingBehaviour.java`: 240-unit cycle, midpoint processing,
   clamped speed interpolation, integer truncation, client receipt/hold/interpolation,
   item-particle request ordering and the rendered head's motion curve.
@@ -110,8 +115,7 @@ The following MIT code informed or was adapted into the Rust engine:
 
 Paths above are under `src/main/java/com/simibubi/create/`, except the recipe/tag data under
 `src/generated/resources/data/`. The MIT notice is in LICENSE.
-Version 0.5 remains incomplete and does not claim full behavioral parity.
-Validation evidence and its limits are recorded in `VALIDATION.md`.
+The supported behavior and its verification are recorded in `VALIDATION.md`.
 Rust code organization is native to Horizon; source behavior is the reference,
 not one Rust type for every Java class.
 

@@ -66,15 +66,22 @@ def prepare(session, options):
         stations.sign(batch, (907, 81, 74), ['WINDMILL', 'Empty hand:', 'start / stop.', 'Rear shaft: 1 RPM.'])
     if options.farms:
         stations.setup(batch, options.clockwork, options.linear, options.cargo)
-    if options.plough or options.deployer:
+    if options.plough or options.deployer or options.materials:
         stations.actor_plaza(batch)
         if options.plough:
             stations.plough_station(batch)
         if options.deployer:
             stations.deployer_station(batch)
+        if options.materials:
+            stations.materials_station(batch)
     if options.glue:
         stations.glue_station(batch)
-    if options.plough or options.deployer or options.glue:
+    if options.upward_saw:
+        stations.upward_saw_station(batch)
+    if options.chassis:
+        stations.chassis_stations(batch)
+    if any((options.plough, options.deployer, options.glue, options.upward_saw,
+            options.chassis, options.materials)):
         batch.command('tp @s 909.5 81 61.5')
     batch.tick(30 if options.farms else 12)
     batch.data(BEARING)
@@ -257,10 +264,26 @@ def review(session, options):
             assert call('block', 905, 83, 136)['block'] == 'minecraft:spruce_planks'
             call('wait', 12)
             extra.append(str(screenshot('glue.png')))
+        if options.chassis:
+            command('tp @s 912.5 88 155.5')
+            call('look-at', 904.5, 83.5, 152.5)
+            wait_loaded(call, [stations.LINEAR_CHASSIS, stations.RADIAL_CHASSIS])
+            assert call('block', 904, 83, 152)['block'] == 'create:linear_chassis'
+            assert call('block', 904, 83, 151)['block'] == 'create:secondary_linear_chassis'
+            assert call('block', 920, 83, 152)['block'] == 'create:radial_chassis'
+            call('wait', 12)
+            extra.append(str(screenshot('chassis.png')))
+        if options.materials:
+            command('tp @s 923.5 84 125.5')
+            wait_loaded(call, [stations.CRAFTING_TABLE])
+            assert call('block', *stations.CRAFTING_TABLE)['block'] == 'minecraft:crafting_table'
+            assert 'create:brass_sheet' in snapshot((923, 81, 125))['nbt']
         call('key', 'f1', 'tap')
         command('gamemode creative')
         if options.glue:
             command('give @s create:super_glue')
+        if options.upward_saw:
+            command('give @s minecraft:oak_log 8')
         command('tp @s 909.5 81 61.5')
         call('look-at', 904.5, 85.1, 56.5)
         command('save-all flush')
@@ -294,6 +317,9 @@ def main():
     parser.add_argument('--plough', action='store_true')
     parser.add_argument('--deployer', action='store_true')
     parser.add_argument('--glue', action='store_true')
+    parser.add_argument('--upward-saw', action='store_true')
+    parser.add_argument('--chassis', action='store_true')
+    parser.add_argument('--materials', action='store_true')
     args = parser.parse_args()
     if args.sails and not args.windmill:
         parser.error('--sails requires --windmill')

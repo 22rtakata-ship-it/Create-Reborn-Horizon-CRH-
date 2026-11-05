@@ -8,6 +8,19 @@ from catalog import BLOCKS, ITEMS, INTERNAL_BLOCKS
 from sail_content import COLORED_SAILS, SAIL_ITEMS
 
 
+def loot_for_horizon(value):
+    """Use the 26.3 condition discriminator without changing the loot rules."""
+    if isinstance(value, list):
+        return [loot_for_horizon(entry) for entry in value]
+    if not isinstance(value, dict):
+        return value
+    legacy_condition = isinstance(value.get('condition'), str) and 'type' not in value
+    return {
+        ('type' if legacy_condition and key == 'condition' else key): loot_for_horizon(entry)
+        for key, entry in value.items()
+    }
+
+
 def dry_mixing(recipe):
     """The native Basin adapter's explicit item-only, unheated JSON contract.
 
@@ -120,7 +133,8 @@ def main():
         elif isinstance(value, list):
             for child in value: yield from dependencies(child)
     recipes = {}
-    processing = {'create:milling', 'create:splashing', 'create:haunting', 'create:mixing', 'create:compacting'}
+    processing = {'create:milling', 'create:splashing', 'create:haunting', 'create:mixing', 'create:compacting',
+                  'create:sandpaper_polishing'}
     cooking = {'minecraft:smelting', 'minecraft:smoking', 'minecraft:blasting'}
     for name in names:
         if not name.startswith(base + 'create/recipe/') or not name.endswith('.json'): continue
@@ -168,6 +182,10 @@ def main():
     conventional['c:stones'] = ['minecraft:' + stone for stone in ['stone', 'granite', 'diorite', 'andesite', 'deepslate', 'tuff']]
     conventional['c:cobblestones'] = ['minecraft:cobblestone', 'minecraft:mossy_cobblestone', 'minecraft:cobbled_deepslate']
     conventional['c:gems/lapis'] = ['minecraft:lapis_lazuli']
+    # NeoForge 21.1.227 convention values without its optional Forge aliases.
+    conventional['c:gems/quartz'] = ['minecraft:quartz']
+    conventional['c:sands/colorless'] = ['minecraft:sand']
+    conventional['c:sands/red'] = ['minecraft:red_sand']
     conventional['create:not_upright_on_belt'] = []
     # NeoForge 21.1.227 convention tags used by Create's manual casing recipes.
     woods = ['acacia', 'birch', 'cherry', 'dark_oak', 'jungle', 'mangrove', 'oak', 'spruce']
@@ -180,7 +198,8 @@ def main():
         'minecraft:stripped_crimson_hyphae', 'minecraft:stripped_warped_hyphae',
     ]
     missing = []
-    intrinsic_tags = ['create:upright_on_belt', 'create:not_upright_on_belt', 'c:flours', 'c:flours/wheat', 'c:foods/dough', 'c:foods/dough/wheat']
+    intrinsic_tags = ['create:upright_on_belt', 'create:not_upright_on_belt', 'create:sandpaper',
+                      'c:flours', 'c:flours/wheat', 'c:foods/dough', 'c:foods/dough/wheat']
     pending = list(intrinsic_tags)
     def tag_refs(value):
         if isinstance(value, dict):
@@ -275,7 +294,7 @@ def main():
     maps=burner_data_maps(names,read)
     # Keep the complete source pool and explosion/random-sequence policy for
     # this newly supported block, rather than a generic unconditional drop.
-    loot = {path: read(base + path) for path in [
+    loot = {path: loot_for_horizon(read(base + path)) for path in [
         'create/loot_table/blocks/encased_chain_drive.json',
         'create/loot_table/blocks/adjustable_chain_gearshift.json',
         'create/loot_table/blocks/copper_casing.json',

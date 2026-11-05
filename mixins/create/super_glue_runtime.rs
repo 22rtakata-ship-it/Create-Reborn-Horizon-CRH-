@@ -102,7 +102,7 @@ pub(super) fn decode(saved: &Compound) -> Result<Vec<Volume>, AttachmentError> {
             let span_squared = (0..3)
                 .map(|i| (i128::from(max[i]) - i128::from(min[i])).pow(2))
                 .sum::<i128>();
-            if (0..3).any(|i| min[i] > max[i]) || !(1..625).contains(&span_squared) {
+            if (0..3).any(|i| min[i] > max[i]) || span_squared >= 625 {
                 return Err(error);
             }
             Ok(Volume::span(min, max))
@@ -189,6 +189,12 @@ fn sticky(game: &Game<'_>, pos: Pos, side: Direction) -> bool {
 fn holds_glue(game: &Game<'_>) -> bool {
     game.stack_in(game.selected)
         .is_some_and(|stack| stack.item.as_ref() == ITEM)
+}
+
+pub(super) fn predicts(game: &Game<'_>, held: Option<&ItemStack>) -> bool {
+    game.native_on("create")
+        && holds_glue(game)
+        && held.is_some_and(|stack| stack.item.as_ref() == ITEM)
 }
 
 fn available(game: &Game<'_>) -> Option<(usize, ItemStack, u32)> {
@@ -355,7 +361,11 @@ pub(super) fn player_tick(game: &mut Game<'_>) {
 }
 
 pub(super) fn right_click(game: &mut Game<'_>, pos: Pos) -> bool {
-    if !game.native_on("create") || !holds_glue(game) || !game.may_build() {
+    if !game.native_on("create")
+        || game.held_slot() != game.selected
+        || !holds_glue(game)
+        || !game.may_build()
+    {
         return false;
     }
     let first = game

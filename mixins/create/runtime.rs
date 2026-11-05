@@ -147,6 +147,12 @@ pub(super) fn owns(block: &str) -> bool {
 }
 
 pub(super) fn entity(block: &str, entity: &mut Option<(String, Compound)>) {
+    if entity.is_none()
+        && let Some(chassis) = super::create_port_chassis::factory(block)
+    {
+        *entity = Some(chassis);
+        return;
+    }
     if block == super::create_port_deployer::BLOCK && entity.is_none() {
         *entity = Some((block.into(), super::create_port_deployer::default_nbt()));
         return;
@@ -1192,6 +1198,11 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
     ) {
         sync |= crate::game::create_port_drill::tick(game, pos, entity, running_rpm);
     }
+    if block == super::create_port_drill::SAW
+        && game.native_block_property(pos, "facing").as_deref() == Some("up")
+    {
+        sync |= super::create_port_saw_processing::tick(game, pos, entity, running_rpm);
+    }
     if matches!(block.as_str(), "create:speedometer" | "create:stressometer") {
         let value = if block == "create:speedometer" {
             create_engine::visual::speed_dial(rpm)
@@ -1342,6 +1353,7 @@ pub(super) fn update_tag(entity: &ModBlockEntity, tag: &mut Option<Compound>) {
                 | "create:simple_kinetic"
                 | "create:encased_shaft"
                 | "create:drill"
+                | "create:saw"
                 | "create:blaze_heater"
         ))
         && tag.is_none()
@@ -1369,6 +1381,9 @@ pub(super) fn update_tag(entity: &ModBlockEntity, tag: &mut Option<Compound>) {
 pub(super) fn container(block: &str, container: &mut Option<ModContainer>) {
     crate::game::create_port_basin::container(block, container);
     crate::game::create_port_millstone::container(block, container);
+    if block == super::create_port_drill::SAW && container.is_none() {
+        *container = Some(super::create_port_saw_processing::container());
+    }
     if block == super::create_port_deployer::BLOCK && container.is_none() {
         *container = Some(ModContainer {
             slots: 1,
@@ -1576,6 +1591,9 @@ pub(super) fn draw(
         };
         game.native_draw_model(draw, model, 0xFFFFFF);
         draw.pop();
+        if facing == Direction::Up {
+            super::create_port_saw_processing::draw(game, pos, entity, draw);
+        }
         return;
     }
     if crate::game::create_port_drill::draw(game, pos, entity, draw) {

@@ -2,7 +2,28 @@
 import copy
 import unittest
 
-from reference_recipes import dry_mixing, fluid_mixing, heated_mixing, burner_data_maps, compacting
+from reference_recipes import dry_mixing, fluid_mixing, heated_mixing, burner_data_maps, compacting, loot_for_horizon
+
+
+class LootDialect(unittest.TestCase):
+    def test_condition_discriminators_convert_without_changing_the_tree(self):
+        legacy = {"type": "minecraft:item", "name": "create:white_sail", "conditions": [
+            {"condition": "minecraft:inverted",
+             "term": {"condition": "minecraft:block_state_property",
+                      "block": "create:white_sail", "properties": {"facing": "up"}}},
+            {"condition": "minecraft:survives_explosion"},
+        ]}
+        self.assertEqual(loot_for_horizon(legacy), {
+            "type": "minecraft:item", "name": "create:white_sail", "conditions": [
+                {"type": "minecraft:inverted",
+                 "term": {"type": "minecraft:block_state_property",
+                          "block": "create:white_sail", "properties": {"facing": "up"}}},
+                {"type": "minecraft:survives_explosion"},
+            ],
+        })
+        self.assertEqual(loot_for_horizon({"type": "minecraft:item",
+                                          "condition": "minecraft:tool/can_silk_touch"}),
+                         {"type": "minecraft:item", "condition": "minecraft:tool/can_silk_touch"})
 
 
 class DryMixing(unittest.TestCase):

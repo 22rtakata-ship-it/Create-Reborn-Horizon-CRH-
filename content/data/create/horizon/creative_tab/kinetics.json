@@ -47,6 +47,9 @@
     "create:deployer",
     "create:sail_frame",
     "create:white_sail",
+    "create:linear_chassis",
+    "create:secondary_linear_chassis",
+    "create:radial_chassis",
     "create:iron_sheet",
     "create:golden_sheet",
     "create:copper_sheet",
@@ -67,6 +70,12 @@
     "create:empty_blaze_burner",
     "create:blaze_cake",
     "create:creative_blaze_cake",
-    "create:super_glue"
+    "create:super_glue",
+    "create:rose_quartz",
+    "create:polished_rose_quartz",
+    "create:electron_tube",
+    "create:brass_hand",
+    "create:sand_paper",
+    "create:red_sand_paper"
   ]
 }

@@ -87,8 +87,9 @@ with the systems they depend on.
   detach semantics from RotationPropagator.
 - [x] Adjustable Chain Gearshift. Settled shaft speeds and block states for all
   16 redstone strengths from either input end, plus native save/reload.
-- [ ] Adjustable Chain Gearshift transient timing, full visual parity and
-  survival crafting through rose quartz polishing and the Electron Tube.
+- [ ] Adjustable Chain Gearshift transient timing and full visual parity.
+- [x] Original Rose Quartz, Sand Paper, Electron Tube and Brass Hand recipes.
+  Hand and ground polishing unlock the Deployer and Adjustable Chain Gearshift recipes.
 - [ ] Remaining redstone controls, belt and gearbox connection variants.
 - [x] Straight Clutch and Gearshift lines with either input end. Compare the
   immediate detach, next-tick reattachment and short pulses in Java and
@@ -180,7 +181,10 @@ with the systems they depend on.
   preserves their snapshots through a failed restoration preflight.
 - [x] Bearing angle trace and snapped log placement on X, Y and Z verified
   against the isolated Java client. [Architecture and results](contraptions.md)
-- [ ] Native chassis and complete block movement rules.
+- [x] Linear, Secondary Linear and Radial Chassis on a vertical Mechanical
+  Bearing, including sticky faces, saved ranges and blocked landing recovery.
+- [ ] Chassis wrench range UI and preview, other drivers and complete block
+  movement rules.
 - [x] Mechanical Bearing: native assembly, rotation, restart and orphan recovery.
 - [x] Windmill Sail Frame and sixteen sail colors. Dye, shear, placement,
   windmill capture, generated speed and restart verified.
@@ -217,10 +221,11 @@ with the systems they depend on.
 - [x] Two-click Super Glue and single-column bearing transfer, with durability
   and saved volume checks.
 - [ ] Original Glue outlines and particles, offhand placement and transfer on other drivers.
-- [x] Stationary Saw recipe timer, candidate cycling and export direction in
-  the engine. Item processing and recipes still need the native adapter.
-- [ ] Deployer filter interface, Plough entity throws, stationary Saw recipe
-  integration, portable storage and fluid interfaces.
+- [x] Upward stationary Saw wood processing through native item collision,
+  with saved progress and Java comparisons of the cutting and ejection cycle.
+- [ ] Remaining Saw recipes, automation, filter and cutting particles.
+- [ ] Deployer filter interface, Plough entity throws, portable storage and
+  fluid interfaces.
 - [ ] Shared-schematic checks: identical machines produce identical results in both clients.
 
 ## 5. Fluids, railways and other content

@@ -49,6 +49,16 @@ pub(super) fn state(
     answer: &mut Option<Option<BlockStateId>>,
 ) {
     let block = game.native_state_block(state).unwrap_or("");
+    if super::create_port_chassis::is_chassis(block) {
+        *answer = Some(super::create_port_chassis::placement(
+            game,
+            block,
+            state,
+            ctx,
+            direction(ctx.face),
+        ));
+        return;
+    }
     if create_engine::sail::material(block).is_some() {
         let facing = super::create_port::nearest(ctx.yaw, ctx.pitch).opposite();
         *answer = Some(game.native_state_with_property(state, "facing", facing.name()));

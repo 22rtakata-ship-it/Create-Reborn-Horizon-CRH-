@@ -1,5 +1,6 @@
 """Implemented content only. IDs follow Create 6.0.10; assets are imported locally."""
 from sail_content import COLORED_SAILS, SAIL_ITEMS
+from chassis_content import CHASSIS
 
 BASE_BLOCKS = ['creative_motor', 'shaft', 'cogwheel', 'large_cogwheel', 'mechanical_press', 'depot']
 TRANSMISSIONS = ['gearbox', 'clutch', 'gearshift', 'hand_crank', 'andesite_encased_shaft', 'brass_encased_shaft', 'encased_chain_drive', 'adjustable_chain_gearshift']
@@ -13,9 +14,11 @@ ACTORS = ['mechanical_harvester', 'mechanical_saw', 'mechanical_plough', 'deploy
 INTERNAL_BLOCKS = ['water_wheel_structure', 'belt', 'lit_blaze_burner', 'mechanical_piston_head', 'rope', 'pulley_magnet'] + COLORED_SAILS
 EXTRA_BLOCKSTATES = ['lit_blaze_burner', 'mechanical_piston_head', 'rope', 'pulley_magnet'] + COLORED_SAILS
 EXTRA_MODELS = ['entity/train_hat', 'entity/logistics_hat']
-BLOCKS = BASE_BLOCKS + TRANSMISSIONS + STATIC_BLOCKS + INSTRUMENTS + GENERATORS + PROCESSORS + PISTONS + GANTRY + ACTORS + SAIL_ITEMS
+BLOCKS = BASE_BLOCKS + TRANSMISSIONS + STATIC_BLOCKS + INSTRUMENTS + GENERATORS + PROCESSORS + PISTONS + GANTRY + ACTORS + SAIL_ITEMS + CHASSIS
 ITEMS = ['iron_sheet', 'golden_sheet', 'copper_sheet', 'andesite_alloy', 'brass_ingot', 'brass_nugget', 'zinc_ingot', 'zinc_nugget', 'wrench', 'brass_sheet', 'vertical_gearbox', 'goggles', 'propeller', 'wheat_flour', 'dough', 'belt_connector', 'whisk', 'empty_blaze_burner', 'blaze_cake', 'creative_blaze_cake']
 ITEMS.append('super_glue')
+SANDPAPERS = ['sand_paper', 'red_sand_paper']
+ITEMS += ['rose_quartz', 'polished_rose_quartz', 'electron_tube', 'brass_hand'] + SANDPAPERS
 PARTS = ['shaft', 'shaft_half', 'cogwheel', 'large_cogwheel', 'creative_motor/block', 'creative_motor/block_vertical', 'mechanical_press/block', 'mechanical_press/head', 'depot/block', 'hand_crank/handle', 'hand_crank/block', 'gauge/dial', 'gauge/speedometer/head', 'gauge/stressometer/head', 'goggles', 'water_wheel/wheel', 'large_water_wheel/block', 'large_water_wheel/block_extension', 'millstone/block', 'millstone/inner', 'encased_fan/block', 'encased_fan/propeller', 'mechanical_drill/block', 'mechanical_drill/head']
 PARTS += ['belt_pulley', 'belt/particle'] + ['belt/' + part for part in
     ['start', 'middle', 'end', 'start_bottom', 'middle_bottom', 'end_bottom',

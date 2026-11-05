@@ -1,0 +1,25 @@
+{
+  "textures": {
+    "particle": "minecraft:block/slime_block"
+  },
+  "elements": [
+    {
+      "from": [
+        -0.01,
+        2,
+        2
+      ],
+      "to": [
+        0,
+        14,
+        14
+      ],
+      "faces": {
+        "west": {
+          "texture": "#particle",
+          "cullface": "west"
+        }
+      }
+    }
+  ]
+}

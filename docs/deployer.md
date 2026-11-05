@@ -74,12 +74,31 @@ together, with placement consumption in the subsequent same-column write.
 
 Centered or multiple actors, other drivers, stationary operation, PUNCH,
 filter controls, complex filters and placement with custom item components
-remain pending. The source crafting recipe still depends on the Electron Tube
-and Brass Hand. The moving render uses the source pole/hand pose, with held
-item rendering and shaft animation pending.
+remain pending. The moving render uses the source pole and hand pose. Held item rendering and
+shaft animation are pending.
 
 Run `python3 tools/deployer_reference_checks.py` against the isolated Java
 reference for the original stationary and piston planting. Run
 `python3 tools/deployer_farm_checks.py --help` for the shared rotating layout,
 tick comparison and native process restart. `tools/deployer_refill_checks.py`
 compares the one-sapling blocked refill, depletion and restored chest slots.
+
+## Survival crafting
+
+Craft Rose Quartz from a Nether quartz and eight redstone dust. Craft either
+Sand Paper from paper and its matching sand. Hold use with the Sand Paper in
+one hand and Rose Quartz in the other. You can also aim at a dropped stack
+within three blocks. A 32-tick hold polishes one item and consumes one of the
+paper's eight uses in Survival. Releasing early returns the reserved item
+with its components intact.
+
+Craft an Electron Tube with a Polished Rose Quartz above an Iron Sheet. Craft
+a Brass Hand with an Andesite Alloy above a row of three Brass Sheets, with a
+fourth Brass Sheet below the center. Stack the Electron Tube, Andesite Casing
+and Brass Hand vertically to craft a Deployer.
+
+The original item art, translations and sanding sound are loaded from the
+optional Create JAR. Built-in item models use vanilla sprites. The dedicated
+first-person renderer, finish burst, copper scraping and Deployer polishing
+remain pending. The local fixtures are `tools/sandpaper_reference_checks.py`
+and `tools/sandpaper_native_checks.py`.

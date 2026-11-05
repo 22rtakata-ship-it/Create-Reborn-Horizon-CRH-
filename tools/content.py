@@ -8,6 +8,7 @@ from common import ROOT, NATIVE
 from pulley_content import rope_pulley
 from gantry_content import gantry
 from sail_content import COLORED_SAILS, sails
+from chassis_content import chassis
 from deployer_content import deployer
 
 CONTENT = ROOT / "content"
@@ -489,8 +490,8 @@ def belts():
           'minecraft:block/iron_block')
     write('data/create/loot_table/blocks/belt.json', {'type': 'minecraft:block', 'pools': [
         {'rolls': 1, 'entries': [{'type': 'minecraft:item', 'name': 'create:belt_connector'}]},
-        {'rolls': 1, 'conditions': [{'condition': 'minecraft:inverted', 'term': {
-            'condition': 'minecraft:block_state_property', 'block': 'create:belt',
+        {'rolls': 1, 'conditions': [{'type': 'minecraft:inverted', 'term': {
+            'type': 'minecraft:block_state_property', 'block': 'create:belt',
             'properties': {'part': 'middle'}}}],
          'entries': [{'type': 'minecraft:item', 'name': 'create:shaft'}]},
     ]})
@@ -584,7 +585,7 @@ def fallback_instruments_and_wheels():
 
 
 def foundation():
-    from catalog import BLOCKS as all_blocks, ITEMS, TRANSMISSIONS, STATIC_BLOCKS, INSTRUMENTS, GENERATORS, INTERNAL_BLOCKS, rust_catalog
+    from catalog import BLOCKS as all_blocks, ITEMS, TRANSMISSIONS, STATIC_BLOCKS, INSTRUMENTS, GENERATORS, INTERNAL_BLOCKS, SANDPAPERS, rust_catalog
     for block in TRANSMISSIONS + STATIC_BLOCKS + INSTRUMENTS + GENERATORS:
         declaration = {"template": "minecraft:glass", "item": True,
                        "properties": {"hardness": 1.5, "sounds": "minecraft:andesite"}}
@@ -630,20 +631,26 @@ def foundation():
     write('data/create/loot_table/blocks/water_wheel_structure.json',{'type':'minecraft:block','pools':[]})
     for item in ITEMS:
         if item in [name + '_sheet' for name in SHEETS]: continue
-        item_decl={"template":"minecraft:iron_ingot","max_stack_size":1 if item in ['wrench','goggles','super_glue'] else 64}
+        item_decl={"template":"minecraft:iron_ingot","max_stack_size":1 if item in ['wrench','goggles','super_glue', *SANDPAPERS] else 64}
         if item=='goggles':item_decl['components']={'minecraft:equippable':{'slot':'head','equip_sound':'minecraft:item.armor.equip_generic','dispensable':True,'swappable':True,'damage_on_hurt':False}}
         if item == 'super_glue':
             item_decl['components'] = {'minecraft:max_damage': 99, 'minecraft:damage': 0}
+        if item in SANDPAPERS:
+            item_decl['components'] = {'minecraft:max_damage': 8, 'minecraft:damage': 0,
+                                       'minecraft:enchantable': {'value': 1}}
         if item=='creative_blaze_cake':item_decl['rarity']='epic'
         if item == 'empty_blaze_burner':
             item_decl['place_block'] = 'create:blaze_burner'
         write("data/create/horizon/item/" + item + ".json", item_decl)
-        sprite = {"wheat_flour": "sugar", "dough": "bread", "super_glue": "slime_ball"}.get(item, "iron_ingot")
+        sprite = {"wheat_flour": "sugar", "dough": "bread", "super_glue": "slime_ball",
+                  "rose_quartz": "amethyst_shard", "polished_rose_quartz": "quartz",
+                  "sand_paper": "paper", "red_sand_paper": "paper",
+                  "electron_tube": "redstone_torch", "brass_hand": "gold_ingot"}.get(item, "iron_ingot")
         write("assets/create/models/item/" + item + ".json", {"parent": "minecraft:item/generated", "textures": {"layer0": "minecraft:item/" + sprite}})
         write("assets/create/items/" + item + ".json", {"model": {"type": "minecraft:model", "model": "create:item/" + item}})
         if item=='goggles':
             write('assets/create/items/goggles.json',{'model':{'type':'minecraft:select','property':'minecraft:display_context','cases':[{'when':'head','model':{'type':'minecraft:model','model':'create:block/goggles'}}],'fallback':{'type':'minecraft:model','model':'create:item/goggles'}}})
-    vertical={'condition':'minecraft:block_state_property','block':'create:gearbox','properties':{'axis':'y'}}
+    vertical={'type':'minecraft:block_state_property','block':'create:gearbox','properties':{'axis':'y'}}
     write('data/create/loot_table/blocks/gearbox.json',{'type':'minecraft:block','pools':[{'rolls':1,'entries':[{'type':'minecraft:alternatives','children':[{'type':'minecraft:item','name':'create:gearbox','conditions':[vertical]},{'type':'minecraft:item','name':'create:vertical_gearbox'}]}]}]})
     model("hand_crank/handle", [([6, 5, 6], [10, 10, 16])], "minecraft:block/oak_planks")
     model('goggles',[([4,6,3],[7,9,4]),([9,6,3],[12,9,4])],'minecraft:block/gold_block')
@@ -653,6 +660,7 @@ def foundation():
     rope_pulley(write, model)
     gantry(write, model)
     sails(write, model)
+    chassis(write)
     deployer(write, model)
     contraption_actors()
     basin_mixer()
@@ -709,11 +717,17 @@ def foundation():
     extra_blocks.update({name: name.replace('_', ' ').title() for name in COLORED_SAILS})
     extra_blocks.update({'sail_frame': 'Windmill Sail Frame', 'white_sail': 'Windmill Sail'})
     extra_blocks['deployer'] = 'Deployer'
+    extra_blocks.update({'linear_chassis': 'Linear Chassis',
+                         'secondary_linear_chassis': 'Secondary Linear Chassis',
+                         'radial_chassis': 'Radial Chassis'})
     extra_blocks.update({"mechanical_piston": "Mechanical Piston", "sticky_mechanical_piston": "Sticky Mechanical Piston",
                          "mechanical_piston_head": "Mechanical Piston Head", "piston_extension_pole": "Piston Extension Pole"})
     extra_blocks.update({"mechanical_harvester": "Mechanical Harvester",
                          "mechanical_plough": "Mechanical Plough", "mechanical_saw": "Mechanical Saw"})
     extra_items.update({'whisk': 'Whisk', 'super_glue': 'Super Glue'})
+    extra_items.update({'rose_quartz': 'Rose Quartz', 'polished_rose_quartz': 'Polished Rose Quartz',
+                        'sand_paper': 'Sand Paper', 'red_sand_paper': 'Red Sand Paper',
+                        'electron_tube': 'Electron Tube', 'brass_hand': 'Brass Hand'})
     extra_items.update({'empty_blaze_burner': 'Empty Blaze Burner', 'blaze_cake': 'Blaze Cake', 'creative_blaze_cake': 'Creative Blaze Cake'})
     for locale in ["en_us","ru_ru"]:
         path=CONTENT / ("assets/create/lang/"+locale+".json")
@@ -730,7 +744,16 @@ def foundation():
         }
         lang.update({'create.super_glue.' + key: values[locale == 'ru_ru'] for key, values in glue_status.items()})
         if locale == "ru_ru":
+            lang.update({'block.create.linear_chassis': 'Линейное шасси',
+                         'block.create.secondary_linear_chassis': 'Вторичное линейное шасси',
+                         'block.create.radial_chassis': 'Радиальное шасси'})
             lang['item.create.super_glue'] = 'Суперклей'
+            lang.update({'item.create.rose_quartz': 'Розовый кварц',
+                         'item.create.polished_rose_quartz': 'Полированный розовый кварц',
+                         'item.create.sand_paper': 'Наждачная бумага',
+                         'item.create.red_sand_paper': 'Красная наждачная бумага',
+                         'item.create.electron_tube': 'Электронная лампа',
+                         'item.create.brass_hand': 'Латунная рука'})
             lang['block.create.adjustable_chain_gearshift'] = 'Регулируемая цепная коробка передач'
             lang['block.create.copper_casing'] = 'Медный корпус'
             lang['block.create.mechanical_bearing'] = 'Механический вращатель'
@@ -775,7 +798,7 @@ def main():
     CONTENT.mkdir(exist_ok=True)
     (CONTENT / "horizon-mod.toml").write_text('''id = "create"
 name = "Create for Horizon"
-version = "0.8.0-alpha.4"
+version = "0.8.0-alpha.5"
 description = "Build rotating machines and small factories in Horizon. The original Create JAR is optional and supplies its models and textures."
 authors = ["create-horizon contributors"]
 api = "0.2"

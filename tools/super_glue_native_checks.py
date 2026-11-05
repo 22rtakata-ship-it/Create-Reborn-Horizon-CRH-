@@ -37,9 +37,9 @@ def run(session, transfer=False):
         damage = re.search(r'"?minecraft:damage"?:\s*(\d+)', text)
         return int(damage[1]) if damage else 0
 
-    def click(pos, button='right', air=False):
+    def click(pos, button='right', air=False, vantage=None):
         x, y, z = pos
-        command(f'tp @s {x+.5} 99 {z-2.5}')
+        command('tp @s ' + xyz(vantage or (x+.5, 99, z-2.5)))
         call('wait', 5)
         call('look-at', x+.5, y+.5, z+.5)
         call('wait', 4)
@@ -213,9 +213,12 @@ def run(session, transfer=False):
             put(split_payload, 'minecraft:stone')
             command(f'item replace entity @s weapon.mainhand with {ITEM} 1')
             click(split_pivot)
-            click(split_payload)
+            assert saved() == restored, saved()
+            click(split_payload, vantage=(1002.5, 99, 59.5))
             before = saved()
-            assert len(before['value']['Volumes']['value']) == 2, before
+            volumes = before['value']['Volumes']['value']
+            assert len(volumes) == 2 and volumes[-1] == {
+                'type': 'int-array', 'value': [*split_pivot, *split_payload]}, before
             command('clear @s')
             put(split_motor, 'create:creative_motor[facing=up]{ScrollValue:32}')
             step(10)
@@ -244,6 +247,28 @@ def run(session, transfer=False):
         click(last_b, 'left', air=True)
         assert selected_damage() == 1 and saved()['value']['Volumes']['value'] == previous
         report['cases']['attack_through_air'] = {'damage': 1, 'removed': True}
+
+        if transfer:
+            # The source search can reach a sticky neighbor even when the
+            # selection bounds are one cell. That box joins no faces.
+            single = (1003, 100, 57)
+            sticky = (1004, 100, 57)
+            put(single, 'minecraft:stone')
+            put(sticky, 'minecraft:slime_block')
+            click(single)
+            assert saved()['value']['Volumes']['value'] == previous
+            click(single)
+            stationary = previous + [{'type': 'int-array', 'value': [*single, *single]}]
+            assert saved()['value']['Volumes']['value'] == stationary
+            session.restart()
+            command('tick freeze')
+            assert saved()['value']['Volumes']['value'] == stationary
+            put((1003, 99, 57), 'create:mechanical_bearing[facing=up]')
+            put((1003, 98, 57), 'create:creative_motor[facing=up]{ScrollValue:16}')
+            step(10)
+            assert block(single) == block(sticky) == 'minecraft:air'
+            assert saved()['value']['Volumes']['value'] == stationary
+            report['cases']['single_cell_survives_restart'] = True
 
         report['passed'] = True
     finally:

@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "minecraft:block/stripped_birch_log",
+    "west": "minecraft:block/birch_planks",
+    "east": "minecraft:block/birch_planks",
+    "down": "minecraft:block/stripped_birch_log",
+    "up": "minecraft:block/stripped_birch_log",
+    "north": "minecraft:block/stripped_birch_log",
+    "south": "minecraft:block/stripped_birch_log"
+  }
+}

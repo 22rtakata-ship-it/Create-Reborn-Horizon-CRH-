@@ -28,6 +28,10 @@ DEPLOYER = (920, 82, 120)
 DEPLOYER_LEVER = (921, 81, 120)
 GLUE = (904, 82, 136)
 GLUE_LEVER = (905, 81, 136)
+UPWARD_SAW = (920, 82, 136)
+LINEAR_CHASSIS = (904, 82, 152)
+RADIAL_CHASSIS = (920, 82, 152)
+CRAFTING_TABLE = (924, 81, 125)
 SAW_TREE = ((920, 83, 87), (920, 84, 87), (920, 85, 87))
 
 
@@ -191,3 +195,47 @@ def glue_station(batch):
     batch.put((x, y + 1, z), 'minecraft:oak_planks')
     batch.put((x + 1, y + 1, z), 'minecraft:spruce_planks')
     sign(batch, (907, 81, 139), ['SUPER GLUE', 'Click two planks', 'with glue. Start', 'with the lever.'])
+
+
+def upward_saw_station(batch):
+    batch.load(UPWARD_SAW)
+    batch.command('fill 914 81 130 927 94 142 minecraft:air')
+    batch.command('fill 914 80 130 927 80 142 minecraft:smooth_stone')
+    x, y, z = UPWARD_SAW
+    batch.put(UPWARD_SAW, 'create:mechanical_saw[facing=up,axis_along_first=false]')
+    batch.put((x, y, z - 1), 'create:creative_motor[facing=south]{ScrollValue:32}')
+    sign(batch, (923, 81, 139), ['UPWARD SAW', 'Drop an oak log.', 'Strip it, then', 'cut into planks.'])
+
+
+def chassis_stations(batch):
+    batch.load(LINEAR_CHASSIS)
+    batch.command('fill 898 81 146 926 94 158 minecraft:air')
+    batch.command('fill 898 80 146 926 80 158 minecraft:smooth_stone')
+    farm_drive(batch, LINEAR_CHASSIS)
+    x, y, z = LINEAR_CHASSIS
+    batch.put((x, y + 1, z), 'create:linear_chassis[axis=x,sticky_top=true]{ScrollValue:2}')
+    for dx in (1, 2, 3):
+        batch.put((x + dx, y + 1, z), 'minecraft:oak_planks')
+    batch.put((x, y + 1, z - 1), 'create:secondary_linear_chassis[axis=x]')
+    sign(batch, (906, 81, 155), ['LINEAR CHASSIS', 'Range 2.', 'Third plank and', 'secondary stay.'])
+    farm_drive(batch, RADIAL_CHASSIS)
+    x, y, z = RADIAL_CHASSIS
+    batch.put((x, y + 1, z), 'create:radial_chassis[axis=y,sticky_east=true]{ScrollValue:2}')
+    for dx, dz in ((1, 0), (2, 0), (2, 1), (2, 2)):
+        batch.put((x + dx, y + 1, z + dz), 'minecraft:oak_planks')
+    sign(batch, (922, 81, 155), ['RADIAL CHASSIS', 'Range 2.', 'Carries diagonal.', 'Far plank stays.'])
+
+
+def materials_station(batch):
+    batch.load(CRAFTING_TABLE)
+    batch.put(CRAFTING_TABLE, 'minecraft:crafting_table')
+    items = (
+        ('minecraft:paper', 4), ('minecraft:sand', 4),
+        ('minecraft:quartz', 4), ('minecraft:redstone', 32),
+        ('create:iron_sheet', 4), ('create:brass_sheet', 16),
+        ('create:andesite_casing', 4), ('create:andesite_alloy', 4),
+    )
+    nbt = ','.join(f'{{Slot:{slot}b,id:"{item}",count:{count}}}'
+                   for slot, (item, count) in enumerate(items))
+    batch.put((923, 81, 125), 'minecraft:chest[facing=south]{Items:[' + nbt + ']}')
+    sign(batch, (925, 81, 125), ['CRAFT DEPLOYER', 'Chest: materials.', 'Polish Rose Quartz', 'with Sand Paper.'])

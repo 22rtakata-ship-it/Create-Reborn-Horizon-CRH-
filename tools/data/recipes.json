@@ -127,6 +127,22 @@
         "id": "create:dough"
       }
     },
+    "create/recipe/crafting/kinetics/adjustable_chain_gearshift.json": {
+      "type": "minecraft:crafting_shapeless",
+      "category": "misc",
+      "ingredients": [
+        {
+          "item": "create:encased_chain_drive"
+        },
+        {
+          "item": "create:electron_tube"
+        }
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:adjustable_chain_gearshift"
+      }
+    },
     "create/recipe/crafting/kinetics/basin.json": {
       "type": "minecraft:crafting_shaped",
       "category": "misc",
@@ -159,6 +175,51 @@
       "result": {
         "count": 1,
         "id": "create:belt_connector"
+      }
+    },
+    "create/recipe/crafting/kinetics/brass_hand.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "A": {
+          "item": "create:andesite_alloy"
+        },
+        "B": {
+          "tag": "c:plates/brass"
+        }
+      },
+      "pattern": [
+        " A ",
+        "BBB",
+        " B "
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:brass_hand"
+      }
+    },
+    "create/recipe/crafting/kinetics/clockwork_bearing.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "B": {
+          "tag": "minecraft:wooden_slabs"
+        },
+        "C": {
+          "item": "create:brass_casing"
+        },
+        "S": {
+          "item": "create:electron_tube"
+        }
+      },
+      "pattern": [
+        "B",
+        "C",
+        "S"
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:clockwork_bearing"
       }
     },
     "create/recipe/crafting/kinetics/clutch.json": {
@@ -194,6 +255,30 @@
       "result": {
         "count": 1,
         "id": "create:cogwheel"
+      }
+    },
+    "create/recipe/crafting/kinetics/deployer.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "B": {
+          "item": "create:electron_tube"
+        },
+        "C": {
+          "item": "create:andesite_casing"
+        },
+        "I": {
+          "item": "create:brass_hand"
+        }
+      },
+      "pattern": [
+        "B",
+        "C",
+        "I"
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:deployer"
       }
     },
     "create/recipe/crafting/kinetics/depot.json": {
@@ -498,6 +583,40 @@
         "id": "create:large_water_wheel"
       }
     },
+    "create/recipe/crafting/kinetics/linear_chassis.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "L": {
+          "tag": "minecraft:logs"
+        },
+        "P": {
+          "item": "create:andesite_alloy"
+        }
+      },
+      "pattern": [
+        " P ",
+        "LLL",
+        " P "
+      ],
+      "result": {
+        "count": 3,
+        "id": "create:linear_chassis"
+      }
+    },
+    "create/recipe/crafting/kinetics/linear_chassis_from_conversion.json": {
+      "type": "minecraft:crafting_shapeless",
+      "category": "misc",
+      "ingredients": [
+        {
+          "item": "create:secondary_linear_chassis"
+        }
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:linear_chassis"
+      }
+    },
     "create/recipe/crafting/kinetics/mechanical_bearing.json": {
       "type": "minecraft:crafting_shaped",
       "category": "misc",
@@ -756,6 +875,27 @@
         "id": "create:propeller"
       }
     },
+    "create/recipe/crafting/kinetics/radial_chassis.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "L": {
+          "tag": "minecraft:logs"
+        },
+        "P": {
+          "item": "create:andesite_alloy"
+        }
+      },
+      "pattern": [
+        " L ",
+        "PLP",
+        " L "
+      ],
+      "result": {
+        "count": 3,
+        "id": "create:radial_chassis"
+      }
+    },
     "create/recipe/crafting/kinetics/rope_pulley.json": {
       "type": "minecraft:crafting_shaped",
       "category": "misc",
@@ -791,6 +931,19 @@
       "result": {
         "count": 1,
         "id": "create:sail_frame"
+      }
+    },
+    "create/recipe/crafting/kinetics/secondary_linear_chassis_from_conversion.json": {
+      "type": "minecraft:crafting_shapeless",
+      "category": "misc",
+      "ingredients": [
+        {
+          "item": "create:linear_chassis"
+        }
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:secondary_linear_chassis"
       }
     },
     "create/recipe/crafting/kinetics/shaft.json": {
@@ -1190,6 +1343,95 @@
       "result": {
         "count": 9,
         "id": "create:brass_nugget"
+      }
+    },
+    "create/recipe/crafting/materials/electron_tube.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "L": {
+          "item": "create:polished_rose_quartz"
+        },
+        "N": {
+          "tag": "c:plates/iron"
+        }
+      },
+      "pattern": [
+        "L",
+        "N"
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:electron_tube"
+      }
+    },
+    "create/recipe/crafting/materials/red_sand_paper.json": {
+      "type": "minecraft:crafting_shapeless",
+      "category": "misc",
+      "ingredients": [
+        {
+          "item": "minecraft:paper"
+        },
+        {
+          "tag": "c:sands/red"
+        }
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:red_sand_paper"
+      }
+    },
+    "create/recipe/crafting/materials/rose_quartz.json": {
+      "type": "minecraft:crafting_shapeless",
+      "category": "misc",
+      "ingredients": [
+        {
+          "tag": "c:gems/quartz"
+        },
+        {
+          "tag": "c:dusts/redstone"
+        },
+        {
+          "tag": "c:dusts/redstone"
+        },
+        {
+          "tag": "c:dusts/redstone"
+        },
+        {
+          "tag": "c:dusts/redstone"
+        },
+        {
+          "tag": "c:dusts/redstone"
+        },
+        {
+          "tag": "c:dusts/redstone"
+        },
+        {
+          "tag": "c:dusts/redstone"
+        },
+        {
+          "tag": "c:dusts/redstone"
+        }
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:rose_quartz"
+      }
+    },
+    "create/recipe/crafting/materials/sand_paper.json": {
+      "type": "minecraft:crafting_shapeless",
+      "category": "misc",
+      "ingredients": [
+        {
+          "item": "minecraft:paper"
+        },
+        {
+          "tag": "c:sands/colorless"
+        }
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:sand_paper"
       }
     },
     "create/recipe/crafting/materials/zinc_block_from_compacting.json": {
@@ -2619,6 +2861,19 @@
         }
       ]
     },
+    "create/recipe/sandpaper_polishing/rose_quartz.json": {
+      "type": "create:sandpaper_polishing",
+      "ingredients": [
+        {
+          "item": "create:rose_quartz"
+        }
+      ],
+      "results": [
+        {
+          "id": "create:polished_rose_quartz"
+        }
+      ]
+    },
     "create/recipe/smelting/bread.json": {
       "type": "minecraft:smelting",
       "category": "food",
@@ -2942,6 +3197,31 @@
         "create:zinc_block"
       ]
     },
+    "c/tags/item/sands/colorless.json": {
+      "values": [
+        "minecraft:sand"
+      ]
+    },
+    "c/tags/item/dusts/redstone.json": {
+      "values": [
+        "minecraft:redstone"
+      ]
+    },
+    "c/tags/item/gems/quartz.json": {
+      "values": [
+        "minecraft:quartz"
+      ]
+    },
+    "c/tags/item/sands/red.json": {
+      "values": [
+        "minecraft:red_sand"
+      ]
+    },
+    "c/tags/item/plates/iron.json": {
+      "values": [
+        "create:iron_sheet"
+      ]
+    },
     "c/tags/item/storage_blocks/brass.json": {
       "values": [
         "create:brass_block"
@@ -2972,11 +3252,6 @@
         "minecraft:tuff"
       ]
     },
-    "c/tags/item/plates/iron.json": {
-      "values": [
-        "create:iron_sheet"
-      ]
-    },
     "c/tags/item/slimeballs.json": {
       "values": [
         "minecraft:slime_ball"
@@ -2992,14 +3267,14 @@
         "minecraft:string"
       ]
     },
-    "c/tags/item/dusts/redstone.json": {
-      "values": [
-        "minecraft:redstone"
-      ]
-    },
     "c/tags/item/netherracks.json": {
       "values": [
         "minecraft:netherrack"
+      ]
+    },
+    "c/tags/item/plates/brass.json": {
+      "values": [
+        "create:brass_sheet"
       ]
     },
     "c/tags/item/foods/dough/wheat.json": {
@@ -3015,6 +3290,12 @@
     "c/tags/item/flours.json": {
       "values": [
         "create:wheat_flour"
+      ]
+    },
+    "create/tags/item/sandpaper.json": {
+      "values": [
+        "create:sand_paper",
+        "create:red_sand_paper"
       ]
     },
     "create/tags/item/not_upright_on_belt.json": {
@@ -3147,6 +3428,9 @@
         "create:mechanical_bearing",
         "create:clockwork_bearing",
         "create:rope_pulley",
+        "create:linear_chassis",
+        "create:secondary_linear_chassis",
+        "create:radial_chassis",
         "create:mechanical_drill",
         "create:mechanical_saw",
         "create:deployer",
@@ -3212,6 +3496,9 @@
         "create:mechanical_bearing",
         "create:clockwork_bearing",
         "create:rope_pulley",
+        "create:linear_chassis",
+        "create:secondary_linear_chassis",
+        "create:radial_chassis",
         "create:mechanical_drill",
         "create:mechanical_saw",
         "create:deployer",
@@ -3363,7 +3650,7 @@
           "bonus_rolls": 0.0,
           "conditions": [
             {
-              "condition": "minecraft:survives_explosion"
+              "type": "minecraft:survives_explosion"
             }
           ],
           "entries": [
@@ -3384,7 +3671,7 @@
           "bonus_rolls": 0.0,
           "conditions": [
             {
-              "condition": "minecraft:survives_explosion"
+              "type": "minecraft:survives_explosion"
             }
           ],
           "entries": [
@@ -3405,7 +3692,7 @@
           "bonus_rolls": 0.0,
           "conditions": [
             {
-              "condition": "minecraft:survives_explosion"
+              "type": "minecraft:survives_explosion"
             }
           ],
           "entries": [
@@ -3426,7 +3713,7 @@
           "bonus_rolls": 0.0,
           "conditions": [
             {
-              "condition": "minecraft:survives_explosion"
+              "type": "minecraft:survives_explosion"
             }
           ],
           "entries": [
@@ -3447,7 +3734,7 @@
           "bonus_rolls": 0.0,
           "conditions": [
             {
-              "condition": "minecraft:survives_explosion"
+              "type": "minecraft:survives_explosion"
             }
           ],
           "entries": [
@@ -3468,7 +3755,7 @@
           "bonus_rolls": 0.0,
           "conditions": [
             {
-              "condition": "minecraft:survives_explosion"
+              "type": "minecraft:survives_explosion"
             }
           ],
           "entries": [
@@ -3489,7 +3776,7 @@
           "bonus_rolls": 0.0,
           "conditions": [
             {
-              "condition": "minecraft:survives_explosion"
+              "type": "minecraft:survives_explosion"
             }
           ],
           "entries": [
@@ -3510,7 +3797,7 @@
           "bonus_rolls": 0.0,
           "conditions": [
             {
-              "condition": "minecraft:survives_explosion"
+              "type": "minecraft:survives_explosion"
             }
           ],
           "entries": [
@@ -3531,7 +3818,7 @@
           "bonus_rolls": 0.0,
           "conditions": [
             {
-              "condition": "minecraft:survives_explosion"
+              "type": "minecraft:survives_explosion"
             }
           ],
           "entries": [
@@ -3552,7 +3839,7 @@
           "bonus_rolls": 0.0,
           "conditions": [
             {
-              "condition": "minecraft:survives_explosion"
+              "type": "minecraft:survives_explosion"
             }
           ],
           "entries": [
@@ -3573,7 +3860,7 @@
           "bonus_rolls": 0.0,
           "conditions": [
             {
-              "condition": "minecraft:survives_explosion"
+              "type": "minecraft:survives_explosion"
             }
           ],
           "entries": [
@@ -3594,7 +3881,7 @@
           "bonus_rolls": 0.0,
           "conditions": [
             {
-              "condition": "minecraft:survives_explosion"
+              "type": "minecraft:survives_explosion"
             }
           ],
           "entries": [
@@ -3615,7 +3902,7 @@
           "bonus_rolls": 0.0,
           "conditions": [
             {
-              "condition": "minecraft:survives_explosion"
+              "type": "minecraft:survives_explosion"
             }
           ],
           "entries": [
@@ -3636,7 +3923,7 @@
           "bonus_rolls": 0.0,
           "conditions": [
             {
-              "condition": "minecraft:survives_explosion"
+              "type": "minecraft:survives_explosion"
             }
           ],
           "entries": [
@@ -3657,7 +3944,7 @@
           "bonus_rolls": 0.0,
           "conditions": [
             {
-              "condition": "minecraft:survives_explosion"
+              "type": "minecraft:survives_explosion"
             }
           ],
           "entries": [
@@ -3678,7 +3965,7 @@
           "bonus_rolls": 0.0,
           "conditions": [
             {
-              "condition": "minecraft:survives_explosion"
+              "type": "minecraft:survives_explosion"
             }
           ],
           "entries": [
@@ -3699,7 +3986,7 @@
           "bonus_rolls": 0.0,
           "conditions": [
             {
-              "condition": "minecraft:survives_explosion"
+              "type": "minecraft:survives_explosion"
             }
           ],
           "entries": [
@@ -3720,7 +4007,7 @@
           "bonus_rolls": 0.0,
           "conditions": [
             {
-              "condition": "minecraft:survives_explosion"
+              "type": "minecraft:survives_explosion"
             }
           ],
           "entries": [
@@ -3741,7 +4028,7 @@
           "bonus_rolls": 0.0,
           "conditions": [
             {
-              "condition": "minecraft:survives_explosion"
+              "type": "minecraft:survives_explosion"
             }
           ],
           "entries": [
@@ -3762,7 +4049,7 @@
           "bonus_rolls": 0.0,
           "conditions": [
             {
-              "condition": "minecraft:survives_explosion"
+              "type": "minecraft:survives_explosion"
             }
           ],
           "entries": [
@@ -3783,7 +4070,7 @@
           "bonus_rolls": 0.0,
           "conditions": [
             {
-              "condition": "minecraft:survives_explosion"
+              "type": "minecraft:survives_explosion"
             }
           ],
           "entries": [
@@ -3804,7 +4091,7 @@
           "bonus_rolls": 0.0,
           "conditions": [
             {
-              "condition": "minecraft:survives_explosion"
+              "type": "minecraft:survives_explosion"
             }
           ],
           "entries": [
@@ -3825,7 +4112,7 @@
           "bonus_rolls": 0.0,
           "conditions": [
             {
-              "condition": "minecraft:survives_explosion"
+              "type": "minecraft:survives_explosion"
             }
           ],
           "entries": [
@@ -3846,7 +4133,7 @@
           "bonus_rolls": 0.0,
           "conditions": [
             {
-              "condition": "minecraft:survives_explosion"
+              "type": "minecraft:survives_explosion"
             }
           ],
           "entries": [
@@ -3867,7 +4154,7 @@
           "bonus_rolls": 0.0,
           "conditions": [
             {
-              "condition": "minecraft:survives_explosion"
+              "type": "minecraft:survives_explosion"
             }
           ],
           "entries": [
@@ -3888,7 +4175,7 @@
           "bonus_rolls": 0.0,
           "conditions": [
             {
-              "condition": "minecraft:survives_explosion"
+              "type": "minecraft:survives_explosion"
             }
           ],
           "entries": [
@@ -3909,7 +4196,7 @@
           "bonus_rolls": 0.0,
           "conditions": [
             {
-              "condition": "minecraft:survives_explosion"
+              "type": "minecraft:survives_explosion"
             }
           ],
           "entries": [
@@ -3930,7 +4217,7 @@
           "bonus_rolls": 0.0,
           "conditions": [
             {
-              "condition": "minecraft:survives_explosion"
+              "type": "minecraft:survives_explosion"
             }
           ],
           "entries": [

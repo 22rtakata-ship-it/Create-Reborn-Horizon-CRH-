@@ -45,6 +45,9 @@ pub const BLOCKS: &[&str] = &[
     "deployer",
     "sail_frame",
     "white_sail",
+    "linear_chassis",
+    "secondary_linear_chassis",
+    "radial_chassis",
 ];
 pub const EXTRA_BLOCKSTATES: &[&str] = &[
     "lit_blaze_burner",
@@ -90,6 +93,12 @@ pub const ITEMS: &[&str] = &[
     "blaze_cake",
     "creative_blaze_cake",
     "super_glue",
+    "rose_quartz",
+    "polished_rose_quartz",
+    "electron_tube",
+    "brass_hand",
+    "sand_paper",
+    "red_sand_paper",
 ];
 pub const PARTS: &[&str] = &[
     "shaft",
