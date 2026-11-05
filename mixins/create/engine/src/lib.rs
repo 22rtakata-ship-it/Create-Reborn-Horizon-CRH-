@@ -52,3 +52,6 @@ pub mod burner;
 
 #[path = "core/burner_visual.rs"]
 pub mod burner_visual;
+
+#[path = "core/contraption/mod.rs"]
+pub mod contraption;

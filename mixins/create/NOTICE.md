@@ -8,6 +8,10 @@ The following MIT code informed or was adapted into the Rust engine:
 
 - `content/kinetics/KineticNetwork.java`: capacity and stress scale with absolute RPM.
 - `content/kinetics/RotationPropagator.java`: supported coaxial and small/large cog connections.
+- `content/contraptions/Contraption`, `StructureTransform`,
+  `ControlledContraptionEntity`, `bearing/BearingContraption`, and
+  `bearing/MechanicalBearingBlockEntity`: read-only assembly, centred rotation,
+  snapped restoration and the bearing's rotation modes and tick rules.
 - `content/kinetics/press/PressingBehaviour.java`: 240-unit cycle, midpoint processing,
   clamped speed interpolation, integer truncation, client receipt/hold/interpolation,
   item-particle request ordering and the rendered head's motion curve.

@@ -17,23 +17,21 @@ handling and the built-in resources. [Gameplay report](reviews/0.7-report.md)
 
 ## Current priority
 
-Pause new block ports while we audit the supported catalog against Create
-6.0.10. Work through one testable group at a time and keep the remaining
-differences visible in each review. Reuse existing fixtures and compare the
-mechanics and presentation separately.
+Build the shared contraption engine alongside the remaining stationary machines.
+Keep the Java comparisons as regressions and schedule presentation refinements
+with the systems they depend on.
 
-1. **Belts.** Compare connector feedback, surface and item animation, then
-   item timing and the supported transfers. Track entity transport separately.
-2. **Kinetics and machines.** Compare startup, reversals, power loss and reload,
-   then the associated sounds, particles, item interactions and menus.
-3. **Shared entity motion.** Define contact, collision-aware motion and
-   coordinate transforms for static and moving surfaces before porting belt
-   passengers. Use Horizon's existing entity movement and collision handling.
-   Check horizontal and sloped belts, sneaking, ends and blocking entities.
-
-Resume the content roadmap after the current blocks pass their scoped
-comparisons and the remaining differences that depend on shared infrastructure
-are recorded.
+1. **Capture and motion.** Define the local block snapshot, connectivity, pose
+   and restoration plan. Compare the Mechanical Bearing's tick and placement
+   rules with the original. [Architecture and results](contraptions.md)
+2. **Horizon integration.** Add a persistent moving structure owned by the
+   level, a safe handoff between world blocks and the structure, and a separate
+   client view. Test a Mechanical Bearing through assembly, movement, reload,
+   controller removal and restoration.
+3. **Contact and actors.** Use the existing movement and collision paths for
+   players and entities on moving surfaces, then bring in glue, chassis,
+   other drives and actors. Reuse contact work for stationary belt passengers
+   where the world-space movement contract is the same.
 
 | Subsystem | Verified bounded foundation | Next acceptance criterion |
 |---|---|---|
@@ -46,7 +44,7 @@ are recorded.
 | Transport and automation | Bare belts, Minecraft hoppers and basic IO | Complete belts, funnels/tunnels, mechanical arms |
 | Mixing and heating | Dry Basin/Mixer; heated brass; burner and fuel in separate native runs | Combined regression, missing interactions and presentation |
 | Fluids | Water/lava in canonical Basin tanks; buckets, dough and mud | Complete processing, pipe networks, pumps, tanks |
-| Contraptions | Pending | Shared assembly, transformations, collisions and actors |
+| Contraptions | Shared capture, rotation, restoration planning and Bearing controller tested in the engine | Native ownership, persistence, collision and rendering |
 | Trains and logistics | Pending | Tracks, trains, schedules, cargo |
 | Ponder and guides | Pending | Original scenes, controls and presentation |
 | Addons | Architectural requirement | Public Rust contracts; then Sable and Aeronautics |
@@ -182,7 +180,11 @@ are recorded.
   result collection was checked within a bounded time, without claiming exact timing.
 - [ ] Rotations/mirrors with verified block and block entity transformations.
 - [ ] Original Schematic and Quill, preview, UI, deployment and Schematicannon.
-- [ ] Shared assembled-contraption model, glue/chassis and attachment rules.
+- [x] Core captures connected blocks with host-provided attachment rules and
+  preserves their snapshots through a failed restoration preflight.
+- [x] Bearing angle trace and snapped log placement on X, Y and Z verified
+  against the isolated Java client. [Architecture and results](contraptions.md)
+- [ ] Native glue boxes, chassis and complete block movement rules.
 - [ ] Bearings, piston, Rope Pulley, gantry, elevator and Cart Assembler.
 - [ ] Collisions, players/passengers, moving inventories and contraption persistence.
 - [ ] Deployer/drill/saw/plough/harvester actors and portable storage/fluid interfaces.
@@ -206,6 +208,5 @@ are recorded.
 - [ ] Create Aeronautics on verified Create/Sable, without decorative substitutes for physics.
 - [ ] Example external Rust addon and API version policy.
 
-Order: reproducible comparison → accuracy of current systems → practical factories →
-contraptions → fluids/trains/other systems → Sable/Aeronautics.
-Each completed stage receives a build, validation evidence and a separate review world.
+Keep Java comparisons beside each new subsystem. Playable stages receive a
+build, validation evidence and a separate review world.
