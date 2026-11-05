@@ -208,17 +208,6 @@ pub(super) fn draw(
     axis: Axis,
     block: &str,
 ) {
-    if !super::create_port::original_assets() {
-        game.native_draw_model(
-            draw,
-            &format!(
-                "create:block/{}/block",
-                block.strip_prefix("create:").unwrap()
-            ),
-            0xFFFFFF,
-        );
-        return;
-    }
     let part = if block == "create:water_wheel" {
         "water_wheel/wheel"
     } else if game.native_block_property(pos, "extension").as_deref() == Some("true") {

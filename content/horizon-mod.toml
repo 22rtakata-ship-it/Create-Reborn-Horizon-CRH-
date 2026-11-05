@@ -1,7 +1,7 @@
 id = "create"
-name = "Create for Horizon — prototype"
-version = "0.7.0-alpha.1"
-description = "Experimental kinetic foundation with milling, bulk fan processing, stationary drilling, pressing, depots and crafting."
+name = "Create for Horizon"
+version = "0.7.0-alpha.2"
+description = "Build rotating machines and small factories in Horizon. The original Create JAR is optional and supplies its models and textures."
 authors = ["create-horizon contributors"]
 api = "0.2"
 side = "both"

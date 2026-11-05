@@ -1,0 +1,7 @@
+{
+  "parent": "create:block/large_water_wheel/block",
+  "textures": {
+    "all": "minecraft:block/oak_planks",
+    "particle": "minecraft:block/oak_planks"
+  }
+}

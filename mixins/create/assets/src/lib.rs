@@ -45,7 +45,7 @@ pub struct Imported {
 pub fn bundled_content(game_dir: &Path, bytes: &[u8]) -> io::Result<PathBuf> {
     let files: BTreeMap<String, String> = serde_json::from_slice(bytes)?;
     if !files.contains_key("horizon-mod.toml")
-        || files.len() > 512
+        || files.len() > 1024
         || files.iter().any(|(name, value)| {
             !safe_path(name)
                 || !(name == "horizon-mod.toml"

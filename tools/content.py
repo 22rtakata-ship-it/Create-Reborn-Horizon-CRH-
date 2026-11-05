@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""Generate the small playable content set with original, provisional models.
+"""Generate mod content with simple built-in models.
 
 Models reference vanilla textures by ID and contain no upstream texture bytes.
-The full horizon-port-pack carry-over remains in .local for subsequent milestones.
 """
 import json
 from common import ROOT, NATIVE
@@ -18,11 +17,21 @@ def write(path, value):
     target.write_text(json.dumps(value, indent=2, ensure_ascii=False) + "\n")
 
 
-def model(name, boxes, texture="minecraft:block/iron_block"):
-    faces = {face: {"texture": "#all"} for face in ["down", "up", "north", "south", "west", "east"]}
+def model(name, boxes, texture="minecraft:block/iron_block", *, rotation=None):
+    sides = ("down", "up", "north", "south", "west", "east")
+    elements = []
+    for start, end in boxes:
+        face = {"texture": "#all"}
+        # Generated UVs can sample neighbouring atlas sprites beyond a block.
+        if any(value < 0 or value > 16 for value in [*start, *end]):
+            face["uv"] = [0, 0, 16, 16]
+        element = {"from": start, "to": end, "faces": dict.fromkeys(sides, face)}
+        if rotation is not None:
+            element["rotation"] = rotation
+        elements.append(element)
     write("assets/create/models/block/" + name + ".json", {
         "textures": {"all": texture, "particle": texture},
-        "elements": [{"from": a, "to": b, "faces": faces} for a, b in boxes],
+        "elements": elements,
     })
 
 
@@ -238,6 +247,18 @@ def belts():
         'variants': {'': {'model': 'create:block/belt/particle'}}})
     write('assets/create/models/block/belt/particle.json', {
         'textures': {'particle': 'minecraft:block/black_wool'}, 'elements': []})
+    # The renderer reuses these parts for all directions. The built-in belt
+    # surface is plain wool; only the optional JAR supplies scrolling textures.
+    model('belt/middle', [([0, 11, 0], [16, 13, 16])], 'minecraft:block/black_wool')
+    model('belt/middle_bottom', [([0, 3, 0], [16, 5, 16])], 'minecraft:block/black_wool')
+    model('belt/diagonal_middle', [([0, 4, -3.314], [16, 12, 19.314])],
+          'minecraft:block/black_wool', rotation={'origin': [8, 8, 8], 'axis': 'x', 'angle': 45})
+    for prefix, suffix in [('', ''), ('', '_bottom'), ('diagonal_', '')]:
+        for part in ['start', 'end']:
+            write(f'assets/create/models/block/belt/{prefix}{part}{suffix}.json',
+                  {'parent': f'create:block/belt/{prefix}middle{suffix}'})
+    model('belt_pulley', [([2, 6, 2], [14, 10, 14]), ([5, 0, 5], [11, 16, 11])],
+          'minecraft:block/iron_block')
     write('data/create/loot_table/blocks/belt.json', {'type': 'minecraft:block', 'pools': [
         {'rolls': 1, 'entries': [{'type': 'minecraft:item', 'name': 'create:belt_connector'}]},
         {'rolls': 1, 'conditions': [{'condition': 'minecraft:inverted', 'term': {
@@ -288,6 +309,34 @@ def chain_drives():
         model('encased_chain_drive/' + suffix, [([0, 0, 0], [16, 16, 16])], 'minecraft:block/andesite')
     write('assets/create/blockstates/encased_chain_drive.json', {'variants': variants})
     write('assets/create/models/item/encased_chain_drive.json', {'parent': 'create:block/encased_chain_drive/single'})
+
+
+def fallback_instruments_and_wheels():
+    for gauge in ['speedometer', 'stressometer']:
+        model(f'gauge/{gauge}/head', [([15.8, 3, 3], [16.5, 13, 13])],
+              'minecraft:block/smooth_stone')
+    model('gauge/dial', [([16.5, 5.25, 5.25], [17, 10.5, 6.25])],
+          'minecraft:block/red_concrete')
+
+    small = [([1, 6, 5], [15, 10, 11]), ([5, 6, 1], [11, 10, 15]),
+             ([5, 0, 5], [11, 16, 11])]
+    large = [([-16, 6, 4], [32, 10, 12]), ([4, 6, -16], [12, 10, 32]),
+             ([5, 0, 5], [11, 16, 11])]
+    model('water_wheel/wheel', small, 'minecraft:block/spruce_planks')
+    model('large_water_wheel/block', large, 'minecraft:block/spruce_planks')
+    write('assets/create/models/block/large_water_wheel/block_extension.json',
+          {'parent': 'create:block/large_water_wheel/block'})
+    write('assets/create/models/block/water_wheel/block.json',
+          {'textures': {'particle': 'minecraft:block/spruce_planks'}, 'elements': []})
+    write('assets/create/models/item/water_wheel.json', {'parent': 'create:block/water_wheel/wheel'})
+    write('assets/create/models/item/large_water_wheel.json', {'parent': 'create:block/water_wheel/wheel'})
+    woods = ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak', 'mangrove', 'cherry',
+             'bamboo', 'crimson', 'warped', 'pale_oak']
+    for part in ['water_wheel/wheel', 'large_water_wheel/block', 'large_water_wheel/block_extension']:
+        for wood in woods:
+            texture = f'minecraft:block/{wood}_planks'
+            write(f'assets/create/models/block/{part}_material_{wood}.json',
+                  {'parent': f'create:block/{part}', 'textures': {'all': texture, 'particle': texture}})
 
 
 def foundation():
@@ -352,6 +401,7 @@ def foundation():
     burners()
     belts()
     chain_drives()
+    fallback_instruments_and_wheels()
     (CONTENT / 'assets/create/models/block/port_hint.json').unlink(missing_ok=True)
     # Only MIT recipe/tag data is distributed; original assets stay in the JAR.
     reference = json.loads((ROOT / "tools/data/recipes.json").read_text())
@@ -422,9 +472,9 @@ def foundation():
 def main():
     CONTENT.mkdir(exist_ok=True)
     (CONTENT / "horizon-mod.toml").write_text('''id = "create"
-name = "Create for Horizon — prototype"
-version = "0.7.0-alpha.1"
-description = "Experimental kinetic foundation with milling, bulk fan processing, stationary drilling, pressing, depots and crafting."
+name = "Create for Horizon"
+version = "0.7.0-alpha.2"
+description = "Build rotating machines and small factories in Horizon. The original Create JAR is optional and supplies its models and textures."
 authors = ["create-horizon contributors"]
 api = "0.2"
 side = "both"

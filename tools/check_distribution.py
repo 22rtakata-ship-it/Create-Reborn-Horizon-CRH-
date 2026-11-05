@@ -3,7 +3,7 @@
 import json
 import re
 from common import ROOT, NATIVE, PINS
-from catalog import BLOCKS, ITEMS, INTERNAL_BLOCKS, rust_catalog
+from catalog import BLOCKS, EXTRA_MODELS, INTERNAL_BLOCKS, ITEMS, PARTS, rust_catalog
 
 
 def main():
@@ -20,6 +20,15 @@ def main():
                 and "target" not in p.relative_to(content).parts}
     actual = json.loads((NATIVE / "data/content.json").read_text())
     assert actual == expected, "Bundled public content is stale: run tools/content.py"
+    model_prefix = "assets/create/models/"
+    required = {model_prefix + "block/" + part + ".json" for part in PARTS}
+    required.update(model_prefix + name + ".json" for name in EXTRA_MODELS)
+    missing_models = required - actual.keys()
+    assert not missing_models, "Missing built-in models: " + ", ".join(sorted(missing_models))
+    for name, text in actual.items():
+        if name.startswith(model_prefix) and name.endswith(".json"):
+            for texture in json.loads(text).get("textures", {}).values():
+                assert texture.startswith(("minecraft:", "#")), (name, texture)
     reference=json.loads((ROOT / "tools/data/recipes.json").read_text())
     assert reference["reference"] == PINS["create_revision"]
     assert (NATIVE / "assets/src/catalog.rs").read_text() == rust_catalog(), "Importer catalog is stale"

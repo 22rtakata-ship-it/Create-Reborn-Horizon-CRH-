@@ -47,7 +47,7 @@ def main():
     shutil.copy2(content_archive, content_target)
     subprocess.run([str(cli), "check", str(content_target), "--json"], check=True)
     print("Native archives include all public content and pin the accepted upstream Mixins revision; no local tool patch.")
-    print("Original assets are never packaged. Place your own JAR in the instance's horizon-mods/create-resources/.")
+    print("The built-in models work without a JAR. For the original look, place your Create JAR in horizon-mods/create-resources/.")
 
 
 if __name__ == "__main__":

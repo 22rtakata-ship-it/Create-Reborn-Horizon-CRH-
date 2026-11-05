@@ -460,7 +460,7 @@ pub(super) fn draw(
                 material: NativeModelMaterial::Model,
                 // The source OBJ flame likewise has shade=false/OFF.
                 shade: NativeModelShade::Off,
-                uv_shift: Some(NativeModelUvShift {
+                uv_shift: super::create_port::original_assets().then(|| NativeModelUvShift {
                     source_sprite: "create:block/blaze_burner_flame",
                     target_sprite: if flame.superheated {
                         "create:block/blaze_burner_flame_superheated_scroll"

@@ -1,0 +1,7 @@
+{
+  "parent": "create:block/large_water_wheel/block_extension",
+  "textures": {
+    "all": "minecraft:block/mangrove_planks",
+    "particle": "minecraft:block/mangrove_planks"
+  }
+}

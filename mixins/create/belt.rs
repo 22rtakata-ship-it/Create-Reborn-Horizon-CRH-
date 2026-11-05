@@ -1366,7 +1366,7 @@ fn moving_model(
     diagonal: bool,
     moving: bool,
 ) {
-    if !moving {
+    if !moving || !super::create_port::original_assets() {
         game.native_draw_model(draw, model, 0xFFFFFF);
         return;
     }

@@ -53,9 +53,10 @@ class NativeCheckSession:
         else:
             shutil.copytree(resources, self.resources)
         (self.scratch / 'horizon-mods.txt').write_text('mod.create:true\n')
-        inputs = self.scratch / 'horizon-mods/create-resources'
-        inputs.mkdir(parents=True)
-        shutil.copy2(create_jar, inputs / 'create.jar')
+        if create_jar is not None:
+            inputs = self.scratch / 'horizon-mods/create-resources'
+            inputs.mkdir(parents=True)
+            shutil.copy2(create_jar, inputs / 'create.jar')
         self.env = os.environ.copy()
         for key, folder in [('HORIZON_HOME', 'home'), ('HORIZON_LAUNCHER_HOME', 'launcher'),
                             ('XDG_DATA_HOME', 'data'), ('XDG_CONFIG_HOME', 'config'),
