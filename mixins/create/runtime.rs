@@ -299,6 +299,17 @@ pub(super) fn placed(game: &mut Game<'_>, stack: &ItemStack, pos: [i32; 3]) {
                 Axis::Z => "z",
             },
         );
+        if super::create_port_kinetic_runtime::transmission_block(&stack.item) {
+            let dimension = game.dim.id().to_owned();
+            if game.native_neighbor_signal(&dimension, pos) > 0 {
+                game.native_set_block_property_with(
+                    pos,
+                    "powered",
+                    "true",
+                    horizon_world::level::flags::UPDATE_CLIENTS,
+                );
+            }
+        }
     } else {
         let facing = match stack.item.as_ref() {
             "create:creative_motor" => Some(placement::motor(look, sneaking, ports)),
@@ -686,6 +697,11 @@ pub(super) fn node(game: &Game<'_>, pos: [i32; 3]) -> Option<Node> {
                 0
             },
         },
+        "create:clutch" | "create:gearshift"
+            if super::create_port_kinetic_runtime::transmission_detached(game, pos) =>
+        {
+            Kind::Clutch { powered: true }
+        }
         "create:clutch" => Kind::Clutch {
             powered: game.native_block_property(pos, "powered").as_deref() == Some("true"),
         },
@@ -952,13 +968,6 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
     let old_flow_score = integer(&entity.nbt, "FlowScore");
     if crate::game::create_port_generators::tick(game, pos, entity, &block) {
         return;
-    }
-    if matches!(block.as_str(), "create:clutch" | "create:gearshift") {
-        let dim = game.dim.id().to_owned();
-        let powered = game.native_neighbor_signal(&dim, pos) > 0;
-        if game.native_set_block_property(pos, "powered", if powered { "true" } else { "false" }) {
-            crate::game::create_port_kinetic_runtime::invalidate();
-        }
     }
     let Some(mut start) = node(game, pos) else {
         return;

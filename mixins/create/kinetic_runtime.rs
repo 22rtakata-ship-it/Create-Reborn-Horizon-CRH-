@@ -69,6 +69,7 @@ impl Lifetime {
 struct Lifetimes {
     nodes: BTreeMap<Pos, Lifetime>,
     cleaned: Option<i64>,
+    reattach: BTreeMap<Pos, ModRevision>,
 }
 impl Lifetimes {
     fn maintain(&mut self, now: i64, mut live: impl FnMut(Pos, ModRevision) -> bool) {
@@ -325,84 +326,140 @@ pub(super) fn generated_changed(game: &mut Game<'_>, pos: Pos) {
     game.native_block_entity_sync(pos);
 }
 
-/// The block notification hook has no Game borrow. Retain bounded nearby
-/// transmission candidates for the next ordinary level's block phase.
-pub(super) fn changed(dimension: &str, pos: Pos) {
-    invalidate();
+/// The read-only neighbour hook hands the relay to the server event drain,
+/// where a Game borrow is available. Coalesce a vanilla update cascade.
+pub(super) fn transmission_changed(dimension: &str, pos: Pos) {
     CHANGED.with(|cell| {
         let mut changes = cell.borrow_mut();
         let pending = changes.entry(dimension.to_owned()).or_default();
         if pending.scan_loaded {
             return;
         }
-        if pending.positions.len() + 7 > MAX_PENDING_TRANSMISSIONS {
+        if pending.positions.len() == MAX_PENDING_TRANSMISSIONS {
             pending.positions.clear();
             pending.scan_loaded = true;
-            return;
-        }
-        pending.positions.insert(pos);
-        for direction in create_engine::placement::Direction::ALL {
-            let delta = direction.vector();
-            pending
-                .positions
-                .insert(std::array::from_fn(|i| pos[i] + delta[i]));
+        } else {
+            pending.positions.insert(pos);
         }
     });
 }
-/// Clutch/Gearshift reopening is a scheduled block tick before the BE pass.
-/// This preserves that next-tick machine boundary. It does not claim immediate
-/// between-tick neighbour callback parity: the current hook has no Game owner.
-pub(super) fn refresh_transmissions(game: &mut Game<'_>) {
-    LIFETIMES.with(|cell| {
-        cell.borrow_mut().dimension(std::ptr::from_ref(&game.world) as usize, game.dim.id())
-            .maintain(game.world.game_time, |pos, owner| {
-                matches!(game.world.block_entities.get(&(pos[0], pos[1], pos[2])),
-                    Some(BlockEntity::Mod(entity)) if !entity.id.is_empty() && owner.same_entity(entity.revision()))
-            });
-    });
 
-    let pending = CHANGED.with(|cell| cell.borrow_mut().remove(game.dim.id()).unwrap_or_default());
+pub(super) fn transmission_block(block: &str) -> bool {
+    matches!(block, "create:clutch" | "create:gearshift")
+}
+
+fn transmission_owner(game: &Game<'_>, pos: Pos) -> Option<ModRevision> {
+    match game.world.block_entities.get(&(pos[0], pos[1], pos[2])) {
+        Some(BlockEntity::Mod(entity)) if !entity.id.is_empty() => Some(entity.revision()),
+        _ => None,
+    }
+}
+
+/// During the detach interval the same split graph used by an open Clutch
+/// isolates both halves. The block state already holds its new powered value.
+pub(super) fn transmission_detached(game: &Game<'_>, pos: Pos) -> bool {
+    LIFETIMES.with(|cell| {
+        cell.borrow_mut()
+            .dimension(std::ptr::from_ref(&game.world) as usize, game.dim.id())
+            .reattach
+            .get(&pos)
+            .is_some_and(|owner| {
+                // The host takes the currently ticking entity out of the map.
+                transmission_owner(game, pos).is_none_or(|current| owner.same_entity(current))
+            })
+    })
+}
+
+fn publish_transmission(game: &mut Game<'_>, pos: Pos) {
+    let Some(node) = super::create_port::node(game, pos) else {
+        return;
+    };
+    let network = self::network(game, node, 0);
+    let other =
+        matches!(node.kind, Kind::Clutch { powered: true }).then(|| self::network(game, node, 1));
+    game.native_with_mod_block_entity(pos, |entity| {
+        super::create_port::apply_network(entity, &network, other.as_deref(), pos);
+    });
+    publish(game, &network, pos);
+    if let Some(other) = other {
+        publish(game, &other, pos);
+    }
+    game.native_block_entity_sync(pos);
+}
+
+pub(super) fn refresh_transmissions(game: &mut Game<'_>) {
+    let pending = CHANGED.with(|cell| cell.borrow_mut().remove(game.dim.id()));
+    let Some(pending) = pending else { return };
     let positions: Vec<Pos> = if pending.scan_loaded {
         game.world
             .block_entities
             .iter()
             .filter_map(|(&(x, y, z), _)| {
                 let pos = [x, y, z];
-                matches!(
-                    game.native_block(pos).as_str(),
-                    "create:clutch" | "create:gearshift"
-                )
-                .then_some(pos)
+                transmission_block(&game.native_block(pos)).then_some(pos)
             })
             .collect()
     } else {
         pending.positions.into_iter().collect()
     };
+    let dimension = game.dim.id().to_owned();
     for pos in positions {
         let block = game.native_block(pos);
-        if !matches!(block.as_str(), "create:clutch" | "create:gearshift") {
+        if !transmission_block(&block) {
             continue;
         }
-        let dimension = game.dim.id().to_owned();
         let powered = game.native_neighbor_signal(&dimension, pos) > 0;
-        if !game.native_set_block_property(pos, "powered", if powered { "true" } else { "false" }) {
+        let clutch = block == "create:clutch";
+        let mut flags = horizon_world::level::flags::UPDATE_CLIENTS;
+        if clutch {
+            flags |= horizon_world::level::flags::UPDATE_KNOWN_SHAPE;
+        }
+        if !game.native_set_block_property_with(
+            pos,
+            "powered",
+            if powered { "true" } else { "false" },
+            flags,
+        ) {
             continue;
         }
-        invalidate();
-        let Some(node) = super::create_port::node(game, pos) else {
-            continue;
-        };
-        let network = self::network(game, node, 0);
-        let other = matches!(node.kind, Kind::Clutch { powered: true })
-            .then(|| self::network(game, node, 1));
-        game.native_with_mod_block_entity(pos, |entity| {
-            super::create_port::apply_network(entity, &network, other.as_deref(), pos);
+        let owner = transmission_owner(game, pos);
+        LIFETIMES.with(|cell| {
+            let mut cache = cell.borrow_mut();
+            let pending = &mut cache
+                .dimension(std::ptr::from_ref(&game.world) as usize, game.dim.id())
+                .reattach;
+            pending.remove(&pos);
+            // Gearshift always reattaches. Clutch only schedules it on closing.
+            if (!clutch || !powered)
+                && let Some(owner) = owner
+            {
+                pending.insert(pos, owner);
+            }
         });
-        publish(game, &network, pos);
-        if let Some(other) = other {
-            publish(game, &other, pos);
+        invalidate();
+        publish_transmission(game, pos);
+    }
+}
+
+pub(super) fn begin_transmission_tick(game: &mut Game<'_>) {
+    let pending = LIFETIMES.with(|cell| {
+        let mut cache = cell.borrow_mut();
+        let state = cache.dimension(std::ptr::from_ref(&game.world) as usize, game.dim.id());
+        state.maintain(game.world.game_time, |pos, owner| {
+            transmission_owner(game, pos).is_some_and(|current| owner.same_entity(current))
+        });
+        std::mem::take(&mut state.reattach)
+    });
+    if pending.is_empty() {
+        return;
+    }
+    invalidate();
+    for (pos, owner) in pending {
+        if transmission_block(&game.native_block(pos))
+            && transmission_owner(game, pos).is_some_and(|current| owner.same_entity(current))
+        {
+            publish_transmission(game, pos);
         }
-        game.native_block_entity_sync(pos);
     }
 }
 

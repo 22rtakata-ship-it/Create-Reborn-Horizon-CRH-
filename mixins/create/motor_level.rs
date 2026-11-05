@@ -3,7 +3,6 @@
 
 fn motor_level(game: &mut crate::game::Game<'_>) {
     crate::game::create_port_motor_control::level_tick(game);
-    crate::game::create_port_kinetic_runtime::refresh_transmissions(game);
     crate::game::create_port_belt::maintenance(game);
     crate::game::create_port_basin::maintenance(game);
     crate::game::create_port_mixer::maintenance(game);

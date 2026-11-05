@@ -75,7 +75,8 @@ are recorded.
   frames and two actual restart comparisons; resumed fixture correction disclosed.
 - [x] Submit the 0.7.0-alpha.2 archive to the native mod registry.
   [Registry submission #252](https://github.com/horizon-rust/horizon-mods/pull/252)
-- [ ] Complete registry review and publish an approved listing.
+- [x] Complete registry review and publish the 0.7.0-alpha.2 listing.
+  [Create for Horizon](https://playhorizon.dev/mods/create)
 
 ## 2. Rotation and engineer's tools
 
@@ -96,6 +97,9 @@ are recorded.
 - [ ] Adjustable Chain Gearshift transient timing, full visual parity and
   survival crafting through rose quartz polishing and the Electron Tube.
 - [ ] Remaining redstone controls, belt and gearbox connection variants.
+- [x] Straight Clutch and Gearshift lines with either input end. Compare the
+  immediate detach, next-tick reattachment and short pulses in Java and
+  Horizon. [Transmission review](reviews/transmission.md)
 - [ ] Clutch/Gearshift and Hand Crank in all network/animation edge cases.
 - [ ] Original goggles tooltips and value settings, including RU/EN, colors, units and fading.
 - [ ] Original speed/overstress particles, placement assistance, outlines and sound loops.
