@@ -1,6 +1,7 @@
 """Native fan processing and airflow fixtures in the disposable smoke world."""
 import re
 import engineering_checks
+from native_motors import replace_motor
 
 X=96
 def run(call,graphics,log,scratch):
@@ -15,7 +16,7 @@ def run(call,graphics,log,scratch):
         call('command',f'tp @s {X+3.5} 66 4.5');call('wait-ready',120)
         call('fill',X-3,64,-3,X+9,70,4,'minecraft:air');call('command','clear @s');call('command','kill @e[type=minecraft:item]')
         call('fill',X-3,63,-3,X+9,63,4,'minecraft:smooth_stone')
-        setblock(-1,65,0,'create:creative_motor[facing=east]');call('command',f'data merge block {X-1} 65 0 {{ScrollValue:{rpm}}}')
+        replace_motor(call, (X - 1, 65, 0), rpm, 'east')
         setblock(0,65,0,'create:encased_fan[facing=east]');setblock(3,64,0,'create:depot');call('wait',35)
     def supply(item,count=1):call('container',X+3,64,0,item,count)
     def catalyst(name):setblock(1,65,0,name);call('wait',35)
@@ -70,7 +71,9 @@ def run(call,graphics,log,scratch):
         rows=engineering_checks.poses(log,[X,65,0]);parts=[r for r in rows if r['model'].endswith('encased_fan/propeller')]
         engineering_checks.source_rotation(parts,0,80)
         call('screenshot',scratch/'fan.png')
-    print('Fan: real item velocity reverses with rotation; original rotating propeller poses passed',flush=True)
+    print('Fan: real item velocity reverses with rotation; ' +
+          ('original rotating propeller poses passed' if graphics else
+           'renderer poses were not checked in headless mode'), flush=True)
     # Keep a stopped transported stack with canonical timer/type through reload.
     reset(16);catalyst('minecraft:campfire[lit=true]');supply('create:dough',17);call('wait',30)
     setblock(-1,65,0,'minecraft:air');call('wait',8)

@@ -265,7 +265,10 @@ automation or merging changes automatically.
 
 Continue through coherent increments under the existing source-parity rules.
 Close measured behavior/data gaps before expanding the affected system. The
-Press/Basin one-tick startup difference is an open defect, not accepted parity.
+historical Press/Basin startup discrepancy has now been traced to source events
+and actual ticker order: 1,488 bounded unshifted native/original observations match
+in 0.7. Full source ownership, cold-loaded networks and propagation transients
+remain open; those trace results are not complete kinetic-network acceptance.
 Then add the next supported processing/transport features from the subsystem
 plan, each with source-derived tests and actual integration checks. Moving
 contraptions were suggested as future scope, not the priority for this session.
@@ -273,3 +276,18 @@ contraptions were suggested as future scope, not the priority for this session.
 Do not stop merely because the previous checkpoint was delivered. Continue until
 the owner interrupts or a coherent handoff is necessary, with all partial work
 and remaining checks recorded accurately. Preserve existing worlds and instances.
+
+### 0.7 review checkpoint
+
+Encased Chain Drive, bounded generator source events, placement shaft contracts
+and effective fan fire-resistance mapping are implemented. The final native
+binary and an independently exercised clone of CreateFactory07 are ready for
+owner review. See REPORT_07.md and TESTING_07.md; ROADMAP.md remains the overall
+checklist. The original failed audit click and the resumed acceptance are both
+retained, rather than relabeling the first run as successful.
+
+Next: review the visual feedback, expand shared Java/native network scenarios,
+close supported transport/processing gaps, then select another bounded original
+feature. Contraptions remain later work. Every new feature keeps source-derived
+tests, ordinary interactions, persistence and presentation review as acceptance
+requirements.

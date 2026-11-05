@@ -1,7 +1,7 @@
 # Original Create identifiers and data
 
 The sections marked 0.3–0.5 below retain the released historical boundaries.
-The current review checkpoint is **0.6.0-alpha.2**: see [REPORT_06.md](REPORT_06.md)
+The installed review checkpoint is **0.6.0-alpha.2**: see [REPORT_06.md](REPORT_06.md)
 and [DEVELOPMENT_06.md](DEVELOPMENT_06.md) for scoped integration evidence and
 remaining differences. It adds limited schematic placement, bare-belt transport,
 Basin/Mixer/fluid/heat processing and Press compacting, not complete Create parity.
@@ -12,7 +12,29 @@ empty later updates clear the client's retained field. The active recipe object
 is transient and retained through datapack reload, not encoded as a new recipe
 field in the save. Canonical input/output inventories retain unknown sibling
 data; unsupported predicates/structures fail explicitly. The measured one-tick
-kinetic startup difference is recorded in the checkpoint report.
+kinetic startup difference is historical; the bounded 0.7 source-event/ticker-order
+comparison supersedes it without adding a timer offset.
+
+Latest tested developer checkpoint: **0.7.0-alpha.1**. See [REPORT_07.md](REPORT_07.md)
+and [DEVELOPMENT_07.md](DEVELOPMENT_07.md). It adds `create:encased_chain_drive`
+with entity type `create:encased_shaft` and the original 24 combinations of `axis`,
+`axis_along_first` and `part`. The isolated original default is axis Y,
+`axis_along_first=true`, `part=none`. Two source crafting recipes and the complete
+source loot data are preserved. Ordinary interactions, six settled chain scenes
+and real native restarts have passed; full propagation/presentation parity has not.
+
+The target's per-stack `minecraft:damage_resistant` canonical
+`{types:"#minecraft:is_fire"}` maps to original 1.21.1 `FIRE_RESISTANT` presence.
+Explicit removal overrides the default component. Recognized partial selectors
+do not grant full-fire resistance; unknown/malformed selectors are conservatively
+retained when no recipe applies. This is not a general component data fixer.
+Actual recipes retain priority. The 0.5 default-only description below is historical.
+
+The 0.7 generator adapter distinguishes source initialization, actual GUI/crank/
+wrench/flow callbacks and raw NBT reads. An initialized motor's `/data` edit is
+not an ordinary live settings action in original Create. Bounded Press/Basin
+traces match 1,488 ordinary tick samples without time alignment; authentic
+cold-loaded Java networks, source ownership and flicker/breakage remain pending.
 
 The behavior reference is Create **6.0.10**, Minecraft **1.21.1**, source commit
 `ac0c444d9828da3453ae8cc65338e8de063286fb`. The target is Horizon's Minecraft
@@ -32,6 +54,7 @@ implementing each feature, and test save/reload inside Horizon.
 | `create:clutch`, `create:gearshift` | corresponding block ID | `axis`, `powered` |
 | `create:hand_crank` | `create:hand_crank` | `facing`, `waterlogged`; `InUse` int, `Backwards` byte |
 | `create:andesite_encased_shaft`, `create:brass_encased_shaft` | `create:encased_shaft` | `axis` |
+| `create:encased_chain_drive` | `create:encased_shaft` | `axis`, `axis_along_first`, `part` (`none`, `start`, `middle`, `end`) |
 | `create:millstone` | `create:millstone` | no block-state properties; `Timer` int, `InputInventory`, `OutputInventory` |
 | `create:encased_fan` | `create:encased_fan` | six-way `facing`, original default `down`; common kinetic `Speed` |
 | `create:mechanical_drill` | `create:drill` | six-way `facing`, `waterlogged`; defaults `down`, false; `Progress`, `NextTick`, `Breaking` |

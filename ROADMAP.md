@@ -14,6 +14,10 @@ Completion percentages are rough estimates, not a count of the rows below.
 The latest installed stage is `0.6.0-alpha.2`, branch `stage/parity-06`.
 [The report, build and review world](REPORT_06.md) record the result at this checkpoint.
 Candidate `alpha.3`: [belt X rotation, metadata and checks](REPORT_063.md).
+Latest tested developer checkpoint: **0.7.0-alpha.1**, with Encased Chain Drive,
+bounded source-event timing and fan component mapping. Its separate review world
+and evidence are in [REPORT_07.md](REPORT_07.md) and [TESTING_07.md](TESTING_07.md).
+The installed Launcher instance has not been replaced.
 The checkmarks below apply to the stated bounded capabilities; full Create
 parity is not claimed. Evidence history and differences are in
 [DEVELOPMENT_06.md](DEVELOPMENT_06.md).
@@ -21,7 +25,7 @@ parity is not claimed. Evidence history and differences are in
 | Subsystem | Verified bounded foundation | Next acceptance criterion |
 |---|---|---|
 | Installation and resources | Working native pipeline, local JAR | Verify the next release through the same route |
-| Kinetic network | Basic shafts, gears, gearboxes and stress | Complete effects, diagnostics and complex connections |
+| Kinetic network | Basic shafts, gears, gearboxes, stress and Encased Chain Drive; bounded source-event traces | Source ownership, propagation transients, effects and complex connections |
 | Item processing | Depot, press, millstone, airflow; press/fan over belts, bounded compacting over a Basin | Accurate presentation and complete factory chains |
 | Rotation sources | Creative Motor, Hand Crank, water wheels | Other sources, control and power systems |
 | UI and visual feedback | Java comparisons of motor and Basin tooltips; other UI/effects are partial | Complete layout and lifecycle of supported screens, original lighting |
@@ -53,6 +57,8 @@ parity is not claimed. Evidence history and differences are in
   [PR #9529](https://github.com/horizon-rust/horizon/pull/9529); an `.app` created by the source helper was tested.
 - [ ] Update the installed Launcher after the fix is accepted, repeat a clean
   installation and prepare a new user review instance.
+- [x] Separate 0.7 developer review world: 23 independent audit groups, 16 inspected
+  frames and two actual restart comparisons; resumed fixture correction disclosed.
 - [ ] Submit a ready, reproducible package to the official native mod registry.
 
 ## 2. Rotation and engineer's tools
@@ -61,7 +67,13 @@ parity is not claimed. Evidence history and differences are in
 - [x] Gearbox, Clutch, Gearshift, original directions and rotating parts.
 - [x] Hand Crank, motor, small and large water wheels: basic mechanics and persistence.
 - [x] Wrench, rotation/removal, encased shafts; basic Speedometer/Stressometer.
-- [ ] All redstone control, Encased Chain Drive, belt and gearbox connection variants.
+- [x] Encased Chain Drive: 24 source states, placement/shape updates, ordinary Wrench,
+  two recipes, six actual Java/native settled scenes and a native restart.
+- [x] Bounded generator publication from initialization, GUI, crank and wrench events;
+  raw NBT reads remain distinct. Per-component publication and lifetime cache tests.
+- [ ] Complete source ownership, flicker/breakage, loaded-network and instantaneous
+  detach semantics from RotationPropagator.
+- [ ] All redstone control, Adjustable Chain Gearshift, belt and gearbox connection variants.
 - [ ] Clutch/Gearshift and Hand Crank in all network/animation edge cases.
 - [ ] Original goggles tooltips and value settings, including RU/EN, colors, units and fading.
 - [ ] Original speed/overstress particles, placement assistance, outlines and sound loops.
@@ -74,6 +86,9 @@ parity is not claimed. Evidence history and differences are in
 - [x] Press: single-item cycle, basic recipes, acceleration, blocked output and save/reload.
 - [x] Millstone: input, timer, chance outputs, collection and persistence.
 - [x] Fan: item movement, processing media and item/Depot processing.
+- [x] Bounded effective fire-resistance components: prototype/removal, canonical
+  full-fire tag and recipe priority; actual Java/native scenes and native restart.
+- [ ] General damage-selector/data-fixer equivalence across Minecraft versions.
 - [x] Stationary drill: breaking the block in front, drops, speed and stopping.
 - [ ] Fan: players/mobs/other entities, ignition/damage/effects and exact particles/sound.
 - [ ] Full observable parity of already supported machines, including item animation.
@@ -107,7 +122,9 @@ parity is not claimed. Evidence history and differences are in
   partial transfer, components and an actual restart.
 - [x] Bounded Press/Basin: separate compacting pool, square crafting recipes,
   ice and three stone types with lava; repetition, stopping, overstress and persistence.
-- [ ] Exact Press/Basin startup phase: starts one tick earlier than Java.
+- [x] Bounded Press/Basin startup: 1,488 unshifted per-tick observations match,
+  respecting actual source events and ticker order; no timer offset.
+- [ ] Authentic cold-loaded Java/network traces and full propagation-order coverage.
 - [x] Press client foundation: packets, pause/interpolation, three modes and
   item-particle order checked by oracles and actual Game tests.
 - [ ] Complete Basin/Mixer: filters, side outputs, other compacting recipes,

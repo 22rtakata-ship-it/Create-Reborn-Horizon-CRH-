@@ -2,7 +2,9 @@
 
 This is an **unreleased development candidate**, version `0.7.0-alpha.1`, on
 `stage/parity-06`. The installed owner review instance remains `0.6.0-alpha.2`.
-Do not treat this page as a completed native-build or installation report.
+The native candidate and independent review-world clone have passed the bounded
+checks below. [Final checkpoint report](REPORT_07.md). This is not a Launcher
+installation report.
 Public documentation is maintained in English; imported game localizations are
 unchanged. No native registry proposal is being submitted in this session.
 
@@ -55,7 +57,7 @@ processing when no recipe applies. This conservative target policy is not a
 general cross-version component data fixer. Actual recipes retain priority over
 resistance, including destruction of smokeable food by blasting.
 
-## Verification so far
+## Verification
 
 | Evidence | Result | Limit |
 |---|---|---|
@@ -67,7 +69,49 @@ resistance, including destruction of smokeable food by blasting.
 | Actual original source timing | Eight scenarios passed | Explicit ticker order, NBT/setting distinction; cold-load proof remains separate |
 | Fire-resistance method/type checks | Seven Rust tests, 64 component contexts, 108 original method contexts passed | Original ItemStack presence/recipe contexts are authored in this oracle |
 | Actual original fan processing | Six unit-component/default/removal/recipe scenarios passed | Eventual Depot conversion and conservation; no exact first-tick or visual claim |
-| New native candidate | Pending | Build and real integration must pass before handoff |
+| Official-woven native build | Passed, final source `1f96164` | Developer profile, not a Launcher installation |
+| Ordinary original/native traces | 1,488 tick samples, zero unshifted differences | Six Press fields and canonical inputs/outputs; not complete network serialization |
+| Native cache lifecycle | Four tests passed in the actual woven client | Bounded identity/pruning/publication/event rules |
+| Native chain scenes | Six scenes match original on the final binary; true restart passed | Settled states/RPM, not all propagation transients |
+| Native fan resistance | Six original mappings and two target-policy controls passed on the final binary; true restart | Does not establish arbitrary selector equivalence |
+| Existing processing regression | Millstone, fan, stationary drill and belt pressing passed with restarts | Headless gameplay; no renderer/acoustic claim |
+| Fluids and fan over a belt | Ordinary fluid IO, recipes, transport and real restart passed | Uses explicit fixture source events |
+| Frozen GUI publication | Actual normal value-board callback matches original before simulation resumes | Frozen-step and normal-tick comparisons are deliberately separate |
+| Ordinary motor Wrench | Two actual off-center UP clicks rotate east → south → west; output follows −32 RPM | Clicks inside the value box are setting interactions |
+| Strict native Clippy | Six inherited engine findings remain; zero new findings | Exact flagged-source provenance to pinned Horizon; no full baseline Clippy rerun claim |
+| Prepared review world | Authoring checks and seven reviewed frames passed | Source save kept closed throughout independent acceptance |
+| Independent prepared-map audit | 23 recorded groups, 16 inspected frames, two real restart comparisons passed | Composed/resumed acceptance after correcting a SOUTH collection click to source-required UP; original failed receipt retained |
+
+The final executable SHA256 is
+`ddd282d9d7c082c4754f96ce43a9b3d9dd4b5ba9b8a75957d35759d3a351d237`.
+All 145 current native inputs match its immutable build snapshot. The checked
+native archive SHA256 is
+`69f4b09bbee33fda0e0286a1b5061920f1c4bc39bbec3a92669b94fa40176b40`.
+The four open upstream PRs retain successful `verify` and `launcher` checks;
+their gated parity jobs were skipped. See `UPSTREAM_STATUS.md`.
+
+The live original registry disproved the first authored oracle's assumption
+about BooleanProperty defaults: an isolated Chain Drive has
+`axis_along_first=true`. The Rust default, native declaration and oracle context
+were corrected, then all 35,412 cases reran successfully. Placement now uses
+explicit shaft contracts rather than inferring a shaft from mod ownership;
+3,018 declared-state faces were checked against the existing Node contract.
+The complete MIT source loot table retains explosion survival and its random
+sequence; this is data preservation, not an explosion end-to-end comparison.
+
+Generator wrenching marks a transient reactivation consumed on its next own
+turn. External GUI/crank callbacks do not consume initialization or that marker.
+Auxiliary state changes and raw NBT reads do not masquerade as source events.
+Publication scans are guarded per immutable solved component/tick and cleared
+on invalidation; removed/replaced lifetimes are pruned. Full instantaneous
+detach/source ownership semantics remain outside this increment.
+
+Preserved failed probes include an invalid comparison of one frozen debug step
+to an ordinary unfrozen Java sample. Both original `getSpeed` and the adapter
+return zero while frozen; stored RPM remains intact. Centered Wrench clicks on
+the motor's value box are also intercepted by original value-settings handling.
+They must not be used as a supposed normal rotation probe. The corrected
+off-center interaction check passed separately on the final binary.
 
 Reproduce the source/type checks:
 
@@ -84,13 +128,16 @@ Java instance. `tools/chain_drive_checks.py --java` and
 their native modes require an explicit binary, build receipt, prepared resources,
 control CLI, local JAR and reference report. They do not touch owner worlds.
 
-## Remaining before a review build
+## Checkpoint and remaining work
 
-- [ ] Build with the accepted unchanged official Mixins executable and record all input hashes.
-- [ ] Compare actual native source-event/ticker-order traces without time alignment.
-- [ ] Run the shared chain scenes in native Horizon and verify a real restart.
-- [ ] Run native fan component/recipe scenes, including conservative unsupported selectors.
-- [ ] Migrate affected live-setting regression fixtures and run the relevant machine scenarios.
-- [ ] Inspect original/native chain appearance, ordinary placement and wrench interactions.
-- [ ] Prepare a separate owner review world with a concrete visual checklist.
-- [ ] Publish final source/build evidence; keep registry submission deferred.
+- [x] Build with the accepted unchanged official Mixins executable and record all input hashes.
+- [x] Compare actual native source-event/ticker-order traces without time alignment.
+- [x] Run the shared chain scenes in native Horizon and verify a real restart.
+- [x] Run native fan component/recipe scenes, including conservative unsupported selectors.
+- [x] Migrate the exercised live-setting fixtures and run the relevant machine scenarios.
+- [ ] Migrate remaining historical effect/map fixtures before claiming a complete old-suite rerun.
+- [x] Inspect bounded original/native chain views; test ordinary placement and wrench interactions.
+- [ ] Complete all chain presentation, angular-motion and transient network comparisons.
+- [x] Prepare a separate owner review world with a concrete visual checklist.
+- [x] Complete the independent clone audit of that exact saved world, with the resumed scope disclosed.
+- [x] Record final source/build evidence in REPORT_07.md; keep registry submission deferred.

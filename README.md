@@ -6,12 +6,19 @@ This project is not an official Create or Horizon release. MIT code and datapack
 logic are adapted to Rust; original Create assets are supplied locally by the player.
 See [third-party notices](THIRD_PARTY_NOTICES.md).
 
-Branch `stage/parity-06`, version **0.6.0-alpha.2**: bounded schematics,
+Latest tested developer checkpoint: **0.7.0-alpha.1**, branch `stage/parity-06`.
+It adds Encased Chain Drive, source-event timing corrections and effective fan
+fire-resistance mapping. The catalog now has **48 entries, 139 recipes and 41 tags**.
+[Checkpoint report and exact build](REPORT_07.md), [new review route](TESTING_07.md),
+[complete subsystem checklist](ROADMAP.md). The prepared world passed an independent
+clone audit; this developer build has not replaced the installed Launcher instance.
+This is not yet the whole of Create; rough overall porting estimate: **8–10%**.
+
+Installed review version **0.6.0-alpha.2**: bounded schematics,
 bare belts, Basin/Mixer, water/lava, burner and heated brass, press over a Basin.
 Physical item intake and the packet-driven press client cycle were added.
 [Stage report and known differences](REPORT_06.md),
 [13-station route](TESTING_06.md), [complete TODO table](ROADMAP.md).
-This is not yet the whole of Create; rough overall porting estimate: **8–10%**.
 
 Candidate **0.6.0-alpha.3** fixes belt X rotation and development packaging,
 and pins the already accepted Mixins fix. It is built and has passed focused checks,
@@ -24,12 +31,11 @@ updating the installed Launcher and cleanly installing the candidate are still p
 Candidate source checkpoint:
 [`8b7cca1`](https://github.com/Delete228/create-horizon/commit/8b7cca1ce486e8b4297a46eabe817d3b7ed1a407).
 
-Current development candidate **0.7.0-alpha.1** adds enclosed chain transmission
-and works on source-event timing and effective item-component behavior.
-[Development scope, checks and pending native acceptance](DEVELOPMENT_07.md).
-The installed review instance has not been replaced with this candidate.
+[Detailed 0.7 source findings, checks and remaining boundaries](DEVELOPMENT_07.md).
 
-For a reproducible installation of the experimental stage, paste this into **Add from GitHub**:
+For the historical, reproducible **0.6 alpha.2** installation checkpoint, paste
+this into **Add from GitHub**. The newer developer checkpoint and the pending
+macOS Launcher fix are described above; this URL does not install 0.7:
 
 ```text
 https://github.com/Delete228/create-horizon/commit/d6a82f59e7622d9ad74e5cc200699776fa7e0e66
@@ -128,7 +134,7 @@ To rebuild the installed package, omit `--github`. For development, use `--sourc
 The Launcher manages the compiler, Horizon source, Mixins and caches. Pinned versions
 are in `compatibility.json`; updating Horizon requires revalidating the adapter.
 No manual patching of the original Horizon is needed. The published Mixins fix
-for `recursion_limit` is used; the next alpha.3 pins the already accepted
+for `recursion_limit` is used; alpha.3 and 0.7 pin the already accepted
 fix from [PR #25](https://github.com/horizon-rust/horizon-mixins/pull/25).
 Installed alpha.2 retains its previously verified revision; it is a historical release.
 

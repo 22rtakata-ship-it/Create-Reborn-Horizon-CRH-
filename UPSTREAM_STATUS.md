@@ -6,6 +6,15 @@ edit engine source manually. Acceptance of one PR does not mean the entire
 adapter is compatible with the latest Nightly: other boundaries must be migrated
 and checked separately.
 
+Latest development-session check: **5 November 2026, 00:06 UTC**. All four open
+Horizon PRs below remain ready for review with unchanged branch heads;
+`verify` and `launcher` CI checks succeeded. The gated parity jobs were skipped,
+so their status is not additional parity evidence. A contributor flagged
+[overlap with a separate 2D GUI callback in #9546](https://github.com/horizon-rust/horizon/pull/8918#issuecomment-6644732699):
+both touch `Game::render`, while depth-tested world submission remains separate.
+This is an integration coordination note, not a rejection or a request to
+close/reopen our PR. No PR was merged or new registry proposal submitted.
+
 | Change | Purpose | Actual status |
 |---|---|---|
 | [Horizon #8872](https://github.com/horizon-rust/horizon/pull/8872) | Named mob damage and particles with their own state | Accepted and merged into main |

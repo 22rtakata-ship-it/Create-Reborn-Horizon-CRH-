@@ -1,6 +1,7 @@
 """Stationary mechanical drill scenarios driven through a disposable real game."""
 import re
 import engineering_checks
+from native_motors import replace_motor
 
 X = 156
 DIRECTIONS = [('east', (1, 0, 0)), ('west', (-1, 0, 0)), ('up', (0, 1, 0)),
@@ -42,8 +43,7 @@ def run(call, graphics, log, scratch):
         call('wait', 3)
 
     def gated(rpm):
-        setblock(-3, 67, 0, 'create:creative_motor[facing=east]')
-        call('command', f'data merge block {X - 3} 67 0 {{ScrollValue:{rpm}}}')
+        replace_motor(call, (X - 3, 67, 0), rpm, 'east')
         setblock(-2, 67, 0, 'create:clutch[axis=x]')
         setblock(-1, 67, 0, 'create:shaft[axis=x]')
         setblock(0, 67, 0, 'create:mechanical_drill[facing=east]')
@@ -58,8 +58,7 @@ def run(call, graphics, log, scratch):
     for facing, delta in DIRECTIONS:
         reset()
         x, y, z = delta
-        setblock(-x, 67 - y, -z, f'create:creative_motor[facing={facing}]')
-        call('command', f'data merge block {X - x} {67 - y} {-z} {{ScrollValue:64}}')
+        replace_motor(call, (X - x, 67 - y, -z), 64, facing)
         setblock(0, 67, 0, f'create:mechanical_drill[facing={facing}]')
         setblock(x, 67 + y, z, 'minecraft:stone')
         call('wait', 100)

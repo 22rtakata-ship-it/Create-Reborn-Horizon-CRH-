@@ -7,6 +7,7 @@ It does not claim arbitrary belt schematics or sequenced-assembly support.
 import json
 from pathlib import Path
 import re
+from native_motors import replace_motor
 
 from common import ROOT, PINS
 from native_check_session import wait_loaded
@@ -51,9 +52,9 @@ def run(call, graphics=False, log=None, scratch=None, *, prepare_restart=False, 
 
     def power(belt=None, press=None):
         if belt is not None:
-            command(f'data merge block {x - 1} {y} {z} {{ScrollValue:{belt}}}')
+            replace_motor(ctl, (x - 1, y, z), belt, 'east')
         if press is not None:
-            command(f'data merge block {x - 1} {y + 2} {z + 2} {{ScrollValue:{press}}}')
+            replace_motor(ctl, (x - 1, y + 2, z + 2), press, 'east')
         ctl('wait', 8)
 
     def stand(offset):
@@ -284,8 +285,8 @@ def run_reload(call, scratch):
     fields = {key: int(re.search(r'\b' + key + r':\s*(-?\d+)', text)[1])
               for key in fixture['press_fields']}
     assert fields == fixture['press_fields'], (fixture['press_fields'], fields)
-    command(f'data merge block {x - 1} {y + 2} {z + 2} {{ScrollValue:16}}')
-    command(f'data merge block {x - 1} {y} {z} {{ScrollValue:32}}')
+    replace_motor(call, (x - 1, y + 2, z + 2), 16, 'east')
+    replace_motor(call, (x - 1, y, z), 32, 'east')
     for _ in range(160):
         slots = call('container', x + 1, y - 1, z + 6)['slots']
         amount = sum(item['count'] for item in slots if item and item['item'] == 'create:copper_sheet')

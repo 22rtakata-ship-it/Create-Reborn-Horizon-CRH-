@@ -6,6 +6,7 @@ player retrieval, kinetic stress and renderer poses run through actual game code
 import json
 import re
 import engineering_checks
+from native_motors import replace_motor
 
 X = 72
 
@@ -47,8 +48,7 @@ def run(call, graphics, log, scratch):
     def drive(rpm=256):
         # Millstone is a small cog: a horizontal Y cog drives it in reverse.
         setblock(1, 65, 0, 'create:cogwheel[axis=y]')
-        setblock(1, 64, 0, 'create:creative_motor[facing=up]')
-        call('command', f'data merge block {X + 1} 64 0 {{ScrollValue:{rpm}}}')
+        replace_motor(call, (X + 1, 64, 0), rpm, 'up')
         call('wait', 8)
 
     def stop():
@@ -211,8 +211,7 @@ def reloaded(call, fixture):
     assert 'InputInventory' in text and 'OutputInventory' in text, text
     slots = call('container', *pos)['slots']
     assert slots[0]['item'] == 'minecraft:sandstone' and slots[0]['count'] == 3, slots
-    call('setblock', X + 1, 64, 0, 'create:creative_motor[facing=up]')
-    call('command', f'data merge block {X + 1} 64 0 {{ScrollValue:256}}')
+    replace_motor(call, (X + 1, 64, 0), 256, 'up')
     call('wait', 150)
     slots = call('container', *pos)['slots']
     assert sum(s['count'] for s in slots if s and s['item'] == 'minecraft:sand') == 3, slots
