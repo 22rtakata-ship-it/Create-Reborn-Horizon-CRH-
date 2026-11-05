@@ -743,6 +743,13 @@ def foundation():
             'success': ('Glue applied', 'Клей нанесён'),
         }
         lang.update({'create.super_glue.' + key: values[locale == 'ru_ru'] for key, values in glue_status.items()})
+        chassis_labels = {
+            'distance': ('Distance', 'Расстояние'),
+            'range': ('Range of Sticky Sides', 'Радиус прикрепления липкой стороны'),
+            'radius': ('Radius when Sticky', 'Радиус прикрепления липкой стороны'),
+        }
+        lang.update({'create.contraptions.chassis.' + key: values[locale == 'ru_ru']
+                     for key, values in chassis_labels.items()})
         if locale == "ru_ru":
             lang.update({'block.create.linear_chassis': 'Линейное шасси',
                          'block.create.secondary_linear_chassis': 'Вторичное линейное шасси',
@@ -798,7 +805,7 @@ def main():
     CONTENT.mkdir(exist_ok=True)
     (CONTENT / "horizon-mod.toml").write_text('''id = "create"
 name = "Create for Horizon"
-version = "0.8.0-alpha.5"
+version = "0.8.0-alpha.6"
 description = "Build rotating machines and small factories in Horizon. The original Create JAR is optional and supplies its models and textures."
 authors = ["create-horizon contributors"]
 api = "0.2"

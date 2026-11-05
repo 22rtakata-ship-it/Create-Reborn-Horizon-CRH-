@@ -99,5 +99,8 @@
   "create.super_glue.not_enough": "You need more glue",
   "create.super_glue.too_far": "The selection is too large",
   "create.super_glue.success": "Glue applied",
+  "create.contraptions.chassis.distance": "Distance",
+  "create.contraptions.chassis.range": "Range of Sticky Sides",
+  "create.contraptions.chassis.radius": "Radius when Sticky",
   "create.kinetics.creative_motor.rotation_speed": "Generated Speed in RPM"
 }

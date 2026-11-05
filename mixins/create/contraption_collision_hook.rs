@@ -6,6 +6,8 @@ fn contraption_collision(game: &crate::game::Game<'_>, mut result: Vec<Aabb>) ->
         &game.world,
         game.collision,
         &mut result,
+        None,
+        None,
     );
     result
 }

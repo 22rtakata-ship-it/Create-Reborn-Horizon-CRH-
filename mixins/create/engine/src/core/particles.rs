@@ -54,14 +54,19 @@ fn sine_table() -> &'static [f32] {
 pub fn source_sin(angle: f32) -> f32 {
     sine_table()[((angle * 10430.378) as i32 & 65535) as usize]
 }
+/// Pinned Minecraft 1.21.1 `Mth.cos(float)` uses a float quarter-turn shift
+/// before truncating its table index.
+pub(crate) fn source_cos(angle: f32) -> f32 {
+    sine_table()[((angle * 10430.378 + 16384.0) as i32 & 65535) as usize]
+}
 fn rotate(offset: [f64; 3], degrees: f32, axis: Axis) -> [f64; 3] {
     if degrees == 0.0 {
         return offset;
     }
     // Catnip VecHelper.rotate delegates to the original Mth lookup table.
     let radians = (f64::from(degrees) / 180.0 * std::f64::consts::PI) as f32;
-    let sin = f64::from(sine_table()[((radians * 10430.378) as i32 & 65535) as usize]);
-    let cos = f64::from(sine_table()[((radians * 10430.378 + 16384.0) as i32 & 65535) as usize]);
+    let sin = f64::from(source_sin(radians));
+    let cos = f64::from(source_cos(radians));
     let [x, y, z] = offset;
     match axis {
         Axis::X => [x, y * cos - z * sin, z * cos + y * sin],

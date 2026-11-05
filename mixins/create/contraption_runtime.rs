@@ -399,13 +399,75 @@ impl CaptureView for Capture<'_, '_> {
     }
 }
 
-struct BearingCapture<'g, 'a> {
+pub(super) struct MountedCapture<'g, 'a> {
     base: Capture<'g, 'a>,
     allow_inventory: bool,
+    allow_chassis: bool,
     glue: &'g [create_engine::contraption::glue::Volume],
 }
 
-impl CaptureView for BearingCapture<'_, '_> {
+impl<'g, 'a> MountedCapture<'g, 'a> {
+    pub(super) fn for_linear(
+        game: &'g Game<'a>,
+        glue: &'g [create_engine::contraption::glue::Volume],
+    ) -> Self {
+        Self {
+            base: Capture(game),
+            allow_inventory: false,
+            allow_chassis: true,
+            glue,
+        }
+    }
+}
+
+/// Transfer the saved chassis ranges and glue along with the blocks. The
+/// grid origin belongs to the payload at capture, which can differ from the
+/// zero-stroke anchor used by its driver.
+pub(super) fn commit_linear_capture(
+    game: &mut Game<'_>,
+    key: [i32; 2],
+    mut records: Vec<Record>,
+    record: Record,
+    origin: Pos,
+    edits: &[Edit],
+) -> bool {
+    use super::create_port_glue_transfer as glue;
+    let Ok(ranges) = chassis::capture(game, origin, &record.blocks) else {
+        return false;
+    };
+    let Ok(update) = glue::capture(game, key, &record, origin) else {
+        return false;
+    };
+    let controller = record.controller;
+    records.push(record);
+    glue::commit(game, key, update, |game| {
+        chassis::commit_capture(game, key, controller, ranges, |game| {
+            commit(game, key, records, edits)
+        })
+    })
+}
+
+pub(super) fn commit_linear_landing(
+    game: &mut Game<'_>,
+    key: [i32; 2],
+    records: Vec<Record>,
+    record: &Record,
+    origin: Pos,
+    edits: &[Edit],
+) -> bool {
+    use super::create_port_glue_transfer as glue;
+    let turn = QuarterTurn::IDENTITY;
+    let Ok(update) = glue::landing(game, key, record, origin, turn) else {
+        return false;
+    };
+    glue::commit(game, key, update, |game| {
+        chassis::commit_landing(game, key, record, origin, turn, edits, |game| {
+            commit(game, key, records, edits)
+        })
+    })
+}
+
+impl CaptureView for MountedCapture<'_, '_> {
     type Block = BlockState;
 
     fn inspect(&self, p: Pos) -> Cell {
@@ -415,10 +477,9 @@ impl CaptureView for BearingCapture<'_, '_> {
     fn snapshot(&self, p: Pos) -> Option<BlockState> {
         let game = self.base.0;
         let block = game.pack.assets.registry.state(state(game, p))?;
-        if self.allow_inventory
-            && (storage::can_capture(game, p, block)
-                || deployer::can_capture(game, p, block)
-                || chassis::can_capture(game, p, block))
+        if (self.allow_inventory
+            && (storage::can_capture(game, p, block) || deployer::can_capture(game, p, block)))
+            || (self.allow_chassis && chassis::can_capture(game, p, block))
         {
             return Some(block.clone());
         }
@@ -434,7 +495,7 @@ impl CaptureView for BearingCapture<'_, '_> {
         p: Pos,
         forced: Option<Direction>,
     ) -> Result<Vec<Pos>, create_engine::contraption::CaptureError> {
-        if !self.allow_inventory {
+        if !self.allow_chassis {
             return Ok(Vec::new());
         }
         chassis::expansion(self.base.0, p, forced, |target| self.base.inspect(target))
@@ -462,9 +523,11 @@ fn assemble(
     }
     let shape = {
         let glue = super::create_port_super_glue::read(game, key).ok()?;
-        let capture = BearingCapture {
+        let allow_mounted_data = !windmill && facing.axis() == Axis::Y;
+        let capture = MountedCapture {
             base: Capture(game),
-            allow_inventory: !windmill && facing.axis() == Axis::Y,
+            allow_inventory: allow_mounted_data,
+            allow_chassis: allow_mounted_data,
             glue: &glue,
         };
         Assembly::capture(&capture, anchor, Some(controller), None, MAX_BLOCKS).ok()?
@@ -530,7 +593,7 @@ fn assemble(
         clock_hand: None,
         blocks: shape.blocks().to_vec(),
     };
-    let glue = super::create_port_glue_transfer::capture(game, key, &record).ok()?;
+    let glue = super::create_port_glue_transfer::capture(game, key, &record, anchor).ok()?;
     records.push(record);
     if !super::create_port_glue_transfer::commit(game, key, glue, |game| {
         chassis::commit_capture(game, key, controller, chassis, |game| {
@@ -615,11 +678,12 @@ fn land(game: &mut Game<'_>, controller: Pos, angle: f32) -> bool {
         return false;
     };
     let turn = rotation.snapped();
-    let Ok(glue) = super::create_port_glue_transfer::landing(game, key, &record, turn) else {
+    let Ok(glue) = super::create_port_glue_transfer::landing(game, key, &record, record.anchor, turn)
+    else {
         return false;
     };
     if !super::create_port_glue_transfer::commit(game, key, glue, |game| {
-        chassis::commit_landing(game, key, &record, turn, &edits, |game| {
+        chassis::commit_landing(game, key, &record, record.anchor, turn, &edits, |game| {
             deployer::commit_landing(game, key, records, &edits, &record, turn)
         })
     }) {

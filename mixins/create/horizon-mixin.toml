@@ -1,6 +1,6 @@
 [mod]
 id = "create"
-version = "0.8.0-alpha.5"
+version = "0.8.0-alpha.6"
 
 [compatibility]
 horizon_revision = "9c7f9b2215dfed497aba5522c44f38926628648d"
@@ -1380,7 +1380,7 @@ bindings = [
 id = "contraption-collision"
 target = "horizon_client::game::ghasts::Game<'_>::player_entity_collisions"
 kind = "RETURN"
-helper = "contraption_collision_hook.rs"
+helper = "contraption_player_collision_hook.rs"
 bindings = [
   { name = "game", ty = "&crate::game::Game<'_>", value = "self" },
   { name = "result", ty = "Vec<Aabb>", value = "$value" },

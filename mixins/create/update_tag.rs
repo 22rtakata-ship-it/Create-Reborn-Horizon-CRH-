@@ -7,4 +7,5 @@ fn create_on_update_tag(
 ) {
     crate::game::create_port::update_tag(entity, tag);
     crate::game::create_port_fan::update_tag(entity, tag);
+    crate::game::create_port_chassis::update_tag(entity, tag);
 }

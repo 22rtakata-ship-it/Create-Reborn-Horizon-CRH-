@@ -29,9 +29,24 @@ impl Game<'_> {
         uuid: u128,
         pos: [i32; 3],
     ) -> bool {
+        self.create_value_configuration_allowed(uuid, pos, false)
+    }
+
+    pub(in crate::game) fn create_value_configuration_allowed(
+        &mut self,
+        uuid: u128,
+        pos: [i32; 3],
+        needs_wrench: bool,
+    ) -> bool {
         let mut allowed = false;
         self.native_as_player(uuid, |game| {
-            if game.spectator() || !game.may_build() {
+            if game.spectator()
+                || !game.may_build()
+                || needs_wrench
+                    && !game
+                        .held()
+                        .is_some_and(|item| crate::game::create_port_chassis::wrench(game, item))
+            {
                 return;
             }
             let Some(eye) = game.eye_position() else {

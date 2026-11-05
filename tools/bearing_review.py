@@ -80,8 +80,10 @@ def prepare(session, options):
         stations.upward_saw_station(batch)
     if options.chassis:
         stations.chassis_stations(batch)
+    if options.rotary_contact:
+        stations.rotary_contact_station(batch)
     if any((options.plough, options.deployer, options.glue, options.upward_saw,
-            options.chassis, options.materials)):
+            options.chassis, options.materials, options.rotary_contact)):
         batch.command('tp @s 909.5 81 61.5')
     batch.tick(30 if options.farms else 12)
     batch.data(BEARING)
@@ -199,17 +201,25 @@ def review(session, options):
             assert call('block', *stations.PULLEY)['block'] == 'create:rope_pulley'
             assert call('block', 904, 82, 103)['block'] == 'minecraft:oak_log'
             assert call('block', *stations.GANTRY)['block'] == 'create:gantry_carriage'
-            assert call('block', 918, 84, 103)['block'] == 'minecraft:oak_planks'
+            assert call('block', *stations.GANTRY_CARGO[0])['block'] == 'minecraft:oak_planks'
+            assert call('block', *stations.GANTRY_CARGO[1])['block'] == 'minecraft:spruce_planks'
             assert call('block', *stations.STATIONARY_SAW)['block'] == 'create:mechanical_saw'
             assert call('block', 920, 82, 110)['block'] == 'minecraft:oak_log'
+            command('tp @s 915.5 83 102.5')
+            command('item replace entity @s weapon.mainhand with create:super_glue')
+            for plank in stations.GANTRY_CARGO:
+                interact(plank, 'west')
+            command('clear @s create:super_glue')
             command('tp @s 920.5 81 107.5')
             interact(stations.GANTRY_LEVER, 'south')
             wait_block((920, 83, 103), 'create:gantry_carriage')
             wait_block((920, 84, 103), 'minecraft:oak_planks')
+            wait_block((920, 84, 102), 'minecraft:spruce_planks')
             command('tp @s 917.5 81 107.5')
             interact((917, 82, 104), 'south')
             wait_block(stations.GANTRY, 'create:gantry_carriage')
-            wait_block((918, 84, 103), 'minecraft:oak_planks')
+            wait_block(stations.GANTRY_CARGO[0], 'minecraft:oak_planks')
+            wait_block(stations.GANTRY_CARGO[1], 'minecraft:spruce_planks')
             command('tp @s 920.5 81 107.5')
             interact(stations.GANTRY_LEVER, 'south')
             assert 'powered=true' in call('block', *stations.GANTRY_LEVER)['state']
@@ -278,12 +288,22 @@ def review(session, options):
             wait_loaded(call, [stations.CRAFTING_TABLE])
             assert call('block', *stations.CRAFTING_TABLE)['block'] == 'minecraft:crafting_table'
             assert 'create:brass_sheet' in snapshot((923, 81, 125))['nbt']
+        if options.rotary_contact:
+            command('tp @s 910.5 86 170.5')
+            wait_loaded(call, [stations.ROTARY_CONTACT])
+            wait_running(stations.ROTARY_CONTACT, 1)
+            assert call('block', 906, 82, 164)['block'] == 'minecraft:stone_bricks'
+            call('look-at', 904.5, 82.5, 166.5)
+            call('wait', 12)
+            extra.append(str(screenshot('rotary-contact.png')))
         call('key', 'f1', 'tap')
         command('gamemode creative')
         if options.glue:
             command('give @s create:super_glue')
         if options.upward_saw:
             command('give @s minecraft:oak_log 8')
+        if options.chassis:
+            command('give @s create:wrench')
         command('tp @s 909.5 81 61.5')
         call('look-at', 904.5, 85.1, 56.5)
         command('save-all flush')
@@ -320,6 +340,7 @@ def main():
     parser.add_argument('--upward-saw', action='store_true')
     parser.add_argument('--chassis', action='store_true')
     parser.add_argument('--materials', action='store_true')
+    parser.add_argument('--rotary-contact', action='store_true')
     args = parser.parse_args()
     if args.sails and not args.windmill:
         parser.error('--sails requires --windmill')

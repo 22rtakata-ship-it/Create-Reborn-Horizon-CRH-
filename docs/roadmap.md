@@ -15,6 +15,10 @@ The 0.7 checkpoints cover Encased Chain Drive, generator timing, fan component
 handling and the built-in resources. [Gameplay report](reviews/0.7-report.md)
 · [Review route](reviews/0.7-test-world.md)
 
+The 0.8.0-alpha.6 checkpoint adds chassis and glue on two linear drivers,
+the Wrench range board and upright rotor side contact.
+[Contraption review route](reviews/0.8-contraption-world.md)
+
 ## Current priority
 
 Build the shared contraption engine alongside the remaining stationary machines.
@@ -39,7 +43,7 @@ with the systems they depend on.
 | Transport and automation | Bare belts, Minecraft hoppers and basic IO | Complete belts, funnels/tunnels, mechanical arms |
 | Mixing and heating | Dry Basin/Mixer; heated brass; burner and fuel in separate native runs | Combined regression, missing interactions and presentation |
 | Fluids | Water/lava in canonical Basin tanks; buckets, dough and mud | Complete processing, pipe networks, pumps, tanks |
-| Contraptions | Bearings and pistons move, render and save; bounded rider contact, harvesters and saws | Glue, chassis, broader payloads, cross-chunk ownership, other drives and actors |
+| Contraptions | Bearings, pistons, Gantry and Rope Pulley with bounded cargo, riders and farm tools | Broader payloads, cross-chunk ownership, more drives, contact and portable storage |
 | Trains and logistics | Pending | Tracks, trains, schedules, cargo |
 | Ponder and guides | Pending | Original scenes, controls and presentation |
 | Addons | Architectural requirement | Public Rust contracts; then Sable and Aeronautics |
@@ -183,8 +187,13 @@ with the systems they depend on.
   against the isolated Java client. [Architecture and results](contraptions.md)
 - [x] Linear, Secondary Linear and Radial Chassis on a vertical Mechanical
   Bearing, including sticky faces, saved ranges and blocked landing recovery.
-- [ ] Chassis wrench range UI and preview, other drivers and complete block
-  movement rules.
+- [x] Chassis on a dry Gantry Carriage, including sticky capture, translated
+  landing and saved ranges after an obstructed restart.
+- [x] Chassis on a dry Rope Pulley with the selected range restored after
+  restart and landing.
+- [x] Wrench range board for the three chassis variants, with single and Ctrl
+  group settings and the saved value on reopen.
+- [ ] Chassis attached-block outlines, other drivers and complete block movement rules.
 - [x] Mechanical Bearing: native assembly, rotation, restart and orphan recovery.
 - [x] Windmill Sail Frame and sixteen sail colors. Dye, shear, placement,
   windmill capture, generated speed and restart verified.
@@ -205,6 +214,8 @@ with the systems they depend on.
   collision of narrow piston poles in Horizon.
 - [x] Unobstructed and wall-constrained side pushes from a horizontal piston,
   including mirrored wall exits checked in Java.
+- [x] Side pushes and wall sliding from full cubes on a vertical Mechanical
+  Bearing, with a pinned JAR geometry oracle and separate live-client tests.
 - [x] One ordinary mounted chest on a vertical Mechanical Bearing, with crop
   and cutter loot, item components, restart and landing recovery.
 - [ ] Full entity contact, multiple mounted inventories, moving chest menus
@@ -220,6 +231,8 @@ with the systems they depend on.
   storage rules checked against Java traces.
 - [x] Two-click Super Glue and single-column bearing transfer, with durability
   and saved volume checks.
+- [x] Super Glue transfer on dry Gantry and Rope Pulley, with off-origin
+  capture and bounds restored after a cold native restart.
 - [ ] Original Glue outlines and particles, offhand placement and transfer on other drivers.
 - [x] Upward stationary Saw wood processing through native item collision,
   with saved progress and Java comparisons of the cutting and ejection cycle.

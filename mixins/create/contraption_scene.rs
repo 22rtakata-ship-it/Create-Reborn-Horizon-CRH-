@@ -461,13 +461,30 @@ fn block_cross_section([u, v]: [usize; 2], [cos, sin]: [f64; 2], bounds: Aabb) -
 /// Vanilla payload states that fill a cube without querying collision shapes.
 pub fn full_cube_payload(state: &BlockState) -> bool {
     state.name.starts_with("minecraft:")
-        && !matches!(state.name.as_str(), "minecraft:honey_block" | "minecraft:chest")
+        && !matches!(
+            state.name.as_str(),
+            "minecraft:honey_block" | "minecraft:chest"
+        )
+}
+
+pub fn upright_side_payload(record: &Record) -> bool {
+    record.axis == 1
+        && record.stroke.is_none()
+        && record.clock_hand.is_none()
+        && !record.return_home
+        && record.angle != record.previous_angle
+        && record
+            .blocks
+            .iter()
+            .all(|(_, state)| full_cube_payload(state))
 }
 
 pub fn append_collisions(
     world: &crate::world::World,
     binding: &BlockCollisionRegistry<'_>,
     obstacles: &mut Vec<Aabb>,
+    excluded_controller: Option<Pos>,
+    standing_bounds: Option<Aabb>,
 ) {
     if !world.attachments.has(&ACTIVE) {
         return;
@@ -481,6 +498,10 @@ pub fn append_collisions(
     for chunk in world.chunks.values() {
         let Ok(records) = read(chunk) else { continue };
         for record in records.iter() {
+            if Some(record.controller) == excluded_controller {
+                continue;
+            }
+            let standing = standing_bounds.filter(|_| upright_side_payload(record));
             let plane = [(record.axis + 1) % 3, (record.axis + 2) % 3];
             let rotation = collision_rotation(record.angle);
             let full_cube = block_cross_section(plane, rotation, cube);
@@ -489,7 +510,17 @@ pub fn append_collisions(
                 let center =
                     origin.add_vector(vector(rotate_plane(plane, rotation, local.map(f64::from))));
                 if full_cube_payload(state) {
-                    obstacles.extend(full_cube.iter().map(|aabb| aabb.move_by(center)));
+                    obstacles.extend(full_cube.iter().map(|aabb| aabb.move_by(center)).filter(
+                        |shape| {
+                            standing.is_none_or(|body| {
+                                // Java's side collider resolves an overlapping
+                                // rotor at normal height. Its broad phase must not
+                                // make the client choose a crawl pose under it.
+                                shape.min_position().y <= body.min_position().y
+                                    || !shape.intersects(body)
+                            })
+                        },
+                    ));
                     continue;
                 }
                 // Captured non-cubes have static shapes keyed by block state.

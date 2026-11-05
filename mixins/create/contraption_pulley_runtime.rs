@@ -4,10 +4,12 @@
 use super::{
     Game,
     create_port_contraption::{
-        Capture, column, commit, entries, movement_sound, resident, set_records, state,
+        Capture, MountedCapture, column, commit_linear_capture, commit_linear_landing, entries,
+        movement_sound, resident, set_records, state,
     },
     create_port_contraption_actors as actors,
     create_port_piston::collides_at,
+    create_port_super_glue as glue,
     native_block_entity_draw::BlockEntityDraw,
     native_world_draw::NativeWorldDraw,
 };
@@ -82,7 +84,7 @@ fn collides(game: &Game<'_>, record: &Record, probe: Probe, owned: impl Fn(Pos) 
 
 fn assemble(game: &mut Game<'_>, controller: Pos, rpm: f32) -> Option<u32> {
     let key = column(controller);
-    let mut records = entries(game, key).ok()?;
+    let records = entries(game, key).ok()?;
     if records.len() >= MAX_RECORDS || records.iter().any(|r| r.controller == controller) {
         return None;
     }
@@ -91,7 +93,11 @@ fn assemble(game: &mut Game<'_>, controller: Pos, rpm: f32) -> Option<u32> {
         cell(game, p)
     })
     .ok()?;
-    let assembly = layout.capture(&Capture(game), MAX_BLOCKS).ok()?;
+    let origin = cargo_cell(controller, [0; 3], layout.initial_offset)?;
+    let volumes = glue::read(game, key).ok()?;
+    let assembly = layout
+        .capture(&MountedCapture::for_linear(game, &volumes), MAX_BLOCKS)
+        .ok()?;
     let blocks = assembly.blocks().to_vec();
     let registry = game.pack.assets.registry;
     let mut edits = Vec::new();
@@ -135,8 +141,7 @@ fn assemble(game: &mut Game<'_>, controller: Pos, rpm: f32) -> Option<u32> {
     }
     layout.start(rpm, true, !record.blocks.is_empty())?;
     let has_payload = !record.blocks.is_empty();
-    records.push(record);
-    if !commit(game, key, records, &edits) {
+    if !commit_linear_capture(game, key, records, record, origin, &edits) {
         return None;
     }
     if has_payload {
@@ -199,7 +204,8 @@ fn land(game: &mut Game<'_>, controller: Pos, offset: u32, rehang: bool) -> Opti
         }
         edits.push((position, state(game, position), registry.id(block)?));
     }
-    if !commit(game, key, records, &edits) {
+    let origin = cargo_cell(controller, [0; 3], offset)?;
+    if !commit_linear_landing(game, key, records, &record, origin, &edits) {
         return None;
     }
     if !record.blocks.is_empty() {

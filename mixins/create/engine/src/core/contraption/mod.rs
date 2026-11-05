@@ -16,6 +16,7 @@ pub mod glue;
 pub mod linear;
 pub mod piston;
 pub mod pulley;
+pub mod rotary_contact;
 mod transform;
 pub mod windmill;
 

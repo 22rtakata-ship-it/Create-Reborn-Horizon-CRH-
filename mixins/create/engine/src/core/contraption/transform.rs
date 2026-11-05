@@ -73,6 +73,11 @@ pub struct QuarterTurn {
 }
 
 impl QuarterTurn {
+    pub const IDENTITY: Self = Self {
+        axis: Axis::Y,
+        steps: 0,
+    };
+
     fn rotate(self, mut position: [i64; 3]) -> [i64; 3] {
         for _ in 0..self.steps {
             let [x, y, z] = position;

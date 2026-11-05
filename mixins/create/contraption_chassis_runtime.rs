@@ -21,7 +21,7 @@ use horizon_world::{
     nbt::{Compound, Tag},
     registry::BlockStateId,
 };
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 const ENTITY: &str = "create:chassis";
 const RANGE: &str = "ScrollValue";
@@ -65,6 +65,102 @@ fn range(nbt: &Compound) -> Option<u8> {
         Some(Tag::Int(value)) if (1..=i32::from(MAX_RANGE)).contains(value) => Some(*value as u8),
         _ => None,
     }
+}
+
+pub(super) fn update_tag(entity: &ModBlockEntity, tag: &mut Option<Compound>) {
+    if entity.id == ENTITY && tag.is_none() {
+        *tag = range(&entity.nbt).map(range_nbt);
+    }
+}
+
+pub(super) fn configured_range(game: &Game<'_>, pos: Pos) -> Option<u8> {
+    if !contraption::resident(game, pos) || !is_chassis(&at(game, pos)?.name) {
+        return None;
+    }
+    let BlockEntity::Mod(entity) = game.world.block_entities.get(&(pos[0], pos[1], pos[2]))? else {
+        return None;
+    };
+    (entity.id == ENTITY).then(|| range(&entity.nbt)).flatten()
+}
+
+pub(super) fn wrench(game: &Game<'_>, item: &ItemStack) -> bool {
+    item.item.as_ref() == "create:wrench"
+        || game
+            .native_server_item_in_tag(item, "c:tools/wrench")
+            .unwrap_or(false)
+}
+
+pub(super) fn value_box_hit(pos: Pos, face: Pos, point: [f64; 3]) -> bool {
+    (0..3)
+        .map(|i| {
+            let offset = 0.5 + f64::from(face[i]) * 7.5 / 16.0;
+            (point[i] - f64::from(pos[i]) - offset).powi(2)
+        })
+        .sum::<f64>()
+        < 0.25 * 0.25
+}
+
+// ChassisBlockEntity.collectChassisGroup. Stay within loaded columns and
+// bound the whole operation before publishing any range changes.
+fn settings_group(game: &Game<'_>, start: Pos) -> Option<Vec<Pos>> {
+    const MAX_EDIT_GROUP: usize = 512;
+    let mut collected = Vec::new();
+    let mut visited = BTreeSet::from([start]);
+    let mut frontier = VecDeque::from([start]);
+    while let Some(pos) = frontier.pop_front() {
+        let state = chassis(at(game, pos)?, configured_range(game, pos)?)?;
+        collected.push(pos);
+        for face in Direction::ALL {
+            let Some(next) = offset(pos, face.vector()) else {
+                continue;
+            };
+            if visited.contains(&next) || !contraption::resident(game, next) {
+                continue;
+            }
+            if at(game, next)
+                .and_then(|block| chassis(block, DEFAULT_RANGE))
+                .is_some_and(|other| state.joins(other, face))
+            {
+                if visited.len() >= MAX_EDIT_GROUP {
+                    return None;
+                }
+                visited.insert(next);
+                frontier.push_back(next);
+            }
+        }
+    }
+    Some(collected)
+}
+
+// The inherited source setter compares against the chassis' zero-based
+// setting after the override already added one. Preserve that comparison
+// for feedback, and for the single-block early return.
+pub(super) fn apply_range(game: &mut Game<'_>, pos: Pos, value: u8, bulk: bool) -> bool {
+    let Some(previous) = configured_range(game, pos) else {
+        return false;
+    };
+    let feedback = value != previous - 1;
+    if !bulk && !feedback {
+        return false;
+    }
+    let group = if bulk {
+        let Some(group) = settings_group(game, pos) else {
+            return false;
+        };
+        group
+    } else {
+        vec![pos]
+    };
+    for member in group {
+        if configured_range(game, member) == Some(value) {
+            continue;
+        }
+        game.native_with_mod_block_entity(member, |entity| {
+            entity.nbt.insert(RANGE.into(), Tag::Int(i32::from(value)));
+        });
+        game.native_block_entity_sync(member);
+    }
+    feedback
 }
 
 fn axis(value: &str) -> Option<Axis> {
@@ -406,6 +502,9 @@ pub(super) fn capture(
         .iter()
         .filter(|(_, block)| is_chassis(&block.name))
         .map(|(local, block)| {
+            if !valid_local(*local) {
+                return Err(AttachmentError::Encode);
+            }
             let pos = offset(anchor, *local).ok_or(AttachmentError::Encode)?;
             let state = captured(game, pos, block).ok_or(AttachmentError::Encode)?;
             Ok((*local, state.range()))
@@ -467,6 +566,7 @@ pub(super) fn commit_landing(
     game: &mut Game<'_>,
     key: [i32; 2],
     record: &Record,
+    origin: Pos,
     turn: QuarterTurn,
     edits: &[Edit],
     apply: impl FnOnce(&mut Game<'_>) -> bool,
@@ -477,7 +577,7 @@ pub(super) fn commit_landing(
         .iter()
         .filter(|(_, block)| is_chassis(&block.name))
     {
-        let Some(pos) = turn.place(record.anchor, *local) else {
+        let Some(pos) = turn.place(origin, *local) else {
             return false;
         };
         if game
@@ -534,11 +634,19 @@ pub(super) fn commit_landing(
     true
 }
 
+fn valid_local(pos: Pos) -> bool {
+    pos.iter().all(|p| p.unsigned_abs() <= 15)
+}
+
 fn encode(mounted: &Mounted) -> Result<Compound, AttachmentError> {
     if mounted.len() > MAX_RECORDS
-        || mounted
-            .values()
-            .any(|ranges| ranges.is_empty() || ranges.len() > MAX_BLOCKS)
+        || mounted.values().any(|ranges| {
+            ranges.is_empty()
+                || ranges.len() > MAX_BLOCKS
+                || ranges
+                    .iter()
+                    .any(|(&pos, &range)| !valid_local(pos) || !(1..=MAX_RANGE).contains(&range))
+        })
     {
         return Err(AttachmentError::Encode);
     }
@@ -596,7 +704,7 @@ fn decode(saved: &Compound) -> Result<Mounted, AttachmentError> {
                 return Err(invalid);
             };
             let pos = [x, y, z];
-            if pos.iter().any(|p| p.unsigned_abs() > 15)
+            if !valid_local(pos)
                 || !(1..=i32::from(MAX_RANGE)).contains(&range)
                 || local.insert(pos, range as u8).is_some()
             {

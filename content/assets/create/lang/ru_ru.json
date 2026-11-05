@@ -99,5 +99,8 @@
   "create.super_glue.not_enough": "Нужно больше клея",
   "create.super_glue.too_far": "Выделение слишком большое",
   "create.super_glue.success": "Клей нанесён",
+  "create.contraptions.chassis.distance": "Расстояние",
+  "create.contraptions.chassis.range": "Радиус прикрепления липкой стороны",
+  "create.contraptions.chassis.radius": "Радиус прикрепления липкой стороны",
   "create.kinetics.creative_motor.rotation_speed": "Generated Speed in RPM"
 }

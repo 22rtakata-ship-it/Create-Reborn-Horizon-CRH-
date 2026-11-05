@@ -1,20 +1,79 @@
 // Copyright (c) 2026 create-horizon contributors
 // SPDX-License-Identifier: MIT
 
+use std::cell::Cell;
+
 use super::{Game, create_port_contraption::mirror_sync};
-use create_engine::contraption::contact::{
-    ContactBox, linear_face_separation, linear_overlap_response, linear_top_motion,
-    rotary_top_motion,
+use create_engine::contraption::{
+    contact::{
+        ContactBox, linear_face_separation, linear_overlap_response, linear_top_motion,
+        rotary_top_motion,
+    },
+    rotary_contact::upright_rotary_contact,
 };
 use horizon_client::collisions::{EntityCollisions, LookupCollisions, SceneCollisions};
-use horizon_client_render::create_contraption_scene::{KEY, Record, full_cube_payload, read};
-use horizon_core::geometry::Vec3;
+use horizon_client_render::create_contraption_scene::{
+    KEY, Pos, Record, full_cube_payload, read, upright_side_payload,
+};
+use horizon_core::geometry::{Aabb, Vec3};
 use horizon_world::{
     attachments::Holder,
     collision_context::{CollisionContext, CollisionEntity, CollisionItem, EntityContextKind},
     entity_move::MovementRecord,
     entity_obstruction::EntityIdentity,
 };
+
+#[derive(Clone, Copy)]
+struct ContactClip {
+    excluded_controller: Option<Pos>,
+}
+
+thread_local! {
+    static CONTACT_CLIP: Cell<Option<ContactClip>> = const { Cell::new(None) };
+}
+
+fn local_contact_player<'a>(
+    game: &'a Game<'_>,
+) -> Option<&'a horizon_client::motion::PlayerMotion> {
+    game.player.as_ref().filter(|player| {
+        game.remote.is_some()
+            && game.riding.is_none()
+            && game.sleeping.is_none()
+            && !player.spectator
+            && !player.flying
+            && player.health.health() > 0.0
+    })
+}
+
+pub(super) fn player_collision_filter(game: &Game<'_>) -> (Option<Pos>, Option<Aabb>) {
+    if let Some(clip) = CONTACT_CLIP.get() {
+        // The pose filter applies to the ordinary movement query. Explicit
+        // contact motion still collides with every neighboring rotor.
+        return (clip.excluded_controller, None);
+    }
+    let standing = local_contact_player(game).map(|player| {
+        horizon_client::pose::Pose::Standing
+            .dimensions(player.scale)
+            .bounds(player.position)
+    });
+    (None, standing)
+}
+
+fn entity_collisions(game: &Game<'_>, excluded_controller: Option<Pos>) -> Vec<Aabb> {
+    // The ordinary collision hook also supplies conservative moving geometry.
+    // OBB separation must leave its own collider out, just like Java's entity
+    // query. The short-lived guard affects only this collision query.
+    struct Restore(Option<ContactClip>);
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            CONTACT_CLIP.set(self.0);
+        }
+    }
+    let _restore = Restore(CONTACT_CLIP.replace(Some(ContactClip {
+        excluded_controller,
+    })));
+    game.player_entity_collisions()
+}
 
 pub(super) fn sync(game: &mut Game<'_>, data: &[u8]) {
     let previous = previous_records(game, data);
@@ -25,16 +84,7 @@ pub(super) fn sync(game: &mut Game<'_>, data: &[u8]) {
 }
 
 fn previous_records(game: &Game<'_>, data: &[u8]) -> Option<((i32, i32), Vec<Record>)> {
-    let player = game.player.as_ref()?;
-    if game.remote.is_none()
-        || game.riding.is_some()
-        || game.sleeping.is_some()
-        || player.spectator
-        || player.flying
-        || player.health.health() <= 0.0
-    {
-        return None;
-    }
+    local_contact_player(game)?;
     let message = horizon_protocol::attachment_sync::decode(data).ok()?;
     let Holder::Chunk([x, z]) = message.holder else {
         return None;
@@ -71,7 +121,17 @@ fn carry(game: &mut Game<'_>, column: (i32, i32), previous: &[Record]) {
     let bounds = player.bounds();
     let feet = bounds.bottom_center().components();
     let size = bounds.size();
-    let Some((movement, separate)) = current.iter().find_map(|record| {
+    let mut body = ContactBox {
+        min: bounds.min_position().components(),
+        max: bounds.max_position().components(),
+    };
+    if size.y > 1.0 {
+        body.max[1] -= 2.0 / 16.0;
+    }
+    // Preserve the existing priority of platform transfer and linear contact
+    // when a nearby rotor also has a side overlap in this column.
+    let mut side = None;
+    let contact = current.iter().find_map(|record| {
         let before = previous.iter().find(|before| {
             before.controller == record.controller
                 && before.anchor == record.anchor
@@ -88,19 +148,38 @@ fn carry(game: &mut Game<'_>, column: (i32, i32), previous: &[Record]) {
         // Snapshots and duplicate updates never apply a second displacement.
         match (before.stroke, record.stroke) {
             (None, None)
-                if player.ground.on_ground
-                    && record.axis == 1
+                if record.axis == 1
                     && before.angle == record.previous_angle
                     && before.angle != record.angle =>
             {
-                rotary_top_motion(
+                if player.ground.on_ground
+                    && let Some(motion) = rotary_top_motion(
+                        record.anchor,
+                        [before.angle, record.angle],
+                        full_blocks.clone(),
+                        feet,
+                        half_extents,
+                    )
+                {
+                    return Some((motion, false, None));
+                }
+                if side.is_some() || !upright_side_payload(record) {
+                    return None;
+                }
+                let response = upright_rotary_contact(
                     record.anchor,
-                    [before.angle, record.angle],
+                    record.angle,
+                    body,
+                    player.velocity.components(),
                     full_blocks,
-                    feet,
-                    half_extents,
-                )
-                .map(|motion| (motion, false))
+                    max_step,
+                );
+                // Keep the existing path for support, lift and step-up. This
+                // pass supplies only hard separation of the side of the body.
+                if response.separation[1] == 0.0 && response.separation != [0.0; 3] {
+                    side = Some((response.separation, true, Some(record.controller)));
+                }
+                None
             }
             (Some(previous), Some(current))
                 if previous.offset == current.previous && previous.offset != current.offset =>
@@ -116,33 +195,32 @@ fn carry(game: &mut Game<'_>, column: (i32, i32), previous: &[Record]) {
                         half_extents,
                     )
                 {
-                    return Some((motion, false));
-                }
-                let low = bounds.min_position().components();
-                let mut high = bounds.max_position().components();
-                if size.y > 1.0 {
-                    high[1] -= 2.0 / 16.0;
+                    return Some((motion, false, None));
                 }
                 if record.axis == 1 {
-                    linear_face_separation(previous_origin, current_origin, full_blocks, low, high)
-                        .map(|motion| (motion, true))
+                    linear_face_separation(
+                        previous_origin,
+                        current_origin,
+                        full_blocks,
+                        body.min,
+                        body.max,
+                    )
+                    .map(|motion| (motion, true, None))
                 } else {
-                    let body = ContactBox {
-                        min: low,
-                        max: high,
-                    };
                     let shapes = linear_colliders(game, record, current_origin);
                     // Horizon's ordinary collision path establishes ground
                     // contact. A touching top needs no hard separation.
                     if !shapes.iter().any(|&shape| body.penetrates(shape)) {
                         return None;
                     }
-                    linear_overlap_response(body, &shapes, max_step).map(|motion| (motion, true))
+                    linear_overlap_response(body, &shapes, max_step)
+                        .map(|motion| (motion, true, None))
                 }
             }
             _ => None,
         }
-    }) else {
+    });
+    let Some((movement, separate, excluded)) = contact.or(side) else {
         return;
     };
     let movement = Vec3::new(movement[0], movement[1], movement[2]);
@@ -150,7 +228,7 @@ fn carry(game: &mut Game<'_>, column: (i32, i32), previous: &[Record]) {
         return;
     }
 
-    let entities = game.player_entity_collisions();
+    let entities = entity_collisions(game, excluded);
     let from = player.position;
     let context = CollisionContext::for_entity(
         CollisionEntity {

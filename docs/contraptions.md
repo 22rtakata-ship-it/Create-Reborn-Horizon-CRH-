@@ -18,9 +18,10 @@ loaded chunk column. This keeps the source, target and persistent record in the
 same chunk save. It refuses unsupported snapshots and occupied landing cells
 instead of discarding blocks. Capture is limited to an allowlist of stateless
 blocks, idle tools and a single ordinary chest and Deployer on a vertical
-Mechanical Bearing. The three chassis variants can expand a vertical bearing's
-capture. Other inventories and fluid-containing payloads still need adapters.
-The supported Gantry path has a fixed loaded rail span.
+Mechanical Bearing. The three chassis variants can expand capture on a
+vertical Mechanical Bearing, Gantry or Rope Pulley. Other inventories and fluid-containing
+payloads still need adapters. The supported Gantry path has a fixed loaded
+rail span.
 The Rope Pulley supports dry rope and cargo. The clockwork hands are captured
 and restored together and currently accept vanilla payloads only.
 
@@ -29,11 +30,16 @@ and the registered shapes of piston parts and tools. Tests cover dropped items
 and grounded riders on full block tops. Horizontal translating shapes resolve
 player overlap using the minimum-separation axes from Java's
 `ContinuousOBBCollider`, then use Horizon's terrain collision resolver. The
-wall fixture checks sideways separation in both directions. Contact on
-rotating sides, arbitrary tilted contact, the Java client's sub-tick
-actuator interpolation, rider transfer on partial shapes, mounted mobs and
-downward lock behavior remain open. Sable integration remains a separate
-milestone.
+wall fixture checks sideways separation in both directions. A vertical
+Mechanical Bearing also separates the local player from the sides of moving
+full cubes. The adapter uses the current pose, Create's contracted player body,
+the original six separating axes and the ordinary terrain resolver. Existing
+flat-platform support and linear actuator paths retain their own rules.
+The upright resolver matches the pinned JAR for separation, surface and time
+of impact. The native adapter applies the lateral overlap response. Arbitrary
+tilt, contact with partial shapes, moving block bounce, exact client sub-tick
+pose timing, mounted mobs and downward lock behavior remain open. Sable
+integration remains a separate milestone.
 
 The Harvester handles wheat, carrots, potatoes, beetroot, Nether Wart, cocoa,
 sweet berries, sugar cane and supported leaves or growing plants. A moving Saw
@@ -68,10 +74,12 @@ the two durability calls in Create 6.0.10. Creative leaves the item intact.
 
 Volumes currently fit in one loaded chunk column. Mechanical and Windmill
 Bearings transfer them with their payload and restore them at the snapped
-landing pose. A volume that would be split or include a stationary block stops
-capture. The mounted volume shares the chunk save with the structure. The
-original selection outlines, particles, offhand placement and transfer on other
-drivers remain open.
+landing pose. Gantry and dry Rope Pulley transfer volumes relative to their
+current cargo origin, including starts away from the zero-stroke position.
+A volume that would be split or include a stationary block stops capture.
+The mounted volume shares the chunk save with the structure. The original
+selection outlines, particles, offhand placement and transfer on other drivers
+remain open.
 
 ## Mounted chest
 
@@ -99,9 +107,10 @@ canvas bounce and fall damping remain open.
 
 ## Chassis
 
-Linear, Secondary Linear and Radial Chassis expand the capture of a vertical
-Mechanical Bearing. Sticky faces and ranges remain attached through a
-quarter turn, a restart and an obstructed landing.
+Linear, Secondary Linear and Radial Chassis expand capture on vertical
+Mechanical Bearings, dry Gantry Carriages and dry Rope Pulleys. Sticky faces and ranges are
+restored after a quarter turn or a carriage translation, including recovery
+after a restart and an obstructed landing.
 [Chassis rules and verification](chassis.md)
 
 ## Minecart contraptions
@@ -136,6 +145,13 @@ controller motion. The current implementation is exercised by Rust unit tests.
 - `tools/gantry_reference_checks.py` and `tools/gantry_native_checks.py` compare
   Java motion and stopped blocks. The native run checks powered pinion output,
   restart, blocked placement, reversed travel and vertical orientation.
+- `tools/gantry_chassis_checks.py` checks sticky capture and translated landing
+  in Java and Horizon. It also exercises native save recovery and refused
+  snapshots.
+- `tools/gantry_glue_checks.py` and `tools/pulley_payload_checks.py` check
+  ordinary Super Glue clicks, capture away from the zero-stroke position, a
+  cold native restart and restored bounds. The pulley also carries a chassis
+  with its selected range and sticky row.
 - `tools/cart_assembler_reference_checks.py` checks a regular minecart, a
   powered controller rail with a chest cart, a rejected TNT cart and a coupled
   payload released onto two original assembler rails in Java.
@@ -153,6 +169,9 @@ controller motion. The current implementation is exercised by Rust unit tests.
   both clients.
 - `tools/contraption_contact_oracle.py` runs 945 comparisons against the
   discrete horizontal resolver in the pinned original JAR.
+- `tools/rotary_contact_oracle.py` compares 17,280 upright contact cases with
+  the pinned JAR. `tools/rotary_contact_checks.py` checks mirrored lateral pushes,
+  a wall slide and an untouched player in the real clients.
 - `tools/plough_checks.py` compares forward and reverse passes, including
   grass, coarse and rooted dirt, farmland crops, three snow layers and drops.
 - `tools/deployer_farm_checks.py` and `tools/deployer_refill_checks.py --combined`

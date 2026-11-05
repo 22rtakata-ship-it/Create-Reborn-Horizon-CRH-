@@ -20,6 +20,7 @@ PULLEY = (904, 85, 103)
 PULLEY_CLUTCH = (903, 85, 104)
 GANTRY = (918, 83, 103)
 GANTRY_LEVER = (920, 82, 104)
+GANTRY_CARGO = ((918, 84, 103), (918, 84, 102))
 STATIONARY_SAW = (919, 82, 110)
 STATIONARY_SAW_LEVER = (918, 82, 111)
 PLOUGH = (904, 82, 120)
@@ -31,6 +32,7 @@ GLUE_LEVER = (905, 81, 136)
 UPWARD_SAW = (920, 82, 136)
 LINEAR_CHASSIS = (904, 82, 152)
 RADIAL_CHASSIS = (920, 82, 152)
+ROTARY_CONTACT = (904, 81, 166)
 CRAFTING_TABLE = (924, 81, 125)
 SAW_TREE = ((920, 83, 87), (920, 84, 87), (920, 85, 87))
 
@@ -128,11 +130,12 @@ def linear_stations(batch):
         batch.put((x, 82, 103), f'create:gantry_shaft[facing=east,part={part},powered=true]')
     batch.put(GANTRY_LEVER, 'minecraft:lever[face=wall,facing=south,powered=true]')
     batch.put(GANTRY, 'create:gantry_carriage[facing=up,axis_along_first=false]')
-    batch.put((918, 84, 103), 'minecraft:oak_planks')
+    batch.put(GANTRY_CARGO[0], 'minecraft:oak_planks')
+    batch.put(GANTRY_CARGO[1], 'minecraft:spruce_planks')
     batch.put((917, 82, 103), 'create:gearshift[axis=x]')
     batch.put((917, 82, 104), 'minecraft:lever[face=wall,facing=south]')
     batch.put((916, 82, 103), 'create:creative_motor[facing=east]{ScrollValue:-32}')
-    sign(batch, (919, 81, 106), ['GANTRY', 'Right: rail stop.', 'Left: reverse.', 'Carries the plank.'])
+    sign(batch, (919, 81, 106), ['GANTRY', 'Right: rail stop.', 'Left: reverse.', 'Two glued planks.'])
     batch.put(STATIONARY_SAW, 'create:mechanical_saw[facing=east]')
     batch.put((918, 82, 110), 'create:clutch[axis=x]')
     batch.put(STATIONARY_SAW_LEVER, 'minecraft:lever[face=wall,facing=south,powered=true]')
@@ -217,13 +220,13 @@ def chassis_stations(batch):
     for dx in (1, 2, 3):
         batch.put((x + dx, y + 1, z), 'minecraft:oak_planks')
     batch.put((x, y + 1, z - 1), 'create:secondary_linear_chassis[axis=x]')
-    sign(batch, (906, 81, 155), ['LINEAR CHASSIS', 'Range 2.', 'Third plank and', 'secondary stay.'])
+    sign(batch, (906, 81, 155), ['LINEAR CHASSIS', 'Hold use: Wrench', 'Set the range.', 'Range 2: two move.'])
     farm_drive(batch, RADIAL_CHASSIS)
     x, y, z = RADIAL_CHASSIS
     batch.put((x, y + 1, z), 'create:radial_chassis[axis=y,sticky_east=true]{ScrollValue:2}')
     for dx, dz in ((1, 0), (2, 0), (2, 1), (2, 2)):
         batch.put((x + dx, y + 1, z + dz), 'minecraft:oak_planks')
-    sign(batch, (922, 81, 155), ['RADIAL CHASSIS', 'Range 2.', 'Carries diagonal.', 'Far plank stays.'])
+    sign(batch, (922, 81, 155), ['RADIAL CHASSIS', 'Hold use: Wrench', 'Set the radius.', 'Far plank stays.'])
 
 
 def materials_station(batch):
@@ -239,3 +242,17 @@ def materials_station(batch):
                    for slot, (item, count) in enumerate(items))
     batch.put((923, 81, 125), 'minecraft:chest[facing=south]{Items:[' + nbt + ']}')
     sign(batch, (925, 81, 125), ['CRAFT DEPLOYER', 'Chest: materials.', 'Polish Rose Quartz', 'with Sand Paper.'])
+
+
+def rotary_contact_station(batch):
+    batch.load(ROTARY_CONTACT)
+    batch.command('fill 899 81 161 913 89 174 minecraft:air')
+    batch.command('fill 899 80 161 913 80 174 minecraft:smooth_stone')
+    batch.command('fill 906 80 159 910 80 160 minecraft:smooth_stone')
+    x, y, z = ROTARY_CONTACT
+    batch.put((x, y - 1, z), 'create:creative_motor[facing=up]{ScrollValue:16}')
+    batch.put(ROTARY_CONTACT, 'create:mechanical_bearing[facing=up]')
+    batch.put((x, y + 1, z), 'minecraft:slime_block')
+    batch.put((x + 1, y + 1, z), 'minecraft:stone')
+    batch.command(f'fill {x} {y} {z - 2} {x + 3} {y + 2} {z - 2} minecraft:stone_bricks')
+    sign(batch, (906, 81, 169), ['ROTOR CONTACT', 'Walk between', 'rotor and wall.', 'Try in Survival.'])

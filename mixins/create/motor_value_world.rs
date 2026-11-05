@@ -4,7 +4,7 @@
 // Create 6.0.10 ScrollValueRenderer, ValueBox.TextValueBox,
 // ValueBoxTransform.Sided, CreativeMotorBlockEntity.MotorValueBox, AllIcons;
 // bundled MIT Catnip Outliner/OutlineEntry. No original asset bytes.
-use super::{Game, native_world_draw::NativeWorldDraw};
+use super::{Game, create_port_chassis as chassis, native_world_draw::NativeWorldDraw};
 use crate::containers::BlockEntity;
 use horizon_world::nbt::Tag;
 use std::{cell::RefCell, collections::HashMap};
@@ -43,7 +43,7 @@ impl Side {
 #[derive(Clone, Debug)]
 pub(super) struct Plan {
     pub pos: [i32; 3],
-    facing: Side,
+    motor_facing: Option<Side>,
     side: Side,
     pub text: String,
     pub active: bool,
@@ -51,12 +51,14 @@ pub(super) struct Plan {
 }
 impl Plan {
     fn side_active(&self) -> bool {
-        self.side.axis() != self.facing.axis()
-            && !(self.facing.axis() != 1 && self.side.0 == [0, -1, 0])
+        self.motor_facing.is_none_or(|facing| {
+            self.side.axis() != facing.axis() && !(facing.axis() != 1 && self.side.0 == [0, -1, 0])
+        })
     }
     pub fn offset(&self) -> [f32; 3] {
-        std::array::from_fn(|i| {
-            0.5 + self.side.0[i] as f32 * (4.5 / 16.0) - self.facing.0[i] as f32 / 16.0
+        std::array::from_fn(|i| match self.motor_facing {
+            Some(facing) => 0.5 + self.side.0[i] as f32 * (4.5 / 16.0) - facing.0[i] as f32 / 16.0,
+            None => 0.5 + self.side.0[i] as f32 * (7.5 / 16.0),
         })
     }
     pub fn rotation(&self) -> [f32; 3] {
@@ -67,11 +69,9 @@ impl Plan {
                 [0, -1, 0] => 270.0,
                 _ => 0.0,
             },
-            if self.facing.axis() != 1 && self.side.0 == [0, 1, 0] {
-                -self.facing.horizontal_angle() + 180.0
-            } else {
-                0.0
-            },
+            self.motor_facing
+                .filter(|facing| facing.axis() != 1 && self.side.0 == [0, 1, 0])
+                .map_or(0.0, |facing| -facing.horizontal_angle() + 180.0),
         ]
     }
     fn hit(&self, point: [f64; 3]) -> bool {
@@ -226,7 +226,11 @@ fn identity(game: &Game<'_>) -> (usize, usize, &'static str) {
 
 fn target(game: &Game<'_>) -> Option<Plan> {
     let hit = game.pick()?;
-    if game.native_block(hit.pos) != "create:creative_motor"
+    let block = game.native_block(hit.pos);
+    let motor = block == "create:creative_motor";
+    let wrench_target =
+        chassis::is_chassis(&block) && game.held().is_some_and(|item| chassis::wrench(game, item));
+    if !(motor || wrench_target)
         || [
             game.mob_hit().map(|hit| hit.1),
             game.boat_hit().map(|hit| hit.1),
@@ -250,15 +254,24 @@ fn target(game: &Game<'_>) -> Option<Plan> {
     else {
         return None;
     };
-    let value = match entity.nbt.get(&"ScrollValue".into()) {
-        Some(Tag::Int(value)) => *value,
-        _ => 16,
+    let (value, motor_facing) = if motor {
+        let value = match entity.nbt.get(&"ScrollValue".into()) {
+            Some(Tag::Int(value)) => *value,
+            _ => 16,
+        };
+        let facing = Side::named(&game.native_block_property(hit.pos, "facing")?)?;
+        (value.wrapping_abs(), Some(facing))
+    } else {
+        let saved = chassis::configured_range(game, hit.pos)?;
+        let value = super::create_port_motor_value_ui::chassis_preview_value(hit.pos)
+            .unwrap_or(i32::from(saved));
+        (value, None)
     };
     let mut plan = Plan {
         pos: hit.pos,
-        facing: Side::named(&game.native_block_property(hit.pos, "facing")?)?,
+        motor_facing,
         side: Side(hit.face),
-        text: value.wrapping_abs().to_string(),
+        text: value.to_string(),
         active: false,
         ticks_until_removal: 1,
     };
@@ -321,7 +334,7 @@ mod tests {
     fn plan(facing: &str, side: &str) -> Plan {
         Plan {
             pos: [0; 3],
-            facing: Side::named(facing).unwrap(),
+            motor_facing: Side::named(facing),
             side: Side::named(side).unwrap(),
             text: "128".into(),
             active: true,

@@ -6,8 +6,8 @@
 
 use super::{Game, create_port_contraption as contraption, create_port_super_glue as glue};
 use create_engine::{
-    contraption::{QuarterTurn, Rotation, glue::Volume},
-    kinetics::{Axis, Pos},
+    contraption::{QuarterTurn, glue::Volume},
+    kinetics::Pos,
 };
 use horizon_client_render::create_contraption_scene::{MAX_RECORDS, Record};
 use horizon_world::{
@@ -128,6 +128,7 @@ pub(super) fn capture(
     game: &Game<'_>,
     key: [i32; 2],
     record: &Record,
+    origin: Pos,
 ) -> Result<Option<Update>, AttachmentError> {
     let error = AttachmentError::Encode;
     let mut mounted = read(game, key)?;
@@ -138,13 +139,10 @@ pub(super) fn capture(
     if static_volumes.is_empty() {
         return Ok(None);
     }
-    let identity = Rotation::new(record.anchor, Axis::Y, 0.0)
-        .ok_or(error)?
-        .snapped();
     let positions = record
         .blocks
         .iter()
-        .map(|(local, _)| identity.place(record.anchor, *local))
+        .map(|(local, _)| QuarterTurn::IDENTITY.place(origin, *local))
         .collect::<Option<HashSet<_>>>()
         .ok_or(error)?;
     let mut retained = Vec::new();
@@ -161,7 +159,7 @@ pub(super) fn capture(
         }
         let local = volume
             .fit_to(positions.iter().copied())
-            .and_then(|fit| fit.relative_to(record.anchor))
+            .and_then(|fit| fit.relative_to(origin))
             .ok_or(error)?;
         moving.push(local);
     }
@@ -179,6 +177,7 @@ pub(super) fn landing(
     game: &Game<'_>,
     key: [i32; 2],
     record: &Record,
+    origin: Pos,
     turn: QuarterTurn,
 ) -> Result<Option<Update>, AttachmentError> {
     let error = AttachmentError::Encode;
@@ -189,7 +188,7 @@ pub(super) fn landing(
     let positions = record
         .blocks
         .iter()
-        .map(|(local, _)| turn.place(record.anchor, *local))
+        .map(|(local, _)| turn.place(origin, *local))
         .collect::<Option<HashSet<_>>>()
         .ok_or(error)?;
     let mut static_volumes = glue::read(game, key)?.into_owned();
@@ -200,7 +199,7 @@ pub(super) fn landing(
         if volume.fit_to(record.blocks.iter().map(|(local, _)| *local)) != Some(volume) {
             return Err(AttachmentError::Decode);
         }
-        let landed = volume.place(record.anchor, turn).ok_or(error)?;
+        let landed = volume.place(origin, turn).ok_or(error)?;
         if !footprint_valid(game, key, landed, &positions) {
             return Err(error);
         }
@@ -213,7 +212,7 @@ pub(super) fn landing(
 }
 
 /// The common transaction protects static glue from drivers which cannot yet
-/// transfer it. A bearing wrapper removes its verified static data first.
+/// transfer it. Supported drivers remove their verified static data first.
 pub(super) fn blocked(
     game: &Game<'_>,
     key: [i32; 2],

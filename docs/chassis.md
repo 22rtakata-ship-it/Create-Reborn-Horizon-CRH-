@@ -17,11 +17,15 @@ rotated sticky faces from the host's movement classification.
 
 ## Current support
 
-The first native adapter supports a vertical Mechanical Bearing in one chunk
-column. It saves the range of each captured chassis by local position and
-restores it with the rotated state at landing. Unknown block-entity data and
-unloaded cells fail capture before world edits. The installed mod provides
-fallback models and loads the original models from the optional local JAR.
+Chassis can expand a vertical Mechanical Bearing, a dry Gantry Carriage or a
+dry Rope Pulley within one chunk column. Like `GantryContraption.assemble`
+and `PulleyContraption.assemble`, the translating drivers require a sticky
+face to capture a row in the direction of travel. The range of each captured
+chassis is saved by local position and restored with its block state at the
+rotated or translated landing. Unknown block-entity data, unloaded cells and
+chassis offsets outside −15 to 15 on any axis fail before world edits.
+The installed mod provides fallback models and loads the original models
+from the optional local JAR.
 
 Use a slimeball or Super Glue on a glueable face to make it sticky. Clicking
 an already sticky face covers the other eligible faces. Sneak-click with an
@@ -30,10 +34,11 @@ intact. The linear variants inherit the axis of either linear variant when
 placed against it without sneaking. A same-variant, same-axis neighbor
 clears the covered sticky end on placement.
 
-The wrench settings board, group preview, connected textures and slime
-particle remain open. Use `/data merge block x y z {ScrollValue:4}` to set
-the range for a fixture. Other drivers and the full set of movement
-classifications are later steps.
+Hold use with a Wrench to open the range board. Linear Chassis shows
+**Range of Sticky Sides** and Radial Chassis shows **Radius when Sticky**.
+Select a value from 1 to 16 and release use to apply it. Ctrl applies it to
+the connected group of the same type and axis. The attached-block outline,
+offhand Wrench, connected textures and slime particles remain open.
 
 ## Verification
 
@@ -42,3 +47,14 @@ classifications are later steps.
 then checks obstructed recovery across restarts, rotated states and drops.
 Use `--hand` for ordinary survival interaction. The Rust tests also cover
 forced linear movement, rotation and unavailable cells.
+
+`tools/gantry_chassis_checks.py --java` checks the pinned Java Gantry against
+three shared fixtures. With `--game`, `--resources` and `--ctl`, the same
+script checks the equivalent Horizon geometry, a blocked landing and recovery
+over two restarts, recapture on the next run, and capture refusals that must
+preserve every source block.
+
+`tools/pulley_payload_checks.py` lifts glued cargo with a chassis and checks
+the mounted data before a process restart and the landed ranges and volumes
+after it. `tools/chassis_value_settings_checks.py` exercises the real board,
+single and group updates, authorization, and the saved selection on reopen.

@@ -3,8 +3,9 @@
 // SPDX-License-Identifier: MIT
 // Create 6.0.10 ValueSettingsClient/Screen and KineticScrollValueBehaviour.
 // Rendering uses the original private value_settings.png sheet via the importer.
-use super::Game;
+use super::{Game, create_port_chassis as chassis};
 use crate::{containers::BlockEntity, mod_api::NativeScreenView};
+use create_engine::contraption::chassis::{DEFAULT_RANGE, MAX_RANGE};
 use horizon_client::{
     first_person::Hand,
     hud::{HudBatch, rgba},
@@ -22,12 +23,12 @@ struct Setting {
 }
 #[derive(Clone, Copy)]
 struct Holding {
-    pos: [i32; 3],
+    target: Target,
     ticks: u8,
 }
 #[derive(Clone, Copy)]
 struct Panel {
-    pos: [i32; 3],
+    target: Target,
     ticks: u32,
     hovered: Option<Setting>,
     sound_cooldown: u8,
@@ -38,16 +39,87 @@ struct State {
     panel: Option<Panel>,
     cursor: Option<[f32; 2]>,
     sound: Option<f32>,
-    submission: Option<([i32; 3], Setting)>,
+    submission: Option<(Target, Setting, bool)>,
     close: bool,
     hover_warmup: i32,
     hover_ticks: i32,
-    last_hover_tip: bool,
+    last_hover_tip: Option<Board>,
 }
 thread_local! {static STATE: RefCell<State> = RefCell::new(State::default());}
 
-fn title() -> Text {
-    Text::translate("create.kinetics.creative_motor.rotation_speed", &[])
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Board {
+    Motor,
+    LinearChassis,
+    RadialChassis,
+}
+
+impl Board {
+    fn title(self) -> Text {
+        let key = match self {
+            Self::Motor => "create.kinetics.creative_motor.rotation_speed",
+            Self::LinearChassis => "create.contraptions.chassis.range",
+            Self::RadialChassis => "create.contraptions.chassis.radius",
+        };
+        Text::translate(key, &[])
+    }
+
+    fn max(self) -> i32 {
+        if self == Self::Motor {
+            256
+        } else {
+            i32::from(MAX_RANGE) - 1
+        }
+    }
+
+    fn milestone(self) -> i32 {
+        if self == Self::Motor { 32 } else { 1 }
+    }
+
+    fn rows(self) -> i32 {
+        if self == Self::Motor { 2 } else { 1 }
+    }
+
+    fn label(self, row: i32) -> Text {
+        if self == Self::Motor {
+            arrow(row)
+        } else {
+            Text::translate("create.contraptions.chassis.distance", &[])
+        }
+    }
+
+    fn formatted(self, setting: Setting) -> Text {
+        if self == Self::Motor {
+            crate::game::create_port_goggles::numeral(f64::from(setting.value.abs().max(1)))
+                .append(arrow(setting.row))
+        } else {
+            crate::game::create_port_goggles::numeral(f64::from(setting.value + 1))
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Target {
+    pos: [i32; 3],
+    board: Board,
+}
+
+impl Target {
+    fn setting(self, game: &Game<'_>) -> Setting {
+        if self.board == Board::Motor {
+            let value = saved(game, self.pos);
+            Setting {
+                row: i32::from(value >= 0),
+                value: value.saturating_abs().min(256),
+            }
+        } else {
+            let value = chassis::configured_range(game, self.pos).unwrap_or(DEFAULT_RANGE);
+            Setting {
+                row: 0,
+                value: i32::from(value) - 1,
+            }
+        }
+    }
 }
 fn arrow(row: i32) -> Text {
     Text::styled(
@@ -57,10 +129,6 @@ fn arrow(row: i32) -> Text {
             ..Style::default()
         },
     )
-}
-fn formatted(setting: Setting) -> Text {
-    crate::game::create_port_goggles::numeral(f64::from(setting.value.abs().max(1)))
-        .append(arrow(setting.row))
 }
 fn can_interact(game: &Game<'_>) -> bool {
     game.player.is_some()
@@ -76,18 +144,24 @@ fn saved(game: &Game<'_>, pos: [i32; 3]) -> i32 {
         _ => 16,
     }
 }
-fn setting(value: i32) -> Setting {
-    Setting {
-        row: if value < 0 { 0 } else { 1 },
-        value: value.saturating_abs().min(256),
-    }
-}
-
 // CreativeMotorBlockEntity.MotorValueBox plus ValueBoxTransform.testHit.
-fn target(game: &Game<'_>) -> Option<[i32; 3]> {
+fn target(game: &Game<'_>) -> Option<Target> {
     let hit = game.pick()?;
-    if game.native_block(hit.pos) != "create:creative_motor" {
-        return None;
+    let board = match game.native_block(hit.pos).as_str() {
+        "create:linear_chassis" | "create:secondary_linear_chassis" => Board::LinearChassis,
+        "create:radial_chassis" => Board::RadialChassis,
+        "create:creative_motor" => Board::Motor,
+        _ => return None,
+    };
+    let target = Target {
+        pos: hit.pos,
+        board,
+    };
+    if board != Board::Motor {
+        return (game.held().is_some_and(|item| chassis::wrench(game, item))
+            && chassis::configured_range(game, hit.pos).is_some()
+            && chassis::value_box_hit(hit.pos, hit.face, hit.point))
+        .then_some(target);
     }
     let facing = match game.native_block_property(hit.pos, "facing")?.as_str() {
         "east" => [1, 0, 0],
@@ -109,7 +183,16 @@ fn target(game: &Game<'_>) -> Option<[i32; 3]> {
             (hit.point[axis] - f64::from(hit.pos[axis]) - offset).powi(2)
         })
         .sum::<f64>();
-    (distance < 0.25 * 0.25).then_some(hit.pos)
+    (distance < 0.25 * 0.25).then_some(target)
+}
+
+pub(super) fn chassis_preview_value(pos: [i32; 3]) -> Option<i32> {
+    STATE.with_borrow(|state| {
+        let panel = state.panel?;
+        (panel.target.pos == pos && panel.target.board != Board::Motor)
+            .then(|| panel.hovered.map(|setting| setting.value + 1))
+            .flatten()
+    })
 }
 
 /// Alive source Outliner entries suppress goggles, including their expiry ticks.
@@ -134,12 +217,12 @@ pub(super) fn interaction(
     {
         return;
     }
-    let Some(pos) = target(game) else {
+    let Some(target) = target(game) else {
         return;
     };
     STATE.with_borrow_mut(|state| {
         if state.holding.is_none() {
-            state.holding = Some(Holding { pos, ticks: 0 });
+            state.holding = Some(Holding { target, ticks: 0 });
         }
     });
     *canceled = true;
@@ -161,7 +244,7 @@ pub(super) fn tick(game: &mut Game<'_>) {
     let holding = STATE.with_borrow(|state| state.holding);
     if let Some(mut holding) = holding {
         let valid = can_interact(game)
-            && target(game) == Some(holding.pos)
+            && target(game) == Some(holding.target)
             && !game
                 .held()
                 .is_some_and(|stack| stack.item.as_ref() == "create:clipboard");
@@ -171,18 +254,20 @@ pub(super) fn tick(game: &mut Game<'_>) {
         } else if holding.ticks >= 5 {
             STATE.with_borrow_mut(|state| state.holding = None);
             if game.native_mod_screen_open("create") {
-                let current = setting(saved(game, holding.pos));
+                let current = holding.target.setting(game);
                 STATE.with_borrow_mut(|state| {
                     state.panel = Some(Panel {
-                        pos: holding.pos,
+                        target: holding.target,
                         ticks: 0,
                         hovered: None,
                         sound_cooldown: 0,
                     });
                     if let Some(size) = game.native_physical_window_size() {
                         let batch = HudBatch::new(size);
-                        state.cursor =
-                            Some(layout(game, [batch.width, batch.height]).coordinate(current));
+                        state.cursor = Some(
+                            layout(game, [batch.width, batch.height], holding.target.board)
+                                .coordinate(current),
+                        );
                     }
                 });
             }
@@ -191,7 +276,9 @@ pub(super) fn tick(game: &mut Game<'_>) {
             STATE.with_borrow_mut(|state| state.holding = Some(holding));
         }
     }
-    if game.native_mod_screen().is_none() && target(game).is_some() {
+    if game.native_mod_screen().is_none()
+        && let Some(target) = target(game)
+    {
         // ScrollValueRenderer.showHoverTip; one call per client tick.
         STATE.with_borrow_mut(|state| {
             if state.hover_warmup < 6 {
@@ -203,7 +290,7 @@ pub(super) fn tick(game: &mut Game<'_>) {
                 } else {
                     state.hover_ticks.max(6)
                 };
-                state.last_hover_tip = true;
+                state.last_hover_tip = Some(target.board);
             }
         });
     }
@@ -217,13 +304,17 @@ struct Layout {
     bar: i32,
     width: i32,
     height: i32,
+    board: Board,
 }
 impl Layout {
     fn coordinate(self, setting: Setting) -> [f32; 2] {
         let column = setting.value;
-        let mut x = self.x as f32 + (((column.max(1) - 1) / 32) * 4 + column) as f32 + 1.5;
+        let interval = self.board.milestone();
+        let mut x = self.x as f32
+            + (((column.max(1) - 1) / interval) * 4 + column * self.scale()) as f32
+            + 1.5;
         x += (self.label + 18) as f32;
-        if column % 32 == 0 {
+        if column % interval == 0 {
             x += 2.0;
         }
         if column > 0 {
@@ -235,7 +326,7 @@ impl Layout {
         let [mx, my] = mouse.map(|value| value as i32);
         let mut row = 0;
         let mut best = f64::MAX;
-        for candidate in 0..2 {
+        for candidate in 0..self.board.rows() {
             let difference = f64::from(
                 (self.coordinate(Setting {
                     row: candidate,
@@ -252,8 +343,12 @@ impl Layout {
         }
         best = f64::MAX;
         let mut value = 0;
-        for column in 0..=256 {
-            let candidate = if shift { column * 32 } else { column };
+        for column in 0..=self.board.max() {
+            let candidate = if shift {
+                column * self.board.milestone()
+            } else {
+                column
+            };
             let difference = f64::from(
                 (self.coordinate(Setting {
                     row,
@@ -266,21 +361,23 @@ impl Layout {
                 break;
             }
             best = difference;
-            value = candidate.min(256);
+            value = candidate.min(self.board.max());
         }
         Setting { row, value }
     }
+    fn scale(self) -> i32 {
+        if self.board.max() > 128 { 1 } else { 2 }
+    }
 }
-fn layout(game: &Game<'_>, size: [f32; 2]) -> Layout {
-    let label = game
-        .gui
-        .atlas
-        .font
-        .width_text(&arrow(0))
-        .max(game.gui.atlas.font.width_text(&arrow(1))) as i32;
-    let bar = 257 + 1 + 9 * 4;
+fn layout(game: &Game<'_>, size: [f32; 2], board: Board) -> Layout {
+    let label = (0..board.rows())
+        .map(|row| game.gui.atlas.font.width_text(&board.label(row)) as i32)
+        .max()
+        .unwrap_or(0);
+    let scale = if board.max() > 128 { 1 } else { 2 };
+    let bar = (board.max() + 1) * scale + 1 + (board.max() / board.milestone() + 1) * 4;
     let width = label + 14 + bar + 10;
-    let height = 22;
+    let height = board.rows() * 11;
     Layout {
         x: (size[0] as i32 - width) / 2,
         y: (size[1] as i32 - height) / 2,
@@ -288,6 +385,7 @@ fn layout(game: &Game<'_>, size: [f32; 2]) -> Layout {
         bar,
         width,
         height,
+        board,
     }
 }
 
@@ -363,7 +461,8 @@ pub(super) fn draw(game: &Game<'_>, batch: &mut HudBatch, screen: &NativeScreenV
     let Some(panel) = STATE.with_borrow(|state| state.panel) else {
         return;
     };
-    let l = layout(game, [batch.width, batch.height]);
+    let board = panel.target.board;
+    let l = layout(game, [batch.width, batch.height], board);
     let partial = screen.partial_tick;
     let shade = (80.0 * ((panel.ticks as f32 + partial) / 20.0).min(1.0)) as u8;
     batch.fill_gradient(
@@ -372,7 +471,7 @@ pub(super) fn draw(game: &Game<'_>, batch: &mut HudBatch, screen: &NativeScreenV
         rgba(16, 16, 16, shade),
         rgba(16, 16, 16, shade),
     );
-    let title = title();
+    let title = board.title();
     let use_name = keybinds::display_name(game.settings.keys.get("key.use"));
     let tip = Text::translate("create.gui.value_settings.release_to_confirm", &[use_name]);
     let fattest = game
@@ -433,7 +532,14 @@ pub(super) fn draw(game: &Game<'_>, batch: &mut HudBatch, screen: &NativeScreenV
             0xdddddd,
         );
     }
-    frame_border(game, batch, l.x + l.label + 14, l.y - 3, l.bar + 8, 27);
+    frame_border(
+        game,
+        batch,
+        l.x + l.label + 14,
+        l.y - 3,
+        l.bar + 8,
+        l.height + 5,
+    );
     quad(
         game,
         batch,
@@ -442,10 +548,10 @@ pub(super) fn draw(game: &Game<'_>, batch: &mut HudBatch, screen: &NativeScreenV
             (l.x + l.label + 17) as f32,
             l.y as f32,
             (l.bar + 2) as f32,
-            21.,
+            (l.height - 1) as f32,
         ],
     );
-    for row in 0..2 {
+    for row in 0..board.rows() {
         let y = l.y + row * 11;
         let bar_x = l.x + l.label + 18;
         crop(game, batch, [0, 31], [l.x - 4, y], [l.label + 8, 11]);
@@ -458,12 +564,19 @@ pub(super) fn draw(game: &Game<'_>, batch: &mut HudBatch, screen: &NativeScreenV
                 [(l.bar - w).min(249), 8],
             );
         }
-        text(game, batch, &arrow(row), [l.x, y + 1], 0x442000);
-        for milestone in 0..9 {
-            crop(game, batch, [0, 0], [bar_x + milestone * 36, y + 1], [7, 8]);
+        text(game, batch, &board.label(row), [l.x, y + 1], 0x442000);
+        let spacing = 4 + board.milestone() * l.scale();
+        for milestone in 0..=board.max() / board.milestone() {
+            crop(
+                game,
+                batch,
+                [0, 0],
+                [bar_x + milestone * spacing, y + 1],
+                [7, 8],
+            );
         }
     }
-    frame_border(game, batch, l.x - 7, l.y - 3, l.label + 14, 27);
+    frame_border(game, batch, l.x - 7, l.y - 3, l.label + 14, l.height + 5);
     if panel.ticks < 1 {
         return;
     }
@@ -474,13 +587,13 @@ pub(super) fn draw(game: &Game<'_>, batch: &mut HudBatch, screen: &NativeScreenV
             return;
         };
         if current.hovered != Some(hovered) && current.sound_cooldown == 0 {
-            state.sound = Some(1.15 + (hovered.value as f32 / 256.0) * (1.5 - 1.15));
+            state.sound = Some(1.15 + (hovered.value as f32 / board.max() as f32) * (1.5 - 1.15));
             current.sound_cooldown = 1;
         }
         current.hovered = Some(hovered);
     });
     let coordinate = l.coordinate(hovered);
-    let cursor = formatted(hovered);
+    let cursor = board.formatted(hovered);
     let cursor_width = (game.gui.atlas.font.width_text(&cursor) as i32 / 2) * 2 + 3;
     let x = coordinate[0] as i32 - cursor_width / 2;
     let y = coordinate[1] as i32 - 7;
@@ -490,10 +603,15 @@ pub(super) fn draw(game: &Game<'_>, batch: &mut HudBatch, screen: &NativeScreenV
     text(game, batch, &cursor, [x + 2, y + 3], 0x442000);
     if std::env::var_os("CREATE_HORIZON_TRACE").is_some() {
         thread_local! {static LAST:RefCell<String>=const{RefCell::new(String::new())};}
-        let trace=serde_json::json!({"pos":panel.pos,"value":hovered.value,"row":hovered.row,"origin":[l.x,l.y],"size":[l.width,l.height],"coordinate":coordinate,"cursor":cursor.plain(),"title":title.plain(),"tip":tip.plain(),"title_width":game.gui.atlas.font.width_text(&title),"tip_width":game.gui.atlas.font.width_text(&tip)}).to_string();
+        let trace=serde_json::json!({"pos":panel.target.pos,"value":hovered.value,"row":hovered.row,"origin":[l.x,l.y],"size":[l.width,l.height],"coordinate":coordinate,"cursor":cursor.plain(),"title":title.plain(),"tip":tip.plain(),"title_width":game.gui.atlas.font.width_text(&title),"tip_width":game.gui.atlas.font.width_text(&tip)}).to_string();
         LAST.with_borrow_mut(|last| {
             if *last != trace {
-                log::info!("Create motor board: {trace}");
+                let name = if board == Board::Motor {
+                    "motor"
+                } else {
+                    "chassis"
+                };
+                log::info!("Create {name} board: {trace}");
                 *last = trace;
             }
         });
@@ -548,9 +666,10 @@ fn submit(game: &Game<'_>, screen: &NativeScreenView<'_>) -> bool {
             return false;
         };
         state.submission = Some((
-            panel.pos,
-            layout(game, [screen.rect[2], screen.rect[3]])
+            panel.target,
+            layout(game, [screen.rect[2], screen.rect[3]], panel.target.board)
                 .closest(screen.mouse, game.has_shift_down()),
+            game.has_control_down(),
         ));
         state.close = true;
         true
@@ -563,17 +682,18 @@ pub(super) fn scroll(
     modifiers: u32,
     canceled: &mut bool,
 ) {
-    if game.native_mod_screen() != Some("create")
-        || !STATE.with_borrow(|state| state.panel.is_some())
-        || !scroll[1].is_finite()
-    {
+    if game.native_mod_screen() != Some("create") || !scroll[1].is_finite() {
         return;
     }
-    let l = layout(game, [screen.rect[2], screen.rect[3]]);
+    let Some(board) = STATE.with_borrow(|state| state.panel.map(|panel| panel.target.board)) else {
+        return;
+    };
+    let l = layout(game, [screen.rect[2], screen.rect[3]], board);
     let shift = modifiers & 1 != 0;
     let old = l.closest(screen.mouse, shift);
-    let value =
-        (old.value + (scroll[1].signum() as i32) * if shift { 32 } else { 1 }).clamp(0, 256);
+    let value = (old.value
+        + (scroll[1].signum() as i32) * if shift { board.milestone() } else { 1 })
+    .clamp(0, board.max());
     if value != old.value {
         STATE.with_borrow_mut(|state| {
             state.cursor = Some(l.coordinate(Setting {
@@ -613,14 +733,18 @@ pub(super) fn frame(game: &mut Game<'_>) {
     if let Some(pitch) = sound {
         game.audio.play("create:scroll_value", None, 0.25, pitch);
     }
-    if let Some((pos, setting)) = submission {
-        // Preserve raw row/magnitude (including 0) for source feedback ordering.
+    if let Some((target, setting, bulk)) = submission {
         let mut bytes = Vec::with_capacity(20);
-        for value in pos.into_iter().chain([setting.row, setting.value]) {
+        let (channel, fields) = if target.board == Board::Motor {
+            ("create:motor_settings_v2", [setting.row, setting.value])
+        } else {
+            ("create:chassis_settings", [i32::from(bulk), setting.value])
+        };
+        for value in target.pos.into_iter().chain(fields) {
             bytes.extend_from_slice(&value.to_be_bytes());
         }
-        if let Err(error) = game.native_net_send_to_server("create:motor_settings_v2", &bytes) {
-            log::debug!("Create motor setting: {error}");
+        if let Err(error) = game.native_net_send_to_server(channel, &bytes) {
+            log::debug!("Create value setting: {error}");
         }
     }
     if close {
@@ -635,8 +759,9 @@ pub(super) fn hud(game: &Game<'_>, batch: &mut HudBatch) {
     if game.ui.hide_gui || game.native_mod_screen().is_some() || !can_interact(game) {
         return;
     }
-    let (ticks, have) = STATE.with_borrow(|state| (state.hover_ticks, state.last_hover_tip));
-    if ticks == 0 || !have {
+    let (ticks, board) = STATE.with_borrow(|state| (state.hover_ticks, state.last_hover_tip));
+    let Some(board) = board else { return };
+    if ticks == 0 {
         return;
     }
     let alpha = if ticks > 5 {
@@ -647,7 +772,7 @@ pub(super) fn hud(game: &Game<'_>, batch: &mut HudBatch) {
     let x = batch.width as i32 / 2;
     let mut y = batch.height as i32 - 75 - 24;
     for (i, line) in [
-        title(),
+        board.title(),
         Text::translate("create.gui.value_settings.hold_to_edit", &[]),
     ]
     .into_iter()
@@ -674,6 +799,31 @@ pub(super) fn hud(game: &Game<'_>, batch: &mut HudBatch) {
 mod tests {
     use super::*;
     #[test]
+    fn original_chassis_coordinates_match_the_live_reference() {
+        let layout = Layout {
+            x: 773,
+            y: 517,
+            label: 42,
+            bar: 97,
+            width: 163,
+            height: 11,
+            board: Board::LinearChassis,
+        };
+        assert_eq!(
+            layout.coordinate(Setting { row: 0, value: 0 }),
+            [836.5, 522.0]
+        );
+        assert_eq!(
+            layout.coordinate(Setting { row: 0, value: 7 }),
+            [878.5, 522.0]
+        );
+        assert_eq!(
+            layout.closest([10000., -1000.], true),
+            Setting { row: 0, value: 15 }
+        );
+    }
+
+    #[test]
     fn original_motor_coordinates_match_live_reference_at_gui_640_by_360() {
         let layout = Layout {
             x: 157,
@@ -682,6 +832,7 @@ mod tests {
             bar: 294,
             width: 326,
             height: 22,
+            board: Board::Motor,
         };
         assert_eq!(
             layout.coordinate(Setting { row: 0, value: 0 }),

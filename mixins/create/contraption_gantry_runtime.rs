@@ -4,10 +4,12 @@
 use super::{
     Game, GameLevel,
     create_port_contraption::{
-        Capture, column, commit, entries, facing, movement_sound, resident, set_records, state,
+        MountedCapture, column, commit_linear_capture, commit_linear_landing, entries, facing,
+        movement_sound, resident, set_records, state,
     },
     create_port_contraption_actors as actors,
     create_port_piston::collides_at,
+    create_port_super_glue as glue,
 };
 use crate::containers::{BlockEntity, ModBlockEntity};
 use create_engine::{
@@ -200,7 +202,7 @@ fn capture(
     movement: Direction,
 ) -> bool {
     let key = column(pos);
-    let Ok(mut records) = entries(game, key) else {
+    let Ok(records) = entries(game, key) else {
         return false;
     };
     if records.len() >= MAX_RECORDS || records.iter().any(|record| record.controller == pos) {
@@ -222,8 +224,13 @@ fn capture(
     let end = step(rail[rail.len() - 1], carriage);
     let initial = pos[axis].abs_diff(anchor[axis]);
     let limit = end[axis].abs_diff(anchor[axis]);
+    let Ok(stationary_glue) = glue::read(game, key) else {
+        return false;
+    };
+    // GantryContraption.assemble leaves the force direction unset even when
+    // the rail provides a direction for the terrain collision check below.
     let Ok(payload) = Assembly::capture_from(
-        &Capture(game),
+        &MountedCapture::for_linear(game, &stationary_glue),
         pos,
         [step(pos, carriage)],
         |p| p == pos || rail.contains(&p),
@@ -278,8 +285,7 @@ fn capture(
     }) {
         return false;
     }
-    records.push(record);
-    if !commit(game, key, records, &edits) {
+    if !commit_linear_capture(game, key, records, record, pos, &edits) {
         return false;
     }
     movement_sound(game, pos, true);
@@ -320,26 +326,26 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: Pos) -> bool {
         .is_some()
 }
 
-fn land(game: &mut Game<'_>, key: [i32; 2], mut records: Vec<Record>, index: usize, anchor: Pos) {
+fn land(game: &mut Game<'_>, key: [i32; 2], mut records: Vec<Record>, index: usize, origin: Pos) {
     let record = records.remove(index);
     let registry = game.pack.assets.registry;
     let edits = record
         .blocks
         .iter()
         .map(|(local, block)| {
-            let p = std::array::from_fn(|i| anchor[i] + local[i]);
+            let p = std::array::from_fn(|i| origin[i] + local[i]);
             let before = state(game, p);
-            if !resident(game, p) || !game.res.facts().is_air(before) {
+            if column(p) != key || !resident(game, p) || !game.res.facts().is_air(before) {
                 return None;
             }
             Some((p, before, registry.id(block)?))
         })
         .collect::<Option<Vec<_>>>();
     if let Some(edits) = edits
-        && commit(game, key, records.clone(), &edits)
+        && commit_linear_landing(game, key, records.clone(), &record, origin, &edits)
     {
         actors::remove(game, record.controller);
-        movement_sound(game, anchor, false);
+        movement_sound(game, origin, false);
     } else if let Some(stroke) = record.stroke
         && !stroke.waiting
     {
