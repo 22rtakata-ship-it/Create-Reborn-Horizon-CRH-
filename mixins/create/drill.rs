@@ -17,6 +17,7 @@ use std::{
 };
 
 const ID: &str = "create:mechanical_drill";
+pub(super) const SAW: &str = "create:mechanical_saw";
 static NEXT_BREAKER: AtomicI32 = AtomicI32::new(-1);
 
 struct Running {
@@ -91,8 +92,9 @@ pub(super) fn maintenance(game: &mut Game<'_>) {
         state.cleaned = Some(time);
         let mut removed = Vec::new();
         state.drills.retain(|pos, value| {
-            let live =
-                time >= value.seen && time - value.seen < 400 && game.native_block(*pos) == ID;
+            let live = time >= value.seen
+                && time - value.seen < 400
+                && matches!(game.native_block(*pos).as_str(), ID | SAW);
             if !live {
                 removed.push((value.breaker, value.target));
             }
@@ -136,11 +138,16 @@ pub(super) fn tick(
     entity: &mut ModBlockEntity,
     rpm: f32,
 ) -> bool {
-    if !matches!(entity.id.as_str(), ID | "create:drill") {
+    let is_saw = entity.id == "create:saw";
+    if !is_saw && !matches!(entity.id.as_str(), ID | "create:drill") {
+        return false;
+    }
+    let direction = facing(game, pos);
+    if is_saw && direction.axis() == create_engine::kinetics::Axis::Y {
         return false;
     }
     let target = {
-        let delta = facing(game, pos).vector();
+        let delta = direction.vector();
         std::array::from_fn(|i| pos[i] + delta[i])
     };
     let time = game.world.game_time;
@@ -172,7 +179,7 @@ pub(super) fn tick(
     if lazy {
         cycle.lazy_tick();
     }
-    if dirty {
+    if (!is_saw && dirty) || (is_saw && cycle.next_tick < 0) {
         cycle.wake();
     }
     if rpm != 0.0 {
@@ -203,7 +210,11 @@ pub(super) fn tick(
     let action = cycle.tick(
         rpm,
         hardness,
-        !air && !liquid && hardness != -1.0 && !non_breakable,
+        if is_saw {
+            super::create_port_contraption_actors::saw_can_break(game, target)
+        } else {
+            !air && !liquid && hardness != -1.0 && !non_breakable
+        },
     );
     if matches!(action, Action::Hit | Action::Break) {
         game.with_level(|_, level, _| {
@@ -218,7 +229,9 @@ pub(super) fn tick(
             // player and an empty tool, preserves fluid, spills block entities,
             // honours block_drops and sends destroy particles to all clients.
             // It deliberately never calls the acting player's mining path.
-            if let Err(error) = game.destroy_block_dropping(target) {
+            if is_saw {
+                super::create_port_contraption_actors::finish_stationary_saw(game, pos, target);
+            } else if let Err(error) = game.destroy_block_dropping(target) {
                 log::warn!("Create drill could not destroy {target:?}: {error:?}");
             }
             crack(game, breaker, target, -1);

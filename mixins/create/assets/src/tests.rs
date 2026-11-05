@@ -773,6 +773,20 @@ fn bundled_content_repairs_itself_without_changing_other_mods_or_settings() {
 }
 
 #[test]
+fn generated_distribution_passes_the_native_content_allowlist() {
+    let home = Stage::new(&std::env::temp_dir()).unwrap();
+    let path = bundled_content(&home.0, include_bytes!("../../data/content.json")).unwrap();
+    for name in [
+        "data/create/horizon/block/gantry_shaft.json",
+        "data/create/horizon/block/rope_pulley.json",
+        "data/create/horizon/block/rope.json",
+        "data/minecraft/tags/block/climbable.json",
+    ] {
+        assert!(path.join(name).is_file(), "{name}");
+    }
+}
+
+#[test]
 fn bundled_content_rejects_paths_outside_its_namespace_before_writing() {
     let home = std::env::temp_dir().join(format!("create-content-invalid-{}", std::process::id()));
     for name in [

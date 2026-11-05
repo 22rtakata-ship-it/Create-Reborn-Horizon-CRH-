@@ -12,6 +12,20 @@ The following MIT code informed or was adapted into the Rust engine:
   `ControlledContraptionEntity`, `bearing/BearingContraption`, and
   `bearing/MechanicalBearingBlockEntity`: read-only assembly, centred rotation,
   snapped restoration and the bearing's rotation modes and tick rules.
+- `content/contraptions/bearing/WindmillBearingBlockEntity`,
+  `ClockworkBearingBlockEntity` and `ClockworkContraption` inform sail power,
+  clock motion and paired restoration.
+- `content/contraptions/piston`, `content/contraptions/pulley`,
+  `content/contraptions/gantry`, `content/kinetics/gantry` and
+  `content/contraptions/ContraptionCollider` inform pole and rope layout,
+  linear travel, rail motion, placement and rider contact.
+- `content/contraptions/actors/harvester`, `content/kinetics/saw`,
+  `content/kinetics/drill/DrillMovementBehaviour`,
+  `content/kinetics/base/BlockBreakingMovementBehaviour` and `TreeCutter` inform
+  actor targets, harvest and cut rules, break ticks, loot and movement pauses.
+- `content/contraptions/glue` and `content/kinetics/deployer` inform the
+  engine rules for glue selection and transfer and for Deployer action timing,
+  targeting, hand pose and filtered inventory.
 - `content/kinetics/press/PressingBehaviour.java`: 240-unit cycle, midpoint processing,
   clamped speed interpolation, integer truncation, client receipt/hold/interpolation,
   item-particle request ordering and the rendered head's motion curve.
@@ -53,7 +67,7 @@ The following MIT code informed or was adapted into the Rust engine:
 - `content/kinetics/drill/DrillBlock`, `DrillBlockEntity`, `DrillRenderer`, and
   `content/kinetics/base/BlockBreakingKineticBlockEntity`: stationary front-block
   selection, break progress/retry timing, source NBT names, ordinary loot, rear
-  shaft and rotating head. Contraption movement and entity damage are not ported.
+  shaft and rotating head. Moving contact damage remains open.
 - `content/processing/burner/BlazeBurnerBlock`, `BlazeBurnerBlockEntity`,
   `BlazeBurnerBlockItem`, `LitBlazeBurnerBlock` and `api/registry/CreateDataMaps`:
   source state/factory identities, fuel precedence and transitions, consumption

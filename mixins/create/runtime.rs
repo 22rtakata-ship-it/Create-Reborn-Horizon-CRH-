@@ -111,6 +111,14 @@ pub(super) fn owns(block: &str) -> bool {
             | "create:shaft"
             | "create:cogwheel"
             | "create:large_cogwheel"
+            | super::create_port_contraption::BLOCK
+            | super::create_port_contraption::WINDMILL
+            | super::create_port_clockwork::BLOCK
+            | super::create_port_piston::NORMAL
+            | super::create_port_piston::STICKY
+            | super::create_port_gantry::SHAFT
+            | super::create_port_gantry::CARRIAGE
+            | super::create_port_pulley::BLOCK
             | "create:mechanical_press"
             | "create:depot"
             | "create:gearbox"
@@ -129,6 +137,8 @@ pub(super) fn owns(block: &str) -> bool {
             | "create:millstone"
             | "create:encased_fan"
             | "create:mechanical_drill"
+            | super::create_port_drill::SAW
+            | "create:mechanical_harvester"
             | "create:basin"
             | "create:mechanical_mixer"
             | "create:blaze_burner"
@@ -141,6 +151,10 @@ pub(super) fn entity(block: &str, entity: &mut Option<(String, Compound)>) {
         let id = match block {
             "create:creative_motor" => "create:motor",
             "create:mechanical_drill" => "create:drill",
+            super::create_port_drill::SAW => "create:saw",
+            "create:mechanical_harvester" => "create:harvester",
+            super::create_port_piston::STICKY => super::create_port_piston::NORMAL,
+            super::create_port_gantry::CARRIAGE => super::create_port_gantry::entity_id(block),
             "create:shaft" | "create:cogwheel" | "create:large_cogwheel" => "create:simple_kinetic",
             "create:andesite_encased_shaft"
             | "create:brass_encased_shaft"
@@ -158,7 +172,7 @@ pub(super) fn entity(block: &str, entity: &mut Option<(String, Compound)>) {
 }
 
 pub(super) fn ticks(block: &str, ticks: &mut bool) {
-    if owns(block) {
+    if owns(block) && block != "create:mechanical_harvester" {
         *ticks = true;
     }
 }
@@ -386,6 +400,15 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3], ca
         *canceled = true;
         return;
     }
+    if super::create_port_contraption::right_click(game, pos)
+        || super::create_port_piston::right_click(game, pos)
+        || super::create_port_pulley::right_click(game, pos)
+        || super::create_port_gantry::right_click(game, pos)
+    {
+        *canceled = true;
+        game.swing_arm();
+        return;
+    }
     if crate::game::create_port_burner_interactions::right_click(game, pos) {
         *canceled = true;
         game.swing_arm();
@@ -577,7 +600,11 @@ pub(super) fn node(game: &Game<'_>, pos: [i32; 3]) -> Option<Node> {
         _ if direction[1] != 0 => Axis::Y,
         _ => Axis::Z,
     };
-    if matches!(block.as_str(), "create:speedometer" | "create:stressometer") {
+    if matches!(block.as_str(), "create:speedometer" | "create:stressometer")
+        || super::create_port_piston::is_piston(&block)
+        || block == super::create_port_gantry::CARRIAGE
+        || (block == super::create_port_drill::SAW && axis == Axis::Y)
+    {
         let first = game
             .native_block_property(pos, "axis_along_first")
             .as_deref()
@@ -635,6 +662,14 @@ pub(super) fn node(game: &Game<'_>, pos: [i32; 3]) -> Option<Node> {
                 ),
             }
         }
+        super::create_port_piston::NORMAL
+        | super::create_port_piston::STICKY
+        | super::create_port_pulley::BLOCK => Kind::LinearActuator,
+        super::create_port_drill::SAW if direction[1] == 0 => Kind::Consumer {
+            facing: direction.map(|v| -v),
+            impact: 4.0,
+        },
+        super::create_port_drill::SAW => Kind::LinearActuator,
         "create:millstone" => Kind::Millstone,
         "create:mechanical_mixer" => Kind::Mixer,
         "create:encased_fan" | "create:mechanical_drill" => Kind::Consumer {
@@ -645,6 +680,22 @@ pub(super) fn node(game: &Game<'_>, pos: [i32; 3]) -> Option<Node> {
                 2.0
             },
         },
+        super::create_port_contraption::WINDMILL => Kind::Motor {
+            facing: direction.map(|v| -v),
+            rpm: match game.world.block_entities.get(&(pos[0], pos[1], pos[2])) {
+                Some(BlockEntity::Mod(entity)) => {
+                    number(&entity.nbt, super::create_port_contraption::LAST_GENERATED)
+                }
+                _ => 0.0,
+            },
+            capacity: 512.0,
+        },
+        super::create_port_contraption::BLOCK | super::create_port_clockwork::BLOCK => {
+            Kind::Consumer {
+                facing: direction.map(|v| -v),
+                impact: 4.0,
+            }
+        }
         "create:speedometer" | "create:stressometer" => Kind::Shaft,
         "create:water_wheel" | "create:large_water_wheel" => Kind::WaterWheel {
             rpm: match game.world.block_entities.get(&(pos[0], pos[1], pos[2])) {
@@ -682,6 +733,13 @@ pub(super) fn node(game: &Game<'_>, pos: [i32; 3]) -> Option<Node> {
         "create:shaft" | "create:andesite_encased_shaft" | "create:brass_encased_shaft" => {
             Kind::Shaft
         }
+        super::create_port_gantry::SHAFT => Kind::GantryShaft {
+            facing: Direction::from_vector(direction)?,
+            powered: game.native_block_property(pos, "powered").as_deref() == Some("true"),
+        },
+        super::create_port_gantry::CARRIAGE => Kind::GantryCarriage {
+            facing: Direction::from_vector(direction)?,
+        },
         "create:gearbox" => Kind::Gearbox,
         "create:encased_chain_drive" | super::create_port_chain::ADJUSTABLE => Kind::Chain {
             state: super::create_port_chain::read(
@@ -690,7 +748,9 @@ pub(super) fn node(game: &Game<'_>, pos: [i32; 3]) -> Option<Node> {
             )?,
             signal: if block == super::create_port_chain::ADJUSTABLE {
                 match game.world.block_entities.get(&(pos[0], pos[1], pos[2])) {
-                    Some(BlockEntity::Mod(entity)) => integer(&entity.nbt, "Signal").clamp(0, 15) as u8,
+                    Some(BlockEntity::Mod(entity)) => {
+                        integer(&entity.nbt, "Signal").clamp(0, 15) as u8
+                    }
                     _ => 0,
                 }
             } else {
@@ -816,7 +876,10 @@ fn slide_depot(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEntity) 
     let update = if item.locked {
         super::create_port_belt_press::held(game, press, &mut item)
     } else {
-        if !game.native_block_collision([pos[0], pos[1] + 1, pos[2]]).is_empty() {
+        if !game
+            .native_block_collision([pos[0], pos[1] + 1, pos[2]])
+            .is_empty()
+        {
             return changed;
         }
         super::create_port_belt_press::received(game, press, &mut item)
@@ -825,7 +888,11 @@ fn slide_depot(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEntity) 
     for stack in overflow {
         game.spawn_item(
             stack,
-            [f64::from(pos[0]) + 0.5, f64::from(pos[1]) + 1.0, f64::from(pos[2]) + 0.5],
+            [
+                f64::from(pos[0]) + 0.5,
+                f64::from(pos[1]) + 1.0,
+                f64::from(pos[2]) + 0.5,
+            ],
             [0.0; 3],
             10,
         );
@@ -978,9 +1045,16 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
     {
         // The host removes the ticking entity from the level's map. Override
         // its graph input with the signal sampled on its own turn.
-        (*signal, chain_signal_changed) = super::create_port_chain::refresh_signal(game, pos, entity);
+        (*signal, chain_signal_changed) =
+            super::create_port_chain::refresh_signal(game, pos, entity);
     }
-    if let Kind::Motor { rpm, .. } = &mut start.kind {
+    let mut windmill_changed = false;
+    if block == super::create_port_contraption::WINDMILL {
+        if let Kind::Motor { rpm, .. } = &mut start.kind {
+            (*rpm, windmill_changed) =
+                super::create_port_contraption::windmill_source(game, pos, entity);
+        }
+    } else if let Kind::Motor { rpm, .. } = &mut start.kind {
         let direction = facing(
             &game
                 .native_block_property(pos, "facing")
@@ -1016,8 +1090,13 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
             block == "create:large_water_wheel",
         );
     }
-    let mut publish_source = false;
-    if let Kind::Motor { rpm, .. } | Kind::WaterWheel { rpm, .. } = &mut start.kind {
+    let mut publish_source = windmill_changed;
+    if windmill_changed {
+        super::create_port_kinetic_runtime::invalidate();
+    }
+    if block != super::create_port_contraption::WINDMILL
+        && let Kind::Motor { rpm, .. } | Kind::WaterWheel { rpm, .. } = &mut start.kind
+    {
         (*rpm, publish_source) = crate::game::create_port_kinetic_runtime::source_turn(
             game,
             pos,
@@ -1081,6 +1160,21 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
     }
     let mut sync = old_rpm != rpm || chain_signal_changed;
     let running_rpm = running_speed(game, &entity.nbt);
+    if block == super::create_port_contraption::BLOCK {
+        let theoretical = super::create_port_kinetic_runtime::theoretical(entity);
+        super::create_port_contraption::tick(game, pos, entity, theoretical, running_rpm);
+    } else if block == super::create_port_contraption::WINDMILL {
+        super::create_port_contraption::tick_windmill(game, pos, entity, running_rpm);
+    } else if block == super::create_port_clockwork::BLOCK {
+        let theoretical = super::create_port_kinetic_runtime::theoretical(entity);
+        super::create_port_clockwork::tick(game, pos, entity, theoretical, running_rpm);
+    } else if super::create_port_piston::is_piston(&block) {
+        super::create_port_piston::tick(game, pos, entity, running_rpm);
+    } else if block == super::create_port_gantry::CARRIAGE {
+        super::create_port_gantry::tick_carriage(game, pos, entity);
+    } else if block == super::create_port_pulley::BLOCK {
+        sync |= super::create_port_pulley::tick(game, pos, entity, running_rpm);
+    }
     sync |= crate::game::create_port_belt::tick(game, pos, entity, running_rpm);
     if block == "create:millstone" {
         sync |= crate::game::create_port_millstone::tick(game, pos, entity, running_rpm);
@@ -1093,7 +1187,10 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
     if block == "create:encased_fan" {
         crate::game::create_port_fan::tick(game, pos, entity, running_rpm);
     }
-    if block == "create:mechanical_drill" {
+    if matches!(
+        block.as_str(),
+        "create:mechanical_drill" | super::create_port_drill::SAW
+    ) {
         sync |= crate::game::create_port_drill::tick(game, pos, entity, running_rpm);
     }
     if matches!(block.as_str(), "create:speedometer" | "create:stressometer") {
@@ -1294,6 +1391,11 @@ pub(super) fn models(models: &mut Vec<String>) {
             .map(|name| format!("create:block/{name}")),
     );
     models.extend(
+        create_assets::MOVING_BLADES
+            .iter()
+            .map(|(model, _)| format!("create:block/{model}")),
+    );
+    models.extend(
         create_assets::EXTRA_MODELS
             .iter()
             .map(|name| format!("create:{name}")),
@@ -1355,6 +1457,13 @@ pub(super) fn draw(
     if !owns(block) {
         return;
     }
+    if super::create_port_contraption::is_bearing(block) {
+        super::create_port_contraption::draw_bearing(game, pos, draw);
+        return;
+    }
+    if block == super::create_port_pulley::BLOCK {
+        super::create_port_pulley::draw_controller(game, pos, entity, draw);
+    }
     if block == "create:blaze_burner" {
         crate::game::create_port_burner_presentation::draw(game, pos, state, entity, draw);
         return;
@@ -1383,6 +1492,74 @@ pub(super) fn draw(
         return;
     }
     if crate::game::create_port_millstone::draw(game, pos, entity, draw) {
+        return;
+    }
+    if block == "create:mechanical_harvester" {
+        if let Some(facing) = super::create_port_contraption::facing(game, pos) {
+            draw.push();
+            face_south(draw, facing);
+            game.native_draw_model(
+                draw,
+                "create:block/mechanical_harvester/moving_blade",
+                0xFFFFFF,
+            );
+            draw.pop();
+        }
+        return;
+    }
+    if block == super::create_port_drill::SAW {
+        let Some(node) = node(game, pos) else { return };
+        let Some(facing) = super::create_port_contraption::facing(game, pos) else {
+            return;
+        };
+        let speed = number(&entity.nbt, "Speed");
+        let angle = create_engine::visual::angle(
+            draw.game_time as f64 + f64::from(draw.partial),
+            speed,
+            create_engine::visual::rotation_offset(pos, node.axis, false),
+        );
+        draw.push();
+        if facing.axis() == Axis::Y {
+            orient(draw, node.axis);
+            draw.rotate_about([0.0, 1.0, 0.0], angle, [0.5; 3]);
+            game.native_draw_model(draw, "create:block/shaft", 0xFFFFFF);
+        } else {
+            draw.rotate_about(
+                create_engine::visual::positive_axis(node.axis),
+                angle,
+                [0.5; 3],
+            );
+            face_south(draw, facing.opposite());
+            game.native_draw_model(draw, "create:block/shaft_half", 0xFFFFFF);
+        }
+        draw.pop();
+        draw.push();
+        face_south(draw, facing);
+        if facing.axis() == Axis::Y
+            && game
+                .native_block_property(pos, "axis_along_first")
+                .as_deref()
+                == Some("true")
+        {
+            draw.rotate_about([0.0, 0.0, 1.0], 90.0, [0.5; 3]);
+        }
+        let model = if facing.axis() == Axis::Y {
+            if speed > 0.0 {
+                "create:block/mechanical_saw/moving_vertical"
+            } else if speed < 0.0 {
+                "create:block/mechanical_saw/moving_vertical_reverse"
+            } else {
+                "create:block/mechanical_saw/moving_vertical_idle"
+            }
+        } else if speed > 0.0 {
+            "create:block/mechanical_saw/moving_horizontal"
+        } else if speed < 0.0 {
+            "create:block/mechanical_saw/moving_horizontal_reverse"
+        } else {
+            "create:block/mechanical_saw/moving_horizontal_idle"
+        };
+        game.native_draw_model(draw, model, 0xFFFFFF);
+        draw.pop();
         return;
     }
     if crate::game::create_port_drill::draw(game, pos, entity, draw) {

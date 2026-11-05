@@ -1,0 +1,220 @@
+// Copyright (c) The Create Team / The Creators of Create
+// Copyright (c) 2026 create-horizon contributors
+// SPDX-License-Identifier: MIT
+
+//! Movement and world-action rules for contraption-mounted tools.
+
+use crate::{kinetics::Pos, placement::Direction};
+
+pub mod breaking;
+pub mod harvester;
+pub mod saw;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Tool {
+    Harvester,
+    Saw,
+    Drill,
+}
+
+impl Tool {
+    /// Local-space point to transform with the current contraption pose.
+    pub fn active_point(self, local_block: Pos, facing: Direction) -> [f64; 3] {
+        let reach = match self {
+            Self::Harvester => 0.45,
+            Self::Saw | Self::Drill => f64::from(0.65_f32),
+        };
+        let normal = facing.vector();
+        std::array::from_fn(|i| f64::from(local_block[i]) + 0.5 + f64::from(normal[i]) * reach)
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct Sample {
+    /// Transformed active point at the end of the current simulation tick.
+    pub position: [f64; 3],
+    /// The facing in the captured block state.
+    pub facing: Direction,
+    pub stalled: bool,
+    pub disabled: bool,
+    /// A train actor can make its first visit before it moves.
+    pub allow_stationary_first_visit: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Movement {
+    pub motion: [f64; 3],
+    pub relative_motion: [f64; 3],
+    pub active: bool,
+    pub visit: Option<Pos>,
+}
+
+/// `AbstractContraptionEntity.tickActors` / `shouldActorTrigger` and the
+/// backward-facing checks in `HarvesterMovementBehaviour` / `SawMovementBehaviour`.
+#[derive(Clone, Copy, Debug)]
+pub struct MotionTracker {
+    position: Option<[f64; 3]>,
+    motion: [f64; 3],
+    relative_motion: [f64; 3],
+    first_movement: bool,
+}
+
+impl Default for MotionTracker {
+    fn default() -> Self {
+        Self {
+            position: None,
+            motion: [0.0; 3],
+            relative_motion: [0.0; 3],
+            first_movement: true,
+        }
+    }
+}
+
+impl MotionTracker {
+    /// `effective_motion` can normalize carriage motion to actual train speed.
+    /// `inverse_rotation` transforms a vector without the pose's translation.
+    pub fn sample(
+        &mut self,
+        sample: Sample,
+        effective_motion: impl FnOnce([f64; 3]) -> [f64; 3],
+        inverse_rotation: impl FnOnce([f64; 3]) -> [f64; 3],
+    ) -> Movement {
+        self.sample_with_activation(
+            sample,
+            effective_motion,
+            inverse_rotation,
+            |motion, facing| !points_backwards(motion, facing),
+        )
+    }
+
+    pub(crate) fn sample_with_activation(
+        &mut self,
+        sample: Sample,
+        effective_motion: impl FnOnce([f64; 3]) -> [f64; 3],
+        inverse_rotation: impl FnOnce([f64; 3]) -> [f64; 3],
+        can_act: impl FnOnce([f64; 3], Direction) -> bool,
+    ) -> Movement {
+        let cell = sample.position.map(|coordinate| coordinate.floor() as i32);
+        let mut trigger = false;
+        if let Some(previous) = self.position.replace(sample.position)
+            && !sample.stalled
+        {
+            self.motion =
+                effective_motion(std::array::from_fn(|i| sample.position[i] - previous[i]));
+            self.relative_motion = inverse_rotation(self.motion);
+            let moved = length(self.relative_motion) > 0.0;
+            trigger = previous.map(|coordinate| coordinate.floor() as i32) != cell
+                || (self.first_movement && (moved || sample.allow_stationary_first_visit));
+        }
+        let active = !sample.disabled && can_act(self.relative_motion, sample.facing);
+        let visit = (active && trigger).then_some(cell);
+        if visit.is_some() {
+            self.first_movement = false;
+        }
+        Movement {
+            motion: self.motion,
+            relative_motion: self.relative_motion,
+            active,
+            visit,
+        }
+    }
+}
+
+pub fn points_backwards(motion: [f64; 3], facing: Direction) -> bool {
+    let speed = length(motion);
+    let normal = facing.opposite().vector();
+    speed >= 1e-4
+        && (0..3)
+            .map(|i| f64::from(normal[i]) * (motion[i] / speed))
+            .sum::<f64>()
+            > 0.125
+}
+
+fn length([x, y, z]: [f64; 3]) -> f64 {
+    (x * x + y * y + z * z).sqrt()
+}
+
+/// Velocity used for overflow from ordinary movement actors. The caller supplies
+/// the world's random float and spawns at the active point.
+pub fn drop_velocity(mut motion: [f64; 3], random: f32) -> [f64; 3] {
+    motion[1] += 0.5;
+    motion.map(|component| component * f64::from(random * 0.3))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn step(tracker: &mut MotionTracker, position: [f64; 3], stalled: bool) -> Movement {
+        tracker.sample(
+            Sample {
+                position,
+                facing: Direction::East,
+                stalled,
+                disabled: false,
+                allow_stationary_first_visit: false,
+            },
+            |motion| motion,
+            |motion| motion,
+        )
+    }
+
+    #[test]
+    fn tools_sample_different_points_at_the_start_of_motion() {
+        let position = [-2, 8, -5];
+        assert_eq!(
+            Tool::Harvester.active_point(position, Direction::East),
+            [-1.05, 8.5, -4.5]
+        );
+        let point = Tool::Saw.active_point(position, Direction::East);
+        assert_eq!(point, [-1.5 + f64::from(0.65_f32), 8.5, -4.5]);
+        let mut tracker = MotionTracker::default();
+        assert_eq!(step(&mut tracker, point, false).visit, None);
+        assert_eq!(
+            step(&mut tracker, [-0.7, 8.5, -4.5], false).visit,
+            Some([-1, 8, -5])
+        );
+        assert_eq!(step(&mut tracker, [-0.6, 8.5, -4.5], false).visit, None);
+        assert_eq!(
+            step(&mut tracker, [0.01, 8.5, -4.5], false).visit,
+            Some([0, 8, -5])
+        );
+    }
+
+    #[test]
+    fn backward_or_stalled_steps_do_not_consume_the_first_active_visit() {
+        let mut tracker = MotionTracker::default();
+        step(&mut tracker, [1.25, 0.0, 0.0], false);
+        let backward = step(&mut tracker, [0.75, 0.0, 0.0], false);
+        assert!(!backward.active);
+        assert_eq!(backward.visit, None);
+        let stalled = step(&mut tracker, [0.75, 0.0, 0.0], true);
+        assert_eq!(stalled.relative_motion, [-0.5, 0.0, 0.0]);
+        assert_eq!(stalled.visit, None);
+        assert_eq!(
+            step(&mut tracker, [0.8, 0.0, 0.0], false).visit,
+            Some([0, 0, 0])
+        );
+    }
+
+    #[test]
+    fn facing_test_uses_rotated_local_motion_and_normalized_dot_product() {
+        let mut tracker = MotionTracker::default();
+        step(&mut tracker, [0.0; 3], false);
+        let movement = tracker.sample(
+            Sample {
+                position: [1.0, 0.0, 0.0],
+                facing: Direction::North,
+                stalled: false,
+                disabled: false,
+                allow_stationary_first_visit: false,
+            },
+            |motion| motion,
+            |[x, y, z]| [-z, y, x],
+        );
+        assert!(!movement.active);
+        assert_eq!(movement.visit, None);
+        assert!(step(&mut tracker, [0.9, 0.0, 1.0], false).active);
+        assert!(!step(&mut tracker, [0.7, 0.0, 2.0], false).active);
+    }
+}

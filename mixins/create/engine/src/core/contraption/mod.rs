@@ -3,9 +3,18 @@
 
 //! Read-only structure capture, local coordinates and driver rules.
 //! The host owns block writes, saved data, entities, collision and rendering.
+pub mod actors;
 mod assembly;
 pub mod bearing;
+pub mod clockwork;
+pub mod contact;
+pub mod gantry;
+pub mod glue;
+pub mod linear;
+pub mod piston;
+pub mod pulley;
 mod transform;
+pub mod windmill;
 
 pub use assembly::*;
 pub use transform::*;

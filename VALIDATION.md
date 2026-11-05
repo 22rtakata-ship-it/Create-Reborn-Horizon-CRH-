@@ -1,5 +1,26 @@
 # Checks and evidence
 
+## 0.8.0-alpha.2 contraptions
+
+The native build was checked against Create 6.0.10 on three Mechanical
+Bearing axes, three Clockwork modes, regular and sticky piston rigs,
+a Rope Pulley with dry cargo, and Gantry Carriage motion and redstone stops.
+The comparisons include 120 pairs of hand angles, 176 piston samples,
+48 pulley ticks with 80 block observations, and 273 Gantry assertions.
+
+Separate Horizon runs cover saving a moving structure, removing its driver,
+retrying an obstructed placement and restoring the payload once. Offscreen
+checks cover items on moving surfaces, rotary and linear player transfer,
+and clipping against a wall. Native actor fixtures exercise crop loot and
+replanting, tree felling, drilling and resumed motion. A separate run matches
+32 ticks of stationary horizontal Saw progress.
+
+The review world includes native stations with original local resources. The
+native bundle also works with the included models. Read the supported scope
+and the in-game route before extending the fixtures.
+
+[Contraption checks](docs/contraptions.md) · [Review route](docs/reviews/0.8-contraption-world.md)
+
 ## Belt motion and Depot pressing
 
 Six identical connector-built lanes cover east and south orientation with

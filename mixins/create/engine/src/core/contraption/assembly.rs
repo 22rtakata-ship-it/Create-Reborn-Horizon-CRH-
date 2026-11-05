@@ -103,15 +103,39 @@ impl<B> Assembly<B> {
         forced: Option<Direction>,
         max_blocks: usize,
     ) -> Result<Self, CaptureError> {
+        Self::capture_from(
+            world,
+            anchor,
+            [anchor],
+            |pos| controller == Some(pos),
+            forced,
+            max_blocks,
+        )
+    }
+
+    pub fn capture_from(
+        world: &impl CaptureView<Block = B>,
+        anchor: Pos,
+        seeds: impl IntoIterator<Item = Pos>,
+        fixed: impl Fn(Pos) -> bool,
+        forced: Option<Direction>,
+        max_blocks: usize,
+    ) -> Result<Self, CaptureError> {
         let mut blocks = Vec::new();
         let mut frontier = VecDeque::new();
         let mut seen = HashSet::new();
-        if controller != Some(anchor) {
-            match world.inspect(anchor) {
-                Cell::Unloaded => return Err(CaptureError::Unloaded(anchor)),
+        for pos in seeds {
+            if fixed(pos) || seen.contains(&pos) {
+                continue;
+            }
+            match world.inspect(pos) {
+                Cell::Unloaded => return Err(CaptureError::Unloaded(pos)),
                 Cell::Block(rules) if !rules.brittle => {
-                    seen.insert(anchor);
-                    frontier.push_back((anchor, rules));
+                    if seen.len() == max_blocks {
+                        return Err(CaptureError::TooLarge { limit: max_blocks });
+                    }
+                    seen.insert(pos);
+                    frontier.push_back((pos, rules));
                 }
                 _ => {}
             }
@@ -132,7 +156,7 @@ impl<B> Assembly<B> {
             for face in Direction::ALL {
                 let neighbour = checked_zip(pos, face.vector(), i32::checked_add)
                     .ok_or(CaptureError::CoordinateOverflow)?;
-                if controller == Some(neighbour) || seen.contains(&neighbour) {
+                if fixed(neighbour) || seen.contains(&neighbour) {
                     continue;
                 }
                 let adjacent = match world.inspect(neighbour) {
@@ -160,6 +184,9 @@ impl<B> Assembly<B> {
                     || world.glued(pos, face)
                     || force && supportive
                 {
+                    if seen.len() == max_blocks {
+                        return Err(CaptureError::TooLarge { limit: max_blocks });
+                    }
                     seen.insert(neighbour);
                     frontier.push_back((neighbour, adjacent));
                 }
@@ -183,23 +210,34 @@ impl<B> Assembly<B> {
         &self,
         anchor: Pos,
         turn: QuarterTurn,
-        mut rotate: impl FnMut(&B, QuarterTurn) -> Option<B>,
-        mut accepts: impl FnMut(Pos, &B) -> bool,
+        rotate: impl FnMut(&B, QuarterTurn) -> Option<B>,
+        accepts: impl FnMut(Pos, &B) -> bool,
     ) -> Result<Vec<(Pos, B)>, LandingError> {
-        self.blocks
-            .iter()
-            .map(|(local, block)| {
-                let pos = turn
-                    .place(anchor, *local)
-                    .ok_or(LandingError::CoordinateOverflow)?;
-                let block = rotate(block, turn).ok_or(LandingError::Unsupported(pos))?;
-                if !accepts(pos, &block) {
-                    return Err(LandingError::Obstructed(pos));
-                }
-                Ok((pos, block))
-            })
-            .collect()
+        plan_landing(&self.blocks, anchor, turn, rotate, accepts)
     }
+}
+
+/// Restore a live or deserialized snapshot using the same preflight.
+pub fn plan_landing<B>(
+    blocks: &[(Pos, B)],
+    anchor: Pos,
+    turn: QuarterTurn,
+    mut rotate: impl FnMut(&B, QuarterTurn) -> Option<B>,
+    mut accepts: impl FnMut(Pos, &B) -> bool,
+) -> Result<Vec<(Pos, B)>, LandingError> {
+    blocks
+        .iter()
+        .map(|(local, block)| {
+            let pos = turn
+                .place(anchor, *local)
+                .ok_or(LandingError::CoordinateOverflow)?;
+            let block = rotate(block, turn).ok_or(LandingError::Unsupported(pos))?;
+            if !accepts(pos, &block) {
+                return Err(LandingError::Obstructed(pos));
+            }
+            Ok((pos, block))
+        })
+        .collect()
 }
 
 fn checked_zip(a: Pos, b: Pos, op: fn(i32, i32) -> Option<i32>) -> Option<Pos> {

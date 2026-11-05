@@ -16,7 +16,7 @@ pub const CREATE_VERSION: &str = "6.0.10+mc1.21.1 (NeoForge)";
 pub const JAR_SHA256: &str = "ef87fe5709f1ba1f5b8bb20a2925b5afb4669e178fd6d8bf10c167759eefe37a";
 // Bump whenever the import catalog changes: the cache key pins the JAR, not
 // BLOCKS/ITEMS/PARTS, so an older valid cache lacks newly required resources.
-const SCHEMA: u32 = 13;
+const SCHEMA: u32 = 20;
 const MAX_JAR: u64 = 128 << 20;
 const MAX_FILE: u64 = 16 << 20;
 const MAX_TOTAL: usize = 64 << 20;
@@ -27,6 +27,39 @@ pub const WOODS: &[&str] = &[
     "oak", "spruce", "birch", "jungle", "acacia", "dark_oak", "mangrove", "cherry", "bamboo",
     "crimson", "warped", "pale_oak",
 ];
+/// Standalone blade overlays used with imported assets. Built-in models
+/// already include simple blade geometry and need no overlay.
+pub const MOVING_BLADES: &[(&str, &str)] = &[
+    (
+        "mechanical_harvester/moving_blade",
+        "mechanical_harvester/blade",
+    ),
+    (
+        "mechanical_saw/moving_horizontal",
+        "mechanical_saw/blade_horizontal_active",
+    ),
+    (
+        "mechanical_saw/moving_horizontal_idle",
+        "mechanical_saw/blade_horizontal_inactive",
+    ),
+    (
+        "mechanical_saw/moving_vertical",
+        "mechanical_saw/blade_vertical_active",
+    ),
+    (
+        "mechanical_saw/moving_vertical_idle",
+        "mechanical_saw/blade_vertical_inactive",
+    ),
+    (
+        "mechanical_saw/moving_horizontal_reverse",
+        "mechanical_saw/blade_horizontal_reversed",
+    ),
+    (
+        "mechanical_saw/moving_vertical_reverse",
+        "mechanical_saw/blade_vertical_reversed",
+    ),
+];
+
 pub const WHEEL_PARTS: &[&str] = &[
     "water_wheel/wheel",
     "large_water_wheel/block",
@@ -56,6 +89,7 @@ pub fn bundled_content(game_dir: &Path, bytes: &[u8]) -> io::Result<PathBuf> {
                         "data/minecraft/tags/damage_type/is_fire.json"
                             | "data/minecraft/tags/damage_type/bypasses_armor.json"
                             | "data/minecraft/tags/damage_type/bypasses_shield.json"
+                            | "data/minecraft/tags/block/climbable.json"
                             | "data/minecraft/tags/block/mineable/axe.json"
                             | "data/minecraft/tags/block/mineable/pickaxe.json"
                             | "data/minecraft/tags/block/convertable_to_mud.json"
@@ -260,6 +294,16 @@ fn valid_cache(target: &Path, hash: &str, format: (i64, i64)) -> Option<usize> {
     }
     let files = receipt["files"].as_object()?;
     if files.is_empty() || files.len() > MAX_ENTRIES {
+        return None;
+    }
+    if !BLOCKS
+        .iter()
+        .chain(EXTRA_BLOCKSTATES)
+        .all(|block| files.contains_key(&format!("assets/create/blockstates/{block}.json")))
+        || !PARTS
+            .iter()
+            .all(|part| files.contains_key(&format!("assets/create/models/block/{part}.json")))
+    {
         return None;
     }
     for (name, expected) in files {
@@ -518,6 +562,13 @@ fn collect(bytes: Vec<u8>) -> io::Result<BTreeMap<String, Vec<u8>>> {
     }
     for model in EXTRA_MODELS {
         reader.model(&format!("create:{model}"))?;
+    }
+    for &(alias, original) in MOVING_BLADES {
+        let model = json!({"parent": format!("create:block/{original}")});
+        reader.files.insert(
+            format!("assets/create/models/block/{alias}.json"),
+            serde_json::to_vec(&model)?,
+        );
     }
     // Generated local texture variants inherit the original OBJ geometry. They
     // remain in the player's private cache, under the original asset terms.

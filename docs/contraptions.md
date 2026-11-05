@@ -1,52 +1,68 @@
-# Contraption engine
+# Contraptions
 
-The first stage implements the shared rules in `create_engine::contraption`.
-Create 6.0.10 supplies the reference. Each driver will use the same captured
-structure and restoration planner.
+Create for Horizon uses one structure format for moving blocks and keeps the
+driver rules in `create_engine::contraption`. The reference is Create 6.0.10
+for Minecraft 1.21.1. The implementations share local coordinates and motion
+rules while using Horizon's block, item and player APIs.
 
 | Layer | Responsibility |
 |---|---|
-| Capture | Discover blocks from the anchor using movement, adhesion and attachment rules supplied by the host. Store full snapshots at local positions. The excluded controller stays in the world. |
-| Pose | Convert points between the assembly and the world using the centre of the anchor block. Keep the continuous angle for motion and use the nearest quarter turn when planning block placement. |
-| Restoration | Resolve all target positions and rotated block snapshots. Return a plan only when every target passes the host's preflight. |
-| Mechanical Bearing | React to power and manual input, advance the angle, and request assembly or disassembly. The host acknowledges disassembly only after committing the plan. |
+| Capture | Discover a payload through block movement and attachment rules. Store original identifiers and full block states in local coordinates. |
+| Drive | Mechanical and Windmill Bearings, both hands of the Clockwork Bearing, and the regular and sticky Mechanical Piston advance their own poses. Rope Pulleys share the linear actuator, while Gantry Carriages follow a loaded rail. |
+| Ownership | The structure belongs to the chunk, independently of the driver. It is saved with the removal of the original blocks. Removing a driver leaves a recoverable record if a block obstructs the landing. |
+| Presentation | The client receives the captured structure and successive poses. Models are drawn in the same coordinate system used for collision. Original resources remain an optional local import. |
+| Contact and actors | Horizon's normal collision paths handle moving geometry. A rider on a flat platform can follow horizontal rotation or translation and be lifted. Moving harvesters, saws and drills use the original crop or block rules and Horizon loot. |
 
-Horizon supplies block rules and the snapshot codec. The core can represent
-slime and honey adhesion, explicit face bonds and block attachments. Connecting
-those rules to the in-game Super Glue boxes, chassis and block-specific behavior
-is separate work. The current restoration preflight can refuse an occupied
-position and leave the snapshot intact. Create's replacement and item drop
-rules will need their own tests in the native adapter.
+The current native adapter limits each structure and its swept footprint to one
+loaded chunk column. This keeps the source, target and persistent record in the
+same chunk save. It refuses unsupported snapshots and occupied landing cells
+instead of discarding blocks. Capture is limited to an allowlist of stateless
+blocks and idle tools. Super Glue, chassis, inventories and fluid-containing
+payloads still need adapters. The supported Gantry path has a fixed loaded rail
+span. The Rope Pulley supports dry rope and cargo. The clockwork hands are captured and restored
+together and currently accept vanilla payloads only.
 
-## Native integration
+Collision uses exact boxes at quarter turns, narrow strips for oblique rotation
+and the registered shapes of piston parts and tools. Tests cover dropped items
+and grounded riders on full block tops. Side impacts, arbitrary tilted contact,
+rider transfer on partial shapes, mounted mobs and downward lock behavior remain
+open. Sable integration remains a separate milestone.
 
-Store one authoritative structure record per moving assembly in the level.
-Keep the controller reference separate so breaking the driver cannot discard the
-blocks it holds. Define save and chunk unload behavior before making the capture
-remove world blocks. A server-side commit must revalidate the captured positions
-and check every placement before applying it. A rejected placement keeps the
-structure available for retry or recovery. The initial world test should cover
-normal stops, obstructions, restart and removal of the controller.
-
-Send the snapshot and pose to the client through the native game path. Render
-and resolve contact from the same local coordinates. Actors and inventories
-should operate on captured blocks through the structure's own view of the world.
-Further drives can supply their own initial frontier and motion without changing
-the ownership or restoration contract. Sable can be evaluated against that
-boundary once an ordinary Create contraption works end to end.
+The Harvester handles wheat, carrots, potatoes, beetroot, Nether Wart, cocoa,
+sweet berries, sugar cane and supported leaves or growing plants. A moving Saw
+pauses its platform while cutting supported vanilla trees, fungi and stalks.
+A horizontal stationary Saw also fells trees. The moving Drill breaks eligible
+vanilla blocks and drops their loot. Cut progress on moving tools resets across
+restarts. Mounted storage, block breaking damage to passengers, stationary Saw
+processing recipes and planting trees with a Deployer remain open.
+[Deployer engine and host boundary](deployer.md)
 
 ## Verification
 
-`tools/bearing_reference_checks.py` uses the isolated Java reference client.
-It runs a Mechanical Bearing at 32 RPM on X, Y and Z. A slime block picks up an
-oak log, the angle advances by 9.6 degrees per tick, and cutting power returns
-the log to the corresponding quarter-turn position with its axis rotated.
-The Rust tests use the recorded trace and the observed target on each axis.
-They also exercise capture limits, an unsupported snapshot, an unloaded cell,
-and retrying a refused restoration without losing its data.
+- `tools/bearing_reference_checks.py` and `tools/bearing_native_checks.py` compare
+  three axes at 32 RPM against Java. The Horizon test also reloads a running
+  structure and recovers it after the driver is removed and an obstruction is
+  cleared.
+- `tools/piston_checks.py` compares extension and retraction across four rigs,
+  including opposite axes, a sticky payload and blocked travel: 176 tick
+  samples plus final block states. The native test reloads mid-stroke and
+  recovers a blocked orphan on a second restart.
+- `tools/clockwork_checks.py` compares the three original modes and both hand
+  angles, with native checks for grouped restoration, restart and an obstruction.
+- `tools/pulley_reference_checks.py` and `tools/pulley_native_checks.py` compare
+  48 ticks and 80 block observations against Java. The native run also checks
+  restart, controller removal and breaking a placed rope.
+- `tools/gantry_reference_checks.py` and `tools/gantry_native_checks.py` compare
+  Java motion and stopped blocks. The native run checks powered pinion output,
+  restart, blocked placement, reversed travel and vertical orientation.
+- `tools/contraption_collision_checks.py --player --piston` verifies normal
+  player and dropped-item movement in a disposable Horizon world.
+- `tools/actor_reference_checks.py` runs the original Java Create and Catnip
+  classes against the Rust actor rules. `tools/actor_native_checks.py` verifies
+  crop resets and drops, tree felling, drilling and motion after a cut.
+  `tools/stationary_saw_checks.py` compares the horizontal Saw over 32 Java ticks.
+- `tools/bearing_review.py` prepares a separate in-game review world. The
+  checked world and screenshots are local artifacts, with no changes to the
+  player's normal worlds.
 
-This stage runs in the engine. A player can try moving structures once the
-native ownership, write and rendering paths are connected and verified in a
-disposable Horizon world.
-
-[Create source revision](https://github.com/Creators-of-Create/Create/tree/ac0c444d9828da3453ae8cc65338e8de063286fb/src/main/java/com/simibubi/create/content/contraptions)
+[Original Java source](https://github.com/Creators-of-Create/Create/tree/ac0c444d9828da3453ae8cc65338e8de063286fb/src/main/java/com/simibubi/create/content/contraptions)

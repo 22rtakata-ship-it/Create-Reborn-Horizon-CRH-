@@ -14,6 +14,9 @@ pub mod pressing;
 #[path = "core/depot.rs"]
 pub mod depot;
 
+#[path = "core/deployer.rs"]
+pub mod deployer;
+
 #[path = "core/controls.rs"]
 pub mod controls;
 

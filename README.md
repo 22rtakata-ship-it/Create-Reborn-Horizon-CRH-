@@ -8,7 +8,7 @@ Build small factories with gears, water wheels, belts and presses. Create for Ho
 - Move items on basic belts and depots. Press sheets, mill ingredients and use fans to wash, smoke, haunt or blast items.
 - Mix recipes in a Basin, heat it with a Blaze Burner or mine a block with a stationary Mechanical Drill. Engineer’s Goggles show speed and stress. Apply a copper ingot to stripped wood to make Copper Casing.
 
-Moving contraptions, trains and Ponder are planned. [Feature roadmap](docs/roadmap.md)
+The development build adds bearings, pistons and small moving farms. Trains and Ponder are planned. [Feature roadmap](docs/roadmap.md)
 
 ## Install
 
@@ -16,7 +16,7 @@ Moving contraptions, trains and Ponder are planned. [Feature roadmap](docs/roadm
 2. Open **Mods → Add from GitHub** and enter `https://github.com/Delete228/create-horizon`.
 3. Build the native mod, then start the instance.
 
-**0.7.0-alpha.2** is available in the [Horizon mod registry](https://playhorizon.dev/mods/create). The 0.8 development build adds the Adjustable Chain Gearshift and Copper Casing. The launcher builds the mod against the Horizon and Horizon Mixins revisions in the bundle. [Installation guide](docs/installation.md)
+**0.7.0-alpha.2** is available in the [Horizon mod registry](https://playhorizon.dev/mods/create). The 0.8 development builds add the Adjustable Chain Gearshift, Copper Casing and early contraptions. The launcher builds the mod against the Horizon and Horizon Mixins revisions in the bundle. [Installation guide](docs/installation.md)
 
 ## Original models and textures
 
@@ -24,6 +24,6 @@ The mod works on its own with simple models and standard Minecraft textures. **F
 
 ## Development
 
-[Build and test](docs/development.md) · [Compatibility](docs/compatibility.md) · [Transmission review](docs/reviews/transmission.md) · [0.8 review world](docs/reviews/0.8-test-world.md)
+[Build and test](docs/development.md) · [Compatibility](docs/compatibility.md) · [Transmission review](docs/reviews/transmission.md) · [0.8 review world](docs/reviews/0.8-test-world.md) · [Contraption review](docs/reviews/0.8-contraption-world.md)
 
 The port's code is MIT licensed. Create's code is credited to the Creators of Create. The original art and audio remain under their authors' terms. [License](LICENSE) · [Third-party notices](THIRD_PARTY_NOTICES.md)

@@ -132,6 +132,16 @@ fn generation(game: &Game<'_>, pos: Pos, entity: &ModBlockEntity) -> f32 {
     })
 }
 fn published_node(game: &Game<'_>, mut node: Node) -> Node {
+    if matches!(
+        node.kind,
+        Kind::Motor {
+            capacity: 512.0,
+            ..
+        }
+    ) && game.native_block(node.pos) == super::create_port_contraption::WINDMILL
+    {
+        return node;
+    }
     if let Some(BlockEntity::Mod(entity)) =
         game.world
             .block_entities

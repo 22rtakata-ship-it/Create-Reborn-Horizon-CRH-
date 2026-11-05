@@ -157,6 +157,7 @@ def main():
     conventional['c:rods/wooden'] = ['minecraft:stick']
     conventional['c:dusts/redstone'] = ['minecraft:redstone']
     conventional['c:strings'] = ['minecraft:string']
+    conventional['c:slimeballs'] = ['minecraft:slime_ball']
     # NeoForge's verified 1.21.1 convention contains this vanilla block item;
     # its optional legacy #forge alias is unavailable here and is omitted.
     conventional['c:netherracks'] = ['minecraft:netherrack']
@@ -275,7 +276,14 @@ def main():
     loot = {path: read(base + path) for path in [
         'create/loot_table/blocks/encased_chain_drive.json',
         'create/loot_table/blocks/adjustable_chain_gearshift.json',
-        'create/loot_table/blocks/copper_casing.json']}
+        'create/loot_table/blocks/copper_casing.json',
+        'create/loot_table/blocks/mechanical_piston.json',
+        'create/loot_table/blocks/sticky_mechanical_piston.json',
+        'create/loot_table/blocks/piston_extension_pole.json',
+        'create/loot_table/blocks/mechanical_piston_head.json',
+        'create/loot_table/blocks/clockwork_bearing.json',
+        'create/loot_table/blocks/mechanical_harvester.json',
+        'create/loot_table/blocks/mechanical_saw.json']}
     result = {'reference': PINS['create_revision'], 'license': 'MIT recipe/data-map/loot data; original definitions of vanilla convention tags', 'recipes': recipes, 'tags': tags, 'data_maps':maps, 'loot_tables':loot}
     dest = ROOT / 'tools/data/recipes.json'; dest.parent.mkdir(exist_ok=True); dest.write_text(json.dumps(result, indent=2) + '\n')
     print('Exported', len(recipes), 'recipes,', len(tags), 'tags and',len(maps),'data maps from MIT datapack sources')

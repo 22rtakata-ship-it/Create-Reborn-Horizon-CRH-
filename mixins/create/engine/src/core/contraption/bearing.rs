@@ -30,6 +30,14 @@ pub struct Bearing {
 }
 
 impl Bearing {
+    pub fn resume(angle: f32) -> Self {
+        Self {
+            running: true,
+            angle,
+            ..Self::default()
+        }
+    }
+
     pub fn running(&self) -> bool {
         self.running
     }

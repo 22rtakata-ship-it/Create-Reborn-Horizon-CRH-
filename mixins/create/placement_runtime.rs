@@ -49,8 +49,105 @@ pub(super) fn state(
     answer: &mut Option<Option<BlockStateId>>,
 ) {
     let block = game.native_state_block(state).unwrap_or("");
+    if matches!(block, super::create_port_gantry::SHAFT | super::create_port_gantry::CARRIAGE) {
+        *answer = Some(super::create_port_gantry::placement(game, state, block, ctx, direction(ctx.face)));
+        return;
+    }
     if super::create_port_chain::is_chain(block) {
         *answer = Some(super::create_port_chain::placement(game, state, ctx));
+        return;
+    }
+    if block == super::create_port_pulley::BLOCK {
+        let p = [ctx.pos.x, ctx.pos.y, ctx.pos.z];
+        let mut ports = level_ports(game, p);
+        ports[Direction::Up as usize] = false;
+        ports[Direction::Down as usize] = false;
+        let axis = placement::preferred(ports).map_or_else(
+            || horizontal(ctx.yaw).clockwise(Axis::Y).axis(),
+            Direction::axis,
+        );
+        *answer = Some(game.native_state_with_property(state, "axis", if axis == Axis::X { "x" } else { "z" }));
+        return;
+    }
+    if super::create_port_contraption::is_bearing(block) {
+        let pos = [ctx.pos.x, ctx.pos.y, ctx.pos.z];
+        let look = super::create_port::nearest(ctx.yaw, ctx.pitch);
+        let preferred = placement::preferred(level_ports(game, pos)).unwrap_or(look);
+        let facing = if ctx.sneaking {
+            look
+        } else {
+            preferred.opposite()
+        };
+        *answer = Some(game.native_state_with_property(state, "facing", facing.name()));
+        return;
+    }
+    if super::create_port_piston::is_piston(block) || block == "create:mechanical_saw" {
+        let pos = [ctx.pos.x, ctx.pos.y, ctx.pos.z];
+        let look = super::create_port::nearest(ctx.yaw, ctx.pitch);
+        let facing = if ctx.sneaking { look } else { look.opposite() };
+        let ports = level_ports(game, pos);
+        let has = |side: Direction| ports[side as usize];
+        let first = match facing.axis() {
+            Axis::X => has(Direction::Up) || has(Direction::Down),
+            Axis::Z => !has(Direction::Up) && !has(Direction::Down),
+            Axis::Y => {
+                let x = has(Direction::East) || has(Direction::West);
+                let z = has(Direction::North) || has(Direction::South);
+                if x != z {
+                    x
+                } else {
+                    horizontal(ctx.yaw).axis() == Axis::X
+                }
+            }
+        };
+        *answer = Some(
+            game.native_state_with_property(state, "facing", facing.name())
+                .and_then(|id| {
+                    game.native_state_with_property(
+                        id,
+                        "axis_along_first",
+                        if first { "true" } else { "false" },
+                    )
+                }),
+        );
+        if block == "create:mechanical_saw" {
+            let positive = matches!(horizontal(ctx.yaw), Direction::South | Direction::East);
+            let flipped = facing.axis() == Axis::Y && positive;
+            if let Some(Some(id)) = *answer {
+                *answer = Some(game.native_state_with_property(
+                    id,
+                    "flipped",
+                    if flipped { "true" } else { "false" },
+                ));
+            }
+        }
+        return;
+    }
+    if block == super::create_port_piston::POLE {
+        *answer = Some(game.native_state_with_property(
+            state,
+            "facing",
+            direction(ctx.face).opposite().name(),
+        ));
+        return;
+    }
+    if block == "create:mechanical_harvester" {
+        let face = direction(ctx.face);
+        let facing = if face.axis() == Axis::Y {
+            horizontal(ctx.yaw).opposite()
+        } else {
+            let [x, y, z] = face.vector();
+            let support = game
+                .world
+                .block(ctx.pos.x - x, ctx.pos.y - y, ctx.pos.z - z);
+            game.registry
+                .state(support)
+                .filter(|s| s.name == block)
+                .and_then(|s| s.properties.get("facing"))
+                .and_then(|f| Direction::ALL.into_iter().find(|d| d.name() == f))
+                .unwrap_or(face)
+        };
+        *answer = Some(game.native_state_with_property(state, "facing", facing.name()));
         return;
     }
     if block == "create:blaze_burner" {
@@ -275,6 +372,9 @@ pub(super) fn destroy(game: &mut Game<'_>, pos: [i32; 3], canceled: &mut bool) {
     if !game.native_on("create") {
         return;
     }
+    if !*canceled {
+        super::create_port_pulley::break_line(game, pos);
+    }
     let block = game.native_block(pos);
     if !matches!(
         block.as_str(),
@@ -383,6 +483,7 @@ fn state_shaft_port(state: &horizon_world::chunk::BlockState, face: Direction) -
         | "create:stressometer"
         | "create:water_wheel"
         | "create:large_water_wheel" => state_axis(state) == face.axis(),
+        super::create_port_pulley::BLOCK => state_axis(state) == face.axis(),
         _ => false,
     }
 }

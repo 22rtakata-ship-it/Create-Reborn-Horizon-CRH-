@@ -33,6 +33,13 @@ pub enum Kind {
         capacity: f32,
     },
     Shaft,
+    GantryShaft {
+        facing: crate::placement::Direction,
+        powered: bool,
+    },
+    GantryCarriage {
+        facing: crate::placement::Direction,
+    },
     /// BeltBlockEntity propagates unchanged RPM between segments sharing a
     /// controller. Only pulley segments expose the ordinary shaft axis.
     Belt {
@@ -45,6 +52,7 @@ pub enum Kind {
         large: bool,
     },
     Press,
+    LinearActuator,
     Millstone,
     /// MechanicalMixerBlock is a fixed-Y small cog without a shaft port.
     Mixer,
@@ -112,7 +120,7 @@ impl Node {
     fn impact(self) -> f32 {
         match self.kind {
             Kind::Press => 8.0,
-            Kind::Millstone | Kind::Mixer => 4.0,
+            Kind::Millstone | Kind::Mixer | Kind::LinearActuator => 4.0,
             Kind::Consumer { impact, .. } => impact,
             _ => 0.0,
         }
@@ -132,6 +140,27 @@ pub fn ratio(from: Node, to: Node) -> Option<f32> {
     let distance: i32 = delta.iter().map(|n| n.abs()).sum();
     if distance == 1 && from.shaft_port(delta) && to.shaft_port(delta.map(|v| -v)) {
         return Some(from.port_modifier(delta) / to.port_modifier(delta.map(|v| -v)));
+    }
+    match (from.kind, to.kind) {
+        (
+            Kind::GantryShaft {
+                facing: rail,
+                powered: true,
+            },
+            Kind::GantryCarriage { facing: mount },
+        ) if delta == mount.vector() => {
+            return crate::contraption::gantry::pinion_ratio(rail, mount);
+        }
+        (
+            Kind::GantryCarriage { facing: mount },
+            Kind::GantryShaft {
+                facing: rail,
+                powered: true,
+            },
+        ) if delta == mount.opposite().vector() => {
+            return crate::contraption::gantry::pinion_ratio(rail, mount);
+        }
+        _ => {}
     }
     if distance == 1
         && let (

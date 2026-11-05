@@ -41,10 +41,12 @@ pub fn mix_colors(a: u32, b: u32, amount: f32) -> u32 {
 pub fn offset_randomly(random: &mut impl ParticleRandom, range: f32) -> [f64; 3] {
     std::array::from_fn(|_| f64::from((random.next_float() - 0.5) * 2.0 * range))
 }
-fn sine_table() -> &'static [f32; 65536] {
-    static TABLE: OnceLock<[f32; 65536]> = OnceLock::new();
+fn sine_table() -> &'static [f32] {
+    static TABLE: OnceLock<Box<[f32]>> = OnceLock::new();
     TABLE.get_or_init(|| {
-        std::array::from_fn(|i| ((i as f64 * std::f64::consts::PI * 2.0 / 65536.0).sin()) as f32)
+        (0..65536)
+            .map(|i| ((f64::from(i) * std::f64::consts::PI * 2.0 / 65536.0).sin()) as f32)
+            .collect()
     })
 }
 /// Pinned Minecraft 1.21.1 `Mth.sin(float)`. Its float index multiplication is

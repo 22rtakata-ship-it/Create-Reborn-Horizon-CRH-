@@ -21,17 +21,12 @@ Build the shared contraption engine alongside the remaining stationary machines.
 Keep the Java comparisons as regressions and schedule presentation refinements
 with the systems they depend on.
 
-1. **Capture and motion.** Define the local block snapshot, connectivity, pose
-   and restoration plan. Compare the Mechanical Bearing's tick and placement
-   rules with the original. [Architecture and results](contraptions.md)
-2. **Horizon integration.** Add a persistent moving structure owned by the
-   level, a safe handoff between world blocks and the structure, and a separate
-   client view. Test a Mechanical Bearing through assembly, movement, reload,
-   controller removal and restoration.
-3. **Contact and actors.** Use the existing movement and collision paths for
-   players and entities on moving surfaces, then bring in glue, chassis,
-   other drives and actors. Reuse contact work for stationary belt passengers
-   where the world-space movement contract is the same.
+1. Expand the supported bearings and linear actuators with original Java
+   comparisons. [Architecture and results](contraptions.md)
+2. Extend capture to Super Glue, chassis and block entities. Define a durable
+   cross-chunk write protocol before allowing a structure to span columns.
+3. Expand contact, mounted storage and farm tools. Add shared schematic
+   fixtures for repeating the same machine checks in both games.
 
 | Subsystem | Verified bounded foundation | Next acceptance criterion |
 |---|---|---|
@@ -44,7 +39,7 @@ with the systems they depend on.
 | Transport and automation | Bare belts, Minecraft hoppers and basic IO | Complete belts, funnels/tunnels, mechanical arms |
 | Mixing and heating | Dry Basin/Mixer; heated brass; burner and fuel in separate native runs | Combined regression, missing interactions and presentation |
 | Fluids | Water/lava in canonical Basin tanks; buckets, dough and mud | Complete processing, pipe networks, pumps, tanks |
-| Contraptions | Shared capture, rotation, restoration planning and Bearing controller tested in the engine | Native ownership, persistence, collision and rendering |
+| Contraptions | Bearings and pistons move, render and save; bounded rider contact, harvesters and saws | Glue, chassis, broader payloads, cross-chunk ownership, other drives and actors |
 | Trains and logistics | Pending | Tracks, trains, schedules, cargo |
 | Ponder and guides | Pending | Original scenes, controls and presentation |
 | Addons | Architectural requirement | Public Rust contracts; then Sable and Aeronautics |
@@ -102,7 +97,8 @@ with the systems they depend on.
 - [ ] Original goggles tooltips and value settings, including RU/EN, colors, units and fading.
 - [ ] Original speed/overstress particles, placement assistance, outlines and sound loops.
 - [ ] Speed Controller, Rotational Speed Controller, Sequenced Gearshift and redstone modules.
-- [ ] Windmill, bearings, Steam Engine, boiler and other stress sources/consumers.
+- [x] Windmill Bearing: wool sails, assembly, rear shaft output and restoration.
+- [ ] Complete Windmill controls, sail blocks, Steam Engine, boiler and other stress sources/consumers.
 
 ## 3. Item processing and transport
 
@@ -185,9 +181,25 @@ with the systems they depend on.
 - [x] Bearing angle trace and snapped log placement on X, Y and Z verified
   against the isolated Java client. [Architecture and results](contraptions.md)
 - [ ] Native glue boxes, chassis and complete block movement rules.
-- [ ] Bearings, piston, Rope Pulley, gantry, elevator and Cart Assembler.
-- [ ] Collisions, players/passengers, moving inventories and contraption persistence.
-- [ ] Deployer/drill/saw/plough/harvester actors and portable storage/fluid interfaces.
+- [x] Mechanical Bearing: native assembly, rotation, restart and orphan recovery.
+- [x] Clockwork Bearing: both hands and three modes, with atomic restoration.
+- [x] Regular and sticky Mechanical Pistons: Java tick comparison, retraction,
+  terrain stop, restart and recovery in one column.
+- [x] Rope Pulley, dry rope and cargo. Lowering, capture, retraction, restart
+  and rope break, checked against Java.
+- [x] Gantry, bounded loaded rail and carriage. Motion, redstone stop, power
+  transfer and restart checked in game.
+- [ ] Complete Rope Pulley and Gantry presentation, wet lines, coupled pulleys,
+  sequenced movement, elevator and Cart Assembler.
+- [x] Dropped-item collision, grounded rotary and linear rider transfer, and
+  collision of narrow piston poles in Horizon.
+- [ ] Full entity contact, moving inventories and cross-chunk persistence.
+- [x] Harvester on supported crops, moving Saw and Drill with cutting stalls,
+  and horizontal stationary Saw tree felling.
+- [x] Super Glue selection and transfer planner. Deployer stroke, target and
+  storage rules checked against Java traces.
+- [ ] Glue selection and placement in game, Deployer and Plough actors,
+  stationary Saw recipes and portable storage and fluid interfaces.
 - [ ] Shared-schematic checks: identical machines produce identical results in both clients.
 
 ## 5. Fluids, railways and other content

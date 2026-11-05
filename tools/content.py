@@ -5,10 +5,13 @@ Models reference vanilla textures by ID and contain no upstream texture bytes.
 """
 import json
 from common import ROOT, NATIVE
+from pulley_content import rope_pulley
+from gantry_content import gantry
 
 CONTENT = ROOT / "content"
 BLOCKS = ["creative_motor", "shaft", "cogwheel", "large_cogwheel", "mechanical_press", "depot"]
 SHEETS = ["iron", "golden", "copper"]
+FACING_AXES = {"down": 1, "up": 1, "north": 2, "south": 2, "west": 0, "east": 0}
 
 
 def write(path, value):
@@ -33,6 +36,19 @@ def model(name, boxes, texture="minecraft:block/iron_block", *, rotation=None):
         "textures": {"all": texture, "particle": texture},
         "elements": elements,
     })
+
+
+def axial_boxes(facing, sections):
+    """Build centered block-shape boxes from pixel bounds along their facing."""
+    boxes = []
+    axis = FACING_AXES[facing]
+    for inset, low, high in sections:
+        start, end = [inset] * 3, [16 - inset] * 3
+        if facing in ("down", "north", "west"):
+            low, high = 16 - high, 16 - low
+        start[axis], end[axis] = low, high
+        boxes.append([coordinate / 16 for coordinate in start + end])
+    return boxes
 
 
 def processors():
@@ -95,6 +111,208 @@ def processors():
         write("assets/create/models/item/" + block + ".json", {"parent": "create:block/" + block + "/block"})
         write("assets/create/items/" + block + ".json", {"model": {"type": "minecraft:model", "model": "create:item/" + block}})
         write("data/create/loot_table/blocks/" + block + ".json", {"type": "minecraft:block", "pools": [{"rolls": 1, "entries": [{"type": "minecraft:item", "name": "create:" + block}]}]})
+
+
+def bearings():
+    rotations = {
+        "up": {}, "down": {"x": 180}, "north": {"x": 90},
+        "east": {"x": 90, "y": 90}, "south": {"x": 90, "y": 180},
+        "west": {"x": 90, "y": 270},
+    }
+    model("bearing/top", [([1, 13, 1], [15, 16, 15])], "minecraft:block/smooth_stone")
+    model("bearing/top_wooden", [([1, 13, 1], [15, 16, 15])], "minecraft:block/oak_planks")
+    for name in ("mechanical_bearing", "windmill_bearing", "clockwork_bearing"):
+        write(f"data/create/horizon/block/{name}.json", {
+            "template": "minecraft:glass", "item": True,
+            "properties": {"hardness": 1.5, "explosion_resistance": 6, "requires_tool": True,
+                           "render_shape": "MODEL", "sounds": "minecraft:andesite"},
+            "state_properties": {"facing": {"type": "enum", "values": list(rotations)}},
+            "default_state": {"facing": "down"},
+        })
+        casing = "minecraft:block/copper_block" if name == "clockwork_bearing" else "minecraft:block/andesite"
+        model(name, [([0, 0, 0], [16, 13, 16])], casing)
+        write(f"assets/create/blockstates/{name}.json", {
+            "variants": {f"facing={face}": {"model": f"create:block/{name}", **rotation}
+                         for face, rotation in rotations.items()},
+        })
+        write(f"assets/create/models/item/{name}.json", {"parent": f"create:block/{name}"})
+        write(f"assets/create/items/{name}.json", {
+            "model": {"type": "minecraft:model", "model": f"create:item/{name}"},
+        })
+
+
+def pistons():
+    # MIT MechanicalPistonBlock, MechanicalPistonGenerator and AllShapes.
+    # Built-in models below are simplified geometry using vanilla textures.
+    rotations = {
+        "down": {"x": 180}, "up": {}, "north": {"x": 90},
+        "south": {"x": 90, "y": 180}, "west": {"x": 90, "y": 270},
+        "east": {"x": 90, "y": 90},
+    }
+    facing_property = {"type": "enum", "values": list(rotations)}
+    states = ["retracted", "moving", "extended"]
+
+    piston_shapes = {
+        "properties": ["facing", "state"],
+        "values": {
+            f"{facing},{state}": axial_boxes(facing, sections)
+            for facing in rotations
+            for state, sections in [
+                ("moving", [(0, 0, 12)]),
+                ("extended", [(0, 0, 12), (6, 12, 16)]),
+            ]
+        },
+        "default": [[0, 0, 0, 1, 1, 1]],
+    }
+    path = "mechanical_piston"
+    body = [([0, 0, 0], [16, 12, 16])]
+    pole = [([6, 0, 6], [10, 16, 10])]
+    head = [([6, 0, 6], [10, 12, 10]), ([0, 12, 0], [16, 16, 16])]
+    for folder, boxes, texture in [
+        ("normal", body + head[1:], "minecraft:block/stripped_spruce_log"),
+        ("sticky", body + head[1:], "minecraft:block/mossy_cobblestone"),
+        ("moving", body, "minecraft:block/stripped_spruce_log"),
+        ("extended", body + [([6, 12, 6], [10, 16, 10])], "minecraft:block/stripped_spruce_log"),
+    ]:
+        model(f"{path}/{folder}/block", boxes, texture)
+        write(f"assets/create/models/block/{path}/{folder}/block_rotated.json",
+              {"parent": f"create:block/{path}/{folder}/block"})
+    model(f"{path}/normal/head", head, "minecraft:block/stripped_spruce_log")
+    model(f"{path}/sticky/head", head, "minecraft:block/moss_block")
+    model("piston_extension_pole", pole, "minecraft:block/stripped_spruce_log")
+
+    for name, folder in [("mechanical_piston", "normal"), ("sticky_mechanical_piston", "sticky")]:
+        write(f"data/create/horizon/block/{name}.json", {
+            "template": "minecraft:glass", "item": True,
+            "properties": {"hardness": 1.5, "explosion_resistance": 6, "occludes": False,
+                           "render_shape": "MODEL", "sounds": "minecraft:andesite"},
+            "state_properties": {"facing": facing_property, "axis_along_first": {"type": "boolean"},
+                                 "state": {"type": "enum", "values": states}},
+            "default_state": {"facing": "north", "axis_along_first": "true", "state": "retracted"},
+            "shapes": piston_shapes,
+        })
+        variants = {}
+        for facing, rotation in rotations.items():
+            for along_first in (False, True):
+                model_name = "block_rotated" if (FACING_AXES[facing] == 0) != along_first else "block"
+                for state in states:
+                    subfolder = folder if state == "retracted" else state
+                    key = f"axis_along_first={str(along_first).lower()},facing={facing},state={state}"
+                    variants[key] = {"model": f"create:block/{path}/{subfolder}/{model_name}", **rotation}
+        write(f"assets/create/blockstates/{name}.json", {"variants": variants})
+        write(f"assets/create/models/block/{path}/{folder}/item.json", {
+            "parent": f"create:block/{path}/{folder}/block",
+        })
+        write(f"assets/create/models/item/{name}.json", {"parent": f"create:block/{path}/{folder}/item"})
+
+    for name, sections, sound, facing, item in [
+        ("piston_extension_pole", [(6, 0, 16)], "minecraft:scaffolding", "up", True),
+        ("mechanical_piston_head", [(6, 0, 12), (0, 12, 16)], "minecraft:piston", "north", False),
+    ]:
+        properties = {"facing": facing_property, "waterlogged": {"type": "boolean"}}
+        defaults = {"facing": facing, "waterlogged": "false"}
+        if not item:
+            properties["type"] = {"type": "enum", "values": ["normal", "sticky"]}
+            defaults["type"] = "normal"
+        write(f"data/create/horizon/block/{name}.json", {
+            "template": "minecraft:glass", "item": item,
+            "properties": {"hardness": 1.5, "explosion_resistance": 1.5, "occludes": False,
+                           "render_shape": "MODEL", "sounds": sound},
+            "state_properties": properties, "default_state": defaults,
+            "shapes": {"property": "facing", "values": {
+                side: axial_boxes(side, sections) for side in rotations
+            }},
+        })
+        variants = {}
+        for side, rotation in rotations.items():
+            for wet in ("false", "true"):
+                key = f"facing={side},waterlogged={wet}"
+                if item:
+                    variants[key] = {"model": f"create:block/{name}", **rotation}
+                else:
+                    for kind in ("normal", "sticky"):
+                        variants[f"{key},type={kind}"] = {
+                            "model": f"create:block/{path}/{kind}/head", **rotation,
+                        }
+        write(f"assets/create/blockstates/{name}.json", {"variants": variants})
+    write("assets/create/models/item/piston_extension_pole.json", {
+        "parent": "create:block/piston_extension_pole",
+    })
+    for name in ("mechanical_piston", "sticky_mechanical_piston", "piston_extension_pole"):
+        write(f"assets/create/items/{name}.json", {
+            "model": {"type": "minecraft:model", "model": f"create:item/{name}"},
+        })
+
+
+def contraption_actors():
+    # MIT AttachedActorBlock, SawBlock, SawGenerator and AllShapes.
+    properties = {"hardness": 1.5, "explosion_resistance": 6, "render_shape": "MODEL",
+                  "sounds": "minecraft:andesite"}
+    harvester = "mechanical_harvester"
+    saw = "mechanical_saw"
+    horizontal = {"north": 0, "east": 90, "south": 180, "west": 270}
+    harvester_bounds = {
+        "south": [0, 2, 0, 16, 14, 3], "north": [0, 2, 13, 16, 14, 16],
+        "east": [0, 2, 0, 3, 14, 16], "west": [13, 2, 0, 16, 14, 16],
+    }
+    write(f"data/create/horizon/block/{harvester}.json", {
+        "template": "minecraft:glass", "item": True, "properties": properties,
+        "state_properties": {"facing": {"type": "enum", "values": list(horizontal)},
+                             "waterlogged": {"type": "boolean"}},
+        "default_state": {"facing": "north", "waterlogged": "false"},
+        "shapes": {"property": "facing", "values": {
+            side: [[coordinate / 16 for coordinate in box]] for side, box in harvester_bounds.items()
+        }},
+    })
+    write(f"assets/create/blockstates/{harvester}.json", {
+        "variants": {f"facing={side},waterlogged={wet}": {
+            "model": f"create:block/{harvester}/block", **({"y": yaw} if yaw else {}),
+        } for side, yaw in horizontal.items() for wet in ("false", "true")},
+    })
+    model(f"{harvester}/block", [([0, 2, 13], [16, 14, 16]), ([0, 3, 8], [16, 5, 13])])
+    model(f"{harvester}/blade", [([0, 3, 8], [16, 5, 13])])
+
+    write(f"data/create/horizon/block/{saw}.json", {
+        "template": "minecraft:glass", "item": True, "properties": properties,
+        "state_properties": {"facing": {"type": "enum", "values": list(FACING_AXES)},
+                             "axis_along_first": {"type": "boolean"}, "flipped": {"type": "boolean"}},
+        "default_state": {"facing": "down", "axis_along_first": "true", "flipped": "true"},
+        "shapes": {"property": "facing", "values": {
+            side: axial_boxes(side, [(0, 0, 12)]) for side in FACING_AXES
+        }},
+    })
+    saw_variants = {}
+    for side in FACING_AXES:
+        for first in ("false", "true"):
+            for flipped in ("false", "true"):
+                if side in horizontal:
+                    model_type, pitch, yaw = "horizontal", 0, (horizontal[side] + 180) % 360
+                else:
+                    model_type, pitch = "vertical", 180 if side == "down" else 0
+                    yaw = ((270 if first == "true" else 0) + (180 if flipped == "true" else 0)) % 360
+                entry = {"model": f"create:block/{saw}/{model_type}"}
+                if pitch:
+                    entry["x"] = pitch
+                if yaw:
+                    entry["y"] = yaw
+                saw_variants[f"axis_along_first={first},facing={side},flipped={flipped}"] = entry
+    write(f"assets/create/blockstates/{saw}.json", {"variants": saw_variants})
+    blade = {
+        "horizontal": [([7, 3, 12], [9, 13, 16])],
+        "vertical": [([3, 12, 7], [13, 16, 9])],
+    }
+    for orientation, base in [("horizontal", [([0, 0, 0], [16, 16, 12])]),
+                              ("vertical", [([0, 0, 0], [16, 12, 16])])]:
+        model(f"{saw}/{orientation}", base + blade[orientation], "minecraft:block/andesite")
+        for motion in ("active", "inactive", "reversed"):
+            model(f"{saw}/blade_{orientation}_{motion}", blade[orientation])
+
+    for name, appearance in [(harvester, "block"), (saw, "vertical")]:
+        write(f"assets/create/models/block/{name}/item.json", {"parent": f"create:block/{name}/{appearance}"})
+        write(f"assets/create/models/item/{name}.json", {"parent": f"create:block/{name}/item"})
+        write(f"assets/create/items/{name}.json", {
+            "model": {"type": "minecraft:model", "model": f"create:item/{name}"},
+        })
 
 
 def basin_mixer():
@@ -418,6 +636,11 @@ def foundation():
     model("hand_crank/handle", [([6, 5, 6], [10, 10, 16])], "minecraft:block/oak_planks")
     model('goggles',[([4,6,3],[7,9,4]),([9,6,3],[12,9,4])],'minecraft:block/gold_block')
     processors()
+    bearings()
+    pistons()
+    rope_pulley(write, model)
+    gantry(write, model)
+    contraption_actors()
     basin_mixer()
     burners()
     belts()
@@ -463,6 +686,14 @@ def foundation():
     extra_blocks['encased_chain_drive'] = 'Encased Chain Drive'
     extra_blocks['adjustable_chain_gearshift'] = 'Adjustable Chain Gearshift'
     extra_blocks['copper_casing'] = 'Copper Casing'
+    extra_blocks['mechanical_bearing'] = 'Mechanical Bearing'
+    extra_blocks['windmill_bearing'] = 'Windmill Bearing'
+    extra_blocks['clockwork_bearing'] = 'Clockwork Bearing'
+    extra_blocks.update({'rope_pulley': 'Rope Pulley', 'rope': 'Rope', 'pulley_magnet': 'Pulley Magnet'})
+    extra_blocks.update({'gantry_shaft': 'Gantry Shaft', 'gantry_carriage': 'Gantry Carriage'})
+    extra_blocks.update({"mechanical_piston": "Mechanical Piston", "sticky_mechanical_piston": "Sticky Mechanical Piston",
+                         "mechanical_piston_head": "Mechanical Piston Head", "piston_extension_pole": "Piston Extension Pole"})
+    extra_blocks.update({"mechanical_harvester": "Mechanical Harvester", "mechanical_saw": "Mechanical Saw"})
     extra_items['whisk'] = 'Whisk'
     extra_items.update({'empty_blaze_burner': 'Empty Blaze Burner', 'blaze_cake': 'Blaze Cake', 'creative_blaze_cake': 'Creative Blaze Cake'})
     for locale in ["en_us","ru_ru"]:
@@ -473,6 +704,19 @@ def foundation():
         if locale == "ru_ru":
             lang['block.create.adjustable_chain_gearshift'] = 'Регулируемая цепная коробка передач'
             lang['block.create.copper_casing'] = 'Медный корпус'
+            lang['block.create.mechanical_bearing'] = 'Механический вращатель'
+            lang['block.create.windmill_bearing'] = 'Вращатель ветряной мельницы'
+            lang['block.create.clockwork_bearing'] = 'Часовой механизм'
+            lang.update({'block.create.rope_pulley': 'Верёвочная лебёдка', 'block.create.rope': 'Верёвка',
+                         'block.create.pulley_magnet': 'Лебёдочный магнит'})
+            lang.update({'block.create.gantry_shaft': 'Вал линейного привода',
+                         'block.create.gantry_carriage': 'Каретка линейного привода'})
+            lang.update({"block.create.mechanical_piston": "Механический поршень",
+                         "block.create.sticky_mechanical_piston": "Липкий механический поршень",
+                         "block.create.mechanical_piston_head": "Головка механического поршня",
+                         "block.create.piston_extension_pole": "Удлинитель поршня"})
+            lang.update({"block.create.mechanical_harvester": "Механический комбайн",
+                         "block.create.mechanical_saw": "Механическая пила"})
             lang.update({"block.create.millstone": "Мельничный жернов", "block.create.encased_fan": "Вентилятор в корпусе", "block.create.mechanical_drill": "Механический бур",
                          "item.create.propeller": "Пропеллер", "item.create.wheat_flour": "Пшеничная мука", "item.create.dough": "Тесто"})
             lang.update({'block.create.basin': 'Чаша', 'block.create.mechanical_mixer': 'Механический миксер', 'item.create.whisk': 'Венчик'})
@@ -498,7 +742,7 @@ def main():
     CONTENT.mkdir(exist_ok=True)
     (CONTENT / "horizon-mod.toml").write_text('''id = "create"
 name = "Create for Horizon"
-version = "0.8.0-alpha.1"
+version = "0.8.0-alpha.2"
 description = "Build rotating machines and small factories in Horizon. The original Create JAR is optional and supplies its models and textures."
 authors = ["create-horizon contributors"]
 api = "0.2"

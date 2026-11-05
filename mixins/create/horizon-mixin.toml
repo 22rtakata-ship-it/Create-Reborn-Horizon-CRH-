@@ -1,6 +1,6 @@
 [mod]
 id = "create"
-version = "0.8.0-alpha.1"
+version = "0.8.0-alpha.2"
 
 [compatibility]
 horizon_revision = "9c7f9b2215dfed497aba5522c44f38926628648d"
@@ -1088,4 +1088,100 @@ kind = "HEAD"
 helper = "transmission_tick.rs"
 bindings = [
   { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+]
+
+[[module]]
+id = "contraption-attachment"
+file = "crates/horizon-world/src/attachments.rs"
+name = "create_contraption_attachment"
+source = "contraption_attachment.rs"
+visibility = "pub"
+
+[[module]]
+id = "contraption-scene"
+file = "crates/horizon-client-render/src/lib.rs"
+name = "create_contraption_scene"
+source = "contraption_scene.rs"
+visibility = "pub"
+
+[[module]]
+id = "contraption-runtime"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_contraption"
+source = "contraption_runtime.rs"
+
+[[module]]
+id = "contraption-piston-runtime"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_piston"
+source = "contraption_piston_runtime.rs"
+
+[[module]]
+id = "pulley-runtime"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_pulley"
+source = "contraption_pulley_runtime.rs"
+
+[[module]]
+id = "gantry-runtime"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_gantry"
+source = "contraption_gantry_runtime.rs"
+
+[[module]]
+id = "contraption-clockwork-runtime"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_clockwork"
+source = "contraption_clockwork_runtime.rs"
+
+[[module]]
+id = "contraption-actors-runtime"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_contraption_actors"
+source = "contraption_actors_runtime.rs"
+
+[[module]]
+id = "contraption-contact-runtime"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_contraption_contact"
+source = "contraption_contact_runtime.rs"
+
+[[injection]]
+id = "contraption-draw"
+target = "horizon_client::game::native_hooks::Game<'_>::native_world_submit"
+kind = "HEAD"
+helper = "contraption_draw_hook.rs"
+bindings = [
+  { name = "game", ty = "&crate::game::Game<'_>", value = "self" },
+  { name = "draw", ty = "&mut crate::game::native_world_draw::NativeWorldDraw", value = "&mut *draw" },
+]
+
+[[injection]]
+id = "contraption-client-sync"
+target = "horizon_client::game::attachment_sync::Game<'_>::remote_attachment_sync"
+kind = "HEAD"
+helper = "contraption_sync_hook.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "data", ty = "&[u8]", value = "data" },
+]
+
+[[injection]]
+id = "contraption-collision"
+target = "horizon_client::game::ghasts::Game<'_>::player_entity_collisions"
+kind = "RETURN"
+helper = "contraption_collision_hook.rs"
+bindings = [
+  { name = "game", ty = "&crate::game::Game<'_>", value = "self" },
+  { name = "result", ty = "Vec<Aabb>", value = "$value" },
+]
+
+[[injection]]
+id = "contraption-item-collision"
+target = "horizon_client::game::ghasts::Game<'_>::item_entity_collisions"
+kind = "RETURN"
+helper = "contraption_collision_hook.rs"
+bindings = [
+  { name = "game", ty = "&crate::game::Game<'_>", value = "self" },
+  { name = "result", ty = "Vec<Aabb>", value = "$value" },
 ]
