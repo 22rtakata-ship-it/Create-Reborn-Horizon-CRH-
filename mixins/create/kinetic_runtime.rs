@@ -88,7 +88,7 @@ struct Pending {
 }
 thread_local! {
     static CACHE: RefCell<Cache> = RefCell::new(Cache::default());
-    static CHANGED: RefCell<BTreeMap<String, Pending>> = RefCell::new(BTreeMap::new());
+    static CHANGED: RefCell<BTreeMap<String, Pending>> = const { RefCell::new(BTreeMap::new()) };
     static LIFETIMES: RefCell<SessionCache<Lifetimes>> = RefCell::new(SessionCache::default());
 }
 fn with_lifetime<R>(
