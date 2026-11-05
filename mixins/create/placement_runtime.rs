@@ -2,7 +2,7 @@
 // Copyright (c) 2026 create-horizon contributors
 // SPDX-License-Identifier: MIT
 // Vanilla placement remains responsible for obstruction, permissions and consumption.
-use super::{Game, GameLevel};
+use super::{Game, GameLevel, create_port_contraption_actors as actors};
 use crate::items::ItemStack;
 use create_engine::{
     kinetics::Axis,
@@ -99,7 +99,12 @@ pub(super) fn state(
         *answer = Some(game.native_state_with_property(state, "facing", facing.name()));
         return;
     }
-    if super::create_port_piston::is_piston(block) || block == "create:mechanical_saw" {
+    if super::create_port_piston::is_piston(block)
+        || matches!(
+            block,
+            "create:mechanical_saw" | super::create_port_deployer::BLOCK
+        )
+    {
         let pos = [ctx.pos.x, ctx.pos.y, ctx.pos.z];
         let look = super::create_port::nearest(ctx.yaw, ctx.pitch);
         let facing = if ctx.sneaking { look } else { look.opposite() };
@@ -149,7 +154,7 @@ pub(super) fn state(
         ));
         return;
     }
-    if block == "create:mechanical_harvester" {
+    if actors::attached_actor(block) {
         let face = direction(ctx.face);
         let facing = if face.axis() == Axis::Y {
             horizontal(ctx.yaw).opposite()
@@ -160,12 +165,26 @@ pub(super) fn state(
                 .block(ctx.pos.x - x, ctx.pos.y - y, ctx.pos.z - z);
             game.registry
                 .state(support)
-                .filter(|s| s.name == block)
+                .filter(|s| actors::attached_actor(&s.name))
                 .and_then(|s| s.properties.get("facing"))
                 .and_then(|f| Direction::ALL.into_iter().find(|d| d.name() == f))
                 .unwrap_or(face)
         };
-        *answer = Some(game.native_state_with_property(state, "facing", facing.name()));
+        let [x, _, z] = facing.vector();
+        let support = game.world.block(ctx.pos.x - x, ctx.pos.y, ctx.pos.z - z);
+        let sturdy_face = match facing {
+            Direction::North => D::North,
+            Direction::East => D::East,
+            Direction::South => D::South,
+            Direction::West => D::West,
+            _ => unreachable!("attached actors only use horizontal facings"),
+        };
+        *answer = Some(
+            (game.behaviours.is_face_sturdy(support, sturdy_face)
+                && !game.facts.get(support).has_class("LeavesBlock"))
+            .then(|| game.native_state_with_property(state, "facing", facing.name()))
+            .flatten(),
+        );
         return;
     }
     if block == "create:blaze_burner" {

@@ -618,6 +618,30 @@
         "id": "create:mechanical_piston"
       }
     },
+    "create/recipe/crafting/kinetics/mechanical_plough.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "A": {
+          "item": "create:andesite_alloy"
+        },
+        "C": {
+          "item": "create:andesite_casing"
+        },
+        "I": {
+          "tag": "c:plates/iron"
+        }
+      },
+      "pattern": [
+        "III",
+        "AAA",
+        " C "
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:mechanical_plough"
+      }
+    },
     "create/recipe/crafting/kinetics/mechanical_press.json": {
       "type": "minecraft:crafting_shaped",
       "category": "misc",
@@ -850,6 +874,29 @@
       "result": {
         "count": 1,
         "id": "create:stressometer"
+      }
+    },
+    "create/recipe/crafting/kinetics/super_glue.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "A": {
+          "tag": "c:slimeballs"
+        },
+        "N": {
+          "tag": "c:nuggets/iron"
+        },
+        "S": {
+          "tag": "c:plates/iron"
+        }
+      },
+      "pattern": [
+        "AS",
+        "NA"
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:super_glue"
       }
     },
     "create/recipe/crafting/kinetics/vertical_gearbox.json": {
@@ -3102,7 +3149,9 @@
         "create:rope_pulley",
         "create:mechanical_drill",
         "create:mechanical_saw",
+        "create:deployer",
         "create:mechanical_harvester",
+        "create:mechanical_plough",
         "create:sail_frame",
         "create:white_sail",
         "create:orange_sail",
@@ -3165,7 +3214,9 @@
         "create:rope_pulley",
         "create:mechanical_drill",
         "create:mechanical_saw",
+        "create:deployer",
         "create:mechanical_harvester",
+        "create:mechanical_plough",
         "create:andesite_casing",
         "create:brass_casing",
         "create:copper_casing",
@@ -3228,6 +3279,16 @@
         "create:red_sail",
         "create:black_sail",
         "#minecraft:wool"
+      ]
+    },
+    "create/tags/block/plough_blacklist.json": {
+      "values": [
+        "#minecraft:portals"
+      ]
+    },
+    "create/tags/block/plough_whitelist.json": {
+      "values": [
+        "minecraft:snow"
       ]
     },
     "create/tags/block/fan_processing_catalysts/blasting.json": {
@@ -3504,6 +3565,27 @@
         }
       ],
       "random_sequence": "create:blocks/mechanical_saw"
+    },
+    "create/loot_table/blocks/deployer.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "condition": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:deployer"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/deployer"
     },
     "create/loot_table/blocks/sail_frame.json": {
       "type": "minecraft:block",

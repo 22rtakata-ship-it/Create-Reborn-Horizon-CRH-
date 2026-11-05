@@ -180,7 +180,7 @@ with the systems they depend on.
   preserves their snapshots through a failed restoration preflight.
 - [x] Bearing angle trace and snapped log placement on X, Y and Z verified
   against the isolated Java client. [Architecture and results](contraptions.md)
-- [ ] Native glue boxes, chassis and complete block movement rules.
+- [ ] Native chassis and complete block movement rules.
 - [x] Mechanical Bearing: native assembly, rotation, restart and orphan recovery.
 - [x] Windmill Sail Frame and sixteen sail colors. Dye, shear, placement,
   windmill capture, generated speed and restart verified.
@@ -199,18 +199,28 @@ with the systems they depend on.
 - [ ] Native Cart Assembler rails, cart coupling, mounted payload and renderer.
 - [x] Dropped-item collision, grounded rotary and linear rider transfer, and
   collision of narrow piston poles in Horizon.
-- [x] Unobstructed side push from a translating full block, with a Java
-  reference fixture. Obstructed push still differs.
+- [x] Unobstructed and wall-constrained side pushes from a horizontal piston,
+  including mirrored wall exits checked in Java.
 - [x] One ordinary mounted chest on a vertical Mechanical Bearing, with crop
   and cutter loot, item components, restart and landing recovery.
 - [ ] Full entity contact, multiple mounted inventories, moving chest menus
   and cross-chunk persistence.
 - [x] Harvester on supported crops, moving Saw and Drill with cutting stalls,
   and horizontal stationary Saw tree felling.
+- [x] Moving Plough tilling, snow clearing and protection of farmland crops.
+- [x] Downward Deployer planting from its own stock on a vertical Mechanical
+  Bearing, with forty matching Java tick samples and restart coverage.
+- [x] Deployer refill from a single mounted chest and a moving Saw on the same
+  farm. First matching slot, blocked planting and restart checked.
 - [x] Super Glue selection and transfer planner. Deployer stroke, target and
   storage rules checked against Java traces.
-- [ ] Glue selection and placement in game, Deployer and Plough actors,
-  stationary Saw recipes and portable storage and fluid interfaces.
+- [x] Two-click Super Glue and single-column bearing transfer, with durability
+  and saved volume checks.
+- [ ] Original Glue outlines and particles, offhand placement and transfer on other drivers.
+- [x] Stationary Saw recipe timer, candidate cycling and export direction in
+  the engine. Item processing and recipes still need the native adapter.
+- [ ] Deployer filter interface, Plough entity throws, stationary Saw recipe
+  integration, portable storage and fluid interfaces.
 - [ ] Shared-schematic checks: identical machines produce identical results in both clients.
 
 ## 5. Fluids, railways and other content

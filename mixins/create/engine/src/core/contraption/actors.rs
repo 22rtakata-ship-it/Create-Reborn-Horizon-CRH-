@@ -13,6 +13,7 @@ pub mod saw;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Tool {
     Harvester,
+    Plough,
     Saw,
     Drill,
 }
@@ -21,7 +22,7 @@ impl Tool {
     /// Local-space point to transform with the current contraption pose.
     pub fn active_point(self, local_block: Pos, facing: Direction) -> [f64; 3] {
         let reach = match self {
-            Self::Harvester => 0.45,
+            Self::Harvester | Self::Plough => 0.45,
             Self::Saw | Self::Drill => f64::from(0.65_f32),
         };
         let normal = facing.vector();

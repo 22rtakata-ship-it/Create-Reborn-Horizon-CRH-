@@ -45,7 +45,41 @@ storage, with the source distinction for experience from mob kills. A mining
 adapter also needs access to ordinary tool wear, harvest checks and block crack
 stages under the actor identity.
 
-The engine does not register a playable Deployer. Mounted storage binding,
-normal item/entity dispatch, schematic printing, belt recipes and presentation
-remain host integrations. Run `python3 tools/deployer_reference_checks.py`
-against the isolated Java reference for the original sapling fixtures.
+## Moving tree-farm slice
+
+The native adapter registers `create:deployer` with the original six-way
+`facing`, `axis_along_first`, block entity ID and idle USE data. Clicking the
+hand exchanges a stack of plain saplings. In the supported assembly, one
+downward Deployer can ride away from the axis of a vertical Mechanical Bearing.
+It visits the original active cells and plants through Horizon's ordinary
+`PlaceContext` and block-item survival checks. Its sapling stock is finite.
+When the hand is empty, it takes one sapling from the first matching slot of a
+single ordinary mounted chest before attempting that visit. Occupied cells
+and invalid soil leave a withdrawn sapling in the hand. Planting consumes
+exactly one sapling.
+
+The controller column stores the moving hand privately under
+`create:mounted_deployer`. Capture, landing, and item consumption use the
+same column's terrain and attachment transaction. The restored block entity
+retains `Owner`, `Mode`, `Inventory` and `HeldItem`. The native private slot
+backs ordinary inventory spill. This slice runs on the integrated server,
+checks the border, and accepts targets in the controller column. The general
+owner-aware item and entity dispatch described above remains a separate API.
+
+Refill accepts an empty filter or the canonical `Filter` stack for a plain
+sapling. The latter matches by item ID and skips unrelated slots. With an
+empty filter, an unsupported item in the first occupied slot stops the
+bounded adapter at that slot. The chest withdrawal and the new hand are saved
+together, with placement consumption in the subsequent same-column write.
+
+Centered or multiple actors, other drivers, stationary operation, PUNCH,
+filter controls, complex filters and placement with custom item components
+remain pending. The source crafting recipe still depends on the Electron Tube
+and Brass Hand. The moving render uses the source pole/hand pose, with held
+item rendering and shaft animation pending.
+
+Run `python3 tools/deployer_reference_checks.py` against the isolated Java
+reference for the original stationary and piston planting. Run
+`python3 tools/deployer_farm_checks.py --help` for the shared rotating layout,
+tick comparison and native process restart. `tools/deployer_refill_checks.py`
+compares the one-sapling blocked refill, depletion and restored chest slots.

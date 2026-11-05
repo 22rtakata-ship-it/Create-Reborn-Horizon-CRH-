@@ -147,6 +147,10 @@ pub(super) fn owns(block: &str) -> bool {
 }
 
 pub(super) fn entity(block: &str, entity: &mut Option<(String, Compound)>) {
+    if block == super::create_port_deployer::BLOCK && entity.is_none() {
+        *entity = Some((block.into(), super::create_port_deployer::default_nbt()));
+        return;
+    }
     if owns(block) && block != "create:blaze_burner" && entity.is_none() {
         let id = match block {
             "create:creative_motor" => "create:motor",
@@ -398,6 +402,7 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3], ca
         || super::create_port_piston::right_click(game, pos, face)
         || super::create_port_pulley::right_click(game, pos)
         || super::create_port_gantry::right_click(game, pos)
+        || super::create_port_deployer::right_click(game, pos)
     {
         *canceled = true;
         game.swing_arm();
@@ -1326,6 +1331,10 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
 }
 
 pub(super) fn update_tag(entity: &ModBlockEntity, tag: &mut Option<Compound>) {
+    if entity.id == super::create_port_deployer::BLOCK && tag.is_none() {
+        *tag = Some(super::create_port_deployer::update_tag(entity));
+        return;
+    }
     if (owns(&entity.id)
         || matches!(
             entity.id.as_str(),
@@ -1360,6 +1369,15 @@ pub(super) fn update_tag(entity: &ModBlockEntity, tag: &mut Option<Compound>) {
 pub(super) fn container(block: &str, container: &mut Option<ModContainer>) {
     crate::game::create_port_basin::container(block, container);
     crate::game::create_port_millstone::container(block, container);
+    if block == super::create_port_deployer::BLOCK && container.is_none() {
+        *container = Some(ModContainer {
+            slots: 1,
+            faces: std::array::from_fn(|_| Vec::new()),
+            inputs: Vec::new(),
+            outputs: Vec::new(),
+            menu: None,
+        });
+    }
     if block == "create:depot" && container.is_none() {
         *container = Some(ModContainer {
             slots: 9,
@@ -1448,6 +1466,10 @@ pub(super) fn draw(
     entity: &ModBlockEntity,
     draw: &mut BlockEntityDraw,
 ) {
+    if block == super::create_port_deployer::BLOCK {
+        super::create_port_deployer::draw_station(game, pos, entity, draw);
+        return;
+    }
     if !owns(block) {
         return;
     }

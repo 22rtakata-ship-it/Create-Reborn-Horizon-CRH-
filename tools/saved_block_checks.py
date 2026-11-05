@@ -39,10 +39,18 @@ fn value(tag: &Tag) -> Value {
 }
 fn run() -> Result<Value, Box<dyn std::error::Error>> {
     let args:Vec<_> = std::env::args().skip(1).collect();
-    if args.len()!=4 {return Err("raw-nbt x y z required".into());}
+    if args.len()<3 {return Err("raw-nbt x y z or raw-nbt --tag key [...] required".into());}
     let path=std::path::Path::new(&args[0]);
     if path.metadata()?.len()>16<<20 {return Err("NBT exceeds limit".into());}
     let root=nbt::decode_named(&std::fs::read(path)?,&Limits::default())?;
+    if args[1]=="--tag" {
+        let mut tag=root.get(&args[2]);
+        for key in &args[3..] {
+            tag=tag.and_then(Tag::as_compound).and_then(|map| map.get(key));
+        }
+        return Ok(tag.map_or(Value::Null,value));
+    }
+    if args.len()!=4 {return Err("raw-nbt x y z required".into());}
     let pos=[args[1].parse::<i32>()?,args[2].parse()?,args[3].parse()?];
     let Some(Tag::List{values,..})=root.get("block_entities") else {
         return Err("chunk has no block_entities list".into());
@@ -118,11 +126,20 @@ def _raw_chunk(region, chunk_x, chunk_z):
 
 def read_saved_block(scratch, pos, world='CreateParity06'):
     """Return full typed saved BE NBT plus the exact disk chunk fingerprint."""
+    return _read_saved_chunk(scratch, pos, world, list(map(str, pos)))
+
+
+def read_saved_chunk_tag(scratch, pos, keys, world='CreateParity06'):
+    """Return an exact typed tag or null from the chunk holding `pos`."""
+    return _read_saved_chunk(scratch, pos, world, ['--tag', *keys])
+
+
+def _read_saved_chunk(scratch, pos, world, probe_args):
     scratch = Path(scratch).resolve()
     scratch.relative_to((ROOT / '.local').resolve())
     if not world or world in ('.', '..') or '/' in world or '\\' in world:
         raise ValueError('A single private fixture world name is required')
-    x, y, z = pos
+    x, _, z = pos
     chunk_x, chunk_z = x // 16, z // 16
     region = scratch / 'saves' / world / 'dimensions/minecraft/overworld/region' / (
         'r.' + str(chunk_x // 32) + '.' + str(chunk_z // 32) + '.mca')
@@ -134,7 +151,7 @@ def read_saved_block(scratch, pos, world='CreateParity06'):
     import tempfile
     with tempfile.NamedTemporaryFile(dir=work, suffix='.nbt') as stream:
         stream.write(raw); stream.flush()
-        result = subprocess.run([str(binary), stream.name, *map(str, pos)],
+        result = subprocess.run([str(binary), stream.name, *probe_args],
             text=True, capture_output=True, env=environment())
     if result.returncode:
         raise AssertionError(('Saved NBT probe failed', result.stderr, source))

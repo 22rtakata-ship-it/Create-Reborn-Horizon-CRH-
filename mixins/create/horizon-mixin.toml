@@ -1,6 +1,6 @@
 [mod]
 id = "create"
-version = "0.8.0-alpha.3"
+version = "0.8.0-alpha.4"
 
 [compatibility]
 horizon_revision = "9c7f9b2215dfed497aba5522c44f38926628648d"
@@ -217,6 +217,63 @@ bindings = [
   { name = "pos", ty = "[i32; 3]", value = "pos" },
   { name = "face", ty = "[i32; 3]", value = "face" },
   { name = "canceled", ty = "&mut bool", value = "&mut *canceled" },
+]
+
+[[module]]
+id = "super-glue-runtime"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_super_glue"
+source = "super_glue_runtime.rs"
+
+[[module]]
+id = "super-glue-transfer"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_glue_transfer"
+source = "super_glue_transfer.rs"
+
+[[injection]]
+id = "super-glue-player-tick"
+hook = "player_tick"
+hook_version = 1
+kind = "HEAD"
+helper = "super_glue_tick.rs"
+bindings = [{ name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" }]
+
+[[injection]]
+id = "super-glue-attack"
+hook = "left_click_block"
+hook_version = 1
+kind = "HEAD"
+helper = "super_glue_attack.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "canceled", ty = "&mut bool", value = "&mut *canceled" },
+]
+
+[[injection]]
+id = "super-glue-attack-input"
+hook = "interaction_key"
+hook_version = 1
+kind = "HEAD"
+helper = "super_glue_attack_input.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "button", ty = "i32", value = "button" },
+  { name = "swing", ty = "&mut bool", value = "&mut *swing_hand" },
+  { name = "canceled", ty = "&mut bool", value = "&mut *canceled" },
+]
+
+[[injection]]
+id = "super-glue-attack-packet"
+hook = "net_from_client"
+hook_version = 1
+kind = "HEAD"
+helper = "super_glue_packet.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "player", ty = "u128", value = "player" },
+  { name = "channel", ty = "&str", value = "channel" },
+  { name = "data", ty = "&[u8]", value = "data" },
 ]
 
 # API 359 has a server right-click hook but no block client-result hook.
@@ -1116,6 +1173,12 @@ id = "contraption-runtime"
 file = "crates/horizon-client/src/game.rs"
 name = "create_port_contraption"
 source = "contraption_runtime.rs"
+
+[[module]]
+id = "contraption-deployer-runtime"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_deployer"
+source = "contraption_deployer_runtime.rs"
 
 [[module]]
 id = "sail-runtime"

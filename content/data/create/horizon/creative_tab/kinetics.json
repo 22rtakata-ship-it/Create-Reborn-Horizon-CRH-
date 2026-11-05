@@ -43,6 +43,8 @@
     "create:gantry_carriage",
     "create:mechanical_harvester",
     "create:mechanical_saw",
+    "create:mechanical_plough",
+    "create:deployer",
     "create:sail_frame",
     "create:white_sail",
     "create:iron_sheet",
@@ -64,6 +66,7 @@
     "create:whisk",
     "create:empty_blaze_burner",
     "create:blaze_cake",
-    "create:creative_blaze_cake"
+    "create:creative_blaze_cake",
+    "create:super_glue"
   ]
 }

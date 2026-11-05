@@ -17,28 +17,53 @@ The current native adapter limits each structure and its swept footprint to one
 loaded chunk column. This keeps the source, target and persistent record in the
 same chunk save. It refuses unsupported snapshots and occupied landing cells
 instead of discarding blocks. Capture is limited to an allowlist of stateless
-blocks, idle tools and a single ordinary chest on a vertical Mechanical
-Bearing. Super Glue, chassis, other inventories and fluid-containing payloads
+blocks, idle tools and a single ordinary chest and Deployer on a vertical
+Mechanical Bearing. Chassis, other inventories and fluid-containing payloads
 still need adapters. The supported Gantry path has a fixed loaded rail span.
 The Rope Pulley supports dry rope and cargo. The clockwork hands are captured
 and restored together and currently accept vanilla payloads only.
 
 Collision uses exact boxes at quarter turns, narrow strips for oblique rotation
 and the registered shapes of piston parts and tools. Tests cover dropped items
-and grounded riders on full block tops, including unobstructed side pushes from
-a translating full block. A blocked push clips against the terrain. The Java
-wall fixture also moves the player sideways. Other side impacts, arbitrary
-tilted contact, rider transfer on partial shapes, mounted mobs and downward
-lock behavior remain open. Sable integration remains a separate milestone.
+and grounded riders on full block tops. Horizontal translating shapes resolve
+player overlap using the minimum-separation axes from Java's
+`ContinuousOBBCollider`, then use Horizon's terrain collision resolver. The
+wall fixture checks sideways separation in both directions. Contact on
+rotating sides, arbitrary tilted contact, the Java client's sub-tick
+actuator interpolation, rider transfer on partial shapes, mounted mobs and
+downward lock behavior remain open. Sable integration remains a separate
+milestone.
 
 The Harvester handles wheat, carrots, potatoes, beetroot, Nether Wart, cocoa,
 sweet berries, sugar cane and supported leaves or growing plants. A moving Saw
 pauses its platform while cutting supported vanilla trees, fungi and stalks.
 A horizontal stationary Saw also fells trees. The moving Drill breaks eligible
-vanilla blocks and drops their loot. Cut progress on moving tools resets across
-restarts. Block breaking damage to passengers, stationary Saw processing
-recipes and planting trees with a Deployer remain open.
+vanilla blocks and drops their loot. The Plough tills exposed soil, clears
+snow and protects crops rooted in farmland. Cut progress on moving tools resets
+across restarts. Plough entity throws, block breaking damage to passengers
+and stationary Saw processing recipes remain open.
+
+A downward Deployer on a vertical Mechanical Bearing plants ordinary saplings
+from its hand and refills one at a time from a single mounted chest. The plain
+sapling filter can be set in saved data. Stop the bearing to swap the held
+stack by clicking the hand. The owner, filter and remaining stock survive a
+restart. Stationary operation, punching, complex filters and their interface
+remain open.
 [Deployer engine and host boundary](deployer.md)
+
+## Super Glue
+
+Use Super Glue on two connected blocks to store the selected volume. Sneak-use
+on a block or change the held item to clear the first corner. With glue in hand,
+attack a block through an existing volume to remove that volume. Survival uses
+the two durability calls in Create 6.0.10. Creative leaves the item intact.
+
+Volumes currently fit in one loaded chunk column. Mechanical and Windmill
+Bearings transfer them with their payload and restore them at the snapped
+landing pose. A volume that would be split or include a stationary block stops
+capture. The mounted volume shares the chunk save with the structure. The
+original selection outlines, particles, offhand placement and transfer on other
+drivers remain open.
 
 ## Mounted chest
 
@@ -101,11 +126,23 @@ controller motion. The current implementation is exercised by Rust unit tests.
   payload released onto two original assembler rails in Java.
 - `tools/cart_coupling_math_checks.py` compares 722 rail corrections bit for
   bit with `CouplingPhysics.followLinkOnRail` in the original JAR.
+- `tools/super_glue_reference_checks.py` observes the original selection,
+  durability and removal. `tools/super_glue_native_checks.py --transfer` reads
+  saved volumes before and after restart, removal and bearing landing.
 - `tools/contraption_collision_checks.py --player --piston --side` verifies
-  player and dropped-item movement in a disposable Horizon world. The separate
-  Java contact tool records the unobstructed push and wall response.
+  player and dropped-item movement in a disposable Horizon world.
+  `tools/contraption_contact_reference_checks.py` records the unobstructed
+  push and both wall exits on the original Java client.
 - `tools/piston_interaction_checks.py` verifies applying slime, preserving the
-  facing and shaft axis, wrenching retracted pistons and breaking a pole.
+  facing and shaft axis, wrenching retracted pistons and breaking a pole in
+  both clients.
+- `tools/contraption_contact_oracle.py` runs 945 comparisons against the
+  discrete horizontal resolver in the pinned original JAR.
+- `tools/plough_checks.py` compares forward and reverse passes, including
+  grass, coarse and rooted dirt, farmland crops, three snow layers and drops.
+- `tools/deployer_farm_checks.py` and `tools/deployer_refill_checks.py --combined`
+  compare planting ticks and chest slots, then test a restart and a shared
+  Saw and Deployer rotor in Horizon.
 - `tools/actor_reference_checks.py` runs the original Java Create and Catnip
   classes against the Rust actor rules. `tools/actor_native_checks.py` verifies
   crop resets and drops, tree felling, drilling and motion after a cut.

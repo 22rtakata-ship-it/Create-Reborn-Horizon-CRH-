@@ -208,7 +208,9 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3]) ->
                 }
             }
             crate::game::create_port_sounds::wrench(game, pos, true);
-        } else if block == "create:large_water_wheel" {
+        } else if block == "create:large_water_wheel"
+            || super::create_port_contraption_actors::attached_actor(&block)
+        {
             return false;
         } else if let Some(face) = Direction::from_vector(face) {
             if super::create_port_piston::is_piston(&block) {

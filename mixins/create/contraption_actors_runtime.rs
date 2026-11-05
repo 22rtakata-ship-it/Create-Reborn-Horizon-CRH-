@@ -6,6 +6,7 @@
 
 use super::{
     Game, create_port_contraption as contraption, create_port_contraption_storage as storage,
+    create_port_deployer as deployer,
 };
 use crate::items::ItemStack;
 use create_engine::{
@@ -16,6 +17,7 @@ use create_engine::{
         harvester::{self, Age, Block, LootTool, Plant, Replacement, Rules},
         saw::{self, Material, Target, TreeBlock, TreeStem},
     },
+    deployer as deployer_core,
     kinetics::{Axis, Pos},
     placement::Direction,
 };
@@ -36,11 +38,16 @@ use std::{
 };
 
 const HARVESTER: &str = "create:mechanical_harvester";
+pub(super) const PLOUGH: &str = "create:mechanical_plough";
 const SAW: &str = "create:mechanical_saw";
 const DRILL: &str = "create:mechanical_drill";
 const UPDATE: i32 = flags::UPDATE_NEIGHBORS | flags::UPDATE_CLIENTS;
 const TREE_SEARCH_LIMIT: usize = 16_384;
 static NEXT_BREAKER: AtomicI32 = AtomicI32::new(i32::MIN);
+
+pub(super) fn attached_actor(block: &str) -> bool {
+    matches!(block, HARVESTER | PLOUGH)
+}
 
 #[derive(Clone, Default)]
 struct Actor {
@@ -116,10 +123,12 @@ pub(super) fn remove(game: &mut Game<'_>, controller: Pos) {
 
 pub(super) fn tick(game: &mut Game<'_>, previous: &Record, current: &Record) {
     if game.options.execution_role.is_client()
-        || !current
-            .blocks
-            .iter()
-            .any(|(_, state)| matches!(state.name.as_str(), HARVESTER | SAW | DRILL))
+        || !current.blocks.iter().any(|(_, state)| {
+            matches!(
+                state.name.as_str(),
+                HARVESTER | PLOUGH | SAW | DRILL | deployer::BLOCK
+            )
+        })
     {
         return;
     }
@@ -137,12 +146,6 @@ pub(super) fn tick(game: &mut Game<'_>, previous: &Record, current: &Record) {
     let origin_after = DVec3::from_array(current.origin_at(1.0));
     let mount = storage::mounted_chest(current);
     for (local, state) in &current.blocks {
-        let tool = match state.name.as_str() {
-            HARVESTER => Tool::Harvester,
-            SAW => Tool::Saw,
-            DRILL => Tool::Drill,
-            _ => continue,
-        };
         let Some(facing) = state
             .properties
             .get("facing")
@@ -150,7 +153,50 @@ pub(super) fn tick(game: &mut Game<'_>, previous: &Record, current: &Record) {
         else {
             continue;
         };
-        if tool == Tool::Harvester && facing.axis() == Axis::Y {
+        if state.name == deployer::BLOCK && deployer::supported_record(current) {
+            let local_point = DVec3::from_array(deployer_core::active_point(*local, facing));
+            // Java's bearing publishes an angle during its block entity turn.
+            // Its independently ticked contraption first samples the published
+            // moving pose, then visits cells using the preceding angle.
+            if !actors.contains_key(local) && previous.angle == 0.0 {
+                continue;
+            }
+            let point = world_point(origin_before, before, local_point);
+            let sample = |position| Sample {
+                position,
+                facing,
+                stalled: false,
+                disabled: false,
+                allow_stationary_first_visit: false,
+            };
+            let actor = actors.entry(*local).or_default();
+            let movement = deployer_core::track_actor(
+                &mut actor.tracker,
+                sample(point),
+                |m| m,
+                |m| (before.conjugate() * DVec3::from_array(m)).to_array(),
+            );
+            if let Some(cell) = movement.visit {
+                let forward =
+                    (before * DVec3::from_array(facing.vector().map(f64::from))).to_array();
+                let vertical = (before * DVec3::Z).to_array();
+                deployer::plant(
+                    game,
+                    current,
+                    *local,
+                    deployer_core::moving_aim(cell, point, forward, vertical),
+                );
+            }
+            continue;
+        }
+        let tool = match state.name.as_str() {
+            HARVESTER => Tool::Harvester,
+            PLOUGH => Tool::Plough,
+            SAW => Tool::Saw,
+            DRILL => Tool::Drill,
+            _ => continue,
+        };
+        if matches!(tool, Tool::Harvester | Tool::Plough) && facing.axis() == Axis::Y {
             continue;
         }
         let point = DVec3::from_array(tool.active_point(*local, facing));
@@ -169,7 +215,7 @@ pub(super) fn tick(game: &mut Game<'_>, previous: &Record, current: &Record) {
                 identity,
                 identity,
             );
-            if matches!(tool, Tool::Saw | Tool::Drill) {
+            if tool != Tool::Harvester {
                 actor.cutter = Some(MovingCutter {
                     breaker: Breaker::default(),
                     id: NEXT_BREAKER.fetch_add(1, Ordering::Relaxed),
@@ -355,6 +401,79 @@ pub(super) fn drill_can_break(game: &Game<'_>, position: Pos) -> bool {
     drill_target(game, position).breakable
 }
 
+pub(super) fn plough_can_break(game: &Game<'_>, position: Pos) -> bool {
+    plough_target(game, position).breakable
+}
+
+fn plough_target(game: &Game<'_>, position: Pos) -> breaking::Target {
+    let invalid = breaking::Target {
+        hardness: -1.0,
+        breakable: false,
+    };
+    let Some(id) = loaded_state(game, position) else {
+        return invalid;
+    };
+    let Some(state) = game.pack.assets.registry.state(id) else {
+        return invalid;
+    };
+    let below = [position[0], position[1] - 1, position[2]];
+    let facts = game.res.facts().get(id);
+    let breakable = state.name.starts_with("minecraft:")
+        && !game.res.facts().is_air(id)
+        && facts.hardness >= 0.0
+        && loaded_state(game, below).is_some()
+        && game.native_block(below) != "minecraft:farmland"
+        && !matches!(
+            state.name.as_str(),
+            "minecraft:water" | "minecraft:lava" | "minecraft:bubble_column"
+        )
+        && !in_tag(game, state, "create:plough_blacklist")
+        && (in_tag(game, state, "create:plough_whitelist") || !game.collision.may_collide(id))
+        && !game
+            .world
+            .block_entities
+            .contains_key(&(position[0], position[1], position[2]));
+    breaking::Target {
+        hardness: facts.hardness,
+        breakable,
+    }
+}
+
+// PloughMovementBehaviour clips from the active cell's center to the center
+// of the cell below, then uses an unbreakable diamond hoe on that top face.
+// This adapter supports an unobstructed ray to the ordinary vanilla soils.
+fn till(game: &mut Game<'_>, position: Pos) {
+    let [x, y, z] = position;
+    let ground = [x, y - 1, z];
+    if !loaded_state(game, position).is_some_and(|id| game.res.facts().is_air(id))
+        || loaded_state(game, ground).is_none()
+    {
+        return;
+    }
+    let soil = game.native_block(ground);
+    let replacement = match soil.as_str() {
+        "minecraft:grass_block" | "minecraft:dirt" | "minecraft:dirt_path" => "minecraft:farmland",
+        "minecraft:coarse_dirt" | "minecraft:rooted_dirt" => "minecraft:dirt",
+        _ => return,
+    };
+    let Some(state) = game.pack.assets.registry.default_state(replacement) else {
+        return;
+    };
+    let changed = game.with_level(|behaviour, level, ticks| {
+        if !behaviour.set_block(level, ticks, BlockPos::new(x, y - 1, z), state, UPDATE) {
+            return false;
+        }
+        level.native_play_sound("minecraft:item.hoe.till", block_center(ground), 4, 1.0, 1.0);
+        true
+    });
+    if changed && soil == "minecraft:rooted_dirt" {
+        game.pop_resource(position, ItemStack::new("minecraft:hanging_roots", 1));
+    }
+    if let Err(error) = game.process_level_events() {
+        log::warn!("Create Plough could not update {ground:?}: {error}");
+    }
+}
+
 pub(super) fn harvester_can_pass(game: &Game<'_>, position: Pos) -> bool {
     let Some(id) = loaded_state(game, position) else {
         return false;
@@ -387,24 +506,22 @@ fn tick_cutter(
     at: [f64; 3],
     facing: [f64; 3],
 ) {
-    let target = |pos| {
-        if tool == Tool::Drill {
-            drill_target(game, pos)
-        } else {
-            saw_target(game, pos).breaking_target()
-        }
-    };
     if let Some(position) = movement.visit {
-        cutter.breaker.visit(position, target(position));
+        cutter
+            .breaker
+            .visit(position, cutter_target(game, tool, position));
         if tool == Tool::Saw && saw::vertical(facing) {
             cutter.breaker.forget_target();
+        }
+        if tool == Tool::Plough {
+            till(game, position);
         }
     }
     let step = cutter.breaker.tick(
         movement.relative_motion,
         movement.motion,
         ContraptionKind::Other,
-        target,
+        |position| cutter_target(game, tool, position),
     );
     let strike = match step {
         Step::Hit { position, .. } | Step::Finish { position } => position,
@@ -426,10 +543,19 @@ fn tick_cutter(
             if tool == Tool::Saw {
                 finish_saw(game, mount, strike, at, movement);
             } else {
-                break_target(game, mount, strike, at, movement.motion);
+                break_target(game, mount, strike, at, movement.motion, tool);
             }
         }
         _ => unreachable!(),
+    }
+}
+
+fn cutter_target(game: &Game<'_>, tool: Tool, position: Pos) -> breaking::Target {
+    match tool {
+        Tool::Plough => plough_target(game, position),
+        Tool::Saw => saw_target(game, position).breaking_target(),
+        Tool::Drill => drill_target(game, position),
+        Tool::Harvester => unreachable!("harvesters do not stall and break blocks"),
     }
 }
 
@@ -470,10 +596,21 @@ fn break_target(
     position: Pos,
     at: [f64; 3],
     motion: [f64; 3],
+    tool: Tool,
 ) {
     let top = top_falling_block(game, position);
     if let Some(id) = loaded_state(game, top) {
-        chop(game, top, id, 1.0, at, DropMotion::Actor { mount, motion });
+        let shovel = (tool == Tool::Plough && game.native_block(top) == "minecraft:snow")
+            .then(|| ItemStack::new("minecraft:iron_shovel", 1));
+        chop(
+            game,
+            top,
+            id,
+            1.0,
+            at,
+            DropMotion::Actor { mount, motion },
+            shovel.as_ref().map_or(DropTool::None, DropTool::Actor),
+        );
     }
 }
 
@@ -501,7 +638,7 @@ fn finish_saw(
         mount,
         motion: movement.motion,
     };
-    if !chop(game, top, id, 1.0, at, drop) || is_leaves {
+    if !chop(game, top, id, 1.0, at, drop, DropTool::None) || is_leaves {
         return;
     }
 
@@ -523,7 +660,15 @@ pub(super) fn finish_stationary_saw(game: &mut Game<'_>, origin: Pos, target: Po
     for coord in &mut at {
         *coord += f64::from((game.world.random.next_float() - 0.5) * 0.25);
     }
-    if !chop(game, target, id, 1.0, at, DropMotion::Stationary) {
+    if !chop(
+        game,
+        target,
+        id,
+        1.0,
+        at,
+        DropMotion::Stationary,
+        DropTool::None,
+    ) {
         return;
     }
     let direction = std::array::from_fn(|i| f64::from(target[i] - origin[i]));
@@ -569,6 +714,7 @@ fn fell_tree(
             part.particles_chance(),
             block_center(cell),
             DropMotion::Tree { mount, velocity },
+            DropTool::None,
         );
     }
 }
@@ -585,6 +731,12 @@ enum DropMotion {
     },
 }
 
+enum DropTool<'a> {
+    None,
+    Passive(&'a ItemStack),
+    Actor(&'a ItemStack),
+}
+
 fn chop(
     game: &mut Game<'_>,
     position: Pos,
@@ -592,6 +744,7 @@ fn chop(
     particles_chance: f32,
     at: [f64; 3],
     motion: DropMotion,
+    loot_tool: DropTool<'_>,
 ) -> bool {
     if loaded_state(game, position) != Some(state) {
         return false;
@@ -601,7 +754,7 @@ fn chop(
     if fluid == state {
         return false;
     }
-    let mut drops = drops(game, position, state, particles_chance, None);
+    let mut drops = drops(game, position, state, particles_chance, loot_tool);
     if loaded_state(game, position) != Some(state) {
         return false;
     }
@@ -641,7 +794,7 @@ fn drops(
     position: Pos,
     state: BlockStateId,
     particles_chance: f32,
-    tool: Option<&ItemStack>,
+    tool: DropTool<'_>,
 ) -> Vec<ItemStack> {
     if game.world.random.next_float() < particles_chance {
         game.level_event_at(2001, position, state.0 as i32);
@@ -654,13 +807,21 @@ fn drops(
         .state(state)
         .and_then(|block| game.loot_block_entity(position, &block.name));
     let loot_place = game.loot_place_at(block_center(position), saved);
+    let (tool, breaker) = match tool {
+        DropTool::None => (None, false),
+        DropTool::Passive(stack) => (Some(stack), false),
+        DropTool::Actor(stack) => (Some(stack), true),
+    };
     let mut drops = with_native_loot_place(loot_place, || {
-        world_items!(game).block_drops_in(
+        world_items!(game).block_drops_exploded(
             registry,
             state,
             tool,
+            &[],
             &mut game.world.random,
             Some((&mut game.rand_sequences, game.level.seed)),
+            None,
+            breaker,
         )
     });
     game.native_block_drops(position, state, None, tool, None, &mut drops);
@@ -797,7 +958,7 @@ fn harvest(
         position,
         original,
         cut.particles_chance,
-        tool.as_ref(),
+        tool.as_ref().map_or(DropTool::None, DropTool::Passive),
     );
     if contraption::state(game, position) != original {
         return;

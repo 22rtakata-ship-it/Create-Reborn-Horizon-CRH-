@@ -41,6 +41,8 @@ pub const BLOCKS: &[&str] = &[
     "gantry_carriage",
     "mechanical_harvester",
     "mechanical_saw",
+    "mechanical_plough",
+    "deployer",
     "sail_frame",
     "white_sail",
 ];
@@ -87,6 +89,7 @@ pub const ITEMS: &[&str] = &[
     "empty_blaze_burner",
     "blaze_cake",
     "creative_blaze_cake",
+    "super_glue",
 ];
 pub const PARTS: &[&str] = &[
     "shaft",
@@ -144,6 +147,9 @@ pub const PARTS: &[&str] = &[
     "mechanical_saw/blade_vertical_active",
     "mechanical_saw/blade_vertical_inactive",
     "mechanical_saw/blade_vertical_reversed",
+    "deployer/pole",
+    "deployer/hand_pointing",
+    "deployer/hand_holding",
     "blaze_burner/block",
     "blaze_burner/blaze/inert",
     "blaze_burner/blaze/idle",

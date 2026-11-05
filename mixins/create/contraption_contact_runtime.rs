@@ -3,9 +3,10 @@
 
 use super::{Game, create_port_contraption::mirror_sync};
 use create_engine::contraption::contact::{
-    linear_face_separation, linear_top_motion, rotary_top_motion,
+    ContactBox, linear_face_separation, linear_overlap_response, linear_top_motion,
+    rotary_top_motion,
 };
-use horizon_client::collisions::{EntityCollisions, SceneCollisions};
+use horizon_client::collisions::{EntityCollisions, LookupCollisions, SceneCollisions};
 use horizon_client_render::create_contraption_scene::{KEY, Record, full_cube_payload, read};
 use horizon_core::geometry::Vec3;
 use horizon_world::{
@@ -53,6 +54,11 @@ fn previous_records(game: &Game<'_>, data: &[u8]) -> Option<((i32, i32), Vec<Rec
 }
 
 fn carry(game: &mut Game<'_>, column: (i32, i32), previous: &[Record]) {
+    let max_step = game
+        .player
+        .as_mut()
+        .and_then(|player| player.attribute("minecraft:step_height").ok())
+        .map_or(0.6, |step| step as f32);
     let Some(player) = &game.player else { return };
     let Some(current) = game
         .world
@@ -117,8 +123,22 @@ fn carry(game: &mut Game<'_>, column: (i32, i32), previous: &[Record]) {
                 if size.y > 1.0 {
                     high[1] -= 2.0 / 16.0;
                 }
-                linear_face_separation(previous_origin, current_origin, full_blocks, low, high)
-                    .map(|motion| (motion, true))
+                if record.axis == 1 {
+                    linear_face_separation(previous_origin, current_origin, full_blocks, low, high)
+                        .map(|motion| (motion, true))
+                } else {
+                    let body = ContactBox {
+                        min: low,
+                        max: high,
+                    };
+                    let shapes = linear_colliders(game, record, current_origin);
+                    // Horizon's ordinary collision path establishes ground
+                    // contact. A touching top needs no hard separation.
+                    if !shapes.iter().any(|&shape| body.penetrates(shape)) {
+                        return None;
+                    }
+                    linear_overlap_response(body, &shapes, max_step).map(|motion| (motion, true))
+                }
             }
             _ => None,
         }
@@ -181,4 +201,37 @@ fn carry(game: &mut Game<'_>, column: (i32, i32), previous: &[Record]) {
         }
         player.position = to;
     }
+}
+
+fn linear_colliders(game: &Game<'_>, record: &Record, origin: [f64; 3]) -> Vec<ContactBox> {
+    let mut lookup = LookupCollisions {
+        block: &|_, _, _| game.world.air,
+        binding: game.collision,
+    };
+    let mut boxes = Vec::new();
+    for (local, state) in &record.blocks {
+        let at: [f64; 3] = std::array::from_fn(|i| origin[i] + f64::from(local[i]));
+        if full_cube_payload(state) {
+            boxes.push(ContactBox {
+                min: at,
+                max: at.map(|value| value + 1.0),
+            });
+            continue;
+        }
+        let Some(id) = game.pack.assets.registry.id(state) else {
+            continue;
+        };
+        let Ok(shape) = game.collision.collision_shape(&mut lookup, id, *local) else {
+            continue;
+        };
+        for bounds in shape.boxes() {
+            let min = bounds.min_position().components();
+            let max = bounds.max_position().components();
+            boxes.push(ContactBox {
+                min: std::array::from_fn(|i| at[i] + min[i]),
+                max: std::array::from_fn(|i| at[i] + max[i]),
+            });
+        }
+    }
+    boxes
 }

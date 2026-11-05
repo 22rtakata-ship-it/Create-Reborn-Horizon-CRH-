@@ -22,6 +22,12 @@ GANTRY = (918, 83, 103)
 GANTRY_LEVER = (920, 82, 104)
 STATIONARY_SAW = (919, 82, 110)
 STATIONARY_SAW_LEVER = (918, 82, 111)
+PLOUGH = (904, 82, 120)
+PLOUGH_LEVER = (905, 81, 120)
+DEPLOYER = (920, 82, 120)
+DEPLOYER_LEVER = (921, 81, 120)
+GLUE = (904, 82, 136)
+GLUE_LEVER = (905, 81, 136)
 SAW_TREE = ((920, 83, 87), (920, 84, 87), (920, 85, 87))
 
 
@@ -131,3 +137,57 @@ def linear_stations(batch):
         batch.put((920, y, 110), 'minecraft:oak_log[axis=y]')
     batch.put((921, 84, 110), 'minecraft:oak_leaves[persistent=true,distance=1]')
     sign(batch, (921, 81, 113), ['STATIONARY SAW', 'Release clutch.', 'Cuts the trunk', 'and canopy.'])
+
+
+def actor_plaza(batch):
+    batch.load(PLOUGH)
+    batch.command('fill 897 81 115 925 94 126 minecraft:air')
+    batch.command('fill 897 80 115 925 80 126 minecraft:smooth_stone')
+
+
+def plough_station(batch):
+    farm_drive(batch, PLOUGH)
+    x, y, z = PLOUGH
+    for i in range(3):
+        batch.put((x + i, y + 1, z), 'minecraft:slime_block')
+    batch.put((x + 3, y + 1, z), 'create:mechanical_plough[facing=north]')
+    for dx, dz, soil in (
+        (3, -1, 'grass_block'), (2, -2, 'coarse_dirt'),
+        (1, -3, 'rooted_dirt'), (0, -3, 'stone'), (-1, -3, 'farmland[moisture=7]'),
+    ):
+        batch.put((x + dx, y, z + dz), 'minecraft:' + soil)
+    batch.put((x, y + 1, z - 3), 'minecraft:snow[layers=3]')
+    batch.put((x - 1, y + 1, z - 3), 'minecraft:wheat[age=3]')
+    sign(batch, (906, 81, 123), ['PLOUGH', 'Release clutch.', 'Tills soil and', 'clears snow.'])
+
+
+def deployer_station(batch):
+    farm_drive(batch, DEPLOYER)
+    x, y, z = DEPLOYER
+    batch.command('fill 917 80 117 923 80 123 minecraft:dirt')
+    batch.put((x + 1, y - 2, z - 1), 'minecraft:stone')
+    batch.put((x + 1, y - 1, z + 2), 'minecraft:oak_sapling')
+    for i in range(2):
+        batch.put((x + i, y + 1, z), 'minecraft:slime_block')
+    batch.put((x + 2, y + 1, z), 'create:deployer[facing=down,axis_along_first=false]'
+              '{Mode:"USE",Filter:{id:"minecraft:oak_sapling",count:1},FilterAmount:64,UpTo:1b,'
+              'Inventory:[{Slot:0b,id:"minecraft:oak_sapling",count:2}]}')
+    batch.put((x, y + 1, z + 1), 'minecraft:chest[facing=north]{Items:['
+              '{Slot:0b,id:"minecraft:oak_log",count:4},'
+              '{Slot:3b,id:"minecraft:oak_sapling",count:3},'
+              '{Slot:8b,id:"minecraft:oak_sapling",count:2}]}')
+    batch.put((x - 1, y + 1, z), 'create:mechanical_saw[facing=south,axis_along_first=false,flipped=false]')
+    for dy in range(1, 4):
+        batch.put((x - 1, y + dy, z + 1), 'minecraft:oak_log[axis=y]')
+    sign(batch, (924, 81, 123), ['TREE FARM', 'Release clutch.', 'Plants and cuts.', 'Stop for chest.'])
+
+
+def glue_station(batch):
+    batch.load(GLUE)
+    batch.command('fill 898 81 130 911 94 142 minecraft:air')
+    batch.command('fill 898 80 130 911 80 142 minecraft:smooth_stone')
+    farm_drive(batch, GLUE)
+    x, y, z = GLUE
+    batch.put((x, y + 1, z), 'minecraft:oak_planks')
+    batch.put((x + 1, y + 1, z), 'minecraft:spruce_planks')
+    sign(batch, (907, 81, 139), ['SUPER GLUE', 'Click two planks', 'with glue. Start', 'with the lever.'])

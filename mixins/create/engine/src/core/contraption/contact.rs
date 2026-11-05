@@ -6,6 +6,78 @@ use super::Rotation;
 use crate::kinetics::{Axis, Pos};
 
 const CONTACT_EPSILON: f64 = 1.0e-7;
+const SEPARATION_EPSILON: f64 = 1.0e-4;
+
+#[derive(Clone, Copy, Debug)]
+pub struct ContactBox {
+    pub min: [f64; 3],
+    pub max: [f64; 3],
+}
+
+impl ContactBox {
+    pub fn penetrates(self, other: Self) -> bool {
+        (0..3).all(|i| {
+            self.max[i].min(other.max[i]) - self.min[i].max(other.min[i]) > CONTACT_EPSILON
+        })
+    }
+}
+
+/// The discrete, axis-aligned branch of Java's ContinuousOBBCollider.
+/// Evaluate every shape against the accumulated response, since clearing one
+/// shape can intersect another part of the moving structure.
+pub fn linear_overlap_response(
+    body: ContactBox,
+    shapes: &[ContactBox],
+    max_step: f32,
+) -> Option<[f64; 3]> {
+    let min = body.min.map(|value| value - CONTACT_EPSILON);
+    let max = body.max.map(|value| value + CONTACT_EPSILON);
+    let radius: [f64; 3] = std::array::from_fn(|i| (max[i] - min[i]) * 0.5);
+    let center: [f64; 3] = std::array::from_fn(|i| min[i] + radius[i]);
+    let mut response = [0.0; 3];
+    for pass in 0..2 {
+        for shape in shapes {
+            let offset: [f64; 3] = std::array::from_fn(|i| {
+                center[i] + response[i] - (shape.min[i] + shape.max[i]) * 0.5
+            });
+            let combined: [f64; 3] =
+                std::array::from_fn(|i| (shape.max[i] - shape.min[i]) * 0.5 + radius[i]);
+            let depth: [f64; 3] = std::array::from_fn(|i| combined[i] - offset[i].abs());
+            if depth.iter().any(|&depth| depth < 0.0) {
+                continue;
+            }
+            let step = combined[1] - offset[1];
+            if step <= f64::from(max_step) {
+                if step > 0.0 {
+                    response[1] += step + SEPARATION_EPSILON;
+                }
+                continue;
+            }
+            // Java tests X, Y and Z in this order and replaces equal minima.
+            // A centered axis supplies no direction, so it cannot win the tie.
+            let mut selected = None;
+            for axis in 0..3 {
+                if offset[axis] != 0.0 && selected.is_none_or(|other| depth[axis] <= depth[other]) {
+                    selected = Some(axis);
+                }
+            }
+            if let Some(axis) = selected
+                && depth[axis] != 0.0
+            {
+                response[axis] += (depth[axis] + SEPARATION_EPSILON).copysign(offset[axis]);
+            }
+        }
+        if pass == 1 || response[1] == 0.0 {
+            break;
+        }
+        response[0] *= 129.0 / 128.0;
+        response[2] *= 129.0 / 128.0;
+    }
+    response
+        .iter()
+        .any(|&component| component != 0.0)
+        .then_some(response)
+}
 
 /// Contact from a grounded body on a translating full-block top. Rising tops
 /// supply lift, while the normal gravity path follows a receding surface.
@@ -164,6 +236,39 @@ mod tests {
         ] {
             assert!(linear_face_separation(start, [0.25, 0.0, 0.0], [[0; 3]], min, max).is_none());
         }
+    }
+
+    #[test]
+    fn overlap_response_uses_the_nearer_edge_of_a_narrow_piston_arm() {
+        let arm = ContactBox {
+            min: [0.0, 0.375, 0.375],
+            max: [0.75, 0.625, 0.625],
+        };
+        for (z, side) in [(0.55, 1.0), (0.45, -1.0)] {
+            let body = ContactBox {
+                min: [0.3, 0.0, z - 0.3],
+                max: [0.9, 1.675, z + 0.3],
+            };
+            assert_motion(
+                linear_overlap_response(body, &[arm], 0.6),
+                [0.0, 0.0, side * 0.3751001],
+            );
+        }
+    }
+
+    #[test]
+    fn touching_a_platform_top_is_not_a_hard_overlap() {
+        let platform = ContactBox {
+            min: [0.0; 3],
+            max: [1.0; 3],
+        };
+        let mut body = ContactBox {
+            min: [0.2, 1.0, 0.2],
+            max: [0.8, 2.675, 0.8],
+        };
+        assert!(!body.penetrates(platform));
+        body.min[1] -= 0.01;
+        assert!(body.penetrates(platform));
     }
 
     #[test]

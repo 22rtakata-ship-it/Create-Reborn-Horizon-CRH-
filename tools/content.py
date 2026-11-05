@@ -8,6 +8,7 @@ from common import ROOT, NATIVE
 from pulley_content import rope_pulley
 from gantry_content import gantry
 from sail_content import COLORED_SAILS, sails
+from deployer_content import deployer
 
 CONTENT = ROOT / "content"
 BLOCKS = ["creative_motor", "shaft", "cogwheel", "large_cogwheel", "mechanical_press", "depot"]
@@ -250,13 +251,14 @@ def contraption_actors():
     properties = {"hardness": 1.5, "explosion_resistance": 6, "render_shape": "MODEL",
                   "sounds": "minecraft:andesite"}
     harvester = "mechanical_harvester"
+    plough = "mechanical_plough"
     saw = "mechanical_saw"
     horizontal = {"north": 0, "east": 90, "south": 180, "west": 270}
     harvester_bounds = {
         "south": [0, 2, 0, 16, 14, 3], "north": [0, 2, 13, 16, 14, 16],
         "east": [0, 2, 0, 3, 14, 16], "west": [13, 2, 0, 16, 14, 16],
     }
-    write(f"data/create/horizon/block/{harvester}.json", {
+    attached = {
         "template": "minecraft:glass", "item": True, "properties": properties,
         "state_properties": {"facing": {"type": "enum", "values": list(horizontal)},
                              "waterlogged": {"type": "boolean"}},
@@ -264,14 +266,21 @@ def contraption_actors():
         "shapes": {"property": "facing", "values": {
             side: [[coordinate / 16 for coordinate in box]] for side, box in harvester_bounds.items()
         }},
-    })
-    write(f"assets/create/blockstates/{harvester}.json", {
-        "variants": {f"facing={side},waterlogged={wet}": {
-            "model": f"create:block/{harvester}/block", **({"y": yaw} if yaw else {}),
-        } for side, yaw in horizontal.items() for wet in ("false", "true")},
-    })
+    }
+    for name, appearance in ((harvester, f"{harvester}/block"), (plough, plough)):
+        write(f"data/create/horizon/block/{name}.json", attached)
+        write(f"assets/create/blockstates/{name}.json", {
+            "variants": {f"facing={side},waterlogged={wet}": {
+                "model": f"create:block/{appearance}", **({"y": yaw} if yaw else {}),
+            } for side, yaw in horizontal.items() for wet in ("false", "true")},
+        })
     model(f"{harvester}/block", [([0, 2, 13], [16, 14, 16]), ([0, 3, 8], [16, 5, 13])])
     model(f"{harvester}/blade", [([0, 3, 8], [16, 5, 13])])
+    model(plough, [([0, 2, 13], [16, 14, 16]), ([0, 2, 1], [16, 5, 13])], "minecraft:block/anvil")
+    write(f"assets/create/models/item/{plough}.json", {"parent": f"create:block/{plough}"})
+    write(f"assets/create/items/{plough}.json", {
+        "model": {"type": "minecraft:model", "model": f"create:item/{plough}"},
+    })
 
     write(f"data/create/horizon/block/{saw}.json", {
         "template": "minecraft:glass", "item": True, "properties": properties,
@@ -621,13 +630,15 @@ def foundation():
     write('data/create/loot_table/blocks/water_wheel_structure.json',{'type':'minecraft:block','pools':[]})
     for item in ITEMS:
         if item in [name + '_sheet' for name in SHEETS]: continue
-        item_decl={"template":"minecraft:iron_ingot","max_stack_size":1 if item in ['wrench','goggles'] else 64}
+        item_decl={"template":"minecraft:iron_ingot","max_stack_size":1 if item in ['wrench','goggles','super_glue'] else 64}
         if item=='goggles':item_decl['components']={'minecraft:equippable':{'slot':'head','equip_sound':'minecraft:item.armor.equip_generic','dispensable':True,'swappable':True,'damage_on_hurt':False}}
+        if item == 'super_glue':
+            item_decl['components'] = {'minecraft:max_damage': 99, 'minecraft:damage': 0}
         if item=='creative_blaze_cake':item_decl['rarity']='epic'
         if item == 'empty_blaze_burner':
             item_decl['place_block'] = 'create:blaze_burner'
         write("data/create/horizon/item/" + item + ".json", item_decl)
-        sprite = {"wheat_flour": "sugar", "dough": "bread"}.get(item, "iron_ingot")
+        sprite = {"wheat_flour": "sugar", "dough": "bread", "super_glue": "slime_ball"}.get(item, "iron_ingot")
         write("assets/create/models/item/" + item + ".json", {"parent": "minecraft:item/generated", "textures": {"layer0": "minecraft:item/" + sprite}})
         write("assets/create/items/" + item + ".json", {"model": {"type": "minecraft:model", "model": "create:item/" + item}})
         if item=='goggles':
@@ -642,6 +653,7 @@ def foundation():
     rope_pulley(write, model)
     gantry(write, model)
     sails(write, model)
+    deployer(write, model)
     contraption_actors()
     basin_mixer()
     burners()
@@ -680,6 +692,7 @@ def foundation():
             "values": ["create:fan_fire", "create:fan_lava"],
         })
     write("data/create/horizon/creative_tab/kinetics.json", {"title": "itemGroup.create.base", "icon": "create:cogwheel", "items": ["create:" + name for name in all_blocks + ITEMS]})
+    write('data/minecraft/tags/item/enchantable/durability.json', {'values': ['create:super_glue']})
     # These fallback labels are ours; the JAR replaces them with all upstream locales.
     extra_blocks = {"gearbox":"Gearbox","clutch":"Clutch","gearshift":"Gearshift","hand_crank":"Hand Crank","andesite_encased_shaft":"Andesite Encased Shaft","brass_encased_shaft":"Brass Encased Shaft","andesite_casing":"Andesite Casing","brass_casing":"Brass Casing","andesite_alloy_block":"Block of Andesite Alloy","brass_block":"Block of Brass","zinc_block":"Block of Zinc","speedometer":"Speedometer","stressometer":"Stressometer","water_wheel":"Water Wheel","large_water_wheel":"Large Water Wheel","millstone":"Millstone","encased_fan":"Encased Fan","mechanical_drill":"Mechanical Drill"}
     extra_items = {"andesite_alloy":"Andesite Alloy","brass_ingot":"Brass Ingot","brass_nugget":"Brass Nugget","zinc_ingot":"Zinc Ingot","zinc_nugget":"Zinc Nugget","wrench":"Wrench","brass_sheet":"Brass Sheet","vertical_gearbox":"Vertical Gearbox","goggles":"Engineer’s Goggles","propeller":"Propeller","wheat_flour":"Wheat Flour","dough":"Dough"}
@@ -695,17 +708,29 @@ def foundation():
     extra_blocks.update({'gantry_shaft': 'Gantry Shaft', 'gantry_carriage': 'Gantry Carriage'})
     extra_blocks.update({name: name.replace('_', ' ').title() for name in COLORED_SAILS})
     extra_blocks.update({'sail_frame': 'Windmill Sail Frame', 'white_sail': 'Windmill Sail'})
+    extra_blocks['deployer'] = 'Deployer'
     extra_blocks.update({"mechanical_piston": "Mechanical Piston", "sticky_mechanical_piston": "Sticky Mechanical Piston",
                          "mechanical_piston_head": "Mechanical Piston Head", "piston_extension_pole": "Piston Extension Pole"})
-    extra_blocks.update({"mechanical_harvester": "Mechanical Harvester", "mechanical_saw": "Mechanical Saw"})
-    extra_items['whisk'] = 'Whisk'
+    extra_blocks.update({"mechanical_harvester": "Mechanical Harvester",
+                         "mechanical_plough": "Mechanical Plough", "mechanical_saw": "Mechanical Saw"})
+    extra_items.update({'whisk': 'Whisk', 'super_glue': 'Super Glue'})
     extra_items.update({'empty_blaze_burner': 'Empty Blaze Burner', 'blaze_cake': 'Blaze Cake', 'creative_blaze_cake': 'Creative Blaze Cake'})
     for locale in ["en_us","ru_ru"]:
         path=CONTENT / ("assets/create/lang/"+locale+".json")
         lang=json.loads(path.read_text())
         lang.update({"block.create."+k:v for k,v in extra_blocks.items()})
         lang.update({"item.create."+k:v for k,v in extra_items.items()})
+        glue_status = {
+            'first_pos': ('First corner selected', 'Первый угол выбран'),
+            'abort': ('Selection cleared', 'Выделение сброшено'),
+            'cannot_reach': ('The selected blocks must touch', 'Выбранные блоки должны соединяться'),
+            'not_enough': ('You need more glue', 'Нужно больше клея'),
+            'too_far': ('The selection is too large', 'Выделение слишком большое'),
+            'success': ('Glue applied', 'Клей нанесён'),
+        }
+        lang.update({'create.super_glue.' + key: values[locale == 'ru_ru'] for key, values in glue_status.items()})
         if locale == "ru_ru":
+            lang['item.create.super_glue'] = 'Суперклей'
             lang['block.create.adjustable_chain_gearshift'] = 'Регулируемая цепная коробка передач'
             lang['block.create.copper_casing'] = 'Медный корпус'
             lang['block.create.mechanical_bearing'] = 'Механический вращатель'
@@ -717,11 +742,13 @@ def foundation():
                          'block.create.gantry_carriage': 'Каретка линейного привода'})
             lang.update({'block.create.sail_frame': 'Рама паруса ветряной мельницы',
                          'block.create.white_sail': 'Парус ветряной мельницы'})
+            lang['block.create.deployer'] = 'Автономный активатор'
             lang.update({"block.create.mechanical_piston": "Механический поршень",
                          "block.create.sticky_mechanical_piston": "Липкий механический поршень",
                          "block.create.mechanical_piston_head": "Головка механического поршня",
                          "block.create.piston_extension_pole": "Удлинитель поршня"})
             lang.update({"block.create.mechanical_harvester": "Механический комбайн",
+                         "block.create.mechanical_plough": "Механический плуг",
                          "block.create.mechanical_saw": "Механическая пила"})
             lang.update({"block.create.millstone": "Мельничный жернов", "block.create.encased_fan": "Вентилятор в корпусе", "block.create.mechanical_drill": "Механический бур",
                          "item.create.propeller": "Пропеллер", "item.create.wheat_flour": "Пшеничная мука", "item.create.dough": "Тесто"})
@@ -748,7 +775,7 @@ def main():
     CONTENT.mkdir(exist_ok=True)
     (CONTENT / "horizon-mod.toml").write_text('''id = "create"
 name = "Create for Horizon"
-version = "0.8.0-alpha.3"
+version = "0.8.0-alpha.4"
 description = "Build rotating machines and small factories in Horizon. The original Create JAR is optional and supplies its models and textures."
 authors = ["create-horizon contributors"]
 api = "0.2"

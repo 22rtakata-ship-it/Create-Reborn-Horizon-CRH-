@@ -253,7 +253,8 @@ def main():
     # Fan catalyst and permeability tags are MIT behavior data. Unimplemented
     # Create blocks must not become required tag entries in the port.
     for kind, paths in {
-        'block': ['fan_transparent', 'windmill_sails', 'fan_processing_catalysts/blasting', 'passive_boiler_heaters',
+        'block': ['fan_transparent', 'windmill_sails', 'plough_blacklist', 'plough_whitelist',
+                  'fan_processing_catalysts/blasting', 'passive_boiler_heaters',
                   'fan_processing_catalysts/haunting', 'fan_processing_catalysts/smoking'],
         'fluid': ['fan_processing_catalysts/blasting', 'fan_processing_catalysts/splashing'],
         'entity_type': ['blaze_burner_capturable'],
@@ -285,6 +286,7 @@ def main():
         'create/loot_table/blocks/clockwork_bearing.json',
         'create/loot_table/blocks/mechanical_harvester.json',
         'create/loot_table/blocks/mechanical_saw.json',
+        'create/loot_table/blocks/deployer.json',
         *[f'create/loot_table/blocks/{name}.json' for name in SAIL_ITEMS + COLORED_SAILS],
     ]}
     result = {'reference': PINS['create_revision'], 'license': 'MIT recipe/data-map/loot data; original definitions of vanilla convention tags', 'recipes': recipes, 'tags': tags, 'data_maps':maps, 'loot_tables':loot}

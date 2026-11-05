@@ -301,10 +301,57 @@ fn commit(
     if contraption::commit(game, key, records, edits) {
         return true;
     }
+    restore_map(game, key, before);
+    false
+}
+
+fn restore_map(game: &mut Game<'_>, key: [i32; 2], before: Attachments) {
     if let Ok(map) = game.attachment_map_quiet(Holder::Chunk(key)) {
         *map = before;
     }
-    false
+}
+
+/// ItemHelper.extract(EXACTLY, 1) scans the mounted handler in slot order.
+/// Publish the withdrawn item only if its recipient commits in the same column.
+pub(super) fn withdraw_one(
+    game: &mut Game<'_>,
+    mount: Mount,
+    matches_filter: impl FnMut(&ItemStack) -> bool,
+    receive: impl FnOnce(&mut Game<'_>, &ItemStack) -> bool,
+) -> Option<ItemStack> {
+    let key = contraption::column(mount.controller);
+    let attachments = game.attachment_map_quiet(Holder::Chunk(key)).ok()?;
+    let mut store = attachments.get_existing(&STORAGE).ok()??;
+    let chest = store
+        .get_mut(&mount.controller)
+        .filter(|chest| chest.local == mount.local)?;
+    let item = extract_one(&mut chest.slots, matches_filter)?;
+    let before = attachments.clone();
+    write_store(game, key, store).ok()?;
+    if receive(game, &item) {
+        Some(item)
+    } else {
+        restore_map(game, key, before);
+        None
+    }
+}
+
+fn extract_one(
+    slots: &mut [Option<ItemStack>],
+    mut matches_filter: impl FnMut(&ItemStack) -> bool,
+) -> Option<ItemStack> {
+    let slot = slots.iter_mut().find(|slot| {
+        slot.as_ref()
+            .is_some_and(|stack| stack.count > 0 && matches_filter(stack))
+    })?;
+    let stack = slot.as_mut()?;
+    let mut item = stack.clone();
+    item.count = 1;
+    stack.count -= 1;
+    if stack.count == 0 {
+        *slot = None;
+    }
+    Some(item)
 }
 
 /// Insert a block's drops in their loot-table order. Suppress accepted stacks
@@ -482,6 +529,34 @@ fn decode_slots(tag: &Tag) -> Option<Vec<Option<ItemStack>>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn mounted_withdrawal_takes_one_from_first_matching_slot() {
+        let sapling = "minecraft:oak_sapling";
+        let filter = |stack: &ItemStack| stack.item.as_ref() == sapling;
+        let mut slots = vec![None; SIZE];
+        slots[0] = Some(ItemStack::new("minecraft:oak_log", 4));
+        slots[3] = Some(ItemStack::new(sapling, 2));
+        slots[8] = Some(ItemStack::new(sapling, 1));
+
+        for index in [3, 3, 8] {
+            let before = slots[index].as_ref().unwrap().count;
+            assert_eq!(
+                extract_one(&mut slots, filter),
+                Some(ItemStack::new(sapling, 1))
+            );
+            assert_eq!(
+                slots[index].as_ref().map_or(0, |stack| stack.count),
+                before - 1
+            );
+        }
+        assert_eq!(extract_one(&mut slots, filter), None);
+        assert_eq!(slots[0], Some(ItemStack::new("minecraft:oak_log", 4)));
+        assert_eq!(
+            extract_one(&mut slots, |_| true),
+            Some(ItemStack::new("minecraft:oak_log", 1))
+        );
+    }
 
     #[test]
     fn moving_storage_uses_java_slot_order_and_component_equality() {

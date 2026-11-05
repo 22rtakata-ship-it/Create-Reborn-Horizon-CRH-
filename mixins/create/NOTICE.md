@@ -24,10 +24,13 @@ The following MIT code informed or was adapted into the Rust engine:
   `content/contraptions/mounted` and `content/contraptions/minecart/CouplingPhysics`
   inform mounted chest capture, ordered loot insertion and cart rail decisions
   and coupling corrections.
-- `content/contraptions/actors/harvester`, `content/kinetics/saw`,
+- `content/contraptions/actors/harvester`, `content/contraptions/actors/plough`,
+  `content/kinetics/saw`,
   `content/kinetics/drill/DrillMovementBehaviour`,
   `content/kinetics/base/BlockBreakingMovementBehaviour` and `TreeCutter` inform
   actor targets, harvest and cut rules, break ticks, loot and movement pauses.
+  `SawBlockEntity` and `content/processing/recipe/ProcessingInventory` also
+  inform the upward Saw's recipe timer and output selection.
 - `content/contraptions/glue` and `content/kinetics/deployer` inform the
   engine rules for glue selection and transfer and for Deployer action timing,
   targeting, hand pose and filtered inventory.

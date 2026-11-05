@@ -9,12 +9,13 @@ GENERATORS = ['water_wheel', 'large_water_wheel']
 PROCESSORS = ['millstone', 'encased_fan', 'mechanical_drill', 'basin', 'mechanical_mixer', 'blaze_burner', 'mechanical_bearing', 'windmill_bearing', 'clockwork_bearing', 'rope_pulley']
 PISTONS = ['mechanical_piston', 'sticky_mechanical_piston', 'piston_extension_pole']
 GANTRY = ['gantry_shaft', 'gantry_carriage']
-ACTORS = ['mechanical_harvester', 'mechanical_saw']
+ACTORS = ['mechanical_harvester', 'mechanical_saw', 'mechanical_plough', 'deployer']
 INTERNAL_BLOCKS = ['water_wheel_structure', 'belt', 'lit_blaze_burner', 'mechanical_piston_head', 'rope', 'pulley_magnet'] + COLORED_SAILS
 EXTRA_BLOCKSTATES = ['lit_blaze_burner', 'mechanical_piston_head', 'rope', 'pulley_magnet'] + COLORED_SAILS
 EXTRA_MODELS = ['entity/train_hat', 'entity/logistics_hat']
 BLOCKS = BASE_BLOCKS + TRANSMISSIONS + STATIC_BLOCKS + INSTRUMENTS + GENERATORS + PROCESSORS + PISTONS + GANTRY + ACTORS + SAIL_ITEMS
 ITEMS = ['iron_sheet', 'golden_sheet', 'copper_sheet', 'andesite_alloy', 'brass_ingot', 'brass_nugget', 'zinc_ingot', 'zinc_nugget', 'wrench', 'brass_sheet', 'vertical_gearbox', 'goggles', 'propeller', 'wheat_flour', 'dough', 'belt_connector', 'whisk', 'empty_blaze_burner', 'blaze_cake', 'creative_blaze_cake']
+ITEMS.append('super_glue')
 PARTS = ['shaft', 'shaft_half', 'cogwheel', 'large_cogwheel', 'creative_motor/block', 'creative_motor/block_vertical', 'mechanical_press/block', 'mechanical_press/head', 'depot/block', 'hand_crank/handle', 'hand_crank/block', 'gauge/dial', 'gauge/speedometer/head', 'gauge/stressometer/head', 'goggles', 'water_wheel/wheel', 'large_water_wheel/block', 'large_water_wheel/block_extension', 'millstone/block', 'millstone/inner', 'encased_fan/block', 'encased_fan/propeller', 'mechanical_drill/block', 'mechanical_drill/head']
 PARTS += ['belt_pulley', 'belt/particle'] + ['belt/' + part for part in
     ['start', 'middle', 'end', 'start_bottom', 'middle_bottom', 'end_bottom',
@@ -28,6 +29,7 @@ PARTS += ['mechanical_harvester/blade'] + [
     for orientation in ('horizontal', 'vertical')
     for state in ('active', 'inactive', 'reversed')
 ]
+PARTS += ['deployer/pole', 'deployer/hand_pointing', 'deployer/hand_holding']
 PARTS += ['blaze_burner/' + part for part in
           ['block', 'blaze/inert', 'blaze/idle', 'blaze/active', 'blaze/super', 'blaze/super_active',
            'goggles', 'goggles_small', 'flame', 'rods_small', 'rods_large',

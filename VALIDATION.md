@@ -1,5 +1,29 @@
 # Checks and evidence
 
+## 0.8.0-alpha.4 farm actors and Super Glue
+
+The Deployer matches the reference angle and planted cells over 40 ticks
+from its held stack and over 50 more observations with a mounted chest.
+The refill trace checks the first matching slot, preserving the held
+sapling on invalid soil, and exact stock exhaustion. Two native cold
+restarts cover stopping and resuming. A shared Saw and Deployer rotor
+cuts three trunk blocks, stores them and plants seven new saplings.
+
+The Plough matches both passes in the Java field, including protected
+wheat, three cleared snow layers, three snowballs and one Hanging Roots.
+Player clicks in both games cover piston slime, wrench refusal when
+extended and the teardown of a static extension line.
+
+The horizontal piston wall fixture matches both lateral endpoints.
+The discrete resolver has 945 comparisons against the original JAR.
+Grounded riders, dropped items and pole contact passed native regression.
+
+Super Glue passed eight native scenarios covering selection, item damage,
+removal, snapped transfer, failed capture of a split volume and orphan
+recovery across a real restart. The original client supplied the selection
+and wear reference. The build includes the tree farm, Plough and Glue
+stations in the [review world](docs/reviews/0.8-contraption-world.md).
+
 ## 0.8.0-alpha.3 moving cargo and sails
 
 The original Create 6.0.10 client and Horizon agree on slot order and rotated

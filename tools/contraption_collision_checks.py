@@ -148,32 +148,37 @@ def test_side_push(session):
     def command(line):
         return call('command', line)
 
-    pivot = (903, 100, 102)
-    command('tick unfreeze')
-    command('tp @s 905.45 100 102.5')
-    wait_loaded(call, [pivot])
-    command('fill 898 100 98 910 107 107 minecraft:air')
-    command('fill 898 99 98 910 99 107 minecraft:stone')
-    command('setblock 903 100 102 create:mechanical_piston[facing=east,axis_along_first=false]')
-    for x in (900, 901, 902):
-        command(f'setblock {x} 100 102 create:piston_extension_pole[facing=east]')
-    command('setblock 904 100 102 minecraft:stone')
-    command('tp @s 905.45 100 102.5')
-    call('wait', 8)
-    before = call('state')['player']
-    assert before['on_ground'], before
-    command('setblock 903 100 101 create:creative_motor[facing=south]{ScrollValue:-32}')
-    call('wait', 20)
-    after = call('state')['player']
-    assert after['position'][0] > before['position'][0] + 0.45, (before, after)
-    assert abs(after['position'][1] - 100.0) < 1e-6 and after['on_ground'], after
-    assert abs(after['position'][2] - 102.5) < 1e-6, after
-    command('fill 907 101 101 907 104 103 minecraft:stone')
-    call('wait', 40)
-    at_wall = call('state')['player']
-    assert abs(at_wall['position'][0] - 906.7) < 1e-5, at_wall
-    return dict(side_push_before=before['position'], side_push_after=after['position'],
-                side_push_clipped=at_wall['position'])
+    def side(z, expected_z):
+        pivot = (903, 100, 102)
+        command('tick unfreeze')
+        command(f'tp @s 905.45 100 {z}')
+        wait_loaded(call, [pivot])
+        command('fill 898 100 98 910 107 107 minecraft:air')
+        command('fill 898 99 98 910 99 107 minecraft:stone')
+        command('setblock 903 100 102 create:mechanical_piston[facing=east,axis_along_first=false]')
+        for x in (900, 901, 902):
+            command(f'setblock {x} 100 102 create:piston_extension_pole[facing=east]')
+        command('setblock 904 100 102 minecraft:stone')
+        command(f'tp @s 905.45 100 {z}')
+        call('wait', 8)
+        before = call('state')['player']
+        assert before['on_ground'], before
+        command('setblock 903 100 101 create:creative_motor[facing=south]{ScrollValue:-32}')
+        call('wait', 20)
+        after = call('state')['player']
+        assert after['position'][0] > before['position'][0] + 0.45, (before, after)
+        assert abs(after['position'][1] - 100.0) < 1e-6 and after['on_ground'], after
+        assert abs(after['position'][2] - z) < 1e-6, after
+        command('fill 907 101 101 907 104 103 minecraft:stone')
+        call('wait', 40)
+        at_wall = call('state')['player']
+        assert abs(at_wall['position'][2] - expected_z) < 1e-5, at_wall
+        assert abs(at_wall['position'][0] - 906.7) < 1e-5, at_wall
+        assert abs(at_wall['position'][1] - 100.0) < 1e-6 and at_wall['on_ground'], at_wall
+        return dict(before=before['position'], free=after['position'], obstructed=at_wall['position'])
+
+    return dict(side_push_south=side(102.65, 103.30010011192093),
+                side_push_north=side(102.35, 101.69989988807907))
 
 
 def test_player_carry(session, pistons, side):

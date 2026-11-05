@@ -3,6 +3,7 @@
 
 use super::create_port_contraption_actors as actors;
 use super::create_port_contraption_storage as storage;
+use super::create_port_deployer as deployer;
 use super::{
     Game, create_port_clockwork as clockwork, create_port_pulley as pulley,
     native_block_entity_draw::BlockEntityDraw, native_world_draw::NativeWorldDraw,
@@ -127,13 +128,17 @@ pub(super) fn set_records(
     key: [i32; 2],
     records: Vec<Record>,
 ) -> Result<(), AttachmentError> {
+    // Update the transient visibility hint first so an error cannot leave a
+    // saved record for block edits the caller has not committed.
+    if !records.is_empty() {
+        game.world.attachments.set(&ACTIVE, true)?;
+    }
     let map = game.native_attachments(Holder::Chunk(key))?;
     // An empty replacement also clears the native client on the same channel.
     if records.is_empty() {
         map.remove(&RECORDS)?;
     } else {
         map.set(&RECORDS, records)?;
-        game.world.attachments.set(&ACTIVE, true)?;
     }
     Ok(())
 }
@@ -152,6 +157,15 @@ pub(super) fn commit(
     if edits.iter().any(|&(p, before, _)| {
         !positions.insert(p) || column(p) != key || !resident(game, p) || state(game, p) != before
     }) {
+        return false;
+    }
+    if super::create_port_glue_transfer::blocked(
+        game,
+        key,
+        edits.iter().filter_map(|&(position, before, after)| {
+            (before != after && game.res.facts().is_air(after)).then_some(position)
+        }),
+    ) {
         return false;
     }
     let original_entities: Vec<_> = edits
@@ -228,7 +242,7 @@ fn supported(state: &BlockState) -> bool {
         return true;
     }
     match state.name.as_str() {
-        "create:mechanical_harvester" | "create:mechanical_drill" => state
+        "create:mechanical_harvester" | "create:mechanical_drill" | actors::PLOUGH => state
             .properties
             .get("waterlogged")
             .is_some_and(|wet| wet == "false"),
@@ -386,7 +400,8 @@ impl CaptureView for Capture<'_, '_> {
 
 struct BearingCapture<'g, 'a> {
     base: Capture<'g, 'a>,
-    allow_chest: bool,
+    allow_inventory: bool,
+    glue: &'g [create_engine::contraption::glue::Volume],
 }
 
 impl CaptureView for BearingCapture<'_, '_> {
@@ -399,14 +414,16 @@ impl CaptureView for BearingCapture<'_, '_> {
     fn snapshot(&self, p: Pos) -> Option<BlockState> {
         let game = self.base.0;
         let block = game.pack.assets.registry.state(state(game, p))?;
-        if self.allow_chest && storage::can_capture(game, p, block) {
+        if self.allow_inventory
+            && (storage::can_capture(game, p, block) || deployer::can_capture(game, p, block))
+        {
             return Some(block.clone());
         }
         self.base.snapshot(p)
     }
 
     fn glued(&self, p: Pos, face: Direction) -> bool {
-        self.base.glued(p, face)
+        self.glue.iter().any(|volume| volume.glues(p, face))
     }
 }
 
@@ -429,12 +446,14 @@ fn assemble(
     if records.len() == MAX_RECORDS || records.iter().any(|r| r.controller == controller) {
         return None;
     }
-    let capture = BearingCapture {
-        base: Capture(game),
-        allow_chest: !windmill && facing.axis() == Axis::Y,
-    };
-    let Ok(shape) = Assembly::capture(&capture, anchor, Some(controller), None, MAX_BLOCKS) else {
-        return None;
+    let shape = {
+        let glue = super::create_port_super_glue::read(game, key).ok()?;
+        let capture = BearingCapture {
+            base: Capture(game),
+            allow_inventory: !windmill && facing.axis() == Axis::Y,
+            glue: &glue,
+        };
+        Assembly::capture(&capture, anchor, Some(controller), None, MAX_BLOCKS).ok()?
     };
     if shape.blocks().is_empty() {
         return None;
@@ -483,7 +502,8 @@ fn assemble(
         return None;
     };
     let chest = storage::capture(game, anchor, shape.blocks()).ok()?;
-    records.push(Record {
+    let deployer = deployer::capture(game, anchor, shape.blocks()).ok()?;
+    let record = Record {
         controller,
         anchor,
         axis: axis.index(),
@@ -494,8 +514,12 @@ fn assemble(
         stroke: None,
         clock_hand: None,
         blocks: shape.blocks().to_vec(),
-    });
-    if !storage::commit_capture(game, key, records, &edits, controller, chest) {
+    };
+    let glue = super::create_port_glue_transfer::capture(game, key, &record).ok()?;
+    records.push(record);
+    if !super::create_port_glue_transfer::commit(game, key, glue, |game| {
+        deployer::commit_capture(game, key, records, &edits, controller, chest, deployer)
+    }) {
         return None;
     }
     movement_sound(game, controller, true);
@@ -503,10 +527,16 @@ fn assemble(
 }
 
 fn rotate_state(state: &BlockState, turn: QuarterTurn) -> Option<BlockState> {
-    if !supported(state) && !storage::chest_state(state) {
+    if !supported(state) && !storage::chest_state(state) && !deployer::block_state(state) {
         return None;
     }
     let mut rotated = state.clone();
+    if state.name == deployer::BLOCK
+        && turn.axis(Axis::X) != Axis::X
+        && let Some(first) = rotated.properties.get_mut("axis_along_first")
+    {
+        *first = if first == "true" { "false" } else { "true" }.into();
+    }
     if let Some(value) = rotated.properties.get_mut("axis") {
         let axis = match value.as_str() {
             "x" => Axis::X,
@@ -524,7 +554,7 @@ fn rotate_state(state: &BlockState, turn: QuarterTurn) -> Option<BlockState> {
             .find(|f| f.vector() == direction)?;
         // The Java horizontal-facing state is left alone if the quarter turn
         // would point it vertically.
-        if state.name != "create:mechanical_harvester" || facing.axis() != Axis::Y {
+        if !actors::attached_actor(&state.name) || facing.axis() != Axis::Y {
             *value = facing.name().into();
         }
     }
@@ -564,7 +594,13 @@ fn land(game: &mut Game<'_>, controller: Pos, angle: f32) -> bool {
     else {
         return false;
     };
-    if !storage::commit_landing(game, key, records, &edits, &record, rotation.snapped()) {
+    let turn = rotation.snapped();
+    let Ok(glue) = super::create_port_glue_transfer::landing(game, key, &record, turn) else {
+        return false;
+    };
+    if !super::create_port_glue_transfer::commit(game, key, glue, |game| {
+        deployer::commit_landing(game, key, records, &edits, &record, turn)
+    }) {
         return false;
     }
     actors::remove(game, controller);
@@ -750,6 +786,10 @@ fn draw_actor(
     local: Pos,
     state: &BlockState,
 ) {
+    if state.name == deployer::BLOCK {
+        deployer::draw_moving(game, draw, record, local, state);
+        return;
+    }
     let tool = match state.name.as_str() {
         "create:mechanical_harvester" => Tool::Harvester,
         "create:mechanical_saw" => Tool::Saw,
@@ -776,6 +816,7 @@ fn draw_actor(
     let moving = length >= 1.0 / 512.0;
     super::create_port::face_south(draw, facing);
     match tool {
+        Tool::Plough => {}
         Tool::Harvester => {
             let speed = if moving && !backwards {
                 ((-length * 1000.0 - 100.0) as i32 / 100 * 100) as f64

@@ -283,6 +283,7 @@ pub(super) fn collides_at(
             "create:mechanical_saw" => !actors::saw_can_break(game, p),
             "create:mechanical_drill" => !actors::drill_can_break(game, p),
             "create:mechanical_harvester" => !actors::harvester_can_pass(game, p),
+            actors::PLOUGH => !actors::plough_can_break(game, p),
             _ => !game.res.facts().get(state).replaceable,
         }
     })

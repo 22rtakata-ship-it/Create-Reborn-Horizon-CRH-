@@ -45,6 +45,8 @@ pub mod transport;
 
 #[path = "core/drilling.rs"]
 pub mod drilling;
+#[path = "core/saw_processing.rs"]
+pub mod saw_processing;
 
 #[path = "core/audio.rs"]
 pub mod audio;

@@ -28,7 +28,7 @@ SAIL_PANEL = [
 AXIAL_SAIL = (906, 84, 72)
 
 
-def prepare(session, windmill, farms, clockwork, linear, cargo, sails):
+def prepare(session, options):
     batch = Batch()
     batch.load((908, 82, 60))
     batch.command('fill 897 81 49 925 94 78 minecraft:air')
@@ -48,13 +48,13 @@ def prepare(session, windmill, farms, clockwork, linear, cargo, sails):
     batch.put((916, 85, 56), 'minecraft:slime_block')
     batch.put((917, 85, 56), 'minecraft:oak_log[axis=x]')
     batch.put((915, 85, 56), 'minecraft:oak_planks')
-    if windmill and sails:
+    if options.windmill and options.sails:
         batch.put(WINDMILL, 'create:windmill_bearing[facing=east]')
         batch.put((903, 84, 72), 'create:shaft[axis=x]')
         for pos, block in SAIL_PANEL:
             batch.put(pos, f'create:{block}[facing=east]')
         batch.put(AXIAL_SAIL, 'create:orange_sail[facing=east]')
-    elif windmill:
+    elif options.windmill:
         batch.put(WINDMILL, 'create:windmill_bearing[facing=up]')
         batch.put((904, 83, 72), 'create:shaft[axis=y]')
         for x in range(902, 907):
@@ -62,17 +62,27 @@ def prepare(session, windmill, farms, clockwork, linear, cargo, sails):
             batch.put((x, 85, 71), 'minecraft:white_wool')
             batch.put((x, 85, 73), 'minecraft:light_blue_wool')
     stations.sign(batch, (908, 81, 56), ['MECHANICAL', 'Flip the lever.', 'Ride the rotor.', 'Stand on top.'])
-    if windmill:
+    if options.windmill:
         stations.sign(batch, (907, 81, 74), ['WINDMILL', 'Empty hand:', 'start / stop.', 'Rear shaft: 1 RPM.'])
-    if farms:
-        stations.setup(batch, clockwork, linear, cargo)
-    batch.tick(30 if farms else 12)
+    if options.farms:
+        stations.setup(batch, options.clockwork, options.linear, options.cargo)
+    if options.plough or options.deployer:
+        stations.actor_plaza(batch)
+        if options.plough:
+            stations.plough_station(batch)
+        if options.deployer:
+            stations.deployer_station(batch)
+    if options.glue:
+        stations.glue_station(batch)
+    if options.plough or options.deployer or options.glue:
+        batch.command('tp @s 909.5 81 61.5')
+    batch.tick(30 if options.farms else 12)
     batch.data(BEARING)
     rows = batch.run(session, 'prepare-review')
     assert number({'nbt': rows[0]}, 'Running') == 1, rows
 
 
-def review(session, windmill, farms, clockwork, linear, cargo, sails):
+def review(session, options):
     call = session.call
 
     def command(value):
@@ -130,7 +140,7 @@ def review(session, windmill, farms, clockwork, linear, cargo, sails):
         interact(CONTROL, 'east')
         assert number(snapshot(BEARING), 'Running') == 1
 
-        if windmill:
+        if options.windmill:
             command('tp @s 904.5 81 75.5')
             call('wait', 6)
             wait_loaded(call, [WINDMILL])
@@ -140,11 +150,11 @@ def review(session, windmill, farms, clockwork, linear, cargo, sails):
             interact(WINDMILL, 'south')
             windmill_nbt = wait_running(WINDMILL, 1)
             assert number(windmill_nbt, 'LastGenerated') == 1, windmill_nbt
-            shaft = snapshot((903, 84, 72) if sails else (904, 83, 72))
+            shaft = snapshot((903, 84, 72) if options.sails else (904, 83, 72))
             assert number(shaft, 'Speed') == 1, shaft
             interact(WINDMILL, 'south')
             wait_running(WINDMILL, 0)
-            if sails:
+            if options.sails:
                 for pos, block in SAIL_PANEL:
                     state = call('block', *pos)
                     assert state['block'] == 'create:' + block and 'facing=east' in state['state'], state
@@ -156,7 +166,7 @@ def review(session, windmill, farms, clockwork, linear, cargo, sails):
             interact(WINDMILL, 'south')
             wait_running(WINDMILL, 1)
 
-        if farms:
+        if options.farms:
             wait_loaded(call, [stations.PISTON, stations.STICKY_PISTON, stations.HARVESTER, stations.SAW])
             for base, sign, block in ((stations.PISTON, (914, 81, 68), 'create:mechanical_piston'),
                                       (stations.STICKY_PISTON, (914, 81, 75), 'create:sticky_mechanical_piston')):
@@ -167,16 +177,16 @@ def review(session, windmill, farms, clockwork, linear, cargo, sails):
             for base, lever in ((stations.HARVESTER, stations.HARVESTER_LEVER), (stations.SAW, stations.SAW_LEVER)):
                 assert number(snapshot(base), 'Running', 0) == 0, base
                 assert 'powered=true' in call('block', *lever)['state']
-            if cargo:
+            if options.cargo:
                 assert call('block', *stations.FARM_CHEST)['block'] == 'minecraft:chest'
                 assert number(snapshot(stations.CARGO), 'Running', 0) == 1
-            if clockwork:
+            if options.clockwork:
                 wait_loaded(call, [stations.CLOCK])
                 assert call('block', *stations.CLOCK)['block'] == 'create:clockwork_bearing'
                 assert number(snapshot(stations.CLOCK), 'Running', 0) == 1
             for pos in stations.SAW_TREE:
                 assert call('block', *pos)['block'] == 'minecraft:oak_log'
-        if linear:
+        if options.linear:
             command('tp @s 911.5 83 102.5')
             wait_loaded(call, [stations.PULLEY, stations.GANTRY, stations.STATIONARY_SAW])
             assert call('block', *stations.PULLEY)['block'] == 'create:rope_pulley'
@@ -209,18 +219,48 @@ def review(session, windmill, farms, clockwork, linear, cargo, sails):
         second = screenshot('bearing-second.png')
         assert first.read_bytes() != second.read_bytes()
         extra = []
-        if cargo:
+        if options.cargo:
             command('tp @s 908.5 87.2 65.5')
             call('look-at', 904.5, 85.5, 62.5)
             call('wait', 12)
             extra.append(str(screenshot('mounted-chest.png')))
-        if sails:
+        if options.sails:
             command('tp @s 910.5 86.2 75.5')
             call('look-at', 905.5, 84.5, 72.5)
             call('wait', 12)
             extra.append(str(screenshot('colored-sails.png')))
+        if options.plough:
+            command('tp @s 907.5 86 124.5')
+            call('look-at', 906.5, 82.5, 119.5)
+            wait_loaded(call, [stations.PLOUGH, stations.PLOUGH_LEVER])
+            assert 'powered=true' in call('block', *stations.PLOUGH_LEVER)['state']
+            assert call('block', 907, 83, 120)['block'] == 'create:mechanical_plough'
+            assert call('block', 904, 83, 117)['block'] == 'minecraft:snow'
+            call('wait', 12)
+            extra.append(str(screenshot('plough.png')))
+        if options.deployer:
+            command('tp @s 923.5 85 125.5')
+            call('look-at', 922.5, 82.5, 120.5)
+            wait_loaded(call, [stations.DEPLOYER, stations.DEPLOYER_LEVER])
+            assert 'powered=true' in call('block', *stations.DEPLOYER_LEVER)['state']
+            assert call('block', 922, 83, 120)['block'] == 'create:deployer'
+            assert 'minecraft:oak_sapling' in snapshot((922, 83, 120))['nbt']
+            assert call('block', 920, 83, 121)['block'] == 'minecraft:chest'
+            assert call('block', 919, 83, 120)['block'] == 'create:mechanical_saw'
+            call('wait', 12)
+            extra.append(str(screenshot('deployer.png')))
+        if options.glue:
+            command('tp @s 906.5 86 140.5')
+            call('look-at', 904.5, 82.5, 136.5)
+            wait_loaded(call, [stations.GLUE, stations.GLUE_LEVER])
+            assert 'powered=true' in call('block', *stations.GLUE_LEVER)['state']
+            assert call('block', 905, 83, 136)['block'] == 'minecraft:spruce_planks'
+            call('wait', 12)
+            extra.append(str(screenshot('glue.png')))
         call('key', 'f1', 'tap')
         command('gamemode creative')
+        if options.glue:
+            command('give @s create:super_glue')
         command('tp @s 909.5 81 61.5')
         call('look-at', 904.5, 85.1, 56.5)
         command('save-all flush')
@@ -251,6 +291,9 @@ def main():
     parser.add_argument('--linear', action='store_true')
     parser.add_argument('--cargo', action='store_true')
     parser.add_argument('--sails', action='store_true')
+    parser.add_argument('--plough', action='store_true')
+    parser.add_argument('--deployer', action='store_true')
+    parser.add_argument('--glue', action='store_true')
     args = parser.parse_args()
     if args.sails and not args.windmill:
         parser.error('--sails requires --windmill')
@@ -259,8 +302,8 @@ def main():
     session = NativeCheckSession(args.game, args.resources, args.ctl, args.create_jar,
                                  name='bearing-review', graphics=True, world=WORLD, username=NAME)
     print(session.scratch, flush=True)
-    prepare(session, args.windmill, args.farms, args.clockwork, args.linear, args.cargo, args.sails)
-    report = review(session, args.windmill, args.farms, args.clockwork, args.linear, args.cargo, args.sails)
+    prepare(session, args)
+    report = review(session, args)
     report['launcher'] = str(launcher(session))
     (session.scratch / 'report.json').write_text(json.dumps(report, indent=2) + '\n')
     print(json.dumps(report))

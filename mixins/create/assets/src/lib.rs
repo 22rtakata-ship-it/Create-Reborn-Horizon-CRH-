@@ -93,6 +93,7 @@ pub fn bundled_content(game_dir: &Path, bytes: &[u8]) -> io::Result<PathBuf> {
                             | "data/minecraft/tags/block/mineable/axe.json"
                             | "data/minecraft/tags/block/mineable/pickaxe.json"
                             | "data/minecraft/tags/block/convertable_to_mud.json"
+                            | "data/minecraft/tags/item/enchantable/durability.json"
                     )
                     || name.starts_with("data/c/tags/item/"))
                 || value.len() > MAX_FILE as usize
