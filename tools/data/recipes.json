@@ -1,6 +1,6 @@
 {
   "reference": "ac0c444d9828da3453ae8cc65338e8de063286fb",
-  "license": "MIT recipe/data-map data; original definitions of vanilla convention tags",
+  "license": "MIT recipe/data-map/loot data; original definitions of vanilla convention tags",
   "recipes": {
     "create/recipe/compacting/andesite_from_flint.json": {
       "type": "create:compacting",
@@ -2889,6 +2889,29 @@
           "burn_time": 3200
         }
       }
+    }
+  },
+  "loot_tables": {
+    "create/loot_table/blocks/encased_chain_drive.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "condition": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:encased_chain_drive"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/encased_chain_drive"
     }
   }
 }

@@ -10,6 +10,7 @@ import re
 
 from common import ROOT, PINS
 from native_check_session import wait_loaded
+from native_motors import replace_motor
 
 X, Y, Z = 448, 80, 12
 
@@ -44,10 +45,11 @@ class Check:
                 'kind': kind[1] if kind else None}
 
     def power(self, *, belt=None, fan=None):
+        """Publish new drive speeds by replacement, then retain the eight-tick settle."""
         if belt is not None:
-            self.command(f'data merge block {X - 1} {Y} {Z} {{ScrollValue:{belt}}}')
+            replace_motor(self.call, (X - 1, Y, Z), belt, 'east')
         if fan is not None:
-            self.command(f'data merge block {X - 4} {Y + 1} {Z + 2} {{ScrollValue:{fan}}}')
+            replace_motor(self.call, (X - 4, Y + 1, Z + 2), fan, 'east')
         self.call('wait', 8)
 
     def stand(self, offset):
@@ -172,7 +174,7 @@ def overlap_queue(check):
                        ((X + 2, Y + 1, Z + 2), 'minecraft:campfire[lit=true]'),
                        ((X + 4, Y + 1, Z + 2), 'create:creative_motor[facing=west]')]:
         check.command('setblock ' + ' '.join(map(str, pos)) + ' ' + block)
-    check.command(f'data merge block {X + 4} {Y + 1} {Z + 2} {{ScrollValue:0}}')
+    replace_motor(check.call, (X + 4, Y + 1, Z + 2), 0, 'west')
     check.command(f'setblock {X + 3} {Y + 1} {Z + 2} create:encased_fan[facing=west]')
     check.feed('create:wheat_flour', 1, 819)
     check.power(fan=256)
@@ -186,7 +188,7 @@ def overlap_queue(check):
                 break
         else:
             raise AssertionError(('Did not observe natural final timer tick', before))
-        check.command(f'data merge block {X + 4} {Y + 1} {Z + 2} {{ScrollValue:256}}')
+        replace_motor(check.call, (X + 4, Y + 1, Z + 2), 256, 'west')
         reply = check.command(
             f'execute if data block {X + 3} {Y + 1} {Z + 2} {{Speed:-256.0f}} '
             f'run data get block {X} {Y} {Z} Inventory')
@@ -199,7 +201,7 @@ def overlap_queue(check):
                 'scope': 'One actual stopped-belt conversion with two different-media fan handlers before flush; no exhaustive overlap or cross-client timing claim'}
     finally:
         check.command('tick rate 20')
-        check.command(f'data merge block {X + 4} {Y + 1} {Z + 2} {{ScrollValue:0}}')
+        replace_motor(check.call, (X + 4, Y + 1, Z + 2), 0, 'west')
         check.power(fan=0)
 
 

@@ -32,7 +32,7 @@
   },
   "default_state": {
     "axis": "y",
-    "axis_along_first": "false",
+    "axis_along_first": "true",
     "part": "none"
   },
   "shapes": {

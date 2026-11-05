@@ -40,7 +40,7 @@ impl State {
     pub const fn new(axis: Axis) -> Self {
         Self {
             axis,
-            first: false,
+            first: true,
             part: Part::None,
         }
     }
@@ -233,7 +233,10 @@ mod tests {
             first: false,
             part: Part::Start,
         };
-        let to = State::new(Axis::Y);
+        let to = State {
+            first: false,
+            ..State::new(Axis::Y)
+        };
         assert!(from.connected(to, Direction::South));
         assert!(!to.connected(from, Direction::North));
         assert!(!from.connected(to, Direction::East));
@@ -292,7 +295,7 @@ mod tests {
     #[test]
     fn wrench_rebuilds_even_when_the_shaft_axis_does_not_change() {
         let retained = State {
-            first: true,
+            first: false,
             ..State::new(Axis::X)
         };
         assert_eq!(retained.rotated_wrench(Direction::East), retained);

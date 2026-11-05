@@ -10,11 +10,13 @@ import re
 
 from common import ROOT, PINS
 from native_check_session import wait_loaded
+from native_motors import replace_motor
 
 POS = (416, 64, 16)
 
 
 def run(call, graphics=False, log=None, scratch=None):
+    """Use real motor replacement for power; retain inventories and existing waits."""
     scratch = Path(scratch).resolve()
     scratch.relative_to((ROOT / '.local').resolve())
     assert call('state')['world'] == 'CreateParity06'
@@ -103,9 +105,9 @@ def run(call, graphics=False, log=None, scratch=None):
         cmd(f'setblock {x-1} {y+1} {z} create:creative_motor[facing=up]')
         cmd(f'setblock {x-1} {y+2} {z} create:cogwheel[axis=y]')
         cmd(f'setblock {x} {y+2} {z} create:mechanical_mixer')
-        cmd(f'data merge block {x-1} {y+1} {z} {{ScrollValue:0}}')
+        replace_motor(ctl, (x-1, y+1, z), 0, 'up')
         cmd(f'data merge block {x} {y} {z} '+ '{InputItems:{Size:9,Items:[{Slot:0,id:"create:wheat_flour",count:2,components:{"minecraft:custom_data":{fluid_fixture:71}}}]},OutputItems:{Size:9,Items:[]}}')
-        cmd(f'data merge block {x-1} {y+1} {z} {{ScrollValue:32}}')
+        replace_motor(ctl, (x-1, y+1, z), 32, 'up')
         ctl('wait',180)
         assert counts()=={'create:wheat_flour':1,'create:dough':1},counts()
         assert tanks()==empty,tanks()
@@ -114,17 +116,17 @@ def run(call, graphics=False, log=None, scratch=None):
 
         # Freeze the drive before refilling: otherwise the remaining flour can
         # start another genuine dough cycle while the next fixture is prepared.
-        cmd(f'data merge block {x-1} {y+1} {z} {{ScrollValue:0}}')
+        replace_motor(ctl, (x-1, y+1, z), 0, 'up')
         ctl('wait',45)
         held('water_bucket');click('water-for-four-mud',[('minecraft:water',1000),None,None,None],{'minecraft:water_bucket':1})
         cmd(f'data merge block {x} {y} {z} '+ '{InputItems:{Size:9,Items:[{Slot:0,id:"minecraft:dirt",count:2},{Slot:1,id:"minecraft:coarse_dirt",count:1},{Slot:2,id:"minecraft:rooted_dirt",count:1}]},OutputItems:{Size:9,Items:[]}}')
-        cmd(f'data merge block {x-1} {y+1} {z} {{ScrollValue:32}}')
+        replace_motor(ctl, (x-1, y+1, z), 32, 'up')
         ctl('wait',350)
         assert counts()=={'minecraft:mud':4},counts()
         assert tanks()==empty,tanks()
         passed('actual source block tag matches dirt/coarse_dirt/rooted_dirt; +250mB water repeats four times, producing exactly four mud and draining1000mB')
         if graphics:
-            cmd(f'data merge block {x-1} {y+1} {z} {{ScrollValue:0}}')
+            replace_motor(ctl, (x-1, y+1, z), 0, 'up')
             held('water_bucket');click('render-water',[('minecraft:water',1000),None,None,None],{'minecraft:water_bucket':1})
             held('lava_bucket');click('render-lava',[('minecraft:water',1000),('minecraft:lava',1000),None,None],{'minecraft:lava_bucket':1})
             ctl('wait',35)
@@ -147,9 +149,10 @@ def run(call, graphics=False, log=None, scratch=None):
 
 
 def prepare_restart(call,scratch):
+    """Stop by replacing only the motor before the existing persistence fixture."""
     x,y,z=POS
     assert call('state')['world']=='CreateParity06'
-    call('command',f'data merge block {x-1} {y+1} {z} {{ScrollValue:0}}')
+    replace_motor(call, (x-1, y+1, z), 0, 'up')
     call('wait',45)
     call('command',f'data merge block {x} {y} {z} '+ '{InputTanks:[{Level:{Value:.5f,Target:.5f,Speed:.25f},TankContent:{Fluid:{id:"minecraft:water",amount:500,components:{"!minecraft:custom_name":{},"minecraft:custom_data":{marker:919}}}}},{Level:{Value:1f,Target:1f,Speed:.25f},TankContent:{Fluid:{id:"minecraft:lava",amount:1000}}}],OutputTanks:[{Level:{Value:.25f,Target:.25f,Speed:.25f},TankContent:{Fluid:{id:"minecraft:water",amount:250,components:{"minecraft:custom_data":{marker:920}}}}},{Level:{Value:0f,Target:0f,Speed:.25f},TankContent:{}}]}')
     call('wait',5)

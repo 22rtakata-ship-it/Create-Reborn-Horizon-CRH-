@@ -29,6 +29,21 @@ struct Lifetime {
     initialized_source: bool,
     generation: Option<f32>,
 }
+#[derive(Default)]
+struct Lifetimes {
+    nodes: BTreeMap<Pos, Lifetime>,
+    cleaned: Option<i64>,
+}
+impl Lifetimes {
+    fn maintain(&mut self, now: i64, mut live: impl FnMut(Pos, ModRevision) -> bool) {
+        if now.rem_euclid(20) != 0 || self.cleaned == Some(now) {
+            return;
+        }
+        self.cleaned = Some(now);
+        self.nodes
+            .retain(|pos, state| state.owner.is_some_and(|owner| live(*pos, owner)));
+    }
+}
 const MAX_PENDING_TRANSMISSIONS: usize = 2048;
 #[derive(Default)]
 struct Pending {
@@ -38,7 +53,7 @@ struct Pending {
 thread_local! {
     static CACHE: RefCell<Cache> = RefCell::new(Cache::default());
     static CHANGED: RefCell<BTreeMap<String, Pending>> = RefCell::new(BTreeMap::new());
-    static LIFETIMES: RefCell<SessionCache<BTreeMap<Pos, Lifetime>>> = RefCell::new(SessionCache::default());
+    static LIFETIMES: RefCell<SessionCache<Lifetimes>> = RefCell::new(SessionCache::default());
 }
 fn with_lifetime<R>(
     game: &Game<'_>,
@@ -49,7 +64,7 @@ fn with_lifetime<R>(
     LIFETIMES.with(|cell| {
         let mut cache = cell.borrow_mut();
         let world = cache.dimension(std::ptr::from_ref(&game.world) as usize, game.dim.id());
-        let state = world.entry(pos).or_default();
+        let state = world.nodes.entry(pos).or_default();
         let owner = entity.revision();
         if state.owner.is_some_and(|old| !old.same_entity(owner)) {
             *state = Lifetime::default();
@@ -290,6 +305,14 @@ pub(super) fn changed(dimension: &str, pos: Pos) {
 /// This preserves that next-tick machine boundary. It does not claim immediate
 /// between-tick neighbour callback parity: the current hook has no Game owner.
 pub(super) fn refresh_transmissions(game: &mut Game<'_>) {
+    LIFETIMES.with(|cell| {
+        cell.borrow_mut().dimension(std::ptr::from_ref(&game.world) as usize, game.dim.id())
+            .maintain(game.world.game_time, |pos, owner| {
+                matches!(game.world.block_entities.get(&(pos[0], pos[1], pos[2])),
+                    Some(BlockEntity::Mod(entity)) if !entity.id.is_empty() && owner.same_entity(entity.revision()))
+            });
+    });
+
     let pending = CHANGED.with(|cell| cell.borrow_mut().remove(game.dim.id()).unwrap_or_default());
     let positions: Vec<Pos> = if pending.scan_loaded {
         game.world
@@ -332,5 +355,70 @@ pub(super) fn refresh_transmissions(game: &mut Game<'_>) {
             publish(game, &other, pos);
         }
         game.native_block_entity_sync(pos);
+    }
+}
+
+#[cfg(test)]
+mod lifetime_tests {
+    use super::*;
+    #[test]
+    fn pending_bulk_changes_fall_back_to_one_loaded_scan_without_dropping_the_dimension() {
+        reset();
+        for x in 0..MAX_PENDING_TRANSMISSIONS as i32 {
+            changed("minecraft:overworld", [x * 4, 70, 0]);
+        }
+        changed("minecraft:the_nether", [1, 70, 0]);
+        CHANGED.with(|cell| {
+            let pending = cell.borrow();
+            assert!(pending["minecraft:overworld"].scan_loaded);
+            assert!(pending["minecraft:overworld"].positions.is_empty());
+            assert!(!pending["minecraft:the_nether"].scan_loaded);
+            assert_eq!(pending["minecraft:the_nether"].positions.len(), 7);
+        });
+        reset();
+        CHANGED.with(|cell| assert!(cell.borrow().is_empty()));
+    }
+    #[test]
+    fn lifetime_cleanup_preserves_live_generation_and_drops_replaced_or_removed_owners() {
+        let mut live = ModBlockEntity::default();
+        let original = live.revision();
+        let removed = ModBlockEntity::default();
+        let replaced = ModBlockEntity::default();
+        let replacement = replaced.clone();
+        let mut states = Lifetimes::default();
+        for (pos, owner) in [
+            ([1, 0, 0], original),
+            ([2, 0, 0], removed.revision()),
+            ([3, 0, 0], replaced.revision()),
+        ] {
+            states.nodes.insert(
+                pos,
+                Lifetime {
+                    owner: Some(owner),
+                    generation: Some(32.0),
+                    initialized_source: true,
+                    ..Lifetime::default()
+                },
+            );
+        }
+        // A normal content revision is the same entity; a clone is a new one.
+        live.nbt
+            .insert("ScrollValue".into(), horizon_world::nbt::Tag::Int(64));
+        states.maintain(20, |pos, owner| match pos[0] {
+            1 => owner.same_entity(live.revision()),
+            3 => owner.same_entity(replacement.revision()),
+            _ => false,
+        });
+        assert_eq!(states.nodes.len(), 1);
+        assert_eq!(
+            states.nodes[&[1, 0, 0]].generation,
+            Some(32.0),
+            "live /data read must not turn into a setting callback"
+        );
+        assert!(states.nodes[&[1, 0, 0]].initialized_source);
+        states.maintain(20, |_, _| panic!("frozen repeat must not rescan"));
+        states.maintain(21, |_, _| panic!("cleanup must be at most once per20ticks"));
+        states.maintain(40, |_, _| false);
+        assert!(states.nodes.is_empty());
     }
 }

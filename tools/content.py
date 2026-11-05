@@ -257,7 +257,9 @@ def chain_drives():
         'state_properties': {'axis': {'type': 'enum', 'values': ['x', 'y', 'z']},
                              'axis_along_first': {'type': 'boolean'},
                              'part': {'type': 'enum', 'values': ['start', 'middle', 'end', 'none']}},
-        'default_state': {'axis': 'y', 'axis_along_first': 'false', 'part': 'none'},
+        # The pinned original registry's implicit BooleanProperty default is
+        # true, verified in the actual Java client (not inferred from Rust).
+        'default_state': {'axis': 'y', 'axis_along_first': 'true', 'part': 'none'},
         'shapes': {'default': [[0, 0, 0, 1, 1, 1]]},
         'collision_shapes': {'default': [[0, 0, 0, 1, 1, 1]]},
     })
@@ -368,6 +370,7 @@ def foundation():
     for path, value in reference["recipes"].items(): write("data/" + path, current(value))
     for path, value in reference["tags"].items(): write("data/" + path, value)
     for path, value in reference.get('data_maps', {}).items(): write('data/' + path, value)
+    for path, value in reference.get('loot_tables', {}).items(): write('data/' + path, value)
     # MIT Create AllDamageTypes / generated data, pinned in compatibility.json.
     # Keep source IDs and data-driven fire/protection policy on both sides.
     for kind in ("fan_fire", "fan_lava"):

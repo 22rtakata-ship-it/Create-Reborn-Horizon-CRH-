@@ -45,7 +45,7 @@ def run(game, resources, ctl, create_jar, reference, build_result):
     assert source['passed'] and source['create'] == PINS['create_revision']
     assert build['passed'] and Path(build['game']).resolve() == Path(game).resolve()
     session = NativeCheckSession(game, resources, ctl, create_jar,
-                                 name='press-basin-native', graphics=False)
+                                 name='press-basin-native', graphics=False, world='CreatePressBasinFinal')
     game_hash = hashlib.sha256(session.game.read_bytes()).hexdigest()
     assert game_hash == build['game_sha256']
     report = dict(passed=False, completed=False, scope=__doc__, horizon=build['horizon'],
@@ -140,18 +140,13 @@ def run(game, resources, ctl, create_jar, reference, build_result):
         observe('reference-' + str(index), 180)
     setup(); stock([('minecraft:snowball', 8)]); observe('zero', 64)
     setup(); stock([('minecraft:snowball', 8)], marked=True); power(-32); observe('negative', 180)
-    setup(); stock([('minecraft:snowball', 8)])
-    cmd('setblock ' + MOTOR + ' create:hand_crank[facing=west]')
-    cmd('setblock 581 66 30 create:mechanical_press[facing=east]')
-    cmd('data merge block ' + MOTOR + ' {InUse:1000,Backwards:0b}')
-    observe('overload', 40)
     setup(); stock([('minecraft:flint', 2), ('minecraft:gravel', 1)], lava=100)
     power(32); observe('lava-andesite', 100)
     setup(); stock([('minecraft:andesite', 2), ('minecraft:iron_nugget', 2)], lava=100)
     power(32); observe('mixer-only-refusal', 100)
     setup(); stock([('minecraft:snowball', 12)], marked=True); power(32)
     observe('restart-before-pause', 50)
-    cmd('data merge block ' + MOTOR + ' {ScrollValue:0}'); observe('restart-paused', 8)
+    power(0); observe('restart-paused', 8)
     cmd('save-all flush')
     print(json.dumps(dict(scratch=str(session.scratch))), flush=True)
     save()
@@ -194,11 +189,6 @@ def run(game, resources, ctl, create_jar, reference, build_result):
         assert negative[-1]['outputs'] == {'minecraft:snow_block': 2} and not negative[-1]['inputs']
         assert all(s['fields']['Speed'] == -32 for s in negative[5:])
         assert 'press_marker' not in field(negative[-1]['raw']['basin'], 'OutputItems')
-        overloaded = observed['overload'][-20:]
-        assert all(number({'nbt': s['raw']['press']}, 'Stress') >
-                   number({'nbt': s['raw']['press']}, 'Capacity') and s['fields']['Speed'] == 0
-                   and not s['outputs'] and s['inputs'] == {'minecraft:snowball': 8} for s in overloaded)
-        assert len({s['fields']['Ticks'] for s in overloaded}) == 1
         lava = observed['lava-andesite'][-1]
         assert lava['outputs'] == {'minecraft:andesite': 1} and not lava['inputs'], lava
         assert not re.search(r'\bamount\s*:\s*[1-9]', field(lava['raw']['basin'], 'InputTanks'))
@@ -214,7 +204,7 @@ def run(game, resources, ctl, create_jar, reference, build_result):
         assert 'press_marker' not in field(paused['raw']['basin'], 'OutputItems')
         ops.clear(); labels.clear()
         cmd('tick unfreeze'); observe('restart-still-paused', 8)
-        cmd('data merge block ' + MOTOR + ' {ScrollValue:32}'); observe('restart-resumed', 230)
+        power(32); observe('restart-resumed', 230)
         resumed = execute(ops, labels, 'second-process')
         cold = resumed['restart-still-paused'][-1]
         assert cold['inputs'] == paused['inputs'] and cold['outputs'] == paused['outputs']
@@ -226,6 +216,7 @@ def run(game, resources, ctl, create_jar, reference, build_result):
         assert not final['inputs'] and final['outputs'] == {'minecraft:snow_block': 3}, final
         assert 'press_marker' not in field(final['raw']['basin'], 'OutputItems')
         report['controls'].update(resumed)
+        report['controls']['overload_ordinary_interaction'] = ordinary_overload(session)
         report['completed'] = True
         report['absolute_trace_equal'] = not report['differences']
         report['controls_passed'] = True
@@ -242,9 +233,183 @@ def run(game, resources, ctl, create_jar, reference, build_result):
     return report
 
 
+def ordinary_overload(session):
+    """A real crank use publishes rotation; editing InUse is not a turn."""
+    from native_check_session import wait_loaded
+    result = dict(passed=False, ordinary_use=True, samples=[])
+    session.start()
+    try:
+        call = session.call
+        call('command', 'tick freeze')
+        call('command', 'gamemode creative')
+        call('command', 'tp @s 578.5 66 33')
+        call('command', 'forceload add 576 16 591 47')
+        call('wait-ready', 120)
+        wait_loaded(call, [(578, 66, 30), (581, 66, 30)])
+        call('command', 'fill 577 64 28 582 69 32 minecraft:air')
+        for pos, block in [(MOTOR, 'create:hand_crank[facing=west]'),
+                           ('579 66 30', 'create:shaft[axis=x]'),
+                           (PRESS, 'create:mechanical_press[facing=east]'),
+                           ('581 66 30', 'create:mechanical_press[facing=east]'),
+                           (BASIN, 'create:basin[facing=down]')]:
+            call('command', 'setblock ' + pos + ' ' + block)
+        call('command', 'data merge block ' + BASIN + ' {InputItems:{Size:9,Items:[{Slot:0,id:"minecraft:snowball",count:8}]},OutputItems:{Size:9,Items:[]}}')
+        call('command', 'clear @s')
+        call('command', 'fill 577 65 32 579 65 34 minecraft:smooth_stone')
+        call('command', 'tp @s 578.5 66 33.5')
+        call('look-at', 578.5, 66.5, 30.5)
+        call('interact', 578, 66, 30, 'south')
+        call('wait', 2)
+        for _ in range(3):
+            call('command', 'tick unfreeze')
+            call('wait', 1)
+            call('command', 'tick freeze')
+            press = ' '.join(call('command', 'data get block ' + PRESS)['chat'])
+            basin = ' '.join(call('command', 'data get block ' + BASIN)['chat'])
+            crank = ' '.join(call('command', 'data get block ' + MOTOR)['chat'])
+            sample = dict(press=press, basin=basin, crank=crank)
+            result['samples'].append(sample)
+            assert number({'nbt': press}, 'Stress') > number({'nbt': press}, 'Capacity') > 0, sample
+            assert number({'nbt': press}, 'Speed') == 0 and number({'nbt': press}, 'Ticks') == 0, sample
+            assert items(basin, 'InputItems') == {'minecraft:snowball': 8} and items(basin, 'OutputItems') == {}, sample
+            assert number({'nbt': crank}, 'InUse') > 0, sample
+            call('interact', 578, 66, 30, 'south')
+            call('wait', 1)
+        result['passed'] = True
+        return result
+    finally:
+        session.stop()
+
+
+def startup_matrix(game, resources, ctl, create_jar, reference, build_result):
+    """Compare event-driven startup without shifting either client's clock.
+
+    The ordinary GUI callback is covered separately from this command harness;
+    an isolated Speed-field seed is not a valid saved-network fixture.
+    """
+    source = json.loads(Path(reference).read_text())
+    build = json.loads(Path(build_result).read_text())
+    assert source['passed'] and source['create'] == PINS['create_revision']
+    assert build['passed'] and Path(build['game']).resolve() == Path(game).resolve()
+    session = NativeCheckSession(game, resources, ctl, create_jar, name='press-startup-native', graphics=False)
+    report = dict(passed=False, scope=startup_matrix.__doc__, horizon=build['horizon'], cases=[], differences=[],
+                  game_sha256=hashlib.sha256(session.game.read_bytes()).hexdigest(),
+                  reference_sha256=hashlib.sha256(Path(reference).read_bytes()).hexdigest(),
+                  fixture_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+                  skipped_source_cases=['isolated_speed_field_without_network', 'ordinary_gui_zero_to_32'])
+    assert report['game_sha256'] == build['game_sha256']
+    ops, labels = [], []
+
+    def save():
+        (session.scratch / 'result.json').write_text(json.dumps(report, indent=2) + '\n')
+
+    def command(value):
+        ops.append(dict(op='cmd', cmd=value, record=False))
+
+    def ticks(count):
+        ops.append(dict(op='tick', n=count))
+
+    def observe(group, count):
+        for tick in range(1, count + 1):
+            ticks(1)
+            for key, value in [('clock', 'time query gametime'), ('press', 'data get block 620 66 30'),
+                               ('basin', 'data get block 620 64 30')]:
+                ops.append(dict(op='cmd', cmd=value, record=True))
+                labels.append((group, tick, key))
+
+    command('tick unfreeze'); command('gamemode creative'); command('tp @s 624.5 72 34.5')
+    ops.append(dict(op='settle'))
+    command('forceload add 608 16 639 47')
+    command('fill 617 63 28 622 63 32 minecraft:smooth_stone')
+    selected = [row for row in source['cases'] if row['name'] not in report['skipped_source_cases']]
+    for row in selected:
+        name = row['name']
+        clutch = name.startswith('clutch_open_')
+        settled = name in ('replaced_motor_last', 'data_read_existing_zero') or clutch
+        command('fill 617 64 28 622 69 32 minecraft:air')
+        blocks = dict(B='620 64 30 create:basin[facing=down]',
+                      P='620 66 30 create:mechanical_press[facing=east]',
+                      M='618 66 30 create:creative_motor[facing=east]',
+                      S='619 66 30 create:' + ('clutch[axis=x,powered=true]' if clutch else 'shaft[axis=x]'))
+        for role in row['creation_order']:
+            command('setblock ' + blocks[role])
+        command('data merge block 618 66 30 {ScrollValue:' + ('32' if clutch or not settled else '0') + '}')
+        if clutch:
+            command('setblock 619 67 30 minecraft:lever[face=floor,facing=north,powered=true]')
+        if settled:
+            ticks(30)
+        command('data merge block 620 64 30 {InputItems:{Size:9,Items:[{Slot:0,id:"minecraft:snowball",count:8}]},OutputItems:{Size:9,Items:[]}}')
+        if name == 'replaced_motor_last':
+            command('setblock 618 66 30 minecraft:air')
+            command('setblock 618 66 30 create:creative_motor[facing=east]')
+            command('data merge block 618 66 30 {ScrollValue:32}')
+        elif name == 'data_read_existing_zero':
+            command('data merge block 618 66 30 {ScrollValue:32}')
+        elif clutch:
+            command('setblock 619 67 30 minecraft:lever[face=floor,facing=north,powered=false]')
+        observe(name, len(row['samples']))
+    script, output = session.scratch / 'commands.jsonl', session.scratch / 'observations.jsonl'
+    script.write_text(''.join(json.dumps(op) + '\n' for op in ops))
+    env = session.env.copy()
+    env.update(HORIZON_COMMAND_SCRIPT=str(script), HORIZON_COMMAND_OUTPUT=str(output),
+               HORIZON_API_DISCOVERY='http://127.0.0.1:9/')
+    print(json.dumps(dict(scratch=str(session.scratch))), flush=True)
+    save()
+    try:
+        with session.log.open('w') as log:
+            process = subprocess.run([str(session.game), '--headless', '--resources', str(session.resources),
+                '--world', 'CreatePressStartup', '--seed', '5', '--creative', '--render-distance', '2'],
+                cwd=session.scratch, env=env, stdout=log, stderr=subprocess.STDOUT, timeout=420)
+        report['exit'] = process.returncode
+        assert process.returncode == 0, str(session.log)
+        rows = [json.loads(line) for line in output.read_text().splitlines()]
+        assert len(rows) == len(labels)
+        groups = {}
+        for (group, index, key), row in zip(labels, rows):
+            assert row['results'] and all(r[0] for r in row['results']), (group, row)
+            groups.setdefault(group, {}).setdefault(index, {})[key] = text(row)
+        turns = [json.loads(line.split('Create kinetic turn: ', 1)[1])
+                 for line in session.log.read_text().splitlines() if 'Create kinetic turn: ' in line]
+        report['actual_first_native_turns'] = turns
+        for case in selected:
+            samples = [snapshot(raw, tick) for tick, raw in sorted(groups[case['name']].items())]
+            assert all(b['time'] == a['time'] + 1 for a, b in zip(samples, samples[1:]))
+            differences = []
+            for actual, original in zip(samples, case['samples']):
+                expected = {key: number(original['blocks'][1], key) for key in FIELDS}
+                for key in FIELDS:
+                    if actual['fields'][key] != expected[key]:
+                        differences.append(dict(tick=actual['tick'], field=key, native=actual['fields'][key], original=expected[key]))
+                for key, inventory in [('inputs', 'InputItems'), ('outputs', 'OutputItems')]:
+                    expected = items(original['blocks'][0]['nbt'], inventory)
+                    if actual[key] != expected:
+                        differences.append(dict(tick=actual['tick'], field=key, native=actual[key], original=expected))
+            order = [turn['pos'] for turn in turns if turn['time'] == samples[0]['time']]
+            if case['name'].startswith('fresh_motor_'):
+                assert [618, 66, 30] in order and [620, 66, 30] in order, order
+                assert (order.index([618, 66, 30]) < order.index([620, 66, 30])) == case['motor_ticks_before_press'], order
+            row = dict(name=case['name'], samples=samples, actual_first_turn_order=order,
+                       source_first_turn_order=case['samples'][0]['ticker_order'], differences=differences)
+            report['cases'].append(row)
+            report['differences'].extend(dict(case=case['name'], **d) for d in differences)
+            save()
+        report['completed'] = True
+        report['passed'] = not report['differences']
+        assert report['passed'], ('Absolute event traces differ', len(report['differences']))
+        return report
+    except BaseException as error:
+        report['error'] = repr(error)
+        raise
+    finally:
+        save()
+        session.control_temp.cleanup()
+        print(json.dumps(dict(passed=report['passed'], result=str(session.scratch / 'result.json'))), flush=True)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('game', 'resources', 'ctl', 'create-jar', 'reference', 'build-result'):
         parser.add_argument('--' + name, required=True, type=Path)
+    parser.add_argument('--startup-matrix', action='store_true')
     args = parser.parse_args()
-    run(args.game, args.resources, args.ctl, args.create_jar, args.reference, args.build_result)
+    (startup_matrix if args.startup_matrix else run)(args.game, args.resources, args.ctl, args.create_jar, args.reference, args.build_result)

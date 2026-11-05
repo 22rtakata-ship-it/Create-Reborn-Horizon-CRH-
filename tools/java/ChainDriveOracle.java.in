@@ -84,7 +84,8 @@ public class ChainDriveOracle {
         Player getPlayer() { return player; }
     }
     static class Base extends RotatedPillarKineticBlock {
-        BlockState defaultBlockState() { return state(11); }
+        // Observed in the actual pinned Java client: axis=y, first=true, part=none.
+        BlockState defaultBlockState() { return state(15); }
         public BlockState getRotatedBlockState(BlockState originalState,Direction targetedFace) @@BASE_WRENCH@@
         static Axis getPreferredAxis(BlockPlaceContext context) @@PREFERRED@@
     }

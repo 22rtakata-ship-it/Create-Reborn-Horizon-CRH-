@@ -16,6 +16,7 @@ import subprocess
 from basin_native_checks import write_shared_fixture
 from common import ROOT, PINS
 from native_check_session import NativeCheckSession
+from native_motors import replace_motor
 
 
 def run(game, resources, ctl, create_jar):
@@ -34,6 +35,11 @@ def run(game, resources, ctl, create_jar):
     def command(text, record=False):
         operations.append({'op': 'cmd', 'cmd': text, 'record': record})
 
+    def motor_command(operation, text):
+        """Record the helper's ordinary commands without advancing harness ticks."""
+        assert operation == 'command', operation
+        command(text)
+
     command('tick unfreeze')
     command('gamemode creative')
     command('tp @s 4.5 64 4.5')
@@ -51,13 +57,13 @@ def run(game, resources, ctl, create_jar):
                        ('2 66 2', 'create:mechanical_mixer')]:
         command('setblock '+pos+' '+block, True)
     report['fixture']['placement'] = '40 ordinary setblock commands from the shared authored fixture; no schematic-import claim'
-    command('data merge block 1 65 2 {ScrollValue:0}')
+    replace_motor(motor_command, (1, 65, 2), 0, 'up')
     operations.append({'op': 'tick', 'n': 20})
     command('data merge block 2 64 2 {InputItems:{Size:9,Items:['
             '{Slot:0,id:"minecraft:andesite",count:2},'
             '{Slot:1,id:"minecraft:iron_nugget",count:2}]},'
             'OutputItems:{Size:9,Items:[]}}')
-    command('data merge block 1 65 2 {ScrollValue:32}')
+    replace_motor(motor_command, (1, 65, 2), 32, 'up')
     setup_records = sum(op.get('record', True) for op in operations if op['op'] == 'cmd')
     for _ in range(200):
         operations.append({'op': 'tick', 'n': 1})

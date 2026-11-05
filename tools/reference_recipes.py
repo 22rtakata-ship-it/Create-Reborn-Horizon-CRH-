@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export MIT datapack recipes/tags from the pinned Create source, never assets."""
+"""Export MIT recipes/tags/selected loot from pinned Create, never assets."""
 import json
 import math
 import subprocess
@@ -258,7 +258,11 @@ def main():
     tags['minecraft/tags/block/convertable_to_mud.json']={'values':[
         'minecraft:dirt','minecraft:coarse_dirt','minecraft:rooted_dirt']}
     maps=burner_data_maps(names,read)
-    result = {'reference': PINS['create_revision'], 'license': 'MIT recipe/data-map data; original definitions of vanilla convention tags', 'recipes': recipes, 'tags': tags, 'data_maps':maps}
+    # Keep the complete source pool and explosion/random-sequence policy for
+    # this newly supported block, rather than a generic unconditional drop.
+    loot = {path: read(base + path) for path in [
+        'create/loot_table/blocks/encased_chain_drive.json']}
+    result = {'reference': PINS['create_revision'], 'license': 'MIT recipe/data-map/loot data; original definitions of vanilla convention tags', 'recipes': recipes, 'tags': tags, 'data_maps':maps, 'loot_tables':loot}
     dest = ROOT / 'tools/data/recipes.json'; dest.parent.mkdir(exist_ok=True); dest.write_text(json.dumps(result, indent=2) + '\n')
     print('Exported', len(recipes), 'recipes,', len(tags), 'tags and',len(maps),'data maps from MIT datapack sources')
 

@@ -29,6 +29,8 @@ def main():
     tab=json.loads((content / "data/create/horizon/creative_tab/kinetics.json").read_text())
     assert tab["items"] == ["create:"+name for name in BLOCKS+ITEMS]
     assert len(list((content / "data/create/recipe").rglob("*.json"))) == len(reference["recipes"])
+    for path, value in reference.get('loot_tables', {}).items():
+        assert json.loads((content / 'data' / path).read_text()) == value, 'Source loot policy changed: ' + path
     for path in [*NATIVE.rglob("*"), *content.rglob("*")]:
         assert not path.is_symlink(), "Source bundles must not contain links: " + str(path)
         assert path.suffix.lower() not in {".jar", ".class", ".png", ".ogg"}, str(path)

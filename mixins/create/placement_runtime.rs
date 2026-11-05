@@ -317,6 +317,10 @@ fn level_axis(game: &GameLevel<'_>, p: [i32; 3]) -> Axis {
         .registry
         .state(game.world.block(p[0], p[1], p[2]))
         .unwrap();
+    state_axis(state)
+}
+
+fn state_axis(state: &horizon_world::chunk::BlockState) -> Axis {
     let prop = |key: &str| state.properties.get(key).map(String::as_str).unwrap_or("");
     let facing = Direction::ALL
         .into_iter()
@@ -325,6 +329,15 @@ fn level_axis(game: &GameLevel<'_>, p: [i32; 3]) -> Axis {
     if state.name.ends_with("ometer") {
         return placement::gauge_axis(facing, prop("axis_along_first") == "true");
     }
+    if state.name == "create:belt" {
+        return if prop("slope") == "sideways" {
+            Axis::Y
+        } else if facing.axis() == Axis::X {
+            Axis::Z
+        } else {
+            Axis::X
+        };
+    }
     match prop("axis") {
         "x" => Axis::X,
         "z" => Axis::Z,
@@ -332,6 +345,47 @@ fn level_axis(game: &GameLevel<'_>, p: [i32; 3]) -> Axis {
         _ => facing.axis(),
     }
 }
+
+// IRotate.hasShaftTowards for implemented blocks. Ownership does not imply a shaft.
+fn state_shaft_port(state: &horizon_world::chunk::BlockState, face: Direction) -> bool {
+    let facing = || {
+        state.properties.get("facing").and_then(|value| {
+            Direction::ALL
+                .into_iter()
+                .find(|direction| direction.name() == value)
+        })
+    };
+    match state.name.as_str() {
+        "create:creative_motor" => facing() == Some(face),
+        "create:hand_crank" | "create:encased_fan" | "create:mechanical_drill" => {
+            facing() == Some(face.opposite())
+        }
+        "create:millstone" => face == Direction::Down,
+        "create:gearbox" => state_axis(state) != face.axis(),
+        "create:belt" => {
+            state
+                .properties
+                .get("part")
+                .is_some_and(|part| part != "middle")
+                && state_axis(state) == face.axis()
+        }
+        "create:shaft"
+        | "create:andesite_encased_shaft"
+        | "create:brass_encased_shaft"
+        | "create:encased_chain_drive"
+        | "create:cogwheel"
+        | "create:large_cogwheel"
+        | "create:clutch"
+        | "create:gearshift"
+        | "create:mechanical_press"
+        | "create:speedometer"
+        | "create:stressometer"
+        | "create:water_wheel"
+        | "create:large_water_wheel" => state_axis(state) == face.axis(),
+        _ => false,
+    }
+}
+
 pub(super) fn level_ports(game: &GameLevel<'_>, pos: [i32; 3]) -> [bool; 6] {
     Direction::ALL.map(|d| {
         let delta = d.vector();
@@ -340,36 +394,6 @@ pub(super) fn level_ports(game: &GameLevel<'_>, pos: [i32; 3]) -> [bool; 6] {
             .registry
             .state(game.world.block(p[0], p[1], p[2]))
             .unwrap();
-        let name = state.name.as_ref();
-        if !super::create_port::owns(name)
-            || matches!(name, "create:depot" | "create:water_wheel_structure")
-        {
-            return false;
-        }
-        if name == "create:gearbox" {
-            return level_axis(game, p) != d.axis();
-        }
-        if name == "create:millstone" {
-            return d == Direction::Up;
-        }
-        if matches!(
-            name,
-            "create:creative_motor"
-                | "create:hand_crank"
-                | "create:encased_fan"
-                | "create:mechanical_drill"
-        ) {
-            let facing = state
-                .properties
-                .get("facing")
-                .and_then(|v| Direction::ALL.into_iter().find(|f| f.name() == v))
-                .unwrap_or(Direction::Up);
-            return if name != "create:creative_motor" {
-                facing == d
-            } else {
-                facing == d.opposite()
-            };
-        }
-        level_axis(game, p) == d.axis()
+        state_shaft_port(state, d.opposite())
     })
 }
