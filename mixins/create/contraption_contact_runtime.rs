@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 use super::{Game, create_port_contraption::mirror_sync};
-use create_engine::contraption::contact::{linear_top_motion, rotary_top_motion};
+use create_engine::contraption::contact::{
+    linear_face_separation, linear_top_motion, rotary_top_motion,
+};
 use horizon_client::collisions::{EntityCollisions, SceneCollisions};
 use horizon_client_render::create_contraption_scene::{KEY, Record, full_cube_payload, read};
 use horizon_core::geometry::Vec3;
@@ -29,7 +31,6 @@ fn previous_records(game: &Game<'_>, data: &[u8]) -> Option<((i32, i32), Vec<Rec
         || player.spectator
         || player.flying
         || player.health.health() <= 0.0
-        || !player.ground.on_ground
     {
         return None;
     }
@@ -64,7 +65,7 @@ fn carry(game: &mut Game<'_>, column: (i32, i32), previous: &[Record]) {
     let bounds = player.bounds();
     let feet = bounds.bottom_center().components();
     let size = bounds.size();
-    let Some(movement) = current.iter().find_map(|record| {
+    let Some((movement, separate)) = current.iter().find_map(|record| {
         let before = previous.iter().find(|before| {
             before.controller == record.controller
                 && before.anchor == record.anchor
@@ -81,7 +82,8 @@ fn carry(game: &mut Game<'_>, column: (i32, i32), previous: &[Record]) {
         // Snapshots and duplicate updates never apply a second displacement.
         match (before.stroke, record.stroke) {
             (None, None)
-                if record.axis == 1
+                if player.ground.on_ground
+                    && record.axis == 1
                     && before.angle == record.previous_angle
                     && before.angle != record.angle =>
             {
@@ -92,17 +94,31 @@ fn carry(game: &mut Game<'_>, column: (i32, i32), previous: &[Record]) {
                     feet,
                     half_extents,
                 )
+                .map(|motion| (motion, false))
             }
             (Some(previous), Some(current))
                 if previous.offset == current.previous && previous.offset != current.offset =>
             {
-                linear_top_motion(
-                    before.origin_at(1.0),
-                    record.origin_at(1.0),
-                    full_blocks,
-                    feet,
-                    half_extents,
-                )
+                let previous_origin = before.origin_at(1.0);
+                let current_origin = record.origin_at(1.0);
+                if player.ground.on_ground
+                    && let Some(motion) = linear_top_motion(
+                        previous_origin,
+                        current_origin,
+                        full_blocks.clone(),
+                        feet,
+                        half_extents,
+                    )
+                {
+                    return Some((motion, false));
+                }
+                let low = bounds.min_position().components();
+                let mut high = bounds.max_position().components();
+                if size.y > 1.0 {
+                    high[1] -= 2.0 / 16.0;
+                }
+                linear_face_separation(previous_origin, current_origin, full_blocks, low, high)
+                    .map(|motion| (motion, true))
             }
             _ => None,
         }
@@ -153,6 +169,16 @@ fn carry(game: &mut Game<'_>, column: (i32, i32), previous: &[Record]) {
             to,
             original: Some(movement),
         });
+        if separate {
+            let response = movement.components();
+            let mut velocity = player.velocity.components();
+            for axis in [0, 2] {
+                if response[axis].abs() > 1.0 / 128.0 && velocity[axis] * response[axis] < 0.0 {
+                    velocity[axis] = 0.0;
+                }
+            }
+            player.velocity = Vec3::new(velocity[0], velocity[1], velocity[2]);
+        }
         player.position = to;
     }
 }

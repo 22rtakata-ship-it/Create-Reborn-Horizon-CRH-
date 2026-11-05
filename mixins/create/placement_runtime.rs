@@ -49,8 +49,22 @@ pub(super) fn state(
     answer: &mut Option<Option<BlockStateId>>,
 ) {
     let block = game.native_state_block(state).unwrap_or("");
-    if matches!(block, super::create_port_gantry::SHAFT | super::create_port_gantry::CARRIAGE) {
-        *answer = Some(super::create_port_gantry::placement(game, state, block, ctx, direction(ctx.face)));
+    if create_engine::sail::material(block).is_some() {
+        let facing = super::create_port::nearest(ctx.yaw, ctx.pitch).opposite();
+        *answer = Some(game.native_state_with_property(state, "facing", facing.name()));
+        return;
+    }
+    if matches!(
+        block,
+        super::create_port_gantry::SHAFT | super::create_port_gantry::CARRIAGE
+    ) {
+        *answer = Some(super::create_port_gantry::placement(
+            game,
+            state,
+            block,
+            ctx,
+            direction(ctx.face),
+        ));
         return;
     }
     if super::create_port_chain::is_chain(block) {
@@ -66,7 +80,11 @@ pub(super) fn state(
             || horizontal(ctx.yaw).clockwise(Axis::Y).axis(),
             Direction::axis,
         );
-        *answer = Some(game.native_state_with_property(state, "axis", if axis == Axis::X { "x" } else { "z" }));
+        *answer = Some(game.native_state_with_property(
+            state,
+            "axis",
+            if axis == Axis::X { "x" } else { "z" },
+        ));
         return;
     }
     if super::create_port_contraption::is_bearing(block) {
@@ -374,6 +392,7 @@ pub(super) fn destroy(game: &mut Game<'_>, pos: [i32; 3], canceled: &mut bool) {
     }
     if !*canceled {
         super::create_port_pulley::break_line(game, pos);
+        super::create_port_piston::break_static_line(game, pos);
     }
     let block = game.native_block(pos);
     if !matches!(

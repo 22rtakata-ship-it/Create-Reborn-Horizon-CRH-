@@ -182,6 +182,9 @@ with the systems they depend on.
   against the isolated Java client. [Architecture and results](contraptions.md)
 - [ ] Native glue boxes, chassis and complete block movement rules.
 - [x] Mechanical Bearing: native assembly, rotation, restart and orphan recovery.
+- [x] Windmill Sail Frame and sixteen sail colors. Dye, shear, placement,
+  windmill capture, generated speed and restart verified.
+- [ ] Windmill sail placement preview and canvas contact behavior.
 - [x] Clockwork Bearing: both hands and three modes, with atomic restoration.
 - [x] Regular and sticky Mechanical Pistons: Java tick comparison, retraction,
   terrain stop, restart and recovery in one column.
@@ -189,11 +192,19 @@ with the systems they depend on.
   and rope break, checked against Java.
 - [x] Gantry, bounded loaded rail and carriage. Motion, redstone stop, power
   transfer and restart checked in game.
+- [x] Cart Assembler rail actions, mounted cart assembly rules and coupling
+  corrections in the engine, with single and coupled Java reference fixtures.
 - [ ] Complete Rope Pulley and Gantry presentation, wet lines, coupled pulleys,
-  sequenced movement, elevator and Cart Assembler.
+  sequenced movement and elevator controls.
+- [ ] Native Cart Assembler rails, cart coupling, mounted payload and renderer.
 - [x] Dropped-item collision, grounded rotary and linear rider transfer, and
   collision of narrow piston poles in Horizon.
-- [ ] Full entity contact, moving inventories and cross-chunk persistence.
+- [x] Unobstructed side push from a translating full block, with a Java
+  reference fixture. Obstructed push still differs.
+- [x] One ordinary mounted chest on a vertical Mechanical Bearing, with crop
+  and cutter loot, item components, restart and landing recovery.
+- [ ] Full entity contact, multiple mounted inventories, moving chest menus
+  and cross-chunk persistence.
 - [x] Harvester on supported crops, moving Saw and Drill with cutting stalls,
   and horizontal stationary Saw tree felling.
 - [x] Super Glue selection and transfer planner. Deployer stroke, target and

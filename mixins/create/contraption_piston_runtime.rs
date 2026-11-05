@@ -21,7 +21,7 @@ use create_engine::{
 use horizon_client_render::create_contraption_scene::{
     MAX_BLOCKS, MAX_RECORDS, Record, Stroke, StrokeKind,
 };
-use horizon_world::{chunk::BlockState, nbt::Tag};
+use horizon_world::{chunk::BlockState, level::flags, nbt::Tag};
 
 pub(super) const NORMAL: &str = "create:mechanical_piston";
 pub(super) const STICKY: &str = "create:sticky_mechanical_piston";
@@ -330,6 +330,54 @@ fn land(game: &mut Game<'_>, pos: Pos, grid_offset: u32, owned: bool) -> bool {
     true
 }
 
+pub(super) fn break_static_line(game: &mut Game<'_>, pos: Pos) {
+    let block = game.native_block(pos);
+    if !matches!(block.as_str(), NORMAL | STICKY | POLE | HEAD) {
+        return;
+    }
+    let plan = piston::break_parts(pos, piston::MAX_POLES, |at| {
+        use piston::LineCell;
+        let Some(direction) = facing(game, at) else {
+            return LineCell::Other;
+        };
+        match game.native_block(at).as_str() {
+            POLE => LineCell::Pole(direction.axis()),
+            HEAD => LineCell::Head(direction),
+            NORMAL | STICKY
+                if game.native_block_property(at, "state").as_deref() != Some("moving") =>
+            {
+                LineCell::Base(direction)
+            }
+            _ => LineCell::Other,
+        }
+    });
+    for at in plan.remove {
+        if game.creative {
+            let id = state(game, at);
+            let behaviour = game.res.behaviours();
+            let replacement = behaviour.legacy_block(behaviour.fluid(id));
+            let dim = game.dim.id().to_owned();
+            if game.native_set_block(
+                &dim,
+                at,
+                replacement,
+                flags::UPDATE_NEIGHBORS | flags::UPDATE_CLIENTS,
+            ) {
+                game.level_event_at(2001, at, id.0 as i32);
+            }
+        } else if let Err(error) = game.destroy_block_dropping(at) {
+            log::warn!("Create could not remove piston part at {at:?}: {error:?}");
+        }
+    }
+    if let Some(base) = plan.retract {
+        game.native_set_block_property(base, "state", "retracted");
+        if plan.reset_offset {
+            game.native_with_mod_block_entity(base, |entity| write(entity, false, 0.0));
+            game.native_block_entity_sync(base);
+        }
+    }
+}
+
 pub(super) fn recover(game: &mut Game<'_>, pos: Pos) {
     let stroke = entries(game, column(pos)).ok().and_then(|records| {
         records
@@ -350,19 +398,123 @@ pub(super) fn recover(game: &mut Game<'_>, pos: Pos) {
     }
 }
 
-pub(super) fn right_click(game: &mut Game<'_>, pos: Pos) -> bool {
+pub(super) fn right_click(game: &mut Game<'_>, pos: Pos, face: Pos) -> bool {
+    let name = game.native_block(pos);
     if !game.native_on("create")
-        || !is_piston(&game.native_block(pos))
-        || game.held().is_some()
+        || !is_piston(&name)
         || game.keys.contains(&winit::keyboard::KeyCode::ShiftLeft)
         || !game.may_build()
     {
         return false;
     }
+    if let Some(held) = game.held() {
+        let slime = held.item.as_ref() == "minecraft:slime_ball"
+            || game
+                .native_server_item_in_tag(held, "c:slime_balls")
+                .unwrap_or(false);
+        if !slime
+            || name != NORMAL
+            || facing(game, pos).is_none_or(|direction| direction.vector() != face)
+        {
+            return false;
+        }
+        return make_sticky(game, pos);
+    }
     game.native_with_mod_block_entity(pos, |entity| {
         entity.nbt.insert("AssembleNextTick".into(), Tag::Byte(1));
     })
     .is_some()
+}
+
+pub(super) fn wrench(game: &mut Game<'_>, pos: Pos, face: Direction) -> bool {
+    let registry = game.pack.assets.registry;
+    let Some(before) = registry.state(state(game, pos)) else {
+        return false;
+    };
+    let Some(direction) = facing(game, pos) else {
+        return false;
+    };
+    if before
+        .properties
+        .get("state")
+        .is_none_or(|state| state != "retracted")
+    {
+        return false;
+    }
+    let mut rotated = before.clone();
+    if direction.axis() != face.axis() {
+        rotated.properties.insert(
+            "facing".into(),
+            direction.clockwise(face.axis()).name().into(),
+        );
+    }
+    if direction.axis() == face.axis() || face.axis() == create_engine::kinetics::Axis::Y {
+        let Some(first) = rotated.properties.get_mut("axis_along_first") else {
+            return false;
+        };
+        *first = if first == "true" {
+            "false".into()
+        } else {
+            "true".into()
+        };
+    }
+    let Some(rotated) = registry.id(&rotated) else {
+        return false;
+    };
+    let dim = game.dim.id().to_owned();
+    if !game.native_set_block(
+        &dim,
+        pos,
+        rotated,
+        flags::UPDATE_NEIGHBORS | flags::UPDATE_CLIENTS,
+    ) {
+        return false;
+    }
+    super::create_port_kinetic_runtime::invalidate();
+    super::create_port_sounds::wrench(game, pos, false);
+    true
+}
+
+fn make_sticky(game: &mut Game<'_>, pos: Pos) -> bool {
+    let registry = game.pack.assets.registry;
+    let Some(before) = registry.state(state(game, pos)) else {
+        return false;
+    };
+    if before
+        .properties
+        .get("state")
+        .is_none_or(|state| state != "retracted")
+    {
+        return false;
+    }
+    let mut sticky = before.clone();
+    sticky.name = STICKY.into();
+    let Some(sticky) = registry.id(&sticky) else {
+        return false;
+    };
+    let dim = game.dim.id().to_owned();
+    if !game.native_set_block(
+        &dim,
+        pos,
+        sticky,
+        flags::UPDATE_NEIGHBORS | flags::UPDATE_CLIENTS,
+    ) {
+        return false;
+    }
+    if !game.creative {
+        game.consume_held();
+    }
+    super::create_port_kinetic_runtime::invalidate();
+    game.with_level(|_, level, _| {
+        level.native_play_sound(
+            "minecraft:block.slime_block.place",
+            pos.map(|value| f64::from(value) + 0.5),
+            4,
+            0.5,
+            1.0,
+        )
+    });
+    true
 }
 
 fn write(entity: &mut ModBlockEntity, running: bool, offset: f32) {

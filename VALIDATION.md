@@ -1,5 +1,31 @@
 # Checks and evidence
 
+## 0.8.0-alpha.3 moving cargo and sails
+
+The original Create 6.0.10 client and Horizon agree on slot order and rotated
+landing for the single mounted chest. Horizon also preserved item components
+through a real restart, recaptured the chest after landing, recovered it after
+an obstructed controller removal, and collected Saw and Drill drops. Full
+inventory overflow and loot from a neighboring column drop into the world.
+
+The sail fixture matches the Java dye and shear interactions and the eight-sail
+windmill's 1 RPM. The axial sail stays outside the assembly. Both native
+resource modes passed assembly, process restart and restoration. A separate
+offscreen review world checks the original sail meshes and the ordinary
+closed chest on the moving structure.
+
+The player interaction fixture covers Survival slime consumption, Creative
+slime retention, wrenching the retracted piston, refusal while extended and
+teardown through a real left click on a pole. It also detects a server crash
+when an invalid wrench click reaches the Depot handler. The translated
+full-block push covers unobstructed contact. The blocked push still differs
+from the sideways displacement in the Java fixture.
+
+Four Java cart-assembler scenes and 722 bitwise coupling comparisons cover
+the new cart engine. Cart behavior is not connected to Horizon in this build.
+The workspace passed 232 Rust tests, 14 Python tests, strict Clippy and official
+native archive validation.
+
 ## 0.8.0-alpha.2 contraptions
 
 The native build was checked against Create 6.0.10 on three Mechanical

@@ -300,6 +300,101 @@ impl Layout {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LineCell {
+    Base(Direction),
+    Pole(Axis),
+    Head(Direction),
+    Other,
+}
+
+#[derive(Default, Debug, PartialEq, Eq)]
+pub struct PartBreak {
+    pub remove: Vec<Pos>,
+    pub retract: Option<Pos>,
+    pub reset_offset: bool,
+}
+
+/// Physical parts broken by a player outside a moving stroke. The broken
+/// block itself is left to the normal player mining path.
+pub fn break_parts(broken: Pos, max_poles: u32, cell: impl Fn(Pos) -> LineCell) -> PartBreak {
+    let scan = |direction: Direction| {
+        let mut poles = Vec::new();
+        for offset in 1..max_poles {
+            let Ok(at) = advance(broken, direction, i64::from(offset)) else {
+                break;
+            };
+            let found = cell(at);
+            if found == LineCell::Pole(direction.axis()) {
+                poles.push(at);
+            } else {
+                return (poles, Some((at, found)));
+            }
+        }
+        (poles, None)
+    };
+    match cell(broken) {
+        LineCell::Base(facing) => {
+            let (mut front, end) = scan(facing);
+            if let Some((head, LineCell::Head(direction))) = end
+                && direction == facing
+            {
+                front.push(head);
+                front.sort_unstable();
+            } else {
+                front.clear();
+            }
+            front.extend(scan(facing.opposite()).0);
+            PartBreak {
+                remove: front,
+                ..PartBreak::default()
+            }
+        }
+        LineCell::Head(facing) => {
+            let (mut remove, end) = scan(facing.opposite());
+            if let Some((base, LineCell::Base(direction))) = end
+                && direction == facing
+            {
+                remove.sort_unstable();
+                PartBreak {
+                    remove,
+                    retract: Some(base),
+                    reset_offset: false,
+                }
+            } else {
+                PartBreak::default()
+            }
+        }
+        LineCell::Pole(axis) => {
+            let direction = match axis {
+                Axis::X => Direction::East,
+                Axis::Y => Direction::Up,
+                Axis::Z => Direction::South,
+            };
+            let (mut positive, pos) = scan(direction);
+            let (negative, neg) = scan(direction.opposite());
+            let (base, head) = match (pos, neg) {
+                (Some((base, LineCell::Base(facing))), Some((head, LineCell::Head(heading))))
+                | (Some((head, LineCell::Head(heading))), Some((base, LineCell::Base(facing))))
+                    if facing == heading =>
+                {
+                    (base, head)
+                }
+                _ => return PartBreak::default(),
+            };
+            positive.extend(negative);
+            positive.push(head);
+            positive.sort_unstable();
+            PartBreak {
+                remove: positive,
+                retract: Some(base),
+                reset_offset: true,
+            }
+        }
+        LineCell::Other => PartBreak::default(),
+    }
+}
+
 /// MechanicalPistonBlockEntity.getMovementSpeed before stroke/sequence clamps.
 pub fn directional_speed(rpm: f32, facing: Direction) -> f32 {
     let sign = facing.vector().into_iter().sum::<i32>() as f32;
@@ -353,6 +448,40 @@ mod tests {
             rules,
             wool_carpet: false,
         }
+    }
+
+    #[test]
+    fn breaking_the_train_only_removes_the_associated_parts() {
+        use super::{LineCell, PartBreak, break_parts};
+        use crate::kinetics::Axis;
+        let base = [0, 4, 0];
+        let front = [1, 4, 0];
+        let head = [2, 4, 0];
+        let rear = [-1, 4, 0];
+        let read = |at| match at {
+            p if p == base => LineCell::Base(East),
+            p if p == head => LineCell::Head(East),
+            p if p == front || p == rear => LineCell::Pole(Axis::X),
+            _ => LineCell::Other,
+        };
+        assert_eq!(break_parts(base, 64, read).remove, [front, head, rear]);
+        assert_eq!(
+            break_parts(front, 64, read),
+            PartBreak {
+                remove: vec![head],
+                retract: Some(base),
+                reset_offset: true,
+            }
+        );
+        assert_eq!(
+            break_parts(head, 64, read),
+            PartBreak {
+                remove: vec![front],
+                retract: Some(base),
+                reset_offset: false,
+            }
+        );
+        assert_eq!(break_parts(rear, 64, read), PartBreak::default());
     }
 
     #[test]

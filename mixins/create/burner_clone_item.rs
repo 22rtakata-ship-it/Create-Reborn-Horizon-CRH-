@@ -8,6 +8,7 @@ fn create_burner_clone_item(
 ) {
     if stack.is_none() && game.native_on("create") {
         *stack = crate::game::create_port_burner_interactions::clone_item(game, pos)
+            .or_else(|| crate::game::create_port_sail::pickup(&game.native_block(pos)))
             .map(|id| crate::items::ItemStack::new(id, 1));
     }
 }

@@ -364,22 +364,16 @@ pub(super) fn inventory_blocked(game: &Game<'_>, pos: [i32; 3]) -> bool {
         Some(BlockEntity::Mod(entity)) if !inventory_supported(entity))
 }
 
-pub(super) fn depot_reacts(game: &Game<'_>, pos: [i32; 3], face: [i32; 3]) -> bool {
-    if inventory_blocked(game, pos) {
-        return false;
-    }
-    if crate::game::create_port_burner::reacts(game, pos) {
-        return true;
-    }
-    if crate::game::create_port_basin::reacts(game, pos) {
-        return true;
-    }
-    if crate::game::create_port_millstone::reacts(game, pos) {
-        return true;
-    }
-    if crate::game::create_port_interactions::reacts(game, pos) {
-        return true;
-    }
+pub(super) fn predicts_use(game: &Game<'_>, pos: [i32; 3], face: [i32; 3]) -> bool {
+    !inventory_blocked(game, pos)
+        && (crate::game::create_port_burner::reacts(game, pos)
+            || crate::game::create_port_basin::reacts(game, pos)
+            || crate::game::create_port_millstone::reacts(game, pos)
+            || crate::game::create_port_interactions::reacts(game, pos)
+            || depot_reacts(game, pos, face))
+}
+
+fn depot_reacts(game: &Game<'_>, pos: [i32; 3], face: [i32; 3]) -> bool {
     if !game.native_on("create") || game.native_block(pos) != "create:depot" || face != [0, 1, 0] {
         return false;
     }
@@ -401,7 +395,7 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3], ca
         return;
     }
     if super::create_port_contraption::right_click(game, pos)
-        || super::create_port_piston::right_click(game, pos)
+        || super::create_port_piston::right_click(game, pos, face)
         || super::create_port_pulley::right_click(game, pos)
         || super::create_port_gantry::right_click(game, pos)
     {

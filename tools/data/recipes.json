@@ -301,6 +301,51 @@
         "id": "create:encased_fan"
       }
     },
+    "create/recipe/crafting/kinetics/gantry_carriage.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "B": {
+          "tag": "minecraft:wooden_slabs"
+        },
+        "C": {
+          "item": "create:andesite_casing"
+        },
+        "I": {
+          "item": "create:cogwheel"
+        }
+      },
+      "pattern": [
+        "B",
+        "C",
+        "I"
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:gantry_carriage"
+      }
+    },
+    "create/recipe/crafting/kinetics/gantry_shaft.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "A": {
+          "item": "create:andesite_alloy"
+        },
+        "R": {
+          "tag": "c:dusts/redstone"
+        }
+      },
+      "pattern": [
+        "A",
+        "R",
+        "A"
+      ],
+      "result": {
+        "count": 8,
+        "id": "create:gantry_shaft"
+      }
+    },
     "create/recipe/crafting/kinetics/gearbox.json": {
       "type": "minecraft:crafting_shaped",
       "category": "misc",
@@ -711,6 +756,19 @@
         "id": "create:rope_pulley"
       }
     },
+    "create/recipe/crafting/kinetics/sail_frame_from_conversion.json": {
+      "type": "minecraft:crafting_shapeless",
+      "category": "misc",
+      "ingredients": [
+        {
+          "item": "create:white_sail"
+        }
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:sail_frame"
+      }
+    },
     "create/recipe/crafting/kinetics/shaft.json": {
       "type": "minecraft:crafting_shaped",
       "category": "misc",
@@ -868,6 +926,42 @@
       "result": {
         "count": 1,
         "id": "create:whisk"
+      }
+    },
+    "create/recipe/crafting/kinetics/white_sail.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "A": {
+          "item": "create:andesite_alloy"
+        },
+        "S": {
+          "tag": "c:rods/wooden"
+        },
+        "W": {
+          "tag": "minecraft:wool"
+        }
+      },
+      "pattern": [
+        "WS",
+        "SA"
+      ],
+      "result": {
+        "count": 2,
+        "id": "create:white_sail"
+      }
+    },
+    "create/recipe/crafting/kinetics/white_sail_from_conversion.json": {
+      "type": "minecraft:crafting_shapeless",
+      "category": "misc",
+      "ingredients": [
+        {
+          "item": "create:sail_frame"
+        }
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:white_sail"
       }
     },
     "create/recipe/crafting/kinetics/windmill_bearing.json": {
@@ -2651,51 +2745,6 @@
           "id": "minecraft:white_wool"
         }
       ]
-    },
-    "create/recipe/crafting/kinetics/gantry_shaft.json": {
-      "type": "minecraft:crafting_shaped",
-      "category": "misc",
-      "key": {
-        "A": {
-          "item": "create:andesite_alloy"
-        },
-        "R": {
-          "tag": "c:dusts/redstone"
-        }
-      },
-      "pattern": [
-        "A",
-        "R",
-        "A"
-      ],
-      "result": {
-        "count": 8,
-        "id": "create:gantry_shaft"
-      }
-    },
-    "create/recipe/crafting/kinetics/gantry_carriage.json": {
-      "type": "minecraft:crafting_shaped",
-      "category": "misc",
-      "key": {
-        "B": {
-          "tag": "minecraft:wooden_slabs"
-        },
-        "C": {
-          "item": "create:andesite_casing"
-        },
-        "I": {
-          "item": "create:cogwheel"
-        }
-      },
-      "pattern": [
-        "B",
-        "C",
-        "I"
-      ],
-      "result": {
-        "count": 1,
-        "id": "create:gantry_carriage"
-      }
     }
   },
   "tags": {
@@ -3045,17 +3094,35 @@
         "create:sticky_mechanical_piston",
         "create:piston_extension_pole",
         "create:mechanical_piston_head",
+        "create:gantry_carriage",
+        "create:gantry_shaft",
         "create:windmill_bearing",
         "create:mechanical_bearing",
         "create:clockwork_bearing",
+        "create:rope_pulley",
         "create:mechanical_drill",
         "create:mechanical_saw",
         "create:mechanical_harvester",
+        "create:sail_frame",
+        "create:white_sail",
+        "create:orange_sail",
+        "create:magenta_sail",
+        "create:light_blue_sail",
+        "create:yellow_sail",
+        "create:lime_sail",
+        "create:pink_sail",
+        "create:gray_sail",
+        "create:light_gray_sail",
+        "create:cyan_sail",
+        "create:purple_sail",
+        "create:blue_sail",
+        "create:brown_sail",
+        "create:green_sail",
+        "create:red_sail",
+        "create:black_sail",
         "create:andesite_casing",
         "create:brass_casing",
-        "create:copper_casing",
-        "create:gantry_shaft",
-        "create:gantry_carriage"
+        "create:copper_casing"
       ]
     },
     "minecraft/tags/block/mineable/pickaxe.json": {
@@ -3090,9 +3157,12 @@
         "create:sticky_mechanical_piston",
         "create:piston_extension_pole",
         "create:mechanical_piston_head",
+        "create:gantry_carriage",
+        "create:gantry_shaft",
         "create:windmill_bearing",
         "create:mechanical_bearing",
         "create:clockwork_bearing",
+        "create:rope_pulley",
         "create:mechanical_drill",
         "create:mechanical_saw",
         "create:mechanical_harvester",
@@ -3101,9 +3171,7 @@
         "create:copper_casing",
         "create:zinc_block",
         "create:andesite_alloy_block",
-        "create:brass_block",
-        "create:gantry_shaft",
-        "create:gantry_carriage"
+        "create:brass_block"
       ]
     },
     "create/tags/block/casing.json": {
@@ -3124,6 +3192,7 @@
       "values": [
         "create:blaze_burner",
         "create:lit_blaze_burner",
+        "create:sail_frame",
         "minecraft:iron_bars",
         "minecraft:mangrove_roots",
         "minecraft:copper_grate",
@@ -3137,6 +3206,28 @@
         "#minecraft:campfires",
         "#minecraft:fences",
         "#minecraft:leaves"
+      ]
+    },
+    "create/tags/block/windmill_sails.json": {
+      "values": [
+        "create:sail_frame",
+        "create:white_sail",
+        "create:orange_sail",
+        "create:magenta_sail",
+        "create:light_blue_sail",
+        "create:yellow_sail",
+        "create:lime_sail",
+        "create:pink_sail",
+        "create:gray_sail",
+        "create:light_gray_sail",
+        "create:cyan_sail",
+        "create:purple_sail",
+        "create:blue_sail",
+        "create:brown_sail",
+        "create:green_sail",
+        "create:red_sail",
+        "create:black_sail",
+        "#minecraft:wool"
       ]
     },
     "create/tags/block/fan_processing_catalysts/blasting.json": {
@@ -3204,6 +3295,27 @@
     }
   },
   "loot_tables": {
+    "create/loot_table/blocks/encased_chain_drive.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "condition": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:encased_chain_drive"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/encased_chain_drive"
+    },
     "create/loot_table/blocks/adjustable_chain_gearshift.json": {
       "type": "minecraft:block",
       "pools": [
@@ -3224,27 +3336,6 @@
         }
       ],
       "random_sequence": "create:blocks/adjustable_chain_gearshift"
-    },
-    "create/loot_table/blocks/clockwork_bearing.json": {
-      "type": "minecraft:block",
-      "pools": [
-        {
-          "bonus_rolls": 0.0,
-          "conditions": [
-            {
-              "condition": "minecraft:survives_explosion"
-            }
-          ],
-          "entries": [
-            {
-              "type": "minecraft:item",
-              "name": "create:clockwork_bearing"
-            }
-          ],
-          "rolls": 1.0
-        }
-      ],
-      "random_sequence": "create:blocks/clockwork_bearing"
     },
     "create/loot_table/blocks/copper_casing.json": {
       "type": "minecraft:block",
@@ -3267,48 +3358,6 @@
       ],
       "random_sequence": "create:blocks/copper_casing"
     },
-    "create/loot_table/blocks/encased_chain_drive.json": {
-      "type": "minecraft:block",
-      "pools": [
-        {
-          "bonus_rolls": 0.0,
-          "conditions": [
-            {
-              "condition": "minecraft:survives_explosion"
-            }
-          ],
-          "entries": [
-            {
-              "type": "minecraft:item",
-              "name": "create:encased_chain_drive"
-            }
-          ],
-          "rolls": 1.0
-        }
-      ],
-      "random_sequence": "create:blocks/encased_chain_drive"
-    },
-    "create/loot_table/blocks/mechanical_harvester.json": {
-      "type": "minecraft:block",
-      "pools": [
-        {
-          "bonus_rolls": 0.0,
-          "conditions": [
-            {
-              "condition": "minecraft:survives_explosion"
-            }
-          ],
-          "entries": [
-            {
-              "type": "minecraft:item",
-              "name": "create:mechanical_harvester"
-            }
-          ],
-          "rolls": 1.0
-        }
-      ],
-      "random_sequence": "create:blocks/mechanical_harvester"
-    },
     "create/loot_table/blocks/mechanical_piston.json": {
       "type": "minecraft:block",
       "pools": [
@@ -3329,132 +3378,6 @@
         }
       ],
       "random_sequence": "create:blocks/mechanical_piston"
-    },
-    "create/loot_table/blocks/mechanical_piston_head.json": {
-      "type": "minecraft:block",
-      "pools": [
-        {
-          "bonus_rolls": 0.0,
-          "conditions": [
-            {
-              "condition": "minecraft:survives_explosion"
-            }
-          ],
-          "entries": [
-            {
-              "type": "minecraft:item",
-              "name": "create:piston_extension_pole"
-            }
-          ],
-          "rolls": 1.0
-        }
-      ],
-      "random_sequence": "create:blocks/mechanical_piston_head"
-    },
-    "create/loot_table/blocks/mechanical_saw.json": {
-      "type": "minecraft:block",
-      "pools": [
-        {
-          "bonus_rolls": 0.0,
-          "conditions": [
-            {
-              "condition": "minecraft:survives_explosion"
-            }
-          ],
-          "entries": [
-            {
-              "type": "minecraft:item",
-              "name": "create:mechanical_saw"
-            }
-          ],
-          "rolls": 1.0
-        }
-      ],
-      "random_sequence": "create:blocks/mechanical_saw"
-    },
-    "create/loot_table/blocks/piston_extension_pole.json": {
-      "type": "minecraft:block",
-      "pools": [
-        {
-          "bonus_rolls": 0.0,
-          "conditions": [
-            {
-              "condition": "minecraft:survives_explosion"
-            }
-          ],
-          "entries": [
-            {
-              "type": "minecraft:item",
-              "name": "create:piston_extension_pole"
-            }
-          ],
-          "rolls": 1.0
-        }
-      ],
-      "random_sequence": "create:blocks/piston_extension_pole"
-    },
-    "create/loot_table/blocks/pulley_magnet.json": {
-      "type": "minecraft:block",
-      "pools": [
-        {
-          "bonus_rolls": 0.0,
-          "conditions": [
-            {
-              "condition": "minecraft:survives_explosion"
-            }
-          ],
-          "entries": [
-            {
-              "type": "minecraft:item",
-              "name": "minecraft:air"
-            }
-          ],
-          "rolls": 1.0
-        }
-      ],
-      "random_sequence": "create:blocks/pulley_magnet"
-    },
-    "create/loot_table/blocks/rope.json": {
-      "type": "minecraft:block",
-      "pools": [
-        {
-          "bonus_rolls": 0.0,
-          "conditions": [
-            {
-              "condition": "minecraft:survives_explosion"
-            }
-          ],
-          "entries": [
-            {
-              "type": "minecraft:item",
-              "name": "minecraft:air"
-            }
-          ],
-          "rolls": 1.0
-        }
-      ],
-      "random_sequence": "create:blocks/rope"
-    },
-    "create/loot_table/blocks/rope_pulley.json": {
-      "type": "minecraft:block",
-      "pools": [
-        {
-          "bonus_rolls": 0.0,
-          "conditions": [
-            {
-              "condition": "minecraft:survives_explosion"
-            }
-          ],
-          "entries": [
-            {
-              "type": "minecraft:item",
-              "name": "create:rope_pulley"
-            }
-          ],
-          "rolls": 1.0
-        }
-      ],
-      "random_sequence": "create:blocks/rope_pulley"
     },
     "create/loot_table/blocks/sticky_mechanical_piston.json": {
       "type": "minecraft:block",
@@ -3477,7 +3400,7 @@
       ],
       "random_sequence": "create:blocks/sticky_mechanical_piston"
     },
-    "create/loot_table/blocks/gantry_shaft.json": {
+    "create/loot_table/blocks/piston_extension_pole.json": {
       "type": "minecraft:block",
       "pools": [
         {
@@ -3490,15 +3413,15 @@
           "entries": [
             {
               "type": "minecraft:item",
-              "name": "create:gantry_shaft"
+              "name": "create:piston_extension_pole"
             }
           ],
           "rolls": 1.0
         }
       ],
-      "random_sequence": "create:blocks/gantry_shaft"
+      "random_sequence": "create:blocks/piston_extension_pole"
     },
-    "create/loot_table/blocks/gantry_carriage.json": {
+    "create/loot_table/blocks/mechanical_piston_head.json": {
       "type": "minecraft:block",
       "pools": [
         {
@@ -3511,13 +3434,433 @@
           "entries": [
             {
               "type": "minecraft:item",
-              "name": "create:gantry_carriage"
+              "name": "create:piston_extension_pole"
             }
           ],
           "rolls": 1.0
         }
       ],
-      "random_sequence": "create:blocks/gantry_carriage"
+      "random_sequence": "create:blocks/mechanical_piston_head"
+    },
+    "create/loot_table/blocks/clockwork_bearing.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "condition": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:clockwork_bearing"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/clockwork_bearing"
+    },
+    "create/loot_table/blocks/mechanical_harvester.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "condition": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:mechanical_harvester"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/mechanical_harvester"
+    },
+    "create/loot_table/blocks/mechanical_saw.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "condition": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:mechanical_saw"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/mechanical_saw"
+    },
+    "create/loot_table/blocks/sail_frame.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "condition": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:sail_frame"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/sail_frame"
+    },
+    "create/loot_table/blocks/white_sail.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "condition": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:white_sail"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/white_sail"
+    },
+    "create/loot_table/blocks/orange_sail.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "condition": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:white_sail"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/orange_sail"
+    },
+    "create/loot_table/blocks/magenta_sail.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "condition": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:white_sail"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/magenta_sail"
+    },
+    "create/loot_table/blocks/light_blue_sail.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "condition": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:white_sail"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/light_blue_sail"
+    },
+    "create/loot_table/blocks/yellow_sail.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "condition": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:white_sail"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/yellow_sail"
+    },
+    "create/loot_table/blocks/lime_sail.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "condition": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:white_sail"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/lime_sail"
+    },
+    "create/loot_table/blocks/pink_sail.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "condition": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:white_sail"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/pink_sail"
+    },
+    "create/loot_table/blocks/gray_sail.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "condition": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:white_sail"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/gray_sail"
+    },
+    "create/loot_table/blocks/light_gray_sail.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "condition": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:white_sail"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/light_gray_sail"
+    },
+    "create/loot_table/blocks/cyan_sail.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "condition": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:white_sail"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/cyan_sail"
+    },
+    "create/loot_table/blocks/purple_sail.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "condition": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:white_sail"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/purple_sail"
+    },
+    "create/loot_table/blocks/blue_sail.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "condition": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:white_sail"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/blue_sail"
+    },
+    "create/loot_table/blocks/brown_sail.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "condition": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:white_sail"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/brown_sail"
+    },
+    "create/loot_table/blocks/green_sail.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "condition": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:white_sail"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/green_sail"
+    },
+    "create/loot_table/blocks/red_sail.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "condition": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:white_sail"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/red_sail"
+    },
+    "create/loot_table/blocks/black_sail.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "condition": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:white_sail"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/black_sail"
     }
   }
 }

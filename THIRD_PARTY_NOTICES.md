@@ -12,13 +12,18 @@ The following MIT code informed or was adapted into the Rust engine:
   `ControlledContraptionEntity`, `bearing/BearingContraption`, and
   `bearing/MechanicalBearingBlockEntity`: read-only assembly, centred rotation,
   snapped restoration and the bearing's rotation modes and tick rules.
-- `content/contraptions/bearing/WindmillBearingBlockEntity`,
+- `content/contraptions/bearing/SailBlock`, `WindmillBearingBlockEntity`,
   `ClockworkBearingBlockEntity` and `ClockworkContraption` inform sail power,
-  clock motion and paired restoration.
+  sail placement and recoloring, clock motion and paired restoration.
 - `content/contraptions/piston`, `content/contraptions/pulley`,
   `content/contraptions/gantry`, `content/kinetics/gantry` and
   `content/contraptions/ContraptionCollider` inform pole and rope layout,
   linear travel, rail motion, placement and rider contact.
+- `api/contraption/storage/item/chest/ChestMountedStorage`,
+  `api/contraption/storage/item/MountedItemStorageWrapper`,
+  `content/contraptions/mounted` and `content/contraptions/minecart/CouplingPhysics`
+  inform mounted chest capture, ordered loot insertion and cart rail decisions
+  and coupling corrections.
 - `content/contraptions/actors/harvester`, `content/kinetics/saw`,
   `content/kinetics/drill/DrillMovementBehaviour`,
   `content/kinetics/base/BlockBreakingMovementBehaviour` and `TreeCutter` inform

@@ -458,9 +458,10 @@ fn block_cross_section([u, v]: [usize; 2], [cos, sin]: [f64; 2], bounds: Aabb) -
     strips
 }
 
-/// Vanilla payload states admitted by capture fill a cube except honey.
+/// Vanilla payload states that fill a cube without querying collision shapes.
 pub fn full_cube_payload(state: &BlockState) -> bool {
-    state.name.starts_with("minecraft:") && state.name != "minecraft:honey_block"
+    state.name.starts_with("minecraft:")
+        && !matches!(state.name.as_str(), "minecraft:honey_block" | "minecraft:chest")
 }
 
 pub fn append_collisions(
@@ -487,14 +488,12 @@ pub fn append_collisions(
             for (local, state) in &record.blocks {
                 let center =
                     origin.add_vector(vector(rotate_plane(plane, rotation, local.map(f64::from))));
-                // All vanilla blocks admitted by capture currently fill a cube.
                 if full_cube_payload(state) {
                     obstacles.extend(full_cube.iter().map(|aabb| aabb.move_by(center)));
                     continue;
                 }
-                // The captured Harvester and piston parts have static shapes
-                // keyed by block state. Resolve their registered boxes before
-                // moving them. World-dependent shapes need a local block view.
+                // Captured non-cubes have static shapes keyed by block state.
+                // World-dependent shapes need a local block view.
                 let Some(id) = binding.registry().id(state) else {
                     continue;
                 };

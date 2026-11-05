@@ -16,6 +16,8 @@ pub mod depot;
 
 #[path = "core/deployer.rs"]
 pub mod deployer;
+#[path = "core/sail.rs"]
+pub mod sail;
 
 #[path = "core/controls.rs"]
 pub mod controls;

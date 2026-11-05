@@ -53,7 +53,9 @@ pub(super) fn reacts(game: &Game<'_>, pos: [i32; 3]) -> bool {
     let block = game.native_block(pos);
     let held = game.held().map(|s| s.item.as_ref());
     if held == Some("create:wrench")
-        && (crate::game::create_port::owns(&block) || block == "create:lit_blaze_burner")
+        && (crate::game::create_port::owns(&block)
+            || block == "create:lit_blaze_burner"
+            || create_engine::sail::material(&block).is_some())
     {
         return true;
     }
@@ -115,6 +117,9 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3]) ->
     if super::create_port::inventory_blocked(game, pos) {
         return true;
     }
+    if super::create_port_sail::right_click(game, pos, face) {
+        return true;
+    }
     if !reacts(game, pos) {
         return false;
     }
@@ -160,7 +165,9 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3]) ->
             }
             return true;
         }
-        let pickup = if block == "create:gearbox"
+        let pickup = if let Some(item) = super::create_port_sail::pickup(&block) {
+            item
+        } else if block == "create:gearbox"
             && game.native_block_property(pos, "axis").as_deref() != Some("y")
         {
             "create:vertical_gearbox"
@@ -204,6 +211,9 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3]) ->
         } else if block == "create:large_water_wheel" {
             return false;
         } else if let Some(face) = Direction::from_vector(face) {
+            if super::create_port_piston::is_piston(&block) {
+                return super::create_port_piston::wrench(game, pos, face);
+            }
             let before_rotation = game.world.block(pos[0], pos[1], pos[2]);
             if super::create_port_chain::is_chain(&block) {
                 if super::create_port_chain::wrench(game, pos, face) {

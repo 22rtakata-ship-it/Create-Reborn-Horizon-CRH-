@@ -19,9 +19,16 @@ WORLD = 'CreateBearingReview'
 BEARING = (904, 84, 56)
 CONTROL = (905, 83, 56)
 WINDMILL = (904, 84, 72)
+SAIL_PANEL = [
+    ((905, 84, 72), 'sail_frame'), ((905, 83, 72), 'sail_frame'),
+    ((905, 85, 72), 'white_sail'), ((905, 84, 71), 'yellow_sail'),
+    ((905, 84, 73), 'white_sail'), ((905, 85, 73), 'cyan_sail'),
+    ((905, 83, 71), 'blue_sail'), ((905, 85, 71), 'black_sail'),
+]
+AXIAL_SAIL = (906, 84, 72)
 
 
-def prepare(session, windmill, farms, clockwork, linear):
+def prepare(session, windmill, farms, clockwork, linear, cargo, sails):
     batch = Batch()
     batch.load((908, 82, 60))
     batch.command('fill 897 81 49 925 94 78 minecraft:air')
@@ -41,7 +48,13 @@ def prepare(session, windmill, farms, clockwork, linear):
     batch.put((916, 85, 56), 'minecraft:slime_block')
     batch.put((917, 85, 56), 'minecraft:oak_log[axis=x]')
     batch.put((915, 85, 56), 'minecraft:oak_planks')
-    if windmill:
+    if windmill and sails:
+        batch.put(WINDMILL, 'create:windmill_bearing[facing=east]')
+        batch.put((903, 84, 72), 'create:shaft[axis=x]')
+        for pos, block in SAIL_PANEL:
+            batch.put(pos, f'create:{block}[facing=east]')
+        batch.put(AXIAL_SAIL, 'create:orange_sail[facing=east]')
+    elif windmill:
         batch.put(WINDMILL, 'create:windmill_bearing[facing=up]')
         batch.put((904, 83, 72), 'create:shaft[axis=y]')
         for x in range(902, 907):
@@ -52,14 +65,14 @@ def prepare(session, windmill, farms, clockwork, linear):
     if windmill:
         stations.sign(batch, (907, 81, 74), ['WINDMILL', 'Empty hand:', 'start / stop.', 'Rear shaft: 1 RPM.'])
     if farms:
-        stations.setup(batch, clockwork, linear)
+        stations.setup(batch, clockwork, linear, cargo)
     batch.tick(30 if farms else 12)
     batch.data(BEARING)
     rows = batch.run(session, 'prepare-review')
     assert number({'nbt': rows[0]}, 'Running') == 1, rows
 
 
-def review(session, windmill, farms, clockwork, linear):
+def review(session, windmill, farms, clockwork, linear, cargo, sails):
     call = session.call
 
     def command(value):
@@ -127,13 +140,19 @@ def review(session, windmill, farms, clockwork, linear):
             interact(WINDMILL, 'south')
             windmill_nbt = wait_running(WINDMILL, 1)
             assert number(windmill_nbt, 'LastGenerated') == 1, windmill_nbt
-            shaft = snapshot((904, 83, 72))
+            shaft = snapshot((903, 84, 72) if sails else (904, 83, 72))
             assert number(shaft, 'Speed') == 1, shaft
             interact(WINDMILL, 'south')
             wait_running(WINDMILL, 0)
-            for x in range(902, 907):
-                state = call('block', x, 85, 71)
-                assert 'white_wool' in str(state), state
+            if sails:
+                for pos, block in SAIL_PANEL:
+                    state = call('block', *pos)
+                    assert state['block'] == 'create:' + block and 'facing=east' in state['state'], state
+                assert call('block', *AXIAL_SAIL)['block'] == 'create:orange_sail'
+            else:
+                for x in range(902, 907):
+                    state = call('block', x, 85, 71)
+                    assert 'white_wool' in str(state), state
             interact(WINDMILL, 'south')
             wait_running(WINDMILL, 1)
 
@@ -148,6 +167,9 @@ def review(session, windmill, farms, clockwork, linear):
             for base, lever in ((stations.HARVESTER, stations.HARVESTER_LEVER), (stations.SAW, stations.SAW_LEVER)):
                 assert number(snapshot(base), 'Running', 0) == 0, base
                 assert 'powered=true' in call('block', *lever)['state']
+            if cargo:
+                assert call('block', *stations.FARM_CHEST)['block'] == 'minecraft:chest'
+                assert number(snapshot(stations.CARGO), 'Running', 0) == 1
             if clockwork:
                 wait_loaded(call, [stations.CLOCK])
                 assert call('block', *stations.CLOCK)['block'] == 'create:clockwork_bearing'
@@ -186,13 +208,24 @@ def review(session, windmill, farms, clockwork, linear):
         call('wait', 15)
         second = screenshot('bearing-second.png')
         assert first.read_bytes() != second.read_bytes()
+        extra = []
+        if cargo:
+            command('tp @s 908.5 87.2 65.5')
+            call('look-at', 904.5, 85.5, 62.5)
+            call('wait', 12)
+            extra.append(str(screenshot('mounted-chest.png')))
+        if sails:
+            command('tp @s 910.5 86.2 75.5')
+            call('look-at', 905.5, 84.5, 72.5)
+            call('wait', 12)
+            extra.append(str(screenshot('colored-sails.png')))
         call('key', 'f1', 'tap')
         command('gamemode creative')
         command('tp @s 909.5 81 61.5')
         call('look-at', 904.5, 85.1, 56.5)
         command('save-all flush')
 
-    return dict(supported=supported, control=control, screenshots=[str(first), str(second)])
+    return dict(supported=supported, control=control, screenshots=[str(first), str(second), *extra])
 
 
 def launcher(session):
@@ -216,14 +249,18 @@ def main():
     parser.add_argument('--farms', action='store_true')
     parser.add_argument('--clockwork', action='store_true')
     parser.add_argument('--linear', action='store_true')
+    parser.add_argument('--cargo', action='store_true')
+    parser.add_argument('--sails', action='store_true')
     args = parser.parse_args()
-    if (args.clockwork or args.linear) and not args.farms:
-        parser.error('--clockwork and --linear require --farms')
+    if args.sails and not args.windmill:
+        parser.error('--sails requires --windmill')
+    if (args.clockwork or args.linear or args.cargo) and not args.farms:
+        parser.error('--clockwork, --linear and --cargo require --farms')
     session = NativeCheckSession(args.game, args.resources, args.ctl, args.create_jar,
                                  name='bearing-review', graphics=True, world=WORLD, username=NAME)
     print(session.scratch, flush=True)
-    prepare(session, args.windmill, args.farms, args.clockwork, args.linear)
-    report = review(session, args.windmill, args.farms, args.clockwork, args.linear)
+    prepare(session, args.windmill, args.farms, args.clockwork, args.linear, args.cargo, args.sails)
+    report = review(session, args.windmill, args.farms, args.clockwork, args.linear, args.cargo, args.sails)
     report['launcher'] = str(launcher(session))
     (session.scratch / 'report.json').write_text(json.dumps(report, indent=2) + '\n')
     print(json.dumps(report))

@@ -7,6 +7,7 @@ import json
 from common import ROOT, NATIVE
 from pulley_content import rope_pulley
 from gantry_content import gantry
+from sail_content import COLORED_SAILS, sails
 
 CONTENT = ROOT / "content"
 BLOCKS = ["creative_motor", "shaft", "cogwheel", "large_cogwheel", "mechanical_press", "depot"]
@@ -640,6 +641,7 @@ def foundation():
     pistons()
     rope_pulley(write, model)
     gantry(write, model)
+    sails(write, model)
     contraption_actors()
     basin_mixer()
     burners()
@@ -691,6 +693,8 @@ def foundation():
     extra_blocks['clockwork_bearing'] = 'Clockwork Bearing'
     extra_blocks.update({'rope_pulley': 'Rope Pulley', 'rope': 'Rope', 'pulley_magnet': 'Pulley Magnet'})
     extra_blocks.update({'gantry_shaft': 'Gantry Shaft', 'gantry_carriage': 'Gantry Carriage'})
+    extra_blocks.update({name: name.replace('_', ' ').title() for name in COLORED_SAILS})
+    extra_blocks.update({'sail_frame': 'Windmill Sail Frame', 'white_sail': 'Windmill Sail'})
     extra_blocks.update({"mechanical_piston": "Mechanical Piston", "sticky_mechanical_piston": "Sticky Mechanical Piston",
                          "mechanical_piston_head": "Mechanical Piston Head", "piston_extension_pole": "Piston Extension Pole"})
     extra_blocks.update({"mechanical_harvester": "Mechanical Harvester", "mechanical_saw": "Mechanical Saw"})
@@ -711,6 +715,8 @@ def foundation():
                          'block.create.pulley_magnet': 'Лебёдочный магнит'})
             lang.update({'block.create.gantry_shaft': 'Вал линейного привода',
                          'block.create.gantry_carriage': 'Каретка линейного привода'})
+            lang.update({'block.create.sail_frame': 'Рама паруса ветряной мельницы',
+                         'block.create.white_sail': 'Парус ветряной мельницы'})
             lang.update({"block.create.mechanical_piston": "Механический поршень",
                          "block.create.sticky_mechanical_piston": "Липкий механический поршень",
                          "block.create.mechanical_piston_head": "Головка механического поршня",
@@ -742,7 +748,7 @@ def main():
     CONTENT.mkdir(exist_ok=True)
     (CONTENT / "horizon-mod.toml").write_text('''id = "create"
 name = "Create for Horizon"
-version = "0.8.0-alpha.2"
+version = "0.8.0-alpha.3"
 description = "Build rotating machines and small factories in Horizon. The original Create JAR is optional and supplies its models and textures."
 authors = ["create-horizon contributors"]
 api = "0.2"

@@ -30,9 +30,12 @@
     "create:sticky_mechanical_piston",
     "create:piston_extension_pole",
     "create:mechanical_piston_head",
+    "create:gantry_carriage",
+    "create:gantry_shaft",
     "create:windmill_bearing",
     "create:mechanical_bearing",
     "create:clockwork_bearing",
+    "create:rope_pulley",
     "create:mechanical_drill",
     "create:mechanical_saw",
     "create:mechanical_harvester",
@@ -41,8 +44,6 @@
     "create:copper_casing",
     "create:zinc_block",
     "create:andesite_alloy_block",
-    "create:brass_block",
-    "create:gantry_shaft",
-    "create:gantry_carriage"
+    "create:brass_block"
   ]
 }

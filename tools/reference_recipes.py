@@ -5,6 +5,7 @@ import math
 import subprocess
 from common import CREATE, PINS, ROOT
 from catalog import BLOCKS, ITEMS, INTERNAL_BLOCKS
+from sail_content import COLORED_SAILS, SAIL_ITEMS
 
 
 def dry_mixing(recipe):
@@ -252,7 +253,7 @@ def main():
     # Fan catalyst and permeability tags are MIT behavior data. Unimplemented
     # Create blocks must not become required tag entries in the port.
     for kind, paths in {
-        'block': ['fan_transparent', 'fan_processing_catalysts/blasting', 'passive_boiler_heaters',
+        'block': ['fan_transparent', 'windmill_sails', 'fan_processing_catalysts/blasting', 'passive_boiler_heaters',
                   'fan_processing_catalysts/haunting', 'fan_processing_catalysts/smoking'],
         'fluid': ['fan_processing_catalysts/blasting', 'fan_processing_catalysts/splashing'],
         'entity_type': ['blaze_burner_capturable'],
@@ -283,7 +284,9 @@ def main():
         'create/loot_table/blocks/mechanical_piston_head.json',
         'create/loot_table/blocks/clockwork_bearing.json',
         'create/loot_table/blocks/mechanical_harvester.json',
-        'create/loot_table/blocks/mechanical_saw.json']}
+        'create/loot_table/blocks/mechanical_saw.json',
+        *[f'create/loot_table/blocks/{name}.json' for name in SAIL_ITEMS + COLORED_SAILS],
+    ]}
     result = {'reference': PINS['create_revision'], 'license': 'MIT recipe/data-map/loot data; original definitions of vanilla convention tags', 'recipes': recipes, 'tags': tags, 'data_maps':maps, 'loot_tables':loot}
     dest = ROOT / 'tools/data/recipes.json'; dest.parent.mkdir(exist_ok=True); dest.write_text(json.dumps(result, indent=2) + '\n')
     print('Exported', len(recipes), 'recipes,', len(tags), 'tags and',len(maps),'data maps from MIT datapack sources')

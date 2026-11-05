@@ -6,6 +6,8 @@
 pub mod actors;
 mod assembly;
 pub mod bearing;
+pub mod cart_assembler;
+pub mod cart_coupling;
 pub mod clockwork;
 pub mod contact;
 pub mod gantry;

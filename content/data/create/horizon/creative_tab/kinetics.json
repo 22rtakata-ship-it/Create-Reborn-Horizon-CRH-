@@ -43,6 +43,8 @@
     "create:gantry_carriage",
     "create:mechanical_harvester",
     "create:mechanical_saw",
+    "create:sail_frame",
+    "create:white_sail",
     "create:iron_sheet",
     "create:golden_sheet",
     "create:copper_sheet",

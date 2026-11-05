@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use super::create_port_contraption_actors as actors;
+use super::create_port_contraption_storage as storage;
 use super::{
     Game, create_port_clockwork as clockwork, create_port_pulley as pulley,
     native_block_entity_draw::BlockEntityDraw, native_world_draw::NativeWorldDraw,
@@ -223,6 +224,9 @@ const WOOD_FAMILIES: &[&str] = &[
 ];
 
 fn supported(state: &BlockState) -> bool {
+    if super::create_port_sail::from_state(state).is_some() {
+        return true;
+    }
     match state.name.as_str() {
         "create:mechanical_harvester" | "create:mechanical_drill" => state
             .properties
@@ -289,10 +293,6 @@ pub(super) fn movement_sound(game: &mut Game<'_>, pos: Pos, assembled: bool) {
     });
 }
 
-fn is_wool(name: &str) -> bool {
-    name.starts_with("minecraft:") && name.ends_with("_wool")
-}
-
 pub(super) struct Capture<'g, 'a>(pub(super) &'g Game<'a>);
 impl CaptureView for Capture<'_, '_> {
     type Block = BlockState;
@@ -312,6 +312,14 @@ impl CaptureView for Capture<'_, '_> {
         let Some(block) = game.pack.assets.registry.state(id) else {
             return Cell::Block(BlockRules::default());
         };
+        if let Some(sail) = super::create_port_sail::from_state(block) {
+            let attached = Direction::ALL.map(|face| sail.attaches(face));
+            return Cell::Block(BlockRules {
+                attached,
+                unsupported_faces: attached.map(|face| !face),
+                ..BlockRules::default()
+            });
+        }
         let rules = BlockRules {
             movable: !matches!(
                 block.name.as_str(),
@@ -376,6 +384,32 @@ impl CaptureView for Capture<'_, '_> {
     }
 }
 
+struct BearingCapture<'g, 'a> {
+    base: Capture<'g, 'a>,
+    allow_chest: bool,
+}
+
+impl CaptureView for BearingCapture<'_, '_> {
+    type Block = BlockState;
+
+    fn inspect(&self, p: Pos) -> Cell {
+        self.base.inspect(p)
+    }
+
+    fn snapshot(&self, p: Pos) -> Option<BlockState> {
+        let game = self.base.0;
+        let block = game.pack.assets.registry.state(state(game, p))?;
+        if self.allow_chest && storage::can_capture(game, p, block) {
+            return Some(block.clone());
+        }
+        self.base.snapshot(p)
+    }
+
+    fn glued(&self, p: Pos, face: Direction) -> bool {
+        self.base.glued(p, face)
+    }
+}
+
 fn assemble(
     game: &mut Game<'_>,
     controller: Pos,
@@ -395,8 +429,11 @@ fn assemble(
     if records.len() == MAX_RECORDS || records.iter().any(|r| r.controller == controller) {
         return None;
     }
-    let Ok(shape) = Assembly::capture(&Capture(game), anchor, Some(controller), None, MAX_BLOCKS)
-    else {
+    let capture = BearingCapture {
+        base: Capture(game),
+        allow_chest: !windmill && facing.axis() == Axis::Y,
+    };
+    let Ok(shape) = Assembly::capture(&capture, anchor, Some(controller), None, MAX_BLOCKS) else {
         return None;
     };
     if shape.blocks().is_empty() {
@@ -406,7 +443,10 @@ fn assemble(
         let sails = shape
             .blocks()
             .iter()
-            .filter(|(_, block)| is_wool(&block.name))
+            .filter(|(_, block)| {
+                game.native_server_block_in_tag(block, create_engine::sail::WINDMILL_TAG)
+                    .unwrap_or(false)
+            })
             .count();
         let config = WindmillConfig::default();
         config.check_sails(sails).ok()?;
@@ -442,6 +482,7 @@ fn assemble(
     else {
         return None;
     };
+    let chest = storage::capture(game, anchor, shape.blocks()).ok()?;
     records.push(Record {
         controller,
         anchor,
@@ -454,7 +495,7 @@ fn assemble(
         clock_hand: None,
         blocks: shape.blocks().to_vec(),
     });
-    if !commit(game, key, records, &edits) {
+    if !storage::commit_capture(game, key, records, &edits, controller, chest) {
         return None;
     }
     movement_sound(game, controller, true);
@@ -462,7 +503,7 @@ fn assemble(
 }
 
 fn rotate_state(state: &BlockState, turn: QuarterTurn) -> Option<BlockState> {
-    if !supported(state) {
+    if !supported(state) && !storage::chest_state(state) {
         return None;
     }
     let mut rotated = state.clone();
@@ -523,7 +564,7 @@ fn land(game: &mut Game<'_>, controller: Pos, angle: f32) -> bool {
     else {
         return false;
     };
-    if !commit(game, key, records, &edits) {
+    if !storage::commit_landing(game, key, records, &edits, &record, rotation.snapped()) {
         return false;
     }
     actors::remove(game, controller);
@@ -825,7 +866,21 @@ pub(super) fn draw_structures(game: &Game<'_>, draw: &mut NativeWorldDraw) {
                     .collect();
                 draw.push();
                 draw.translate(local.map(|v| v as f32));
-                game.native_draw_block(draw, &block.name, &properties);
+                let chest = block.name == "minecraft:chest"
+                    && game.pack.assets.registry.id(block).is_some_and(|id| {
+                        horizon_client_render::block_entity_render::create_contraption_chest::closed(
+                            game.res.block_entity_render(),
+                            &game.gui.atlas,
+                            id.0,
+                            game.dim == super::Dim::Nether,
+                            draw.pose(),
+                            draw.light,
+                            draw.vertices_mut(),
+                        )
+                    });
+                if !chest {
+                    game.native_draw_block(draw, &block.name, &properties);
+                }
                 draw_actor(game, draw, record, *local, block);
                 draw.pop();
             }

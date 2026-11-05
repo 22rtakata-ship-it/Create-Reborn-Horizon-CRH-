@@ -41,12 +41,29 @@ pub const BLOCKS: &[&str] = &[
     "gantry_carriage",
     "mechanical_harvester",
     "mechanical_saw",
+    "sail_frame",
+    "white_sail",
 ];
 pub const EXTRA_BLOCKSTATES: &[&str] = &[
     "lit_blaze_burner",
     "mechanical_piston_head",
     "rope",
     "pulley_magnet",
+    "orange_sail",
+    "magenta_sail",
+    "light_blue_sail",
+    "yellow_sail",
+    "lime_sail",
+    "pink_sail",
+    "gray_sail",
+    "light_gray_sail",
+    "cyan_sail",
+    "purple_sail",
+    "blue_sail",
+    "brown_sail",
+    "green_sail",
+    "red_sail",
+    "black_sail",
 ];
 pub const EXTRA_MODELS: &[&str] = &["entity/train_hat", "entity/logistics_hat"];
 pub const ITEMS: &[&str] = &[

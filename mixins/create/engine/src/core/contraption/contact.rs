@@ -31,6 +31,54 @@ pub fn linear_top_motion(
     })
 }
 
+/// Separation of an initially external body crossed by the leading face of
+/// a translating full block. The host clips the resulting displacement.
+pub fn linear_face_separation(
+    previous: [f64; 3],
+    current: [f64; 3],
+    full_blocks: impl IntoIterator<Item = Pos>,
+    body_min: [f64; 3],
+    body_max: [f64; 3],
+) -> Option<[f64; 3]> {
+    let delta: [f64; 3] = std::array::from_fn(|i| current[i] - previous[i]);
+    let axis = delta.iter().position(|&step| step != 0.0)?;
+    if !delta[axis].is_finite()
+        || delta
+            .iter()
+            .enumerate()
+            .any(|(i, &step)| i != axis && step != 0.0)
+    {
+        return None;
+    }
+    let positive = delta[axis] > 0.0;
+    let mut separation = 0.0f64;
+    for block in full_blocks {
+        let low: [f64; 3] = std::array::from_fn(|i| previous[i] + f64::from(block[i]));
+        if (0..3)
+            .filter(|&i| i != axis)
+            .any(|i| low[i] + 1.0 <= body_min[i] || low[i] >= body_max[i])
+        {
+            continue;
+        }
+        let (gap, overlap) = if positive {
+            let face = low[axis] + 1.0;
+            (body_min[axis] - face, face + delta[axis] - body_min[axis])
+        } else {
+            let face = low[axis];
+            (face - body_max[axis], body_max[axis] - (face + delta[axis]))
+        };
+        if gap >= -CONTACT_EPSILON && overlap > 0.0 {
+            separation = separation.max(overlap);
+        }
+    }
+    if separation == 0.0 {
+        return None;
+    }
+    let mut response = [0.0; 3];
+    response[axis] = (separation + CONTACT_EPSILON).copysign(delta[axis]);
+    Some(response)
+}
+
 /// Horizontal contact displacement on the top of a Y-axis rotary contraption.
 /// The host supplies a grounded body's feet center and horizontal half extents,
 /// then clips the returned movement through the world collision resolver.
@@ -85,6 +133,36 @@ mod tests {
                 (actual - expected).abs() < 1.0e-12,
                 "{actual} != {expected}"
             );
+        }
+    }
+
+    #[test]
+    fn a_leading_face_separates_bodies_on_both_sides() {
+        let start = [0.0; 3];
+        let east = linear_face_separation(
+            start,
+            [0.25, 0.0, 0.0],
+            [[0; 3]],
+            [1.125, 0.0, 0.2],
+            [1.725, 1.675, 0.8],
+        )
+        .unwrap();
+        let west = linear_face_separation(
+            start,
+            [-0.25, 0.0, 0.0],
+            [[0; 3]],
+            [-0.725, 0.0, 0.2],
+            [-0.125, 1.675, 0.8],
+        )
+        .unwrap();
+        assert_eq!(east, [0.125 + CONTACT_EPSILON, 0.0, 0.0]);
+        assert_eq!(west, [-0.125 - CONTACT_EPSILON, 0.0, 0.0]);
+        for (min, max) in [
+            ([1.26, 0.0, 0.2], [1.86, 1.675, 0.8]),
+            ([1.10, 1.0, 0.2], [1.70, 2.675, 0.8]),
+            ([-0.5, 0.0, 0.2], [0.1, 1.675, 0.8]),
+        ] {
+            assert!(linear_face_separation(start, [0.25, 0.0, 0.0], [[0; 3]], min, max).is_none());
         }
     }
 

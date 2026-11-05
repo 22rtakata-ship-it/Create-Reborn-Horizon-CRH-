@@ -142,7 +142,41 @@ def test_linear_riders(session):
                 linear_rider_stopped_at_wall=stopped['position'][0])
 
 
-def test_player_carry(session, pistons):
+def test_side_push(session):
+    call = session.call
+
+    def command(line):
+        return call('command', line)
+
+    pivot = (903, 100, 102)
+    command('tick unfreeze')
+    command('tp @s 905.45 100 102.5')
+    wait_loaded(call, [pivot])
+    command('fill 898 100 98 910 107 107 minecraft:air')
+    command('fill 898 99 98 910 99 107 minecraft:stone')
+    command('setblock 903 100 102 create:mechanical_piston[facing=east,axis_along_first=false]')
+    for x in (900, 901, 902):
+        command(f'setblock {x} 100 102 create:piston_extension_pole[facing=east]')
+    command('setblock 904 100 102 minecraft:stone')
+    command('tp @s 905.45 100 102.5')
+    call('wait', 8)
+    before = call('state')['player']
+    assert before['on_ground'], before
+    command('setblock 903 100 101 create:creative_motor[facing=south]{ScrollValue:-32}')
+    call('wait', 20)
+    after = call('state')['player']
+    assert after['position'][0] > before['position'][0] + 0.45, (before, after)
+    assert abs(after['position'][1] - 100.0) < 1e-6 and after['on_ground'], after
+    assert abs(after['position'][2] - 102.5) < 1e-6, after
+    command('fill 907 101 101 907 104 103 minecraft:stone')
+    call('wait', 40)
+    at_wall = call('state')['player']
+    assert abs(at_wall['position'][0] - 906.7) < 1e-5, at_wall
+    return dict(side_push_before=before['position'], side_push_after=after['position'],
+                side_push_clipped=at_wall['position'])
+
+
+def test_player_carry(session, pistons, side):
     batch = Batch()
     pivot = (920, 100, 52)
     batch.load(pivot)
@@ -171,6 +205,8 @@ def test_player_carry(session, pistons):
         session.call('wait', 15)
         frozen_end = session.call('state')['player']
         linear = test_linear_riders(session) if pistons else {}
+        if side:
+            linear.update(test_side_push(session))
 
     def relative(player):
         x, y, z = player['position']
@@ -199,7 +235,10 @@ def main():
         parser.add_argument('--' + flag, type=Path, required=True)
     parser.add_argument('--player', action='store_true', help='Also test client-side rider transfer')
     parser.add_argument('--piston', action='store_true', help='Also test moving Mechanical Piston parts')
+    parser.add_argument('--side', action='store_true', help='Test a translating face pushing a player')
     args = parser.parse_args()
+    if args.side and not args.player:
+        parser.error('--side requires --player')
     session = NativeCheckSession(args.game, args.resources, args.ctl, None,
                                  name='contraption-collision', graphics=args.player,
                                  world='CreateContraptionCollisionChecks', size=(800, 450),
@@ -210,7 +249,7 @@ def main():
         if args.piston:
             result.update(test_piston_pole(session))
         if args.player:
-            result.update(test_player_carry(session, args.piston))
+            result.update(test_player_carry(session, args.piston, args.side))
     finally:
         session.control_temp.cleanup()
     print(json.dumps(dict(passed=True, world=str(session.scratch), **result)))

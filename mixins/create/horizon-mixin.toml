@@ -1,6 +1,6 @@
 [mod]
 id = "create"
-version = "0.8.0-alpha.2"
+version = "0.8.0-alpha.3"
 
 [compatibility]
 horizon_revision = "9c7f9b2215dfed497aba5522c44f38926628648d"
@@ -1105,10 +1105,23 @@ source = "contraption_scene.rs"
 visibility = "pub"
 
 [[module]]
+id = "contraption-chest-draw"
+file = "crates/horizon-client-render/src/block_entity_render.rs"
+name = "create_contraption_chest"
+source = "contraption_chest_draw.rs"
+visibility = "pub"
+
+[[module]]
 id = "contraption-runtime"
 file = "crates/horizon-client/src/game.rs"
 name = "create_port_contraption"
 source = "contraption_runtime.rs"
+
+[[module]]
+id = "sail-runtime"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_sail"
+source = "sail_runtime.rs"
 
 [[module]]
 id = "contraption-piston-runtime"
@@ -1145,6 +1158,12 @@ id = "contraption-contact-runtime"
 file = "crates/horizon-client/src/game.rs"
 name = "create_port_contraption_contact"
 source = "contraption_contact_runtime.rs"
+
+[[module]]
+id = "contraption-storage-runtime"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_contraption_storage"
+source = "contraption_storage_runtime.rs"
 
 [[injection]]
 id = "contraption-draw"

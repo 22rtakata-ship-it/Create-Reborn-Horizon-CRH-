@@ -4,7 +4,9 @@
 
 // Authoritative world adapter for moving Harvesters and Saws.
 
-use super::{Game, create_port_contraption as contraption};
+use super::{
+    Game, create_port_contraption as contraption, create_port_contraption_storage as storage,
+};
 use crate::items::ItemStack;
 use create_engine::{
     contraption::actors::{
@@ -133,6 +135,7 @@ pub(super) fn tick(game: &mut Game<'_>, previous: &Record, current: &Record) {
     let after = current.orientation(current.angle);
     let origin_before = DVec3::from_array(previous.origin_at(1.0));
     let origin_after = DVec3::from_array(current.origin_at(1.0));
+    let mount = storage::mounted_chest(current);
     for (local, state) in &current.blocks {
         let tool = match state.name.as_str() {
             HARVESTER => Tool::Harvester,
@@ -193,6 +196,7 @@ pub(super) fn tick(game: &mut Game<'_>, previous: &Record, current: &Record) {
                 let normal = DVec3::from_array(facing.vector().map(f64::from));
                 tick_cutter(
                     game,
+                    mount,
                     tool,
                     saw,
                     movement,
@@ -201,7 +205,7 @@ pub(super) fn tick(game: &mut Game<'_>, previous: &Record, current: &Record) {
                 );
             }
         } else if let Some(position) = movement.visit {
-            harvest(game, position, after_point, movement.motion);
+            harvest(game, mount, position, after_point, movement.motion);
         }
     }
     entries.insert(current.controller, actors);
@@ -376,6 +380,7 @@ pub(super) fn harvester_can_pass(game: &Game<'_>, position: Pos) -> bool {
 
 fn tick_cutter(
     game: &mut Game<'_>,
+    mount: Option<storage::Mount>,
     tool: Tool,
     cutter: &mut MovingCutter,
     movement: Movement,
@@ -419,9 +424,9 @@ fn tick_cutter(
         Step::Finish { .. } => {
             crack(game, cutter.id, strike, -1);
             if tool == Tool::Saw {
-                finish_saw(game, strike, at, movement);
+                finish_saw(game, mount, strike, at, movement);
             } else {
-                break_target(game, strike, at, movement.motion);
+                break_target(game, mount, strike, at, movement.motion);
             }
         }
         _ => unreachable!(),
@@ -459,14 +464,26 @@ fn top_falling_block(game: &Game<'_>, position: Pos) -> Pos {
     top
 }
 
-fn break_target(game: &mut Game<'_>, position: Pos, at: [f64; 3], motion: [f64; 3]) {
+fn break_target(
+    game: &mut Game<'_>,
+    mount: Option<storage::Mount>,
+    position: Pos,
+    at: [f64; 3],
+    motion: [f64; 3],
+) {
     let top = top_falling_block(game, position);
     if let Some(id) = loaded_state(game, top) {
-        chop(game, top, id, 1.0, at, DropMotion::Actor(motion));
+        chop(game, top, id, 1.0, at, DropMotion::Actor { mount, motion });
     }
 }
 
-fn finish_saw(game: &mut Game<'_>, position: Pos, at: [f64; 3], movement: Movement) {
+fn finish_saw(
+    game: &mut Game<'_>,
+    mount: Option<storage::Mount>,
+    position: Pos,
+    at: [f64; 3],
+    movement: Movement,
+) {
     let registry = game.pack.assets.registry;
     let top = top_falling_block(game, position);
     let Some(id) = loaded_state(game, top) else {
@@ -480,11 +497,15 @@ fn finish_saw(game: &mut Game<'_>, position: Pos, at: [f64; 3], movement: Moveme
     }
     let is_leaves = in_tag(game, state, "minecraft:leaves");
     let broken = tree_block(game, state);
-    if !chop(game, top, id, 1.0, at, DropMotion::Actor(movement.motion)) || is_leaves {
+    let drop = DropMotion::Actor {
+        mount,
+        motion: movement.motion,
+    };
+    if !chop(game, top, id, 1.0, at, drop) || is_leaves {
         return;
     }
 
-    fell_tree(game, position, broken, |cell| {
+    fell_tree(game, mount, position, broken, |cell| {
         saw::tree_drop_velocity(movement.relative_motion, cell, Some(at))
     });
 }
@@ -506,13 +527,14 @@ pub(super) fn finish_stationary_saw(game: &mut Game<'_>, origin: Pos, target: Po
         return;
     }
     let direction = std::array::from_fn(|i| f64::from(target[i] - origin[i]));
-    fell_tree(game, target, broken, |cell| {
+    fell_tree(game, None, target, broken, |cell| {
         saw::tree_drop_velocity(direction, cell, Some(block_center(target)))
     });
 }
 
 fn fell_tree(
     game: &mut Game<'_>,
+    mount: Option<storage::Mount>,
     position: Pos,
     broken: TreeBlock,
     velocity_at: impl Fn(Pos) -> [f64; 3],
@@ -546,15 +568,21 @@ fn fell_tree(
             state,
             part.particles_chance(),
             block_center(cell),
-            DropMotion::Tree(velocity),
+            DropMotion::Tree { mount, velocity },
         );
     }
 }
 
 enum DropMotion {
     Stationary,
-    Actor([f64; 3]),
-    Tree([f64; 3]),
+    Actor {
+        mount: Option<storage::Mount>,
+        motion: [f64; 3],
+    },
+    Tree {
+        mount: Option<storage::Mount>,
+        velocity: [f64; 3],
+    },
 }
 
 fn chop(
@@ -573,7 +601,7 @@ fn chop(
     if fluid == state {
         return false;
     }
-    let drops = drops(game, position, state, particles_chance, None);
+    let mut drops = drops(game, position, state, particles_chance, None);
     if loaded_state(game, position) != Some(state) {
         return false;
     }
@@ -583,13 +611,20 @@ fn chop(
         log::warn!("Create saw could not process the update at {position:?}: {error:?}");
     }
     if updated {
-        for stack in drops {
+        let mount = match motion {
+            DropMotion::Stationary => None,
+            DropMotion::Actor { mount, .. } | DropMotion::Tree { mount, .. } => mount,
+        };
+        if let Some(mount) = mount {
+            storage::deposit(game, mount, position, &mut drops);
+        }
+        for stack in drops.into_iter().filter(|stack| stack.count > 0) {
             let (velocity, delay) = match motion {
                 DropMotion::Stationary => ([0.0; 3], 10),
-                DropMotion::Actor(motion) => {
+                DropMotion::Actor { motion, .. } => {
                     (drop_velocity(motion, game.world.random.next_float()), 0)
                 }
-                DropMotion::Tree(velocity) => (velocity, 0),
+                DropMotion::Tree { velocity, .. } => (velocity, 0),
             };
             game.spawn_item(stack, at, velocity, delay);
         }
@@ -717,7 +752,13 @@ fn crop_at<'s>(
     ))
 }
 
-fn harvest(game: &mut Game<'_>, position: Pos, active_point: [f64; 3], motion: [f64; 3]) {
+fn harvest(
+    game: &mut Game<'_>,
+    mount: Option<storage::Mount>,
+    position: Pos,
+    active_point: [f64; 3],
+    motion: [f64; 3],
+) {
     let registry = game.pack.assets.registry;
     let Some(original) = loaded_state(game, position) else {
         return;
@@ -751,7 +792,7 @@ fn harvest(game: &mut Game<'_>, position: Pos, active_point: [f64; 3], motion: [
         }
     };
     let tool = (cut.loot_tool == LootTool::Shears).then(|| ItemStack::new("minecraft:shears", 1));
-    let drops = drops(
+    let mut drops = drops(
         game,
         position,
         original,
@@ -784,13 +825,14 @@ fn harvest(game: &mut Game<'_>, position: Pos, active_point: [f64; 3], motion: [
         return;
     }
 
-    // No mounted inventories are captured by this runtime yet. Use the
-    // original overflow spawn point, speed and ordinary zero pickup delay.
-    for mut stack in drops {
+    for stack in &mut drops {
         stack.count = cut.accept_drop(stack.item.as_ref() == seed, stack.count);
-        if stack.count > 0 {
-            let random = game.world.random.next_float();
-            game.spawn_item(stack, active_point, drop_velocity(motion, random), 0);
-        }
+    }
+    if let Some(mount) = mount {
+        storage::deposit(game, mount, position, &mut drops);
+    }
+    for stack in drops.into_iter().filter(|stack| stack.count > 0) {
+        let random = game.world.random.next_float();
+        game.spawn_item(stack, active_point, drop_velocity(motion, random), 0);
     }
 }

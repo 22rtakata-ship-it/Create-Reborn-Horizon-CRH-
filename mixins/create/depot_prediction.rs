@@ -16,7 +16,8 @@ fn create_depot_prediction(
                 "create:vertical_gearbox" | "create:large_water_wheel"
             )
         })
-        || crate::game::create_port::depot_reacts(game, hit.pos, hit.face)
+        || crate::game::create_port::predicts_use(game, hit.pos, hit.face)
+        || crate::game::create_port_sail::reacts(game, hit.pos, held)
     {
         let bypass = game.keys.contains(&winit::keyboard::KeyCode::ShiftLeft)
             && (game

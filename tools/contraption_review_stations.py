@@ -14,6 +14,8 @@ HARVESTER_LEVER = (905, 81, 88)
 SAW = (919, 82, 88)
 SAW_LEVER = (920, 81, 88)
 CLOCK = (919, 85, 70)
+CARGO = (904, 84, 62)
+FARM_CHEST = (904, 83, 87)
 PULLEY = (904, 85, 103)
 PULLEY_CLUTCH = (903, 85, 104)
 GANTRY = (918, 83, 103)
@@ -49,7 +51,7 @@ def farm_drive(batch, pos):
     batch.put((x, y - 2, z), 'create:creative_motor[facing=up]{ScrollValue:32}')
 
 
-def setup(batch, clockwork=False, linear=False):
+def setup(batch, clockwork=False, linear=False, cargo=False):
     batch.load((911, 82, 82))
     batch.command('fill 897 81 79 925 90 94 minecraft:air')
     batch.command('fill 897 80 79 925 80 94 minecraft:smooth_stone')
@@ -63,12 +65,24 @@ def setup(batch, clockwork=False, linear=False):
     for i in range(3):
         batch.put((hx + i, hy + 1, hz), 'minecraft:slime_block')
     batch.put((hx + 3, hy + 1, hz), 'create:mechanical_harvester[facing=north]')
+    if cargo:
+        batch.put(FARM_CHEST, 'minecraft:chest[facing=south]{Items:[{Slot:5b,id:"minecraft:apple",count:4}]}')
+        cx, cy, cz = CARGO
+        batch.put(CARGO, 'create:mechanical_bearing[facing=up]')
+        batch.put((cx, cy + 1, cz), 'minecraft:slime_block')
+        batch.put((cx + 1, cy + 1, cz), 'minecraft:chest[facing=east]{Items:[{Slot:0b,id:"minecraft:stick",count:3}]}')
+        batch.put((cx, cy - 1, cz), 'create:clutch[axis=y]')
+        batch.put((cx + 1, cy - 1, cz), 'minecraft:lever[face=wall,facing=east]')
+        batch.put((cx, cy - 2, cz), 'create:creative_motor[facing=up]{ScrollValue:8}')
+        sign(batch, (906, 81, 65), ['CARGO', 'Stop the rotor.', 'Open the chest', 'after landing.'])
     for dx, dz, crop, age in [(3, -1, 'wheat', 7), (2, -2, 'carrots', 7),
                              (1, -3, 'potatoes', 7), (0, -3, 'beetroots', 3),
                              (-1, -3, 'wheat', 3)]:
         batch.put((hx + dx, hy, hz + dz), 'minecraft:farmland[moisture=7]')
         batch.put((hx + dx, hy + 1, hz + dz), f'minecraft:{crop}[age={age}]')
-    sign(batch, (906, 81, 92), ['HARVESTER', 'Release clutch.', 'Watch ripe crops', 'get replanted.'])
+    harvest_note = ['HARVESTER', 'Release clutch.', 'Stop to open', 'the cargo chest.'] if cargo else [
+        'HARVESTER', 'Release clutch.', 'Watch ripe crops', 'get replanted.']
+    sign(batch, (906, 81, 92), harvest_note)
     farm_drive(batch, SAW)
     sx, sy, sz = SAW
     batch.put((sx, sy + 1, sz), 'minecraft:slime_block')

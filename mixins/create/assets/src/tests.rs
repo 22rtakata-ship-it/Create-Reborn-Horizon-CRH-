@@ -521,7 +521,11 @@ fn bundled_processors_have_source_states_collision_and_real_processing_recipes()
             .filter_map(Value::as_str)
             .filter(|name| name.starts_with("create:"))
             .collect::<BTreeSet<_>>(),
-        BTreeSet::from(["create:blaze_burner", "create:lit_blaze_burner"])
+        BTreeSet::from([
+            "create:blaze_burner",
+            "create:lit_blaze_burner",
+            "create:sail_frame",
+        ])
     );
     assert_eq!(
         read("data/create/tags/block/fan_processing_catalysts/blasting.json")["values"],
