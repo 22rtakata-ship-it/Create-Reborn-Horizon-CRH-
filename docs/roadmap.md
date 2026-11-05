@@ -15,6 +15,26 @@ The 0.7 checkpoints cover Encased Chain Drive, generator timing, fan component
 handling and the built-in resources. [Gameplay report](reviews/0.7-report.md)
 · [Review route](reviews/0.7-test-world.md)
 
+## Current priority
+
+Pause new block ports while we audit the supported catalog against Create
+6.0.10. Work through one testable group at a time and keep the remaining
+differences visible in each review. Reuse existing fixtures and compare the
+mechanics and presentation separately.
+
+1. **Belts.** Compare connector feedback, surface and item animation, then
+   item timing and the supported transfers. Track entity transport separately.
+2. **Kinetics and machines.** Compare startup, reversals, power loss and reload,
+   then the associated sounds, particles, item interactions and menus.
+3. **Shared entity motion.** Define contact, collision-aware motion and
+   coordinate transforms for static and moving surfaces before porting belt
+   passengers. Use Horizon's existing entity movement and collision handling.
+   Check horizontal and sloped belts, sneaking, ends and blocking entities.
+
+Resume the content roadmap after the current blocks pass their scoped
+comparisons and the remaining differences that depend on shared infrastructure
+are recorded.
+
 | Subsystem | Verified bounded foundation | Next acceptance criterion |
 |---|---|---|
 | Installation and resources | Working native pipeline, local JAR | Verify the next release through the same route |
@@ -114,7 +134,13 @@ handling and the built-in resources. [Gameplay report](reviews/0.7-report.md)
   turn `2 copper + 2 zinc → 4 brass`; power/heat loss does not consume input.
 - [ ] Complete burner: combined ordinary-interaction run, networking, exact lighting,
   retained visual lifecycle, goggles and all effects without known differences.
+- [x] Belt connector green and red dust preview between clicks. Real Java and
+  Horizon captures and accepted/rejected connection checks.
+  [Review route](reviews/belt-preview.md)
 - [ ] Belts: geometry, transported-item lifecycle, directions, slopes and IO.
+- [ ] Belt passenger motion through a contact layer shared with moving surfaces.
+  The static belt shapes stay in the block registry. Moving surfaces need
+  transformed contact geometry and a world-space movement request.
 - [x] Bounded surface geometry: X rotation fixed; 1600 source cases,
   60 actual Game/CPU draw cases and inspection of limited Java/native views.
 - [x] Bounded bare-belt foundation: connector, original shapes, RPM transmission,

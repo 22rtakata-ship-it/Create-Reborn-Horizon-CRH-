@@ -117,7 +117,7 @@ pub(super) fn reset() {
 pub(super) fn invalidate() {
     CACHE.with(|c| c.borrow_mut().invalidate());
 }
-fn theoretical(entity: &ModBlockEntity) -> f32 {
+pub(super) fn theoretical(entity: &ModBlockEntity) -> f32 {
     match entity.nbt.get(&"create_horizon".into()) {
         Some(horizon_world::nbt::Tag::Compound(data)) => {
             super::create_port::number(data, "TheoreticalSpeed")

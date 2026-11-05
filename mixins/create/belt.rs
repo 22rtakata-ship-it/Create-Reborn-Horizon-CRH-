@@ -10,6 +10,7 @@ use super::{Game, native_block_entity_draw::BlockEntityDraw};
 use crate::{
     containers::{BlockEntity, ModBlockEntity},
     items::ItemStack,
+    particles::{ParticleOptions, ParticleType},
 };
 use create_engine::{
     fan::{Processing, ProcessingType},
@@ -32,7 +33,7 @@ use std::{cell::RefCell, collections::BTreeMap};
 
 const ID: &str = "create:belt";
 const CONNECTOR: &str = "create:belt_connector";
-const FIRST: &str = "create:belt_first_shaft";
+pub(super) const FIRST: &str = "create:belt_first_shaft";
 type Moving = Transported<ItemStack>;
 type Contents = Inventory<ItemStack>;
 
@@ -465,17 +466,90 @@ fn state(game: &Game<'_>, block: &str, properties: &[(&str, &str)]) -> Option<Bl
     registry.id(&descriptor)
 }
 fn pulley(game: &Game<'_>, pos: Pos) -> Pulley {
-    let rpm = super::create_port::node(game, pos)
-        .map(|node| super::create_port_kinetic_runtime::network(game, node, 0).speed(pos))
-        .unwrap_or(0.0);
+    let entity = match game.world.block_entities.get(&(pos[0], pos[1], pos[2])) {
+        Some(BlockEntity::Mod(entity)) => Some(entity.as_ref()),
+        _ => None,
+    };
     Pulley {
         pos,
         axis: axis(game, pos),
-        rpm,
+        rpm: entity.map_or(0.0, super::create_port_kinetic_runtime::theoretical),
         loaded: game.world.loaded(pos[0], pos[2]),
-        shaft: game.native_block(pos) == "create:shaft",
+        shaft: entity.is_some() && game.native_block(pos) == "create:shaft",
     }
 }
+
+fn connector_first(stack: &ItemStack) -> Option<Pos> {
+    if stack.item.as_ref() != CONNECTOR {
+        return None;
+    }
+    match stack.data()?.other(FIRST)? {
+        Tag::IntArray(p) if p.len() == 3 => Some([p[0], p[1], p[2]]),
+        _ => None,
+    }
+}
+
+fn replaceable(game: &Game<'_>, pos: Pos) -> bool {
+    game.res
+        .behaviours()
+        .is_replaceable(game.world.block(pos[0], pos[1], pos[2]))
+}
+
+fn connect(game: &Game<'_>, first: Pos, pos: Pos) -> Result<Chain, transport::ConnectionError> {
+    transport::connect(pulley(game, first), pulley(game, pos), transport::DEFAULT_MAX_LENGTH, |p| {
+        if game.native_block(p) == "create:shaft" {
+            Space::Shaft(axis(game, p))
+        } else if replaceable(game, p) {
+            Space::Replaceable
+        } else {
+            Space::Blocked
+        }
+    })
+}
+
+pub(super) fn connector_preview(game: &mut Game<'_>) {
+    if !game.native_window() || game.remote.is_none() || !game.native_on("create")
+        || !game.native_playing() || game.screen_over_playing() || game.native_mod_screen().is_some()
+    {
+        return;
+    }
+    let first = game.inventory.get(game.selected).and_then(Option::as_ref)
+        .into_iter().chain(game.offhand.as_ref()).filter_map(connector_first)
+        .find(|p| game.native_block_property(*p, "axis").is_some());
+    let Some(first) = first else { return };
+    let mut dust = ParticleOptions::simple(ParticleType::Dust);
+    dust.color = [0.3, 0.9, 0.5, 1.0];
+    let center = first.map(|v| f64::from(v) + 0.5);
+    if game.pick_entity_hit().is_some() {
+        if game.world.random.next_int_bound(50) == Ok(0) {
+            let position = center.map(|v| v + f64::from((game.world.random.next_float() - 0.5) * 0.5));
+            game.particles.add(&dust, position, [0.0; 3]);
+        }
+        return;
+    }
+    let Some(hit) = game.pick() else { return };
+    if replaceable(game, hit.pos) {
+        return;
+    }
+    let selected = if game.native_block(hit.pos) == "create:shaft" { hit.pos } else { hit.beside() };
+    let Some((step, samples)) = transport::preview_line(first, selected, axis(game, first)) else { return };
+    let valid = connect(game, first, selected).is_ok();
+    if !valid {
+        dust.color = [0.9, 0.3, 0.5, 1.0];
+    }
+    let mut spawned = 0;
+    for sample in 0..samples {
+        if game.world.random.next_int_bound(10) == Ok(0) {
+            let position = std::array::from_fn(|i| center[i] + f64::from(step[i]) * f64::from(sample) / 16.0);
+            game.particles.add(&dust, position, [0.0; 3]);
+            spawned += 1;
+        }
+    }
+    if std::env::var_os("CREATE_HORIZON_PARTICLE_TRACE").is_some() && spawned > 0 {
+        log::info!("Create belt preview: first={first:?} selected={selected:?} step={step:?} samples={samples} valid={valid} spawned={spawned}");
+    }
+}
+
 pub(super) fn right_click(game: &mut Game<'_>, pos: Pos, _face: Pos) -> bool {
     if !game.native_on("create") {
         return false;
@@ -495,14 +569,7 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: Pos, _face: Pos) -> bool {
         if game.native_block(pos) != "create:shaft" {
             return true;
         }
-        let first = held
-            .as_ref()
-            .and_then(|s| s.data())
-            .and_then(|d| d.other(FIRST))
-            .and_then(|tag| match tag {
-                Tag::IntArray(p) if p.len() == 3 => Some([p[0], p[1], p[2]]),
-                _ => None,
-            });
+        let first = held.as_ref().and_then(connector_first);
         let first = first.filter(|p| {
             game.native_block(*p) == "create:shaft"
                 && p.iter()
@@ -512,24 +579,7 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: Pos, _face: Pos) -> bool {
                     < 1600.0
         });
         if let Some(first) = first {
-            let chain = transport::connect(
-                pulley(game, first),
-                pulley(game, pos),
-                transport::DEFAULT_MAX_LENGTH,
-                |p| {
-                    if game.native_block(p) == "create:shaft" {
-                        Space::Shaft(axis(game, p))
-                    } else if game
-                        .res
-                        .behaviours()
-                        .is_replaceable(game.world.block(p[0], p[1], p[2]))
-                    {
-                        Space::Replaceable
-                    } else {
-                        Space::Blocked
-                    }
-                },
-            );
+            let chain = connect(game, first, pos);
             let Ok(chain) = chain else { return true };
             let plans = chain
                 .segments

@@ -97,6 +97,54 @@ pub enum ConnectionError {
     Bounds,
 }
 
+/// BeltConnectorHandler's projected line, in sixteenth-block samples.
+pub fn preview_line(first: Pos, selected: Pos, axis: Axis) -> Option<(Pos, u32)> {
+    let actual = std::array::from_fn::<_, 3, _>(|i| i64::from(selected[i]) - i64::from(first[i]));
+    let distance_squared = actual.iter().map(|&d| (d as f64).powi(2)).sum::<f64>();
+    if distance_squared >= DEFAULT_MAX_LENGTH.powi(2) {
+        return None;
+    }
+    let mut delta = actual.map(|d| d as i32);
+    delta[axis.index()] = 0;
+    let [x, y, z] = delta.map(i32::abs);
+    let length = x.max(y).max(z);
+    if length == 0 {
+        return None;
+    }
+    if x != y && y != z && z != x {
+        let norm = f64::from(delta.iter().map(|v| v * v).sum::<i32>()).sqrt();
+        let direction = delta.map(|v| f64::from(v) / norm);
+        let mut closest = f32::MAX;
+        for i in -1..=1 {
+            for j in -1..=1 {
+                for k in -1..=1 {
+                    let candidate = [i, j, k];
+                    if candidate[axis.index()] != 0
+                        || (axis == Axis::Y && i != 0 && k != 0)
+                        || candidate == [0; 3]
+                    {
+                        continue;
+                    }
+                    let distance = candidate
+                        .into_iter()
+                        .zip(direction)
+                        .map(|(v, d)| (f64::from(v) - d).powi(2))
+                        .sum::<f64>()
+                        .sqrt();
+                    if distance < f64::from(closest) {
+                        closest = distance as f32;
+                        delta = candidate;
+                    }
+                }
+            }
+        }
+    }
+    if axis == Axis::Y && delta[0] != 0 && delta[2] != 0 {
+        return None;
+    }
+    Some((delta.map(i32::signum), length as u32 * 16))
+}
+
 /// Source connection geometry, including the strict Euclidean length limit.
 /// A Y-axis pulley makes a sideways belt: it transmits rotation, not items.
 pub fn connect(
@@ -866,6 +914,24 @@ fn process<T: Clone + PartialEq>(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn connector_preview_projects_snaps_and_keeps_the_source_length() {
+        assert_eq!(
+            preview_line([0; 3], [3, 0, 5], Axis::X),
+            Some(([0, 0, 1], 80))
+        );
+        assert_eq!(
+            preview_line([0; 3], [0, 5, -4], Axis::X),
+            Some(([0, 1, -1], 80))
+        );
+        assert_eq!(
+            preview_line([0; 3], [0, 5, 1], Axis::X),
+            Some(([0, 1, 0], 80))
+        );
+        assert_eq!(preview_line([0; 3], [5, 0, 5], Axis::Y), None);
+        assert_eq!(preview_line([0; 3], [20, 0, 0], Axis::Z), None);
+    }
+
     use super::*;
     fn pulley(pos: Pos, axis: Axis) -> Pulley {
         Pulley {

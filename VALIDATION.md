@@ -1,5 +1,19 @@
 # Checks and evidence
 
+## Belt connector preview
+
+The same right-click sequence in Create 6.0.10 and Horizon produced green dust
+between compatible shafts and red dust when the second shaft had a different
+axis. The incompatible click left both shafts intact. The compatible click
+formed the five belt segments. Horizon's client trace verified that emission
+starts after the first shaft is selected and ends after a valid connection.
+Both clients were rendered and the captures were inspected.
+
+The real native press/belt integration check passed all five groups without
+the original JAR. The workspace passed 133 Rust tests, 14 Python tests and
+strict Clippy. The [belt review route](docs/reviews/belt-preview.md) describes
+the delivered scene and its boundaries.
+
 ## Chain gearshift and copper casing in 0.8.0-alpha.1
 
 - `tools/adjustable_chain_checks.py` compared 36 settled cases in the pinned

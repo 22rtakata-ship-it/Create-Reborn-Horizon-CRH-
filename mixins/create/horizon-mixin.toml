@@ -625,6 +625,14 @@ name = "create_port_generators"
 source = "generators.rs"
 
 [[injection]]
+id = "belt-component-types"
+hook = "component_types"
+hook_version = 1
+kind = "HEAD"
+helper = "belt_components.rs"
+bindings = [{ name = "types", ty = "&mut Vec<String>", value = "&mut *types" }]
+
+[[injection]]
 id = "client-visual-tick"
 hook = "tick"
 hook_version = 1
