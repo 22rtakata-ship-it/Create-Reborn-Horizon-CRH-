@@ -1,8 +1,8 @@
 # Original Create identifiers and data
 
 The sections marked 0.3–0.5 below retain the released historical boundaries.
-The installed review checkpoint is **0.6.0-alpha.2**: see [REPORT_06.md](REPORT_06.md)
-and [DEVELOPMENT_06.md](DEVELOPMENT_06.md) for scoped integration evidence and
+The installed review checkpoint is **0.6.0-alpha.2**: see [REPORT_06.md](https://github.com/Delete228/create-horizon/blob/eb8b96e8ea1db698b79bb61fd1caf6c963f31652/REPORT_06.md)
+and [DEVELOPMENT_06.md](https://github.com/Delete228/create-horizon/blob/eb8b96e8ea1db698b79bb61fd1caf6c963f31652/DEVELOPMENT_06.md) for scoped integration evidence and
 remaining differences. It adds limited schematic placement, bare-belt transport,
 Basin/Mixer/fluid/heat processing and Press compacting, not complete Create parity.
 
@@ -15,13 +15,13 @@ data; unsupported predicates/structures fail explicitly. The measured one-tick
 kinetic startup difference is historical; the bounded 0.7 source-event/ticker-order
 comparison supersedes it without adding a timer offset.
 
-Latest tested developer checkpoint: **0.7.0-alpha.1**. See [REPORT_07.md](REPORT_07.md)
-and [DEVELOPMENT_07.md](DEVELOPMENT_07.md). It adds `create:encased_chain_drive`
+Version 0.7 adds `create:encased_chain_drive`
 with entity type `create:encased_shaft` and the original 24 combinations of `axis`,
 `axis_along_first` and `part`. The isolated original default is axis Y,
 `axis_along_first=true`, `part=none`. Two source crafting recipes and the complete
 source loot data are preserved. Ordinary interactions, six settled chain scenes
-and real native restarts have passed; full propagation/presentation parity has not.
+and real native restarts were checked in the alpha.1 build. Full propagation and
+presentation parity remain open. [0.7 report](reviews/0.7-report.md)
 
 The target's per-stack `minecraft:damage_resistant` canonical
 `{types:"#minecraft:is_fire"}` maps to original 1.21.1 `FIRE_RESISTANT` presence.

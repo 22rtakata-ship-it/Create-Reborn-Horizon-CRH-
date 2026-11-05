@@ -8,19 +8,12 @@ not mean a subsystem is complete. Java addon JARs are not executed here.
 Legend: `[x]` means a verified, bounded item; `[ ]` means pending or only partly
 ported. A large subsystem will be checked off only after all its listed behavior
 has been verified. Current detailed limits are in
-[COMPATIBILITY.md](COMPATIBILITY.md), with evidence in [VALIDATION.md](VALIDATION.md).
+[COMPATIBILITY.md](compatibility.md), with evidence in [VALIDATION.md](../VALIDATION.md).
 Completion percentages are rough estimates, not a count of the rows below.
 
-The latest installed stage is `0.6.0-alpha.2`, branch `stage/parity-06`.
-[The report, build and review world](REPORT_06.md) record the result at this checkpoint.
-Candidate `alpha.3`: [belt X rotation, metadata and checks](REPORT_063.md).
-Latest tested developer checkpoint: **0.7.0-alpha.1**, with Encased Chain Drive,
-bounded source-event timing and fan component mapping. Its separate review world
-and evidence are in [REPORT_07.md](REPORT_07.md) and [TESTING_07.md](TESTING_07.md).
-The installed Launcher instance has not been replaced.
-The checkmarks below apply to the stated bounded capabilities; full Create
-parity is not claimed. Evidence history and differences are in
-[DEVELOPMENT_06.md](DEVELOPMENT_06.md).
+The 0.7 checkpoints cover Encased Chain Drive, generator timing, fan component
+handling and the built-in resources. [Gameplay report](reviews/0.7-report.md)
+· [Review route](reviews/0.7-test-world.md)
 
 | Subsystem | Verified bounded foundation | Next acceptance criterion |
 |---|---|---|
@@ -42,6 +35,8 @@ parity is not claimed. Evidence history and differences are in
 
 - [x] Build the mod from GitHub through the standard Horizon Launcher with pinned versions.
 - [x] Load original resources from the player's local JAR without publishing them.
+- [x] Built-in models work without the JAR. An actual game switches back when
+  the JAR is removed, even with the cache still present.
 - [x] Original IDs for supported blocks, items and recipes; import 61 localizations.
 - [x] Verified separate native worlds for 0.3, 0.4 and 0.5, preserving older worlds.
 - [x] Independent Java oracles for selected algorithms and real native checks.
@@ -53,10 +48,9 @@ parity is not claimed. Evidence history and differences are in
 - [x] Separate 0.6 world: 13 stations, independent run of 15 groups, 6 survival crafts,
   2 actual restarts and inspection of 19 images. Binary boundaries are in the report.
 - [x] Alpha.3 candidate: accepted upstream Mixins, native package and developer build.
-- [x] Generic metadata and native-data fix for macOS `.app` submitted in
-  [PR #9529](https://github.com/horizon-rust/horizon/pull/9529); an `.app` created by the source helper was tested.
-- [ ] Update the installed Launcher after the fix is accepted, repeat a clean
-  installation and prepare a new user review instance.
+- [x] macOS `.app` metadata and native-data fix merged upstream.
+  [Horizon #9529](https://github.com/horizon-rust/horizon/pull/9529)
+- [ ] Retest a clean installation with the updated Launcher and official Horizon.
 - [x] Separate 0.7 developer review world: 23 independent audit groups, 16 inspected
   frames and two actual restart comparisons; resumed fixture correction disclosed.
 - [ ] Submit a ready, reproducible package to the official native mod registry.

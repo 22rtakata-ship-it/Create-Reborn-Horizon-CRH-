@@ -1,0 +1,17 @@
+name = "Create for Horizon"
+summary = "Build rotating machines and small factories in Horizon with gears, belts, presses and fans."
+authors = ["Delete228"]
+license = "MIT"
+description = """
+An experimental Rust port of [Create](https://github.com/Creators-of-Create/Create).
+
+- Drive machines with water wheels, hand cranks or a Creative Motor.
+- Route power through shafts, gears, gearboxes, clutches and encased chain drives.
+- Move items on basic belts and depots. Press sheets, mill ingredients, mix in a Basin or process items with a fan.
+
+Install it as a native mod in Horizon Launcher and build the instance. It uses simple built-in models and standard Minecraft textures out of the box.
+
+**The original models and textures require the original Create 6.0.10 JAR for Minecraft 1.21.1 (NeoForge).** Place one copy in the instance's `horizon-mods/create-resources/` folder and restart Horizon. The JAR is optional and resources are imported locally. [Supported JAR](https://modrinth.com/mod/create/version/UjX6dr61)
+
+Moving contraptions, trains and Ponder are planned. [Setup and compatibility](https://github.com/Delete228/create-horizon)
+"""

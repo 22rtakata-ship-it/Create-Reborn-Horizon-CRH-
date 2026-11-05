@@ -1,8 +1,8 @@
 # Create Horizon development rules
 
 The owner's primary requirement is observable parity with the pinned original
-Create release. Read `compatibility.json`, `COMPATIBILITY.md` and the current
-increment in `PLAN.md` before changing gameplay or presentation.
+Create release. Read `compatibility.json`, `docs/compatibility.md` and
+`docs/roadmap.md` before changing gameplay or presentation.
 
 - Maintain all public project documentation in English. Preserve original game
   localizations and identifiers; the documentation language does not change them.

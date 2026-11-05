@@ -1,6 +1,24 @@
 # Checks and evidence
 
-## Current review checkpoint: 0.6.0-alpha.2
+## Optional resources in 0.7.0-alpha.2
+
+A disposable Horizon world was opened three times with the same native build.
+On the first launch without the JAR, a powered belt, both wheel sizes, a gauge
+and the press rendered with built-in models. The press turned one Copper Ingot
+into one Copper Sheet. Adding the supported JAR switched the models to the
+original art. Removing it switched the models back even with the import cache
+present. The sheet remained in the Depot across both restarts. The built-in
+burner uses vanilla fire while the atlas may still log the optional original
+flame sprites as missing.
+
+Native build SHA-256
+`dd4786638fd3a943256519b9c4e7818f8c6fdc88b2506e3c1b0dbc32c659a352`.
+The matching `create-0.7.0-alpha.2.hnmod` passed the pinned Horizon archive and
+registry release checks. Archive SHA-256
+`13638c5571ef7ac32be5bb19ddac90959796d6c102122de09f6a81d39be74d97`.
+All 131 Rust tests, 14 Python tests and portable strict Clippy passed.
+
+## Launcher review for 0.6.0-alpha.2
 
 Source bundle `d6a82f59e7622d9ad74e5cc200699776fa7e0e66`; Horizon
 `9c7f9b2215dfed497aba5522c44f38926628648d`; official Mixins
@@ -49,8 +67,8 @@ Evidence: `.local/final-port-checks.json`,
 `.local/final-performance-check-ejbjii2j/result.json` and separate image review,
 `.local/final-user-install-result.json`. Failed fixture attempts are retained.
 
-The route and known differences are in [TESTING_06.md](TESTING_06.md),
-[REPORT_06.md](REPORT_06.md) and [DEVELOPMENT_06.md](DEVELOPMENT_06.md).
+The route and known differences are in [TESTING_06.md](https://github.com/Delete228/create-horizon/blob/eb8b96e8ea1db698b79bb61fd1caf6c963f31652/TESTING_06.md),
+[REPORT_06.md](https://github.com/Delete228/create-horizon/blob/eb8b96e8ea1db698b79bb61fd1caf6c963f31652/REPORT_06.md) and [DEVELOPMENT_06.md](https://github.com/Delete228/create-horizon/blob/eb8b96e8ea1db698b79bb61fd1caf6c963f31652/DEVELOPMENT_06.md).
 The entries below describe earlier binaries and are not silently transferred
 to this checkpoint.
 
@@ -117,7 +135,7 @@ four airflows with eight outputs each, drill with one new cobblestone,
 five crafts through the actual menu, and empty-bucket return. Seven gameplay
 screenshots were viewed. Checks ran on a copy: `final-integrity.json` confirms
 that all 29 source-map files are unchanged. The user walkthrough is in
-[TESTING_05.md](TESTING_05.md).
+[TESTING_05.md](https://github.com/Delete228/create-horizon/blob/eb8b96e8ea1db698b79bb61fd1caf6c963f31652/TESTING_05.md).
 
 The standard **Add from GitHub** installed the published source commit
 `16c5d454b1b9860da01b78474ea5206f0664d384` into a new empty test instance.
@@ -313,7 +331,7 @@ Local results, not published in Git: `.local/placement-oracle/result.json`,
 
 Persistence was checked within Horizon. Cross-version Java-world transfer is
 outside the requirement; the full Create system had not yet been ported.
-Exceptions are listed in [COMPATIBILITY.md](COMPATIBILITY.md). Animations, water,
+Exceptions are listed in [COMPATIBILITY.md](docs/compatibility.md). Animations, water,
 sound, multiplayer, and the remaining machinery required later iterations.
 
 ## First-stage results (0.1.0)
