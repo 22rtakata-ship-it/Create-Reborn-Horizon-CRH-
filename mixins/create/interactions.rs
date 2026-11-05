@@ -204,6 +204,7 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3]) ->
         } else if block == "create:large_water_wheel" {
             return false;
         } else if let Some(face) = Direction::from_vector(face) {
+            let before_rotation = game.world.block(pos[0], pos[1], pos[2]);
             if block == "create:encased_chain_drive" {
                 if super::create_port_chain::wrench(game, pos, face) {
                     crate::game::create_port_sounds::wrench(game, pos, false);
@@ -246,6 +247,17 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3]) ->
                 ) {
                     crate::game::create_port_sounds::wrench(game, pos, false);
                 }
+            }
+            if game.world.block(pos[0], pos[1], pos[2]) != before_rotation
+                && matches!(
+                    block.as_str(),
+                    "create:creative_motor"
+                        | "create:hand_crank"
+                        | "create:water_wheel"
+                        | "create:large_water_wheel"
+                )
+            {
+                crate::game::create_port_kinetic_runtime::wrenched(game, pos);
             }
             crate::game::create_port_kinetic_runtime::invalidate();
         }

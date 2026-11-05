@@ -20,6 +20,16 @@ use std::{
 struct Cache {
     world: Option<(usize, i64, String)>,
     components: BTreeMap<(Pos, u8), Rc<Network>>,
+    published: BTreeSet<usize>,
+}
+impl Cache {
+    fn invalidate(&mut self) {
+        self.components.clear();
+        self.published.clear();
+    }
+    fn first_publication(&mut self, network: &Network) -> bool {
+        self.published.insert(std::ptr::from_ref(network) as usize)
+    }
 }
 #[derive(Default)]
 struct Lifetime {
@@ -27,7 +37,27 @@ struct Lifetime {
     attached: bool,
     waiting_for_neighbour: bool,
     initialized_source: bool,
+    reactivate_source: bool,
     generation: Option<f32>,
+}
+impl Lifetime {
+    fn source_turn(
+        &mut self,
+        requested: f32,
+        initialize_motor: bool,
+        changed: bool,
+    ) -> (f32, bool) {
+        // KineticBlockEntity.switchToBlockState is the explicit wrench path;
+        // Generating.tick consumes reActivateSource on its next own turn.
+        // A raw state change or NBT read does not call that source callback.
+        let re_activate = std::mem::take(&mut self.reactivate_source);
+        let publish = !self.initialized_source && initialize_motor || changed || re_activate;
+        self.initialized_source = true;
+        if publish {
+            self.generation = Some(requested);
+        }
+        (self.generation.unwrap_or(0.0), publish)
+    }
 }
 #[derive(Default)]
 struct Lifetimes {
@@ -79,7 +109,7 @@ pub(super) fn reset() {
     CHANGED.with(|cell| cell.borrow_mut().clear());
 }
 pub(super) fn invalidate() {
-    CACHE.with(|c| c.borrow_mut().components.clear());
+    CACHE.with(|c| c.borrow_mut().invalidate());
 }
 fn theoretical(entity: &ModBlockEntity) -> f32 {
     match entity.nbt.get(&"create_horizon".into()) {
@@ -118,12 +148,7 @@ pub(super) fn source_turn(
 ) -> (f32, bool) {
     let result = with_lifetime(game, pos, entity, |state| {
         state.generation.get_or_insert_with(|| theoretical(entity));
-        let publish = !state.initialized_source && initialize_motor || changed;
-        state.initialized_source = true;
-        if publish {
-            state.generation = Some(requested);
-        }
-        (state.generation.unwrap_or(0.0), publish)
+        state.source_turn(requested, initialize_motor, changed)
     });
     if result.1 {
         invalidate();
@@ -204,7 +229,7 @@ pub(super) fn network(game: &Game<'_>, start: Node, half: u8) -> Rc<Network> {
         );
         if cache.world.as_ref() != Some(&world) {
             cache.world = Some(world);
-            cache.components.clear();
+            cache.invalidate();
         }
         if let Some(network) = cache.components.get(&(start.pos, half)) {
             return Rc::clone(network);
@@ -225,6 +250,13 @@ pub(super) fn network(game: &Game<'_>, start: Node, half: u8) -> Rc<Network> {
 /// updateGeneratedRotation/attachKinetics publishes to neighbours immediately,
 /// including machines whose behaviour turn already ran in this level pass.
 pub(super) fn publish(game: &mut Game<'_>, network: &Network, current: Pos) {
+    // A propagated source already visits every neighbour. Their subsequent
+    // first own turns must not repeat that full-component scan (N squared).
+    // Each source event invalidates both the solved graph and this guard.
+    if !CACHE.with(|cell| cell.borrow_mut().first_publication(network)) {
+        return;
+    }
+
     for &(pos, _) in &network.vertices {
         if pos == current {
             continue;
@@ -254,6 +286,15 @@ pub(super) fn publish(game: &mut Game<'_>, network: &Network, current: Pos) {
             super::create_port::apply_network(entity, network, other.as_deref(), pos);
         });
         game.native_block_entity_sync(pos);
+    }
+}
+/// Successful generator wrench rotation, distinct from raw state/NBT reads.
+/// switchToBlockState marks it now; Generating.tick applies it next own turn.
+pub(super) fn wrenched(game: &Game<'_>, pos: Pos) {
+    if let Some(BlockEntity::Mod(entity)) = game.world.block_entities.get(&(pos[0], pos[1], pos[2]))
+        && !entity.id.is_empty()
+    {
+        with_lifetime(game, pos, entity, |state| state.reactivate_source = true);
     }
 }
 /// Ordinary source-setting callback while the source BE is in the world.
@@ -361,6 +402,54 @@ pub(super) fn refresh_transmissions(game: &mut Game<'_>) {
 #[cfg(test)]
 mod lifetime_tests {
     use super::*;
+    #[test]
+    fn a_component_publishes_once_until_source_or_tick_invalidation() {
+        let empty = || Network {
+            status: kinetics::Status::Idle,
+            capacity: 0.0,
+            stress: 0.0,
+            theoretical: BTreeMap::new(),
+            ports: BTreeMap::new(),
+            vertices: Vec::new(),
+        };
+        let first = Rc::new(empty());
+        let second = Rc::new(empty());
+        let mut cache = Cache::default();
+        assert!(cache.first_publication(&first));
+        assert!(!cache.first_publication(&first));
+        assert!(cache.first_publication(&second));
+        cache.invalidate();
+        assert!(
+            cache.first_publication(&first),
+            "a new source/tick generation must publish again"
+        );
+        assert!(!cache.first_publication(&first));
+    }
+    #[test]
+    fn explicit_wrench_marker_reactivates_on_own_turn_while_raw_settings_stay_inert() {
+        let mut motor = Lifetime::default();
+        assert_eq!(motor.source_turn(32.0, true, false), (32.0, true));
+        // /data and equivalent raw state changes do not set the marker.
+        assert_eq!(motor.source_turn(64.0, true, false), (32.0, false));
+        motor.reactivate_source = true;
+        assert_eq!(motor.source_turn(-64.0, true, false), (-64.0, true));
+        assert!(!motor.reactivate_source);
+        assert_eq!(motor.source_turn(-128.0, true, false), (-64.0, false));
+        assert_eq!(motor.source_turn(-128.0, true, true), (-128.0, true));
+        for speed in [8.0, 32.0] {
+            let mut source = Lifetime {
+                generation: Some(speed),
+                ..Lifetime::default()
+            };
+            assert_eq!(source.source_turn(64.0, false, false), (speed, false));
+            source.reactivate_source = true;
+            assert_eq!(source.source_turn(-speed, false, false), (-speed, true));
+            assert_eq!(source.source_turn(0.0, false, true), (0.0, true));
+        }
+        let mut stopped = Lifetime::default();
+        assert_eq!(stopped.source_turn(0.0, true, false), (0.0, true));
+        assert_eq!(stopped.source_turn(32.0, true, false), (0.0, false));
+    }
     #[test]
     fn pending_bulk_changes_fall_back_to_one_loaded_scan_without_dropping_the_dimension() {
         reset();
