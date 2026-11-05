@@ -41,6 +41,12 @@ struct Lifetime {
     generation: Option<f32>,
 }
 impl Lifetime {
+    fn callback(&mut self, requested: f32) -> f32 {
+        // updateGeneratedRotation is also called outside the BE's own tick.
+        // It does not initialize SmartBlockEntity or consume reActivateSource.
+        self.generation = Some(requested);
+        requested
+    }
     fn source_turn(
         &mut self,
         requested: f32,
@@ -309,7 +315,8 @@ pub(super) fn generated_changed(game: &mut Game<'_>, pos: Pos) {
     let (Kind::Motor { rpm, .. } | Kind::WaterWheel { rpm, .. }) = &mut node.kind else {
         return;
     };
-    (*rpm, _) = source_turn(game, pos, entity, *rpm, false, true);
+    *rpm = with_lifetime(game, pos, entity, |state| state.callback(*rpm));
+    invalidate();
     let network = self::network(game, node, 0);
     game.native_with_mod_block_entity(pos, |entity| {
         super::create_port::apply_network(entity, &network, None, pos);
@@ -446,6 +453,22 @@ mod lifetime_tests {
             assert_eq!(source.source_turn(-speed, false, false), (-speed, true));
             assert_eq!(source.source_turn(0.0, false, true), (0.0, true));
         }
+        let mut newborn = Lifetime {
+            reactivate_source: true,
+            ..Lifetime::default()
+        };
+        assert_eq!(newborn.callback(64.0), 64.0);
+        assert!(
+            !newborn.initialized_source,
+            "callback is not SmartBlockEntity.initialize"
+        );
+        assert!(
+            newborn.reactivate_source,
+            "callback must not consume a pending wrench turn"
+        );
+        assert_eq!(newborn.source_turn(32.0, true, false), (32.0, true));
+        assert!(!newborn.reactivate_source);
+        assert_eq!(newborn.source_turn(128.0, true, false), (32.0, false));
         let mut stopped = Lifetime::default();
         assert_eq!(stopped.source_turn(0.0, true, false), (0.0, true));
         assert_eq!(stopped.source_turn(32.0, true, false), (0.0, false));
