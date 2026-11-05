@@ -53,10 +53,11 @@ pub enum Kind {
         impact: f32,
     },
     Gearbox,
-    /// Enclosed chains link along their state-defined connection axis at 1:1,
-    /// including links between different shaft axes (ChainDriveBlock).
+    /// Enclosed chains connect even when their shaft axes differ. An adjustable
+    /// gearshift's signal only changes its ratio across a chain link.
     Chain {
         state: crate::chain_drive::State,
+        signal: u8,
     },
     Clutch {
         powered: bool,
@@ -133,11 +134,20 @@ pub fn ratio(from: Node, to: Node) -> Option<f32> {
         return Some(from.port_modifier(delta) / to.port_modifier(delta.map(|v| -v)));
     }
     if distance == 1
-        && let (Kind::Chain { state: a }, Kind::Chain { state: b }) = (from.kind, to.kind)
+        && let (
+            Kind::Chain {
+                state: a,
+                signal: input,
+            },
+            Kind::Chain {
+                state: b,
+                signal: output,
+            },
+        ) = (from.kind, to.kind)
         && let Some(direction) = crate::placement::Direction::from_vector(delta)
         && a.connected(b, direction)
     {
-        return Some(1.0);
+        return Some(crate::chain_drive::modifier(input) / crate::chain_drive::modifier(output));
     }
     // BeltBlockEntity.propagateRotationTo: custom, non-axis links carry 1:1
     // rotation, including sloped neighbors. There is no slope sign inversion.
@@ -446,6 +456,7 @@ mod tests {
                         first: false,
                         part: Part::Start,
                     },
+                    signal: 0,
                 },
             },
             Node {
@@ -457,6 +468,7 @@ mod tests {
                         first: false,
                         part: Part::End,
                     },
+                    signal: 0,
                 },
             },
             Node {
@@ -483,6 +495,39 @@ mod tests {
     }
 
     #[test]
+    fn adjustable_chain_uses_both_signals_and_only_modifies_chain_links() {
+        use crate::chain_drive::{Part, State};
+
+        let chain = |z, part, signal| Node {
+            pos: [0, 0, z],
+            axis: Axis::X,
+            kind: Kind::Chain {
+                state: State {
+                    axis: Axis::X,
+                    first: false,
+                    part,
+                },
+                signal,
+            },
+        };
+        let expected = [
+            1.0, 1.125, 1.1875, 1.25, 1.3125, 1.375, 1.4375, 1.5, 1.5625, 1.625, 1.6875, 1.75,
+            1.8125, 1.875, 1.9375, 2.0,
+        ];
+        for (input, input_modifier) in expected.into_iter().enumerate() {
+            for (output, output_modifier) in expected.into_iter().enumerate() {
+                let a = chain(0, Part::Start, input as u8);
+                let b = chain(1, Part::End, output as u8);
+                assert_eq!(ratio(a, b), Some(input_modifier / output_modifier));
+                assert_eq!(ratio(b, a), Some(output_modifier / input_modifier));
+                let shaft = node([1, 0, 0], Kind::Shaft);
+                assert_eq!(ratio(a, shaft), Some(1.0));
+                assert_eq!(ratio(shaft, a), Some(1.0));
+            }
+        }
+    }
+
+    #[test]
     fn enclosed_chain_uses_shaft_ports_and_does_not_mesh_with_cogs() {
         use crate::chain_drive::State;
         let chain = Node {
@@ -490,6 +535,7 @@ mod tests {
             axis: Axis::X,
             kind: Kind::Chain {
                 state: State::new(Axis::X),
+                signal: 15,
             },
         };
         let shaft = node([1, 0, 0], Kind::Shaft);

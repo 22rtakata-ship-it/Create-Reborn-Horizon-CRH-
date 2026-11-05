@@ -55,6 +55,7 @@ implementing each feature, and test save/reload inside Horizon.
 | `create:hand_crank` | `create:hand_crank` | `facing`, `waterlogged`; `InUse` int, `Backwards` byte |
 | `create:andesite_encased_shaft`, `create:brass_encased_shaft` | `create:encased_shaft` | `axis` |
 | `create:encased_chain_drive` | `create:encased_shaft` | `axis`, `axis_along_first`, `part` (`none`, `start`, `middle`, `end`) |
+| `create:adjustable_chain_gearshift` | `create:adjustable_chain_gearshift` | Same chain properties and `powered`. Integer `Signal` stores the analog redstone strength. |
 | `create:millstone` | `create:millstone` | no block-state properties; `Timer` int, `InputInventory`, `OutputInventory` |
 | `create:encased_fan` | `create:encased_fan` | six-way `facing`, original default `down`; common kinetic `Speed` |
 | `create:mechanical_drill` | `create:drill` | six-way `facing`, `waterlogged`; defaults `down`, false; `Progress`, `NextTick`, `Breaking` |

@@ -8,6 +8,7 @@
     "create:clutch",
     "create:gearshift",
     "create:encased_chain_drive",
+    "create:adjustable_chain_gearshift",
     "create:belt",
     "create:water_wheel",
     "create:large_water_wheel",
@@ -21,6 +22,7 @@
     "create:stressometer",
     "create:mechanical_drill",
     "create:andesite_casing",
-    "create:brass_casing"
+    "create:brass_casing",
+    "create:copper_casing"
   ]
 }

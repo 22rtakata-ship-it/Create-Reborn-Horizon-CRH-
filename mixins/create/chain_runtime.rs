@@ -3,21 +3,28 @@
 // SPDX-License-Identifier: MIT
 // ChainDriveBlock: native state/shape/wrench boundary. Simulation is in engine.
 use super::{Game, GameLevel};
+use crate::containers::ModBlockEntity;
 use create_engine::{
     chain_drive::{self, Part, State},
     kinetics::Axis,
     placement::Direction,
 };
 use horizon_world::{
-    level::PlacementContext,
+    level::{PlacementContext, flags},
+    nbt::Tag,
     registry::{BlockRegistry, BlockStateId},
 };
 
 const ID: &str = "create:encased_chain_drive";
+pub(super) const ADJUSTABLE: &str = "create:adjustable_chain_gearshift";
+
+pub(super) fn is_chain(block: &str) -> bool {
+    matches!(block, ID | ADJUSTABLE)
+}
 
 pub(super) fn read(registry: &BlockRegistry, id: BlockStateId) -> Option<State> {
     let state = registry.state(id)?;
-    if state.name != ID {
+    if !is_chain(&state.name) {
         return None;
     }
     Some(State {
@@ -36,6 +43,27 @@ pub(super) fn read(registry: &BlockRegistry, id: BlockStateId) -> Option<State> 
             _ => return None,
         },
     })
+}
+
+pub(super) fn refresh_signal(
+    game: &mut Game<'_>,
+    pos: [i32; 3],
+    entity: &mut ModBlockEntity,
+) -> (u8, bool) {
+    let dimension = game.dim.id().to_owned();
+    let signal = game.native_neighbor_signal(&dimension, pos).clamp(0, 15);
+    game.native_set_block_property_with(
+        pos,
+        "powered",
+        if signal > 0 { "true" } else { "false" },
+        flags::UPDATE_CLIENTS | flags::UPDATE_KNOWN_SHAPE,
+    );
+    let changed = super::create_port::integer(&entity.nbt, "Signal") != signal;
+    if changed {
+        entity.nbt.insert("Signal".into(), Tag::Int(signal));
+        super::create_port_kinetic_runtime::invalidate();
+    }
+    (signal as u8, changed)
 }
 
 fn encode(registry: &BlockRegistry, id: BlockStateId, value: State) -> Option<BlockStateId> {

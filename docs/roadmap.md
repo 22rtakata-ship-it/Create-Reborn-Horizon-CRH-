@@ -53,7 +53,9 @@ handling and the built-in resources. [Gameplay report](reviews/0.7-report.md)
 - [ ] Retest a clean installation with the updated Launcher and official Horizon.
 - [x] Separate 0.7 developer review world: 23 independent audit groups, 16 inspected
   frames and two actual restart comparisons; resumed fixture correction disclosed.
-- [ ] Submit a ready, reproducible package to the official native mod registry.
+- [x] Submit the 0.7.0-alpha.2 archive to the native mod registry.
+  [Registry submission #252](https://github.com/horizon-rust/horizon-mods/pull/252)
+- [ ] Complete registry review and publish an approved listing.
 
 ## 2. Rotation and engineer's tools
 
@@ -61,13 +63,19 @@ handling and the built-in resources. [Gameplay report](reviews/0.7-report.md)
 - [x] Gearbox, Clutch, Gearshift, original directions and rotating parts.
 - [x] Hand Crank, motor, small and large water wheels: basic mechanics and persistence.
 - [x] Wrench, rotation/removal, encased shafts; basic Speedometer/Stressometer.
+- [x] Manual Copper Casing recipes and the NeoForge convention tags for
+  stripped logs and wood. Connected textures and advancements remain pending.
 - [x] Encased Chain Drive: 24 source states, placement/shape updates, ordinary Wrench,
   two recipes, six actual Java/native settled scenes and a native restart.
 - [x] Bounded generator publication from initialization, GUI, crank and wrench events;
   raw NBT reads remain distinct. Per-component publication and lifetime cache tests.
 - [ ] Complete source ownership, flicker/breakage, loaded-network and instantaneous
   detach semantics from RotationPropagator.
-- [ ] All redstone control, Adjustable Chain Gearshift, belt and gearbox connection variants.
+- [x] Adjustable Chain Gearshift. Settled shaft speeds and block states for all
+  16 redstone strengths from either input end, plus native save/reload.
+- [ ] Adjustable Chain Gearshift transient timing, full visual parity and
+  survival crafting through rose quartz polishing and the Electron Tube.
+- [ ] Remaining redstone controls, belt and gearbox connection variants.
 - [ ] Clutch/Gearshift and Hand Crank in all network/animation edge cases.
 - [ ] Original goggles tooltips and value settings, including RU/EN, colors, units and fading.
 - [ ] Original speed/overstress particles, placement assistance, outlines and sound loops.

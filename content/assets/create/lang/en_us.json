@@ -32,6 +32,8 @@
   "block.create.blaze_burner": "Blaze Burner",
   "block.create.lit_blaze_burner": "Lit Blaze Burner",
   "block.create.encased_chain_drive": "Encased Chain Drive",
+  "block.create.adjustable_chain_gearshift": "Adjustable Chain Gearshift",
+  "block.create.copper_casing": "Copper Casing",
   "item.create.andesite_alloy": "Andesite Alloy",
   "item.create.brass_ingot": "Brass Ingot",
   "item.create.brass_nugget": "Brass Nugget",

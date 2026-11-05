@@ -49,7 +49,7 @@ pub(super) fn state(
     answer: &mut Option<Option<BlockStateId>>,
 ) {
     let block = game.native_state_block(state).unwrap_or("");
-    if block == "create:encased_chain_drive" {
+    if super::create_port_chain::is_chain(block) {
         *answer = Some(super::create_port_chain::placement(game, state, ctx));
         return;
     }
@@ -373,6 +373,7 @@ fn state_shaft_port(state: &horizon_world::chunk::BlockState, face: Direction) -
         | "create:andesite_encased_shaft"
         | "create:brass_encased_shaft"
         | "create:encased_chain_drive"
+        | super::create_port_chain::ADJUSTABLE
         | "create:cogwheel"
         | "create:large_cogwheel"
         | "create:clutch"

@@ -1,0 +1,190 @@
+{
+  "variants": {
+    "axis=x,axis_along_first=false,part=start,powered=false": {
+      "model": "create:block/adjustable_chain_gearshift/false",
+      "x": 180
+    },
+    "axis=x,axis_along_first=false,part=middle,powered=false": {
+      "model": "create:block/adjustable_chain_gearshift/false"
+    },
+    "axis=x,axis_along_first=false,part=end,powered=false": {
+      "model": "create:block/adjustable_chain_gearshift/false"
+    },
+    "axis=x,axis_along_first=false,part=none,powered=false": {
+      "model": "create:block/adjustable_chain_gearshift/false",
+      "y": 90
+    },
+    "axis=x,axis_along_first=true,part=start,powered=false": {
+      "model": "create:block/adjustable_chain_gearshift/false",
+      "x": 270
+    },
+    "axis=x,axis_along_first=true,part=middle,powered=false": {
+      "model": "create:block/adjustable_chain_gearshift/false",
+      "x": 90
+    },
+    "axis=x,axis_along_first=true,part=end,powered=false": {
+      "model": "create:block/adjustable_chain_gearshift/false",
+      "x": 90
+    },
+    "axis=x,axis_along_first=true,part=none,powered=false": {
+      "model": "create:block/adjustable_chain_gearshift/false",
+      "y": 90
+    },
+    "axis=y,axis_along_first=false,part=start,powered=false": {
+      "model": "create:block/adjustable_chain_gearshift/false"
+    },
+    "axis=y,axis_along_first=false,part=middle,powered=false": {
+      "model": "create:block/adjustable_chain_gearshift/false"
+    },
+    "axis=y,axis_along_first=false,part=end,powered=false": {
+      "model": "create:block/adjustable_chain_gearshift/false",
+      "y": 180
+    },
+    "axis=y,axis_along_first=false,part=none,powered=false": {
+      "model": "create:block/adjustable_chain_gearshift/false",
+      "x": 90
+    },
+    "axis=y,axis_along_first=true,part=start,powered=false": {
+      "model": "create:block/adjustable_chain_gearshift/false",
+      "y": 270
+    },
+    "axis=y,axis_along_first=true,part=middle,powered=false": {
+      "model": "create:block/adjustable_chain_gearshift/false",
+      "y": 90
+    },
+    "axis=y,axis_along_first=true,part=end,powered=false": {
+      "model": "create:block/adjustable_chain_gearshift/false",
+      "y": 90
+    },
+    "axis=y,axis_along_first=true,part=none,powered=false": {
+      "model": "create:block/adjustable_chain_gearshift/false",
+      "x": 90
+    },
+    "axis=z,axis_along_first=false,part=start,powered=false": {
+      "model": "create:block/adjustable_chain_gearshift/false",
+      "x": 270,
+      "y": 90
+    },
+    "axis=z,axis_along_first=false,part=middle,powered=false": {
+      "model": "create:block/adjustable_chain_gearshift/false",
+      "x": 90,
+      "y": 90
+    },
+    "axis=z,axis_along_first=false,part=end,powered=false": {
+      "model": "create:block/adjustable_chain_gearshift/false",
+      "x": 90,
+      "y": 90
+    },
+    "axis=z,axis_along_first=false,part=none,powered=false": {
+      "model": "create:block/adjustable_chain_gearshift/false"
+    },
+    "axis=z,axis_along_first=true,part=start,powered=false": {
+      "model": "create:block/adjustable_chain_gearshift/false",
+      "y": 90
+    },
+    "axis=z,axis_along_first=true,part=middle,powered=false": {
+      "model": "create:block/adjustable_chain_gearshift/false",
+      "y": 90
+    },
+    "axis=z,axis_along_first=true,part=end,powered=false": {
+      "model": "create:block/adjustable_chain_gearshift/false",
+      "y": 270
+    },
+    "axis=z,axis_along_first=true,part=none,powered=false": {
+      "model": "create:block/adjustable_chain_gearshift/false"
+    },
+    "axis=x,axis_along_first=false,part=start,powered=true": {
+      "model": "create:block/adjustable_chain_gearshift/true",
+      "x": 180
+    },
+    "axis=x,axis_along_first=false,part=middle,powered=true": {
+      "model": "create:block/adjustable_chain_gearshift/true"
+    },
+    "axis=x,axis_along_first=false,part=end,powered=true": {
+      "model": "create:block/adjustable_chain_gearshift/true"
+    },
+    "axis=x,axis_along_first=false,part=none,powered=true": {
+      "model": "create:block/adjustable_chain_gearshift/true",
+      "y": 90
+    },
+    "axis=x,axis_along_first=true,part=start,powered=true": {
+      "model": "create:block/adjustable_chain_gearshift/true",
+      "x": 270
+    },
+    "axis=x,axis_along_first=true,part=middle,powered=true": {
+      "model": "create:block/adjustable_chain_gearshift/true",
+      "x": 90
+    },
+    "axis=x,axis_along_first=true,part=end,powered=true": {
+      "model": "create:block/adjustable_chain_gearshift/true",
+      "x": 90
+    },
+    "axis=x,axis_along_first=true,part=none,powered=true": {
+      "model": "create:block/adjustable_chain_gearshift/true",
+      "y": 90
+    },
+    "axis=y,axis_along_first=false,part=start,powered=true": {
+      "model": "create:block/adjustable_chain_gearshift/true"
+    },
+    "axis=y,axis_along_first=false,part=middle,powered=true": {
+      "model": "create:block/adjustable_chain_gearshift/true"
+    },
+    "axis=y,axis_along_first=false,part=end,powered=true": {
+      "model": "create:block/adjustable_chain_gearshift/true",
+      "y": 180
+    },
+    "axis=y,axis_along_first=false,part=none,powered=true": {
+      "model": "create:block/adjustable_chain_gearshift/true",
+      "x": 90
+    },
+    "axis=y,axis_along_first=true,part=start,powered=true": {
+      "model": "create:block/adjustable_chain_gearshift/true",
+      "y": 270
+    },
+    "axis=y,axis_along_first=true,part=middle,powered=true": {
+      "model": "create:block/adjustable_chain_gearshift/true",
+      "y": 90
+    },
+    "axis=y,axis_along_first=true,part=end,powered=true": {
+      "model": "create:block/adjustable_chain_gearshift/true",
+      "y": 90
+    },
+    "axis=y,axis_along_first=true,part=none,powered=true": {
+      "model": "create:block/adjustable_chain_gearshift/true",
+      "x": 90
+    },
+    "axis=z,axis_along_first=false,part=start,powered=true": {
+      "model": "create:block/adjustable_chain_gearshift/true",
+      "x": 270,
+      "y": 90
+    },
+    "axis=z,axis_along_first=false,part=middle,powered=true": {
+      "model": "create:block/adjustable_chain_gearshift/true",
+      "x": 90,
+      "y": 90
+    },
+    "axis=z,axis_along_first=false,part=end,powered=true": {
+      "model": "create:block/adjustable_chain_gearshift/true",
+      "x": 90,
+      "y": 90
+    },
+    "axis=z,axis_along_first=false,part=none,powered=true": {
+      "model": "create:block/adjustable_chain_gearshift/true"
+    },
+    "axis=z,axis_along_first=true,part=start,powered=true": {
+      "model": "create:block/adjustable_chain_gearshift/true",
+      "y": 90
+    },
+    "axis=z,axis_along_first=true,part=middle,powered=true": {
+      "model": "create:block/adjustable_chain_gearshift/true",
+      "y": 90
+    },
+    "axis=z,axis_along_first=true,part=end,powered=true": {
+      "model": "create:block/adjustable_chain_gearshift/true",
+      "y": 270
+    },
+    "axis=z,axis_along_first=true,part=none,powered=true": {
+      "model": "create:block/adjustable_chain_gearshift/true"
+    }
+  }
+}

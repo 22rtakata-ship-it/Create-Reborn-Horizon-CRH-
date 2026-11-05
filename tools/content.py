@@ -271,7 +271,7 @@ def belts():
 def chain_drives():
     # MIT ChainDriveBlock / RotatedPillarKineticBlock: 24 states, full collision.
     # Original visual resources are imported privately from the player's JAR.
-    write('data/create/horizon/block/encased_chain_drive.json', {
+    declaration = {
         'template': 'minecraft:glass', 'item': True,
         'properties': {'hardness': 1.5, 'explosion_resistance': 6, 'map_color': 34,
                        'render_shape': 'MODEL', 'sounds': 'minecraft:stone'},
@@ -283,6 +283,14 @@ def chain_drives():
         'default_state': {'axis': 'y', 'axis_along_first': 'true', 'part': 'none'},
         'shapes': {'default': [[0, 0, 0, 1, 1, 1]]},
         'collision_shapes': {'default': [[0, 0, 0, 1, 1, 1]]},
+    }
+    write('data/create/horizon/block/encased_chain_drive.json', declaration)
+    adjustable = 'adjustable_chain_gearshift'
+    write(f'data/create/horizon/block/{adjustable}.json', {
+        **declaration,
+        'properties': {**declaration['properties'], 'map_color': 35},
+        'state_properties': {**declaration['state_properties'], 'powered': {'type': 'boolean'}},
+        'default_state': {**declaration['default_state'], 'powered': 'false'},
     })
     variants = {}
     # ChainDriveGenerator rotations. These fallback boxes are our own simple
@@ -309,6 +317,14 @@ def chain_drives():
         model('encased_chain_drive/' + suffix, [([0, 0, 0], [16, 16, 16])], 'minecraft:block/andesite')
     write('assets/create/blockstates/encased_chain_drive.json', {'variants': variants})
     write('assets/create/models/item/encased_chain_drive.json', {'parent': 'create:block/encased_chain_drive/single'})
+    adjustable_variants = {}
+    for powered, texture in [('false', 'red_terracotta'), ('true', 'redstone_block')]:
+        name = f'{adjustable}/{powered}'
+        model(name, [([0, 0, 0], [16, 16, 16])], f'minecraft:block/{texture}')
+        for key, variant in variants.items():
+            adjustable_variants[f'{key},powered={powered}'] = {**variant, 'model': f'create:block/{name}'}
+    write(f'assets/create/blockstates/{adjustable}.json', {'variants': adjustable_variants})
+    write(f'assets/create/models/item/{adjustable}.json', {'parent': f'create:block/{adjustable}/false'})
 
 
 def fallback_instruments_and_wheels():
@@ -368,8 +384,13 @@ def foundation():
             declaration["properties"]["render_shape"] = "ENTITYBLOCK_ANIMATED"
             declaration["state_properties"] = {"facing": {"type": "enum", "values": ["up", "down", "north", "south", "west", "east"]}, "waterlogged": {"type": "boolean"}}
             declaration["default_state"] = {"facing": "up", "waterlogged": "false"}
+        if block == "copper_casing":
+            declaration = {"template": "minecraft:andesite", "item": True,
+                           "properties": {"map_color": 44, "sounds": "minecraft:oak_planks"}}
         write("data/create/horizon/block/" + block + ".json", declaration)
         texture = "minecraft:block/stripped_spruce_log" if "casing" in block else "minecraft:block/iron_block"
+        if block == "copper_casing":
+            texture = "minecraft:block/copper_block"
         model(block + "/block", [([0, 0, 0], [16, 16, 16])], texture)
         write("assets/create/blockstates/" + block + ".json", {"variants": {"": {"model": "create:block/" + block + "/block"}}})
         write("assets/create/models/item/" + block + ".json", {"parent": "create:block/" + block + "/block"})
@@ -440,6 +461,8 @@ def foundation():
     extra_blocks.update({'basin': 'Basin', 'mechanical_mixer': 'Mechanical Mixer'})
     extra_blocks.update({'blaze_burner': 'Blaze Burner', 'lit_blaze_burner': 'Lit Blaze Burner'})
     extra_blocks['encased_chain_drive'] = 'Encased Chain Drive'
+    extra_blocks['adjustable_chain_gearshift'] = 'Adjustable Chain Gearshift'
+    extra_blocks['copper_casing'] = 'Copper Casing'
     extra_items['whisk'] = 'Whisk'
     extra_items.update({'empty_blaze_burner': 'Empty Blaze Burner', 'blaze_cake': 'Blaze Cake', 'creative_blaze_cake': 'Creative Blaze Cake'})
     for locale in ["en_us","ru_ru"]:
@@ -448,6 +471,8 @@ def foundation():
         lang.update({"block.create."+k:v for k,v in extra_blocks.items()})
         lang.update({"item.create."+k:v for k,v in extra_items.items()})
         if locale == "ru_ru":
+            lang['block.create.adjustable_chain_gearshift'] = 'Регулируемая цепная коробка передач'
+            lang['block.create.copper_casing'] = 'Медный корпус'
             lang.update({"block.create.millstone": "Мельничный жернов", "block.create.encased_fan": "Вентилятор в корпусе", "block.create.mechanical_drill": "Механический бур",
                          "item.create.propeller": "Пропеллер", "item.create.wheat_flour": "Пшеничная мука", "item.create.dough": "Тесто"})
             lang.update({'block.create.basin': 'Чаша', 'block.create.mechanical_mixer': 'Механический миксер', 'item.create.whisk': 'Венчик'})
@@ -473,7 +498,7 @@ def main():
     CONTENT.mkdir(exist_ok=True)
     (CONTENT / "horizon-mod.toml").write_text('''id = "create"
 name = "Create for Horizon"
-version = "0.7.0-alpha.2"
+version = "0.8.0-alpha.1"
 description = "Build rotating machines and small factories in Horizon. The original Create JAR is optional and supplies its models and textures."
 authors = ["create-horizon contributors"]
 api = "0.2"
@@ -568,7 +593,8 @@ capabilities = ["registries"]
     # Source installs carry only the native bundle. Its documented data folder
     # therefore contains the complete public content, with no player-side Python.
     files = {path.relative_to(CONTENT).as_posix(): path.read_text()
-             for path in sorted(CONTENT.rglob("*")) if path.is_file()
+             for path in sorted(CONTENT.rglob("*"))
+             if path.is_file() and path.suffix in {".json", ".toml"}
              and "target" not in path.relative_to(CONTENT).parts}
     bundled = NATIVE / "data/content.json"
     bundled.parent.mkdir(parents=True, exist_ok=True)

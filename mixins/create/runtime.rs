@@ -120,6 +120,7 @@ pub(super) fn owns(block: &str) -> bool {
             | "create:andesite_encased_shaft"
             | "create:brass_encased_shaft"
             | "create:encased_chain_drive"
+            | super::create_port_chain::ADJUSTABLE
             | "create:speedometer"
             | "create:stressometer"
             | "create:water_wheel"
@@ -149,6 +150,8 @@ pub(super) fn entity(block: &str, entity: &mut Option<(String, Compound)>) {
         let mut nbt = Compound::new();
         if block == "create:creative_motor" {
             nbt.insert("ScrollValue".into(), Tag::Int(16));
+        } else if block == super::create_port_chain::ADJUSTABLE {
+            nbt.insert("Signal".into(), Tag::Int(0));
         }
         *entity = Some((id.to_owned(), nbt));
     }
@@ -658,11 +661,19 @@ pub(super) fn node(game: &Game<'_>, pos: [i32; 3]) -> Option<Node> {
             Kind::Shaft
         }
         "create:gearbox" => Kind::Gearbox,
-        "create:encased_chain_drive" => Kind::Chain {
+        "create:encased_chain_drive" | super::create_port_chain::ADJUSTABLE => Kind::Chain {
             state: super::create_port_chain::read(
                 game.pack.assets.registry,
                 game.world.block(pos[0], pos[1], pos[2]),
             )?,
+            signal: if block == super::create_port_chain::ADJUSTABLE {
+                match game.world.block_entities.get(&(pos[0], pos[1], pos[2])) {
+                    Some(BlockEntity::Mod(entity)) => integer(&entity.nbt, "Signal").clamp(0, 15) as u8,
+                    _ => 0,
+                }
+            } else {
+                0
+            },
         },
         "create:clutch" => Kind::Clutch {
             powered: game.native_block_property(pos, "powered").as_deref() == Some("true"),
@@ -907,6 +918,14 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
     let Some(mut start) = node(game, pos) else {
         return;
     };
+    let mut chain_signal_changed = false;
+    if block == super::create_port_chain::ADJUSTABLE
+        && let Kind::Chain { signal, .. } = &mut start.kind
+    {
+        // The host removes the ticking entity from the level's map. Override
+        // its graph input with the signal sampled on its own turn.
+        (*signal, chain_signal_changed) = super::create_port_chain::refresh_signal(game, pos, entity);
+    }
     if let Kind::Motor { rpm, .. } = &mut start.kind {
         let direction = facing(
             &game
@@ -978,7 +997,7 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
             .nbt
             .insert("Speed".into(), Tag::Float(0.0f32.to_bits()));
     }
-    if publish_source || first_attachment && !blocked_attachment {
+    if publish_source || (first_attachment || chain_signal_changed) && !blocked_attachment {
         crate::game::create_port_kinetic_runtime::publish(game, &network, pos);
         if let Some(other) = &other_half {
             crate::game::create_port_kinetic_runtime::publish(game, other, pos);
@@ -1006,7 +1025,7 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
             }
         }
     }
-    let mut sync = old_rpm != rpm;
+    let mut sync = old_rpm != rpm || chain_signal_changed;
     let running_rpm = running_speed(game, &entity.nbt);
     sync |= crate::game::create_port_belt::tick(game, pos, entity, running_rpm);
     if block == "create:millstone" {

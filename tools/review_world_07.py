@@ -11,11 +11,21 @@ import json
 from pathlib import Path
 import re
 
-from catalog import BLOCKS, ITEMS
 from common import PINS, ROOT
 from native_check_session import NativeCheckSession, wait_loaded
 
 WORLD = 'CreateFactory07'
+# Frozen inventory for reproducing the 0.7 review save.
+CATALOG = '''
+creative_motor shaft cogwheel large_cogwheel mechanical_press depot gearbox clutch
+gearshift hand_crank andesite_encased_shaft brass_encased_shaft encased_chain_drive
+andesite_casing brass_casing andesite_alloy_block brass_block zinc_block speedometer
+stressometer water_wheel large_water_wheel millstone encased_fan mechanical_drill basin
+mechanical_mixer blaze_burner iron_sheet golden_sheet copper_sheet andesite_alloy
+brass_ingot brass_nugget zinc_ingot zinc_nugget wrench brass_sheet vertical_gearbox
+goggles propeller wheat_flour dough belt_connector whisk empty_blaze_burner blaze_cake
+creative_blaze_cake
+'''.split()
 FLOOR_Y = 127
 PLAYER_Y = 128
 BOUNDS = ((0, 127, 0), (55, 145, 39))
@@ -77,7 +87,7 @@ def rigs():
 
 
 def plan():
-    catalog = ['create:' + name for name in BLOCKS + ITEMS]
+    catalog = ['create:' + name for name in CATALOG]
     assert len(catalog) == len(set(catalog)) == 48, catalog
     return {
         'world': WORLD, 'source': PINS['create_revision'],
@@ -315,7 +325,7 @@ def build(call, scratch, *, graphics=False, log=None):
                    for pos in CATALOG_BARRELS)
         order = ['wrench', 'encased_chain_drive', 'creative_motor', 'shaft', 'cogwheel',
                  'mechanical_press', 'depot', 'basin', 'encased_fan']
-        order.extend(item for item in BLOCKS + ITEMS if item not in order)
+        order.extend(item for item in CATALOG if item not in order)
         cmd('gamemode creative')
         cmd('clear @s')
         for item in order[:36]:

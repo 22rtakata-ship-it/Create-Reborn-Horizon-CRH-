@@ -1,7 +1,7 @@
 """Implemented content only. IDs follow Create 6.0.10; assets are imported locally."""
 BASE_BLOCKS = ['creative_motor', 'shaft', 'cogwheel', 'large_cogwheel', 'mechanical_press', 'depot']
-TRANSMISSIONS = ['gearbox', 'clutch', 'gearshift', 'hand_crank', 'andesite_encased_shaft', 'brass_encased_shaft', 'encased_chain_drive']
-STATIC_BLOCKS = ['andesite_casing', 'brass_casing', 'andesite_alloy_block', 'brass_block', 'zinc_block']
+TRANSMISSIONS = ['gearbox', 'clutch', 'gearshift', 'hand_crank', 'andesite_encased_shaft', 'brass_encased_shaft', 'encased_chain_drive', 'adjustable_chain_gearshift']
+STATIC_BLOCKS = ['andesite_casing', 'brass_casing', 'copper_casing', 'andesite_alloy_block', 'brass_block', 'zinc_block']
 INSTRUMENTS = ['speedometer', 'stressometer']
 GENERATORS = ['water_wheel', 'large_water_wheel']
 PROCESSORS = ['millstone', 'encased_fan', 'mechanical_drill', 'basin', 'mechanical_mixer', 'blaze_burner']

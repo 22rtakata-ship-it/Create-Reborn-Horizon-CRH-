@@ -16,10 +16,10 @@ import re
 import shutil
 import struct
 
-from catalog import BLOCKS, ITEMS
 from common import ROOT
 from native_check_session import NativeCheckSession, wait_loaded
 from reference_java import CREATE_SHA256
+from review_world_07 import CATALOG
 from saved_block_checks import read_saved_block
 
 WORLD = 'CreateFactory07'
@@ -116,7 +116,7 @@ def cold_preflight(source):
         records[xyz(pos)] = record
         return record['nbt']['value']
 
-    catalog = ['create:' + name for name in BLOCKS + ITEMS]
+    catalog = ['create:' + name for name in CATALOG]
     assert len(catalog) == len(set(catalog)) == 48
     for index, pos in enumerate(BARRELS):
         entries = fields(pos)['Items']
@@ -313,7 +313,7 @@ class Audit:
 
     def initial(self):
         self.loaded_scene()
-        catalog = ['create:' + item for item in BLOCKS + ITEMS]
+        catalog = ['create:' + item for item in CATALOG]
         for index, pos in enumerate(BARRELS):
             slots = self.call('container', *pos)['slots']
             assert len([s for s in slots if s]) == 24

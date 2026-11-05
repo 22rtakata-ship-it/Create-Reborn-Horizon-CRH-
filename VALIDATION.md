@@ -1,5 +1,28 @@
 # Checks and evidence
 
+## Chain gearshift and copper casing in 0.8.0-alpha.1
+
+- `tools/adjustable_chain_checks.py` compared 36 settled cases in the pinned
+  Java client and the native client, including all 16 signal strengths from
+  each end of a mixed chain, changes while the motor is running and power
+  removal. An actual Horizon restart retained `Signal`, block states and RPM.
+- `tools/copper_casing_checks.py` compared seven real player interactions,
+  including stripped bamboo, a stem and hyphae, Creative item retention and
+  rejection of an unstripped log. Converted blocks and copper counts matched.
+- Both blocks rendered in separate Horizon review worlds with and without
+  the player-supplied JAR. A real lever click changed the left rig's output
+  from 32 to 64 RPM. The screenshots cover model loading and the powered
+  appearance. They do not measure animation or lighting parity.
+- 132 Rust tests, 14 Python tests, strict workspace Clippy and official
+  native archive validation passed.
+
+Native build SHA-256
+`d7fcf9df49c7729afca036e06dc8f5efe0b8c24636d886ef9493e040e9a64fa4`.
+The `create-0.8.0-alpha.1.hnmod` archive SHA-256 is
+`5c4d4eab4a0e4f3a32f5bfa4a04dd422feb7df518943a0ee0fcf800515e5d6f8`.
+The reviewed mechanics and known differences are in the
+[0.8 review world guide](docs/reviews/0.8-test-world.md).
+
 ## Optional resources in 0.7.0-alpha.2
 
 A disposable Horizon world was opened three times with the same native build.

@@ -205,7 +205,7 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3]) ->
             return false;
         } else if let Some(face) = Direction::from_vector(face) {
             let before_rotation = game.world.block(pos[0], pos[1], pos[2]);
-            if block == "create:encased_chain_drive" {
+            if super::create_port_chain::is_chain(&block) {
                 if super::create_port_chain::wrench(game, pos, face) {
                     crate::game::create_port_sounds::wrench(game, pos, false);
                 }
@@ -322,7 +322,7 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3]) ->
             if consume {
                 game.consume_held();
             }
-            crate::game::create_port_sounds::casing(game, pos);
+            crate::game::create_port_sounds::manual_application(game, pos);
         }
         return true;
     }

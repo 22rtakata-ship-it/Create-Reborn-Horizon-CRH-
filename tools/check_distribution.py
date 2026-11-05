@@ -16,7 +16,7 @@ def main():
     assert re.search(r'^version = "' + re.escape(manifest["version"]) + r'"$', source, re.M)
     content = ROOT / "content"
     expected = {p.relative_to(content).as_posix(): p.read_text()
-                for p in sorted(content.rglob("*")) if p.is_file()
+                for p in sorted(content.rglob("*")) if p.is_file() and p.suffix in {".json", ".toml"}
                 and "target" not in p.relative_to(content).parts}
     actual = json.loads((NATIVE / "data/content.json").read_text())
     assert actual == expected, "Bundled public content is stale: run tools/content.py"

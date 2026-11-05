@@ -167,9 +167,16 @@ def main():
     conventional['c:cobblestones'] = ['minecraft:cobblestone', 'minecraft:mossy_cobblestone', 'minecraft:cobbled_deepslate']
     conventional['c:gems/lapis'] = ['minecraft:lapis_lazuli']
     conventional['create:not_upright_on_belt'] = []
-    for kind in ['logs', 'woods']:
-        conventional['c:stripped_' + kind] = ['minecraft:stripped_' + wood + ('_log' if kind == 'logs' else '_wood')
-            for wood in ['oak','spruce','birch','jungle','acacia','dark_oak','mangrove','cherry']]
+    # NeoForge 21.1.227 convention tags used by Create's manual casing recipes.
+    woods = ['acacia', 'birch', 'cherry', 'dark_oak', 'jungle', 'mangrove', 'oak', 'spruce']
+    conventional['c:stripped_logs'] = [
+        *[f'minecraft:stripped_{wood}_log' for wood in woods],
+        'minecraft:stripped_bamboo_block', 'minecraft:stripped_crimson_stem', 'minecraft:stripped_warped_stem',
+    ]
+    conventional['c:stripped_woods'] = [
+        *[f'minecraft:stripped_{wood}_wood' for wood in woods],
+        'minecraft:stripped_crimson_hyphae', 'minecraft:stripped_warped_hyphae',
+    ]
     missing = []
     intrinsic_tags = ['create:upright_on_belt', 'create:not_upright_on_belt', 'c:flours', 'c:flours/wheat', 'c:foods/dough', 'c:foods/dough/wheat']
     pending = list(intrinsic_tags)
@@ -236,6 +243,11 @@ def main():
         tag = read(base + dest)
         tag['values'] = [v for v in tag['values'] if isinstance(v, str) and v in known_blocks]
         tags[dest] = tag
+    for kind in ['block', 'item']:
+        dest = f'create/tags/{kind}/casing.json'
+        tag = read(base + dest)
+        tag['values'] = [value for value in tag['values'] if value in known_blocks]
+        tags[dest] = tag
     # Fan catalyst and permeability tags are MIT behavior data. Unimplemented
     # Create blocks must not become required tag entries in the port.
     for kind, paths in {
@@ -261,7 +273,9 @@ def main():
     # Keep the complete source pool and explosion/random-sequence policy for
     # this newly supported block, rather than a generic unconditional drop.
     loot = {path: read(base + path) for path in [
-        'create/loot_table/blocks/encased_chain_drive.json']}
+        'create/loot_table/blocks/encased_chain_drive.json',
+        'create/loot_table/blocks/adjustable_chain_gearshift.json',
+        'create/loot_table/blocks/copper_casing.json']}
     result = {'reference': PINS['create_revision'], 'license': 'MIT recipe/data-map/loot data; original definitions of vanilla convention tags', 'recipes': recipes, 'tags': tags, 'data_maps':maps, 'loot_tables':loot}
     dest = ROOT / 'tools/data/recipes.json'; dest.parent.mkdir(exist_ok=True); dest.write_text(json.dumps(result, indent=2) + '\n')
     print('Exported', len(recipes), 'recipes,', len(tags), 'tags and',len(maps),'data maps from MIT datapack sources')

@@ -1244,6 +1244,38 @@
         }
       ]
     },
+    "create/recipe/item_application/copper_casing_from_log.json": {
+      "type": "create:item_application",
+      "ingredients": [
+        {
+          "tag": "c:stripped_logs"
+        },
+        {
+          "tag": "c:ingots/copper"
+        }
+      ],
+      "results": [
+        {
+          "id": "create:copper_casing"
+        }
+      ]
+    },
+    "create/recipe/item_application/copper_casing_from_wood.json": {
+      "type": "create:item_application",
+      "ingredients": [
+        {
+          "tag": "c:stripped_woods"
+        },
+        {
+          "tag": "c:ingots/copper"
+        }
+      ],
+      "results": [
+        {
+          "id": "create:copper_casing"
+        }
+      ]
+    },
     "create/recipe/milling/allium.json": {
       "type": "create:milling",
       "ingredients": [
@@ -2540,26 +2572,31 @@
     },
     "c/tags/item/stripped_woods.json": {
       "values": [
+        "minecraft:stripped_acacia_wood",
+        "minecraft:stripped_birch_wood",
+        "minecraft:stripped_cherry_wood",
+        "minecraft:stripped_dark_oak_wood",
+        "minecraft:stripped_jungle_wood",
+        "minecraft:stripped_mangrove_wood",
         "minecraft:stripped_oak_wood",
         "minecraft:stripped_spruce_wood",
-        "minecraft:stripped_birch_wood",
-        "minecraft:stripped_jungle_wood",
-        "minecraft:stripped_acacia_wood",
-        "minecraft:stripped_dark_oak_wood",
-        "minecraft:stripped_mangrove_wood",
-        "minecraft:stripped_cherry_wood"
+        "minecraft:stripped_crimson_hyphae",
+        "minecraft:stripped_warped_hyphae"
       ]
     },
     "c/tags/item/stripped_logs.json": {
       "values": [
+        "minecraft:stripped_acacia_log",
+        "minecraft:stripped_birch_log",
+        "minecraft:stripped_cherry_log",
+        "minecraft:stripped_dark_oak_log",
+        "minecraft:stripped_jungle_log",
+        "minecraft:stripped_mangrove_log",
         "minecraft:stripped_oak_log",
         "minecraft:stripped_spruce_log",
-        "minecraft:stripped_birch_log",
-        "minecraft:stripped_jungle_log",
-        "minecraft:stripped_acacia_log",
-        "minecraft:stripped_dark_oak_log",
-        "minecraft:stripped_mangrove_log",
-        "minecraft:stripped_cherry_log"
+        "minecraft:stripped_bamboo_block",
+        "minecraft:stripped_crimson_stem",
+        "minecraft:stripped_warped_stem"
       ]
     },
     "c/tags/item/gems/lapis.json": {
@@ -2757,6 +2794,7 @@
         "create:clutch",
         "create:gearshift",
         "create:encased_chain_drive",
+        "create:adjustable_chain_gearshift",
         "create:belt",
         "create:water_wheel",
         "create:large_water_wheel",
@@ -2770,7 +2808,8 @@
         "create:stressometer",
         "create:mechanical_drill",
         "create:andesite_casing",
-        "create:brass_casing"
+        "create:brass_casing",
+        "create:copper_casing"
       ]
     },
     "minecraft/tags/block/mineable/pickaxe.json": {
@@ -2784,6 +2823,7 @@
         "create:clutch",
         "create:gearshift",
         "create:encased_chain_drive",
+        "create:adjustable_chain_gearshift",
         "create:belt",
         "create:creative_motor",
         "create:water_wheel",
@@ -2803,9 +2843,24 @@
         "create:mechanical_drill",
         "create:andesite_casing",
         "create:brass_casing",
+        "create:copper_casing",
         "create:zinc_block",
         "create:andesite_alloy_block",
         "create:brass_block"
+      ]
+    },
+    "create/tags/block/casing.json": {
+      "values": [
+        "create:andesite_casing",
+        "create:brass_casing",
+        "create:copper_casing"
+      ]
+    },
+    "create/tags/item/casing.json": {
+      "values": [
+        "create:andesite_casing",
+        "create:brass_casing",
+        "create:copper_casing"
       ]
     },
     "create/tags/block/fan_transparent.json": {
@@ -2912,6 +2967,48 @@
         }
       ],
       "random_sequence": "create:blocks/encased_chain_drive"
+    },
+    "create/loot_table/blocks/adjustable_chain_gearshift.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "condition": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:adjustable_chain_gearshift"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/adjustable_chain_gearshift"
+    },
+    "create/loot_table/blocks/copper_casing.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "condition": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:copper_casing"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/copper_casing"
     }
   }
 }

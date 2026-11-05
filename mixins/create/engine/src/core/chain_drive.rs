@@ -6,6 +6,14 @@
 
 use crate::{kinetics::Axis, placement::Direction};
 
+/// ChainGearshiftBlockEntity.getModifier for the sampled redstone strength.
+pub fn modifier(signal: u8) -> f32 {
+    match signal.min(15) {
+        0 => 1.0,
+        strength => 1.0 + f32::from(strength + 1) / 16.0,
+    }
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Part {
     Start,

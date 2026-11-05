@@ -49,6 +49,14 @@ pub(super) fn casing(game: &mut Game<'_>, pos: [i32; 3]) {
     event(game, pos, "minecraft:block.wood.place", 1.0, 0.8);
 }
 
+pub(super) fn manual_application(game: &mut Game<'_>, pos: [i32; 3]) {
+    let at = pos.map(|v| f64::from(v) + 0.5);
+    game.with_level(|_, level, _| {
+        // ManualApplicationRecipe uses SoundSource.PLAYERS.
+        level.native_play_sound("minecraft:block.copper.break", at, 7, 1.0, 1.45);
+    });
+}
+
 pub(super) fn land(game: &mut Game<'_>, pos: [i32; 3]) {
     event(game, pos, "create:depot_plop", 0.25, 1.25);
 }
