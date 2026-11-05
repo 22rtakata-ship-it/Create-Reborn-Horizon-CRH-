@@ -8,7 +8,7 @@
 // use the portable transport result/queue contract.
 use super::{Game, native_block_entity_draw::BlockEntityDraw};
 use crate::{
-    containers::{BlockEntity, ModBlockEntity},
+    containers::{BlockEntity, ModBlockEntity, ModRevision},
     items::ItemStack,
     particles::{ParticleOptions, ParticleType},
 };
@@ -40,8 +40,27 @@ type Contents = Inventory<ItemStack>;
 #[derive(Clone)]
 struct KnownChain {
     chain: Chain,
+    owners: Vec<ModRevision>,
     inventory: Contents,
     rpm: f32,
+}
+
+impl KnownChain {
+    fn owns_segment(&self, game: &Game<'_>, index: usize) -> bool {
+        let segment = &self.chain.segments[index];
+        let pos = segment.pos;
+        belt_revision(game, pos).is_some_and(|live| self.owners[index].same_entity(live))
+            && facing(game, pos) == self.chain.facing
+            && slope(game, pos) == self.chain.slope
+            && part(game, pos) == segment.part
+    }
+}
+
+fn belt_revision(game: &Game<'_>, pos: Pos) -> Option<ModRevision> {
+    match game.world.block_entities.get(&(pos[0], pos[1], pos[2])) {
+        Some(BlockEntity::Mod(entity)) if entity.id == ID => Some(entity.revision()),
+        _ => None,
+    }
 }
 #[derive(Clone)]
 struct ProcessingOwner {
@@ -270,7 +289,7 @@ fn return_to_player(game: &mut Game<'_>, pos: Pos, stack: ItemStack) {
         }
     }
 }
-fn read_item(game: &Game<'_>, tag: &Tag) -> Option<Moving> {
+pub(super) fn read_item(game: &Game<'_>, tag: &Tag) -> Option<Moving> {
     let Tag::Compound(nbt) = tag else { return None };
     let stack = horizon_items::item_nbt::item_from_nbt(nbt.get(&"Item".into())?)?;
     let mut item = Moving::new(core_stack(game, stack), int(nbt, "Angle"));
@@ -295,7 +314,7 @@ fn read_item(game: &Game<'_>, tag: &Tag) -> Option<Moving> {
         && item.previous_side_offset.is_finite())
     .then_some(item)
 }
-fn write_item(item: &Moving) -> Tag {
+pub(super) fn write_item(item: &Moving) -> Tag {
     let mut nbt = Compound::from([
         (
             "Item".into(),
@@ -335,6 +354,18 @@ fn write_item(item: &Moving) -> Tag {
     }
     Tag::Compound(nbt)
 }
+pub(super) fn depot_item(
+    game: &Game<'_>,
+    stack: &ItemStack,
+    position: f32,
+    from: Direction,
+) -> Tag {
+    let mut item = Moving::new(core_stack(game, stack.clone()), angle(game, stack));
+    item.position = position;
+    item.previous_position = position;
+    item.inserted_from = from;
+    write_item(&item)
+}
 fn read_inventory(game: &Game<'_>, e: &ModBlockEntity) -> Contents {
     let Some(Tag::Compound(nbt)) = e.nbt.get(&"Inventory".into()) else {
         return Contents::default();
@@ -366,19 +397,28 @@ fn write_inventory(e: &mut ModBlockEntity, inventory: &mut Contents) {
         e.nbt.insert("Inventory".into(), tag);
     }
 }
-fn remember(game: &Game<'_>, chain: Chain, inventory: Contents, rpm: f32) {
-    if let Some(controller) = chain.segments.first().map(|first| first.pos) {
-        with_state(game, |s| {
-            s.chains.insert(
-                controller,
-                KnownChain {
-                    chain,
-                    inventory,
-                    rpm,
-                },
-            );
-        });
-    }
+fn remember(
+    game: &Game<'_>,
+    chain: Chain,
+    inventory: Contents,
+    rpm: f32,
+    ticking: Option<(Pos, ModRevision)>,
+) {
+    let Some(first) = chain.segments.first() else {
+        return;
+    };
+    let owners = chain.segments.iter().map(|segment| {
+        // The native ticker temporarily holds this entity outside the world map.
+        ticking.filter(|(pos, _)| *pos == segment.pos).map(|(_, owner)| owner)
+            .or_else(|| belt_revision(game, segment.pos))
+    }).collect::<Option<Vec<_>>>();
+    let Some(owners) = owners else {
+        return;
+    };
+    let controller = first.pos;
+    with_state(game, |s| {
+        s.chains.insert(controller, KnownChain { chain, owners, inventory, rpm });
+    });
 }
 fn initialize(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity) -> bool {
     let mut controller = pos;
@@ -438,7 +478,7 @@ fn initialize(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity) -> boo
             _ => Contents::default(),
         }
     };
-    remember(game, chain, inventory, 0.0);
+    remember(game, chain, inventory, 0.0, Some((pos, entity.revision())));
     super::create_port_kinetic_runtime::invalidate();
     true
 }
@@ -622,7 +662,7 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: Pos, _face: Pos) -> bool {
             game.with_level(|_, level, _| {
                 level.native_play_sound("minecraft:block.wool.place", midpoint, 4, 0.5, 1.0)
             });
-            remember(game, chain, Contents::default(), 0.0);
+            remember(game, chain, Contents::default(), 0.0, None);
             super::create_port_kinetic_runtime::invalidate();
             let creative = game.creative;
             if let Some(s) = game.held_mut().as_mut() {
@@ -879,24 +919,29 @@ fn eject(game: &mut Game<'_>, controller: Pos, belt: Belt, item: Moving) {
     at[1] += 6.0 / 16.0;
     game.spawn_item(game_stack(&item.stack), at, motion, 10);
 }
-fn dismantle(game: &mut Game<'_>, controller: Pos, known: KnownChain, removed: Option<Pos>) {
+fn dismantle(game: &mut Game<'_>, controller: Pos, mut known: KnownChain, removed: Option<Pos>) {
     let b = Belt {
         rpm: known.rpm,
         facing: known.chain.facing,
         slope: known.chain.slope,
         length: known.chain.segments.len() as i32,
     };
-    let mut inventory = controller_inventory(game, controller).unwrap_or(known.inventory);
+    let mut inventory = if known.owns_segment(game, 0) {
+        let live = controller_inventory(game, controller);
+        game.native_with_mod_block_entity(controller, |e| {
+            e.nbt.remove(&"Inventory".into());
+        });
+        live.unwrap_or_else(|| std::mem::take(&mut known.inventory))
+    } else {
+        std::mem::take(&mut known.inventory)
+    };
     inventory.flush();
-    game.native_with_mod_block_entity(controller, |e| {
-        e.nbt.remove(&"Inventory".into());
-    });
     for item in inventory.items {
         eject(game, controller, b, item);
     }
     let dim = game.dim.id().to_owned();
-    for segment in known.chain.segments {
-        if Some(segment.pos) == removed || game.native_block(segment.pos) != ID {
+    for (index, segment) in known.chain.segments.iter().enumerate() {
+        if Some(segment.pos) == removed || !known.owns_segment(game, index) {
             continue;
         }
         let axis = axis(game, segment.pos);
@@ -991,6 +1036,7 @@ fn restored_chain(game: &Game<'_>, pos: Pos) -> Option<(Pos, KnownChain)> {
     if chain.segments.len() < 2 || chain.segments.last()?.part != Part::End {
         return None;
     }
+    let mut owners = Vec::with_capacity(chain.segments.len());
     for (index, segment) in chain.segments.iter().enumerate() {
         let Some(BlockEntity::Mod(entity)) =
             game.world
@@ -1002,6 +1048,7 @@ fn restored_chain(game: &Game<'_>, pos: Pos) -> Option<(Pos, KnownChain)> {
         if entity.id != ID {
             return None;
         }
+        owners.push(entity.revision());
         if int(&entity.nbt, "Length") != 0
             && (int(&entity.nbt, "Length") != chain.segments.len() as i32
                 || int(&entity.nbt, "Index") != index as i32
@@ -1020,6 +1067,7 @@ fn restored_chain(game: &Game<'_>, pos: Pos) -> Option<(Pos, KnownChain)> {
     Some((
         controller,
         KnownChain {
+            owners,
             inventory: authoritative_inventory(game, controller, entity),
             rpm: number(&entity.nbt, "Speed"),
             chain,
@@ -1101,7 +1149,8 @@ pub(super) fn maintenance(game: &mut Game<'_>) {
                     && c.chain
                         .segments
                         .iter()
-                        .any(|p| game.native_block(p.pos) != ID)
+                        .enumerate()
+                        .any(|(index, _)| !c.owns_segment(game, index))
             })
             .map(|(p, _)| *p)
             .collect::<Vec<_>>();
@@ -1319,7 +1368,6 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity, r
     if entity.id != ID {
         return false;
     }
-    maintenance(game);
     if !boolean(&entity.nbt, "IsController") || int(&entity.nbt, "Length") < 2 {
         return false;
     }

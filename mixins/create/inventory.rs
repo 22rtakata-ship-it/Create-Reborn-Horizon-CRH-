@@ -2,7 +2,10 @@
 // Copyright (c) 2026 create-horizon contributors
 // SPDX-License-Identifier: MIT
 // Game-stack adapter for DepotBehaviour and BeltPressingCallbacks.
+use super::create_port_belt as belt;
 use crate::{containers::ModBlockEntity, items::ItemStack};
+use create_engine::transport::{ProcessingResult, ProcessingUpdate, Transported, TransportedResult};
+use horizon_world::nbt::Tag;
 
 pub(super) fn insert(
     slots: &mut [Option<ItemStack>],
@@ -34,33 +37,46 @@ pub(super) fn insert(
     Some(incoming)
 }
 
-pub(super) fn press(
+pub(super) fn process_depot(
     entity: &mut ModBlockEntity,
-    input: ItemStack,
-    mut output: ItemStack,
-    max: u32,
-) -> Option<Vec<ItemStack>> {
-    if entity.id != "create:depot" || entity.items.first() != Some(&Some(input.clone())) {
-        return None;
+    item: &Transported<ItemStack>,
+    update: ProcessingUpdate<ItemStack>,
+) -> (bool, Vec<ItemStack>) {
+    let locked = update.decision == ProcessingResult::Hold;
+    if let Some(conversion) = update.conversion
+        && !conversion.unchanged_from(&item.stack)
+        && let TransportedResult::Convert { outputs, held } = conversion
+    {
+        let mut outputs = outputs.into_iter();
+        if let Some(mut selected) = held.or_else(|| outputs.next()) {
+            selected.position = 0.5;
+            selected.previous_position = 0.5;
+            selected.locked = locked;
+            entity.items[0] = Some(belt::game_stack(&selected.stack));
+            entity.nbt.insert("HeldItem".into(), belt::write_item(&selected));
+        } else {
+            entity.items[0] = None;
+            entity.nbt.remove(&"HeldItem".into());
+        }
+        let overflow = outputs
+            .filter_map(|output| {
+                let stack = belt::game_stack(&output.stack);
+                insert(&mut entity.items[1..], stack, output.stack.maximum)
+            })
+            .collect();
+        super::create_port::depot_data(entity);
+        return (true, overflow);
     }
-    // Create CRecipes.bulkPressing defaults to false.
-    let outcome = create_engine::depot::press(input.count, false)?;
-    output.count = output.count.checked_mul(outcome.processed)?;
-    // BeltPressingCallbacks.whenItemHeld clears fan processing before copying
-    // either the held result or the unpressed remainder into transported stacks.
-    if let Some(horizon_world::nbt::Tag::Compound(held)) = entity.nbt.get_mut(&"HeldItem".into()) {
-        held.remove(&"FanProcessingType".into());
-        held.remove(&"FanProcessingTime".into());
-    }
-    let overflow = if outcome.output_held {
-        entity.items[0] = Some(output);
-        None
-    } else {
-        let mut remaining = input;
-        remaining.count = outcome.input_left;
-        entity.items[0] = Some(remaining);
-        insert(&mut entity.items[1..], output, max)
+    let Some(Tag::Compound(held)) = entity.nbt.get_mut(&"HeldItem".into()) else {
+        return (false, Vec::new());
     };
-    crate::game::create_port::depot_data(entity);
-    Some(overflow.into_iter().collect())
+    let was_locked = super::create_port::integer(held, "Locked") != 0;
+    if locked != was_locked {
+        if locked {
+            held.insert("Locked".into(), Tag::Byte(1));
+        } else {
+            held.remove(&"Locked".into());
+        }
+    }
+    (locked != was_locked, Vec::new())
 }

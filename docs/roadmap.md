@@ -105,6 +105,9 @@ are recorded.
 ## 3. Item processing and transport
 
 - [x] Depot: top interaction, collection, output buffer, dropped items and hoppers.
+- [x] Bounded Depot slide and press lifecycle: canonical pose, lock release,
+  two cycles and two sheets. Compared 101 unshifted lifecycle samples against
+  the pinned Java client.
 - [x] Press: single-item cycle, basic recipes, acceleration, blocked output and save/reload.
 - [x] Millstone: input, timer, chance outputs, collection and persistence.
 - [x] Fan: item movement, processing media and item/Depot processing.
@@ -137,7 +140,12 @@ are recorded.
 - [x] Belt connector green and red dust preview between clicks. Real Java and
   Horizon captures and accepted/rejected connection checks.
   [Review route](reviews/belt-preview.md)
-- [ ] Belts: geometry, transported-item lifecycle, directions, slopes and IO.
+- [x] Six belt layouts assembled through the connector in each client.
+  Item travel matched in 16 of 18 powered, stopped and reversed phases.
+  The remaining two phases share a Java source loop on one horizontal lane.
+  Replacing a belt preserves the new chain and ejects the old load once.
+  [Motion review](reviews/belt-motion.md)
+- [ ] Belts: frame-by-frame scrolling, item shadows, complete lifecycle and IO.
 - [ ] Belt passenger motion through a contact layer shared with moving surfaces.
   The static belt shapes stay in the block registry. Moving surfaces need
   transformed contact geometry and a world-space movement request.

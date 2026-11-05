@@ -442,8 +442,19 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3], ca
     if put {
         crate::game::create_port_sounds::depot(game, pos);
         let incoming = game.held_mut().take();
+        let record = incoming.as_ref().map(|stack| {
+            super::create_port_belt::depot_item(
+                game,
+                stack,
+                0.25,
+                super::create_port_placement::horizontal(game.yaw),
+            )
+        });
         game.native_with_mod_block_entity(pos, |e| {
             e.items[0] = incoming;
+            if let Some(record) = record {
+                e.nbt.insert("HeldItem".into(), record);
+            }
         });
     }
     game.native_with_mod_block_entity(pos, |e| {
@@ -761,17 +772,49 @@ pub(super) fn result(game: &Game<'_>, stack: &ItemStack) -> Option<ItemStack> {
     None
 }
 
-fn depot_input(game: &Game<'_>, pos: [i32; 3]) -> Option<ItemStack> {
-    if game.native_block(pos) != "create:depot" {
-        return None;
-    }
-    let BlockEntity::Mod(depot) = game.world.block_entities.get(&(pos[0], pos[1], pos[2]))? else {
-        return None;
+fn slide_depot(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEntity) -> bool {
+    let Some(stack) = entity.items.first().and_then(Option::as_ref) else {
+        return false;
     };
-    if !inventory_supported(depot) {
-        return None;
+    let upright = super::create_port_belt::upright(game, stack);
+    let Some(tag) = entity.nbt.get_mut(&"HeldItem".into()) else {
+        return false;
+    };
+    let Tag::Compound(held) = tag else {
+        return false;
+    };
+    let old = number(held, "Pos");
+    let side = number(held, "Offset");
+    let (next, angle, ready) = create_engine::depot::slide(old, integer(held, "Angle"), upright);
+    let changed = depot_field(held, "PrevPos", Tag::Float(old.to_bits()))
+        | depot_field(held, "Pos", Tag::Float(next.to_bits()))
+        | depot_field(held, "PrevOffset", Tag::Float(side.to_bits()))
+        | depot_field(held, "Angle", Tag::Int(angle));
+    let press = [pos[0], pos[1] + 2, pos[2]];
+    if !ready || !super::create_port_belt_press::available(game, press) {
+        return changed;
     }
-    depot.items.first()?.clone()
+    let Some(mut item) = super::create_port_belt::read_item(game, tag) else {
+        return changed;
+    };
+    let update = if item.locked {
+        super::create_port_belt_press::held(game, press, &mut item)
+    } else {
+        if !game.native_block_collision([pos[0], pos[1] + 1, pos[2]]).is_empty() {
+            return changed;
+        }
+        super::create_port_belt_press::received(game, press, &mut item)
+    };
+    let (processed, overflow) = super::create_port_inventory::process_depot(entity, &item, update);
+    for stack in overflow {
+        game.spawn_item(
+            stack,
+            [f64::from(pos[0]) + 0.5, f64::from(pos[1]) + 1.0, f64::from(pos[2]) + 0.5],
+            [0.0; 3],
+            10,
+        );
+    }
+    changed || processed
 }
 
 pub(super) fn network_rpm(
@@ -898,7 +941,9 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
             return;
         }
         crate::game::create_port_world_items::catch(game, pos, entity);
-        if depot_data(entity) {
+        let mut changed = depot_data(entity);
+        changed |= slide_depot(game, pos, entity);
+        if changed {
             game.native_block_entity_sync(pos);
         }
         return;
@@ -1123,12 +1168,6 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
                     "create:depot" | "create:belt"
                 ))
             };
-            let plan = if mode == 1 {
-                depot_input(game, depot)
-                    .and_then(|input| result(game, &input).map(|output| (input, output)))
-            } else {
-                None
-            };
             let world_plan = if mode == 0 {
                 crate::game::create_port_world_items::inputs(game, pos)
                     .into_iter()
@@ -1136,7 +1175,7 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
             } else {
                 None
             };
-            let action = cycle.tick(running_rpm, plan.is_some() || world_plan.is_some());
+            let action = cycle.tick(running_rpm, world_plan.is_some());
             if action == Action::Started {
                 entity.clear_client_update_fields();
                 entity.nbt.remove(&"ParticleItems".into());
@@ -1148,10 +1187,7 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
                 entity.nbt.insert("NeedsUpdate".into(), Tag::Byte(1));
             }
             if action == Action::Press {
-                let mut particle = plan
-                    .as_ref()
-                    .map(|(i, _)| i.clone())
-                    .or_else(|| world_plan.as_ref().map(|(i, _)| i.stack.clone()));
+                let mut particle = world_plan.as_ref().map(|(input, _)| input.stack.clone());
                 // tryProcessInWorld stores the original stack reference, then
                 // shrinks that stack in the nonbulk count>1 branch before writeClient.
                 if world_plan.is_some()
@@ -1169,29 +1205,6 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
                 crate::game::create_port_sounds::press(game, pos, rpm);
                 if let Some((input, output)) = world_plan {
                     crate::game::create_port_world_items::press(game, input, output);
-                }
-                if let Some((input, output)) = plan {
-                    let max = game.native_max_stack_size(&output.item).unwrap_or(64);
-                    let changed = game
-                        .native_with_mod_block_entity(depot, |target| {
-                            crate::game::create_port_inventory::press(target, input, output, max)
-                        })
-                        .flatten();
-                    if let Some(overflow) = changed {
-                        for item in overflow {
-                            game.spawn_item(
-                                item,
-                                [
-                                    f64::from(depot[0]) + 0.5,
-                                    f64::from(depot[1]) + 1.0,
-                                    f64::from(depot[2]) + 0.5,
-                                ],
-                                [0.0; 3],
-                                10,
-                            );
-                        }
-                        game.native_block_entity_sync(depot);
-                    }
                 }
             }
             entity

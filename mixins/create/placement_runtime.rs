@@ -34,7 +34,7 @@ fn ports(game: &Game<'_>, pos: [i32; 3]) -> [bool; 6] {
             .is_some_and(|n| n.shaft_port(delta.map(|v| -v)))
     })
 }
-fn horizontal(yaw: f32) -> Direction {
+pub(super) fn horizontal(yaw: f32) -> Direction {
     [
         Direction::South,
         Direction::West,

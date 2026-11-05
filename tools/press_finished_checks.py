@@ -7,6 +7,7 @@ cross-runtime frame timing.
 """
 import hashlib
 import json
+import math
 from pathlib import Path
 import re
 import subprocess
@@ -20,7 +21,7 @@ PRESS = [488, 66, 24]
 DEPOT = [488, 64, 24]
 MOTOR = [487, 66, 24]
 INPUT = ('{HeldItem:{Item:{id:"minecraft:copper_ingot",count:2},'
-         'BeltPosition:0.5f,PrevBeltPosition:0.5f,Angle:180.0f}}')
+         'Pos:0.0f,PrevPos:0.0f,Offset:0.0f,PrevOffset:0.0f,Angle:180,InDirection:3}}')
 OUTPUT_CHECKS = [
     'execute if data block 488 64 24 HeldItem.Item{id:"create:copper_sheet",count:1} run say held_sheet_ok',
     'execute if data block 488 64 24 OutputBuffer.Items[{Slot:0,id:"create:copper_sheet",count:1}] run say buffered_sheet_ok',
@@ -48,6 +49,18 @@ def lifecycle(records):
     assert fields[-1]['Running'] == 0 and fields[-1]['Finished'] == 1, fields[-1]
     assert all(fields[i]['Mode'] == 1 for i in starts)
     return {'starts': starts, 'observations': fields}
+
+
+def slide_trace(records):
+    trace = []
+    for record in records[:10]:
+        row = {}
+        for key in ('Pos', 'PrevPos', 'Angle'):
+            match = re.search(r'\b' + key + r':\s*(-?[\d.]+)', record)
+            assert match, (key, record)
+            row[key] = float(match[1])
+        trace.append(row)
+    return trace
 
 
 def setup():
@@ -86,9 +99,12 @@ def run_java():
         call('observe_ticks', {'ticks': 20, 'positions': [PRESS, DEPOT]})
         call('command', {'command': 'data merge block 488 64 24 ' + INPUT})
         initial = call('block', {'pos': PRESS})
+        initial_depot = call('block', {'pos': DEPOT})
         observed = call('observe_ticks', {'ticks': 100, 'positions': [PRESS, DEPOT]})
         rows = [initial['nbt']] + [sample['blocks'][0]['nbt'] for sample in observed['samples']]
         report['lifecycle'] = lifecycle(rows)
+        report['slide'] = slide_trace([initial_depot['nbt']] + [sample['blocks'][1]['nbt']
+                                                               for sample in observed['samples']])
         report['samples'] = observed['samples']
         final = call('block', {'pos': DEPOT})
         assert 'minecraft:copper_ingot' not in final['nbt'], final
@@ -105,7 +121,7 @@ def run_java():
     return report
 
 
-def run_native(game, resources, ctl, create_jar):
+def run_native(game, resources, ctl, create_jar, reference=None):
     session = NativeCheckSession(game, resources, ctl, create_jar,
                                  name='press-finished-native', graphics=False)
     report = {'passed': False, 'reference': PINS['create_revision'], 'scope': __doc__,
@@ -121,9 +137,11 @@ def run_native(game, resources, ctl, create_jar):
     operations.append({'op': 'tick', 'n': 20})
     command('data merge block 488 64 24 ' + INPUT)
     command('data get block 488 66 24', True)
+    command('data get block 488 64 24', True)
     for _ in range(100):
         operations.append({'op': 'tick', 'n': 1})
         command('data get block 488 66 24', True)
+        command('data get block 488 64 24', True)
     command('data get block 488 64 24', True)
     for check in OUTPUT_CHECKS:
         command(check, True)
@@ -137,12 +155,20 @@ def run_native(game, resources, ctl, create_jar):
                            cwd=session.scratch, env=session.env, stdout=log,
                            stderr=subprocess.STDOUT, check=True, timeout=300)
         rows = [json.loads(line) for line in output.read_text().splitlines()]
-        assert len(rows) == 102 + len(OUTPUT_CHECKS), len(rows)
+        assert len(rows) == 203 + len(OUTPUT_CHECKS), len(rows)
         text = lambda row: ' '.join(''.join(span[0] for span in message) for message in row['messages'])
-        report['lifecycle'] = lifecycle([text(row) for row in rows[:101]])
-        final = text(rows[101])
+        report['lifecycle'] = lifecycle([text(row) for row in rows[:202:2]])
+        report['slide'] = slide_trace([text(row) for row in rows[1:202:2]])
+        if reference:
+            source = json.loads(Path(reference).read_text())
+            assert source['passed'] and source['reference'] == report['reference']
+            assert report['lifecycle'] == source['lifecycle'], (
+                report['lifecycle']['starts'], source['lifecycle']['starts'])
+            for native, java in zip(report['slide'], source['slide'], strict=True):
+                assert all(math.isclose(native[key], java[key], abs_tol=1e-7) for key in native), (native, java)
+        final = text(rows[202])
         assert 'minecraft:copper_ingot' not in final and 'create:copper_sheet' in final, final
-        for row, marker in zip(rows[102:], OUTPUT_MARKERS):
+        for row, marker in zip(rows[203:], OUTPUT_MARKERS):
             assert marker in text(row), row
         report.update(passed=True, depot=final)
     except Exception as error:
@@ -159,9 +185,10 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--java', action='store_true')
+    parser.add_argument('--reference', type=Path)
     for name in ('game', 'resources', 'ctl', 'create-jar'): parser.add_argument('--'+name)
     args = parser.parse_args()
     if args.java: run_java()
     else:
         assert all([args.game, args.resources, args.ctl, args.create_jar])
-        run_native(args.game, args.resources, args.ctl, args.create_jar)
+        run_native(args.game, args.resources, args.ctl, args.create_jar, args.reference)

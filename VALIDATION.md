@@ -1,5 +1,32 @@
 # Checks and evidence
 
+## Belt motion and Depot pressing
+
+Six identical connector-built lanes cover east and south orientation with
+level, upward and downward belts. The real Java and Horizon captures cover
+forward, stopped and reversed drive. RPM, item step and side offset agreed in
+16 of 18 phases. In the south-facing horizontal lane, Java retained +32 RPM
+through a cyclic source reference while Horizon stopped and reversed. Item
+shadows and continuous texture phase remain open.
+
+Two native rebuild checks cover a level belt replaced with an upward belt and
+a full replacement with identical block states. The new load stays on the
+replacement and the old load drops once. The real press, belt, Depot, hopper
+and chest route also passed, including its freeze regression.
+
+The Depot now slides the held item before delivering it to the same press
+callbacks used by belts. In the source comparison, the first ten Depot pose
+records and all 101 Press lifecycle samples matched Java without aligning
+the clocks. The two cycles began at ticks 9 and 28 and produced two sheets.
+This fixture uses a single copper-ingot stack at the edge of the Depot.
+
+The Basin/Mixer retained its 83-tick first cycle and 62-tick repeat cycle.
+Eight Mixer HUD scenes passed their text, style and layout comparisons.
+The source sound-method oracle passed 2,776 cases. The latter measures
+parameters and lifecycle rather than audio output.
+
+[Review world and remaining limits](docs/reviews/belt-motion.md)
+
 ## Belt connector preview
 
 The same right-click sequence in Create 6.0.10 and Horizon produced green dust

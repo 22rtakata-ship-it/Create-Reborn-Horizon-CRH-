@@ -22,9 +22,36 @@ pub fn press(count: u32, bulk: bool) -> Option<PressResult> {
     })
 }
 
+/// DepotBehaviour.tick slides the transported item toward the centre.
+pub fn slide(position: f32, angle: i32, upright: bool) -> (f32, i32, bool) {
+    let distance = 0.5 - position;
+    let next_position = if distance > 1.0 / 512.0 {
+        position + distance / 4.0
+    } else {
+        position
+    };
+    let next_angle = angle.wrapping_add(i32::from(distance > 1.0 / 32.0 && !upright));
+    (next_position, next_angle, distance < 1.0 / 16.0)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn depot_releases_processing_using_the_position_at_the_start_of_its_tick() {
+        let (mut pos, mut angle) = (0.0, 180);
+        for _ in 0..8 {
+            let (next, rotated, ready) = slide(pos, angle, false);
+            assert!(!ready);
+            (pos, angle) = (next, rotated);
+        }
+        let (next, rotated, ready) = slide(pos, angle, false);
+        assert!(ready && next > pos);
+        assert_eq!(rotated, 189);
+        assert_eq!(slide(pos, angle, true).1, angle);
+        assert_eq!(slide(0.5, 180, false), (0.5, 180, true));
+    }
 
     #[test]
     fn default_pressing_preserves_input_and_buffers_each_result_until_the_last() {

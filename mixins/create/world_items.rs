@@ -4,6 +4,7 @@
 // SharedDepotBlockMethods.onLanded and MechanicalPressBlockEntity world input.
 use super::Game;
 use crate::{containers::ModBlockEntity, items::ItemStack};
+use create_engine::placement::Direction;
 pub(super) fn catch(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEntity) {
     if entity.items.iter().any(Option::is_some) {
         return;
@@ -38,7 +39,9 @@ pub(super) fn catch(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnt
         let mut rest = dropped.stack;
         rest.count -= accepted.count;
         if game.native_set_item_entity(&dim, dropped.id, rest) {
+            let record = super::create_port_belt::depot_item(game, &accepted, 0.5, Direction::Down);
             entity.items[0] = Some(accepted);
+            entity.nbt.insert("HeldItem".into(), record);
             crate::game::create_port_sounds::land(game, pos);
             break;
         }

@@ -11,8 +11,9 @@ use crate::{
     particles::{ParticleOptions, ParticleType},
 };
 use create_engine::{
-    kinetics::Pos,
+    kinetics::{Axis, Pos},
     particles::{self as particle_rules, KineticEffects, ParticleRandom},
+    placement::Direction,
     visual::{self, CrankMotion},
 };
 use horizon_core::random::{LegacyRandom, RandomSource};
@@ -234,6 +235,20 @@ pub(super) fn depot(game: &Game<'_>, _: Pos, entity: &ModBlockEntity, draw: &mut
         && let Some(item) = saved_stack(held)
     {
         draw.push();
+        let from = Direction::ALL[integer(held, "InDirection").rem_euclid(6) as usize];
+        if from.axis() != Axis::Y {
+            let offset = number(held, "PrevPos");
+            let offset = offset + (number(held, "Pos") - offset) * draw.partial;
+            let side = number(held, "PrevOffset");
+            let side = side + (number(held, "Offset") - side) * draw.partial;
+            let direction = from.opposite().vector();
+            let toward_centre = 0.5 - offset;
+            draw.translate([
+                direction[0] as f32 * toward_centre + if from.axis() == Axis::Z { side } else { 0.0 },
+                0.0,
+                direction[2] as f32 * toward_centre - if from.axis() == Axis::X { side } else { 0.0 },
+            ]);
+        }
         stack(game, draw, &item, integer(held, "Angle") as f32);
         draw.pop();
     }
