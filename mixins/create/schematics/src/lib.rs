@@ -1,10 +1,12 @@
+// SPDX-License-Identifier: MIT
+
 //! Strict, world-independent preflight for original Create 6.0.10 schematics.
 //!
 //! Source mapping (MIT, Copyright (c) The Create Team / The Creators of Create):
 //! Create commit ac0c444d9828da3453ae8cc65338e8de063286fb, SchematicExport,
 //! SchematicItem, SchematicPrinter, SchematicPlacePacket, BlockHelper and
 //! SmartBlockEntity.writeSafe. Adapted placement policy, not a Java runtime.
-//! See the repository THIRD_PARTY_NOTICES.md for the complete MIT notice.
+//! See the bundle's NOTICE.md for third-party credits and LICENSE for the MIT terms.
 //!
 //! All world/registry access belongs to `Resolver` and the consuming adapter.
 //! A failed preflight produces no Plan and this crate never changes a world.

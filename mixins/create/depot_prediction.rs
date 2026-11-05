@@ -1,3 +1,6 @@
+// Copyright (c) 2026 create-horizon contributors
+// SPDX-License-Identifier: MIT
+
 // Create's SharedDepotBlockMethods.onUse returns SUCCESS on the client too.
 // End the click after its normal UseItemOn packet, before item prediction or
 // the other hand can send another exchange. Inventories remain server-owned.

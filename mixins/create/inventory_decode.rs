@@ -1,3 +1,6 @@
+// Copyright (c) 2026 create-horizon contributors
+// SPDX-License-Identifier: MIT
+
 // Shared canonical load boundary, also used by client block-entity receipt.
 fn create_inventory_decode(
     id: &str,

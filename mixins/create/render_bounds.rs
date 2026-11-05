@@ -1,3 +1,6 @@
+// Copyright (c) 2026 create-horizon contributors
+// SPDX-License-Identifier: MIT
+
 fn create_render_bounds(
     game: &crate::game::Game<'_>,
     pos: [i32; 3],

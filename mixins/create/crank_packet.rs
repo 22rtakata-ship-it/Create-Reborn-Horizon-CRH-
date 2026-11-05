@@ -1,3 +1,6 @@
+// Copyright (c) 2026 create-horizon contributors
+// SPDX-License-Identifier: MIT
+
 // API 359 has no client block-entity tag receipt hook. This narrow raw adapter
 // is pinned to Game::remote_block_entity_data's type/block/tag validation.
 fn create_crank_packet(

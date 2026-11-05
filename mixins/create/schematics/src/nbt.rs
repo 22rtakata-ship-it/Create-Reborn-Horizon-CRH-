@@ -1,3 +1,6 @@
+// Copyright (c) 2026 create-horizon contributors
+// SPDX-License-Identifier: MIT
+
 //! Small, bounded Java-edition named NBT codec, written for this port.
 //!
 //! Format contract: big-endian primitive tags 0..12 and Java DataInput/DataOutput

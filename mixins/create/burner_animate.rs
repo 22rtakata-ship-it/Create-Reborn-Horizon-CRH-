@@ -1,3 +1,6 @@
+// Copyright (c) 2026 create-horizon contributors
+// SPDX-License-Identifier: MIT
+
 // Source Block.animateTick, invoked by the ordinary ClientLevel random sampler.
 // This client-library boundary needs no Game, block-entity scan or engine-crate dependency.
 fn create_burner_animate(

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 create-horizon contributors
+// SPDX-License-Identifier: MIT
+
 fn create_burner_sync_world(game: &crate::game::Game<'_>, phase: crate::mod_api::WorldPhase) {
     if matches!(
         phase,

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 create-horizon contributors
+// SPDX-License-Identifier: MIT
+
 fn create_server_data(game: &mut crate::game::Game<'_>, reload: bool) {
     crate::game::create_port_burner_sync::data_loaded(game, reload);
     crate::game::create_port_belt::reset(reload);

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 create-horizon contributors
+// SPDX-License-Identifier: MIT
+
 fn motor_key_release(
     game: &crate::game::Game<'_>,
     screen: &crate::mod_api::NativeScreenView<'_>,

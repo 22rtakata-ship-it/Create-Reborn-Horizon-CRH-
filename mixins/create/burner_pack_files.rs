@@ -1,3 +1,6 @@
+// Copyright (c) 2026 create-horizon contributors
+// SPDX-License-Identifier: MIT
+
 // Native data maps read explicit world-pack contributions, unlike the ordinary
 // content loader's recipes/tags. Supply the actual bundled declarations below
 // world packs so their replace/remove rules remain authoritative on reload.

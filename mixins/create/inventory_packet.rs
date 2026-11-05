@@ -1,3 +1,6 @@
+// Copyright (c) 2026 create-horizon contributors
+// SPDX-License-Identifier: MIT
+
 // Pinned to the type/block/compound validation in remote_block_entity_data.
 // This runs before its ordinary NBT merge and hydrates canonical owned slots.
 use super::Game;

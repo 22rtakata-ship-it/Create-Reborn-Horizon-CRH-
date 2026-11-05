@@ -1,3 +1,6 @@
+// Copyright (c) 2026 create-horizon contributors
+// SPDX-License-Identifier: MIT
+
 // ItemStack.interactLivingEntity is reached only after the mob interaction
 // passes. Create returns FAIL here: end the hand turn without swinging.
 fn create_burner_interact_entity(

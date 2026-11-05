@@ -1,3 +1,6 @@
+// Copyright (c) 2026 create-horizon contributors
+// SPDX-License-Identifier: MIT
+
 fn burner_data_maps(types: &mut Vec<crate::mod_api::NativeDataMapType>) {
     for id in [
         "create:regular_blaze_burner_fuels",
