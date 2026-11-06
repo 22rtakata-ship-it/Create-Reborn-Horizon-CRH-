@@ -305,7 +305,14 @@ def reloaded_dropped(call, fixture):
     call('command', 'tick freeze')
     try:
         replace_motor(call, (DROP_X - 1, 69, 0), 256, 'east')
-        sprint_ticks(call, fixture['timer'] - 1)
+        # Source initialization may precede the fan's first powered turn.
+        for _ in range(5):
+            sprint_ticks(call, 1)
+            timer = dropped_timer(call)
+            if timer != fixture['timer']:
+                break
+        assert timer == fixture['timer'] - 1, dropped_text(call)
+        sprint_ticks(call, timer - 1)
         stack = dropped_text(call, 'Item')
         assert 'minecraft:cobblestone' in stack and re.search(r'\bcount:\s*17\b', stack), stack
         assert dropped_timer(call) == 1, dropped_text(call)
@@ -331,8 +338,8 @@ def press_resets_fan_progress(call):
     The source does this before transported.copy() in both bulk/count-one and
     non-bulk branches. A nearly completed blasting timer must therefore restart
     after a stroke, rather than burning a fresh sheet or remaining ingot early.
-    Original NBT seeds the already-held progress and bottom-of-stroke state;
-    actual native press inventory mutation and subsequent fan processing run.
+    The normal press starts and locks the transported stack. Original NBT then
+    seeds its prior fan progress before the real stroke and subsequent airflow.
     """
     origin = 180
 
@@ -369,27 +376,41 @@ def press_resets_fan_progress(call):
             block(2, 69, 0, 'minecraft:iron_bars')
             block(1, 69, 0, 'minecraft:lava')
             block(3, 68, 0, 'create:depot')
-            block(2, 70, 0, 'create:creative_motor[facing=east]')
+            replace_motor(call, (origin + 2, 70, 0), 256, 'east')
             block(3, 70, 0, 'create:mechanical_press[facing=east]')
             # Newly placed depots allocate their item slot on the first tick.
             sprint_ticks(call, 1)
             call('container', origin + 3, 68, 0, 'minecraft:iron_ingot', count)
+            for _ in range(35):
+                sprint_ticks(call, 1)
+                held = data(3, 68, 'HeldItem')
+                if 'Locked: 1b' in held:
+                    break
+            else:
+                raise AssertionError(('Press did not lock the item', held, data(3, 70)))
             call('command', f'data merge block {origin + 3} 68 0 '
-                 f'{{HeldItem:{{Item:{{id:"minecraft:iron_ingot",count:{count}}},'
-                 'FanProcessingType:"create:blasting",FanProcessingTime:5,audit05_transport_marker:504}}')
-            call('command', f'data merge block {origin + 3} 70 0 '
-                 '{Running:1b,Ticks:120,Applied:0,Mode:1}')
-            sprint_ticks(call, 1)
-            assert counts() == expected, (count, counts())
+                 '{HeldItem:{FanProcessingType:"create:blasting",'
+                 'FanProcessingTime:5,audit05_transport_marker:504}}')
+            assert 'audit05_transport_marker: 504' in data(3, 68, 'HeldItem')
+            for _ in range(35):
+                sprint_ticks(call, 1)
+                if counts() == expected:
+                    break
+            else:
+                raise AssertionError(('Press did not process the item', count, counts(), data(3, 70)))
             held = data(3, 68, 'HeldItem')
             assert 'FanProcessingType' not in held and 'FanProcessingTime' not in held, held
-            assert 'audit05_transport_marker: 504' in held, held
+            # TransportedItemStack.read/copy/serializeNBT keep canonical fields.
+            assert 'audit05_transport_marker' not in held, held
             # Stop further strokes; the real fan now receives power and must
             # initialize a fresh 151 timer for the new held transported stack.
             replace_motor(call, (origin + 2, 70, 0), 0, 'east')
             replace_motor(call, (origin - 1, 69, 0), 256, 'east')
-            sprint_ticks(call, 1)
-            held = data(3, 68, 'HeldItem')
+            for _ in range(5):
+                sprint_ticks(call, 1)
+                held = data(3, 68, 'HeldItem')
+                if 'FanProcessingTime' in held:
+                    break
             assert 'create:blasting' in held and re.search(r'\bFanProcessingTime:\s*151\b', held), held
             sprint_ticks(call, 10)
             assert counts() == expected, (count, counts())
@@ -398,7 +419,7 @@ def press_resets_fan_progress(call):
         finally:
             call('command', 'tick unfreeze')
     print('Audit 0.5: pressing clears stale fan state for held output/residual input; real blasting restarts its timer and preserves both cases', flush=True)
-    return {'passed': True, 'scope': 'press/fan reset for count-one output and non-bulk residual input, preserving unrelated transported NBT'}
+    return {'passed': True, 'scope': 'press/fan reset for count-one output and non-bulk residual input with canonical transported NBT'}
 
 
 def main():

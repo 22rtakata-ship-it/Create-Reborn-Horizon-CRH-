@@ -45,11 +45,11 @@ def run(call,graphics,log,scratch):
     call('wait',165);assert counts()=={'create:dough':17},counts()
     print('Fan: washing and 16/17 stack threshold independent of RPM passed',flush=True)
     reset();catalyst('minecraft:oak_fence[waterlogged=true]');setblock(4,65,0,'minecraft:glass')
-    call('command',f'summon minecraft:item {X+3.5} 65.5 .5 {{Item:{{id:"create:wheat_flour",count:4}},NoGravity:1b,PickupDelay:32767}}')
+    call('command',f'summon minecraft:item {X+3.5} 65.5 .5 {{Tags:["create_smoke_washed"],Item:{{id:"create:wheat_flour",count:4}},NoGravity:1b,PickupDelay:32767}}')
     call('wait',175)
-    value=' '.join(call('command','data get entity @e[type=minecraft:item,limit=1] Item')['chat'])
+    value=' '.join(call('command','data get entity @e[type=minecraft:item,tag=create_smoke_washed,limit=1] Item')['chat'])
     assert 'create:dough' in value and re.search(r'count:\s*4',value),value
-    print('Fan: four loose item entities processed through the real air current without inventory duplication',flush=True)
+    print('Fan: four loose items processed through the real air current without inventory duplication',flush=True)
     # Blasting lava column, retained by adjacent glass, smelts ore but burns food.
     reset()
     for x,z in [(1,-1),(1,1),(2,0)]:setblock(x,65,z,'minecraft:glass')
@@ -61,9 +61,9 @@ def run(call,graphics,log,scratch):
     # A thrown entity must accelerate both ways; no client-only smoke substitute.
     for rpm,sign in [(256,1),(-256,-1)]:
         reset(rpm)
-        call('command',f'summon minecraft:item {X+3.5} 65.5 .5 {{Item:{{id:"minecraft:diamond",count:1}},NoGravity:1b,PickupDelay:32767}}')
+        call('command',f'summon minecraft:item {X+3.5} 65.5 .5 {{Tags:["create_smoke_velocity"],Item:{{id:"minecraft:diamond",count:1}},NoGravity:1b,PickupDelay:32767}}')
         call('wait',8)
-        value=' '.join(call('command','data get entity @e[type=minecraft:item,limit=1] Motion')['chat'])
+        value=' '.join(call('command','data get entity @e[type=minecraft:item,tag=create_smoke_velocity,limit=1] Motion')['chat'])
         numbers=re.findall(r'(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)d',value)
         assert numbers and float(numbers[0])*sign>0,(rpm,value)
     if graphics:
