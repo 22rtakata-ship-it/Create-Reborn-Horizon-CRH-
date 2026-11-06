@@ -15,9 +15,9 @@ The 0.7 checkpoints cover Encased Chain Drive, generator timing, fan component
 handling and the built-in resources. [Gameplay report](reviews/0.7-report.md)
 · [Review route](reviews/0.7-test-world.md)
 
-The 0.8.0-alpha.9 checkpoint adds dry vertical Chutes, direct unloading
-from a portable interface, ordinary Saw filter selection and Plough contact
-with living mobs.
+The 0.8 development builds include rotary and linear contraptions,
+Super Glue, Sticker, small moving farms, and two-way Chute transfer through
+an item dock. The current checkpoint adds ordinary Deployer filters.
 [Contraption review route](reviews/0.8-contraption-world.md)
 
 ## Current priority
@@ -26,12 +26,12 @@ Build the shared contraption engine alongside the remaining stationary machines.
 Keep the Java comparisons as regressions and schedule presentation refinements
 with the systems they depend on.
 
-1. Expand the supported bearings and linear actuators with original Java
-   comparisons. [Architecture and results](contraptions.md)
-2. Extend capture to Super Glue, chassis and block entities. Define a durable
-   cross-chunk write protocol before allowing a structure to span columns.
-3. Expand contact, mounted storage and farm tools. Add shared schematic
-   fixtures for repeating the same machine checks in both games.
+1. Define a durable cross-chunk write protocol before allowing a structure
+   to span columns. Verify recovery after a crash between column writes.
+2. Expand mounted storage, terrain contact and actor use. Keep the existing
+   Java traces as regressions. [Architecture and results](contraptions.md)
+3. Add shared schematic fixtures for repeating the same machine checks in
+   both games, including the crop and tree farms.
 
 | Subsystem | Verified bounded foundation | Next acceptance criterion |
 |---|---|---|
@@ -246,6 +246,8 @@ with the systems they depend on.
   farm. First matching slot, blocked planting and restart checked.
 - [x] Two filtered moving Deployers sharing one chest, with separate hand
   stock, bone meal use and restart at the next visited cell.
+- [x] Ordinary Deployer filter slot, with ghost selection and clearing.
+- [ ] Deployer filter hover UI, advanced filters and powered overflow.
 - [x] Stationary downward Deployer planting with plain saplings, redstone
   lock, speed pause and cold-stroke resume.
 - [x] Stationary Deployer held sapling with the original fixed and spinning
@@ -279,8 +281,8 @@ with the systems they depend on.
   and direct unloading from one moving chest through a portable interface.
 - [x] Chute input into a moving chest through a portable interface, including
   partial transfer and component preservation.
-- [ ] Generic portable item automation, fluid interfaces, Deployer filter
-  interface and Plough contact with players and falling blocks.
+- [ ] Generic portable item automation, fluid interfaces, and Plough
+  contact with players and falling blocks.
 - [ ] Shared-schematic checks: identical machines produce identical results in both clients.
 
 ## 5. Fluids, railways and other content

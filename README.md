@@ -8,7 +8,7 @@ Build small factories with gears, water wheels, belts and presses. Create for Ho
 - Move items on basic belts and depots. Press sheets, mill ingredients and use fans to wash, smoke, haunt or blast items.
 - Mix recipes in a Basin, heat it with a Blaze Burner or mine a block with a stationary Mechanical Drill. Engineer’s Goggles show speed and stress. Apply a copper ingot to stripped wood to make Copper Casing.
 
-The development build adds bearings, pistons and small moving farms. Trains and Ponder are planned. [Feature roadmap](docs/roadmap.md)
+The development builds also have bearings, pistons, Gantry Carriages and Rope Pulleys. Small moving farms can share one chest and use a portable dock to receive or unload items. [Feature roadmap](docs/roadmap.md)
 
 ## Install
 

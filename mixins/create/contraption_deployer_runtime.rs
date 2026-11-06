@@ -88,10 +88,12 @@ pub(super) fn default_nbt() -> Compound {
 }
 
 pub(super) fn update_tag(entity: &ModBlockEntity) -> Compound {
-    let mut update: Compound = ["Mode", "HeldItem", "State", "Timer", "Speed", "Powered"]
-        .into_iter()
-        .filter_map(|key| get(&entity.nbt, key).map(|tag| (key.into(), tag.clone())))
-        .collect();
+    let mut update: Compound = [
+        "Mode", "HeldItem", "State", "Timer", "Speed", "Powered", "Filter",
+    ]
+    .into_iter()
+    .filter_map(|key| get(&entity.nbt, key).map(|tag| (key.into(), tag.clone())))
+    .collect();
     let reach = entity.data.first().copied().unwrap_or(0) as u32;
     update.insert("Reach".into(), Tag::Float(reach));
     if let Some(&tick) = entity.data.get(1) {
@@ -100,16 +102,8 @@ pub(super) fn update_tag(entity: &ModBlockEntity) -> Compound {
     update
 }
 
-fn draw_arm(
-    game: &Game<'_>,
-    draw: &mut BlockEntityDraw,
-    facing: Direction,
-    first: bool,
-    shaft_angle: f32,
-    extension: f32,
-    holding: bool,
-) {
-    let shaft_axis = match facing.axis() {
+fn shaft_axis(facing: Direction, first: bool) -> Axis {
+    match facing.axis() {
         Axis::X => {
             if first {
                 Axis::Y
@@ -131,7 +125,19 @@ fn draw_arm(
                 Axis::Y
             }
         }
-    };
+    }
+}
+
+fn draw_arm(
+    game: &Game<'_>,
+    draw: &mut BlockEntityDraw,
+    facing: Direction,
+    first: bool,
+    shaft_angle: f32,
+    extension: f32,
+    holding: bool,
+) {
+    let shaft_axis = shaft_axis(facing, first);
     draw.push();
     draw.rotate_about(
         create_engine::visual::positive_axis(shaft_axis),
@@ -161,6 +167,91 @@ fn draw_arm(
     };
     game.native_draw_model(draw, model, 0xffffff);
     draw.pop();
+}
+
+#[derive(Clone, Copy)]
+struct FilterSlot {
+    center: [f32; 3],
+    yaw: f32,
+    pitch: f32,
+}
+
+impl FilterSlot {
+    fn new(facing: Direction, first: bool, side: Direction) -> Option<Self> {
+        if side.axis() == facing.axis() || side.axis() == shaft_axis(facing, first) {
+            return None;
+        }
+        let yaw = |direction| match direction {
+            Direction::North => 0.0,
+            Direction::East => -90.0,
+            Direction::West => 90.0,
+            _ => 180.0,
+        };
+        let direction = facing.vector();
+        let normal = side.vector();
+        Some(Self {
+            center: std::array::from_fn(|i| {
+                0.5 + normal[i] as f32 * 7.5 / 16.0 - direction[i] as f32 * 2.0 / 16.0
+            }),
+            yaw: yaw(side)
+                + if side.axis() == Axis::Y {
+                    yaw(facing)
+                } else {
+                    0.0
+                },
+            pitch: match side {
+                Direction::Up => 90.0,
+                Direction::Down => -90.0,
+                _ => 0.0,
+            },
+        })
+    }
+
+    fn contains(self, pos: Pos, hit: [f64; 3]) -> bool {
+        (0..3)
+            .map(|i| (hit[i] - f64::from(pos[i]) - f64::from(self.center[i])).powi(2))
+            .sum::<f64>()
+            < 0.25 * 0.25
+    }
+
+    fn draw(self, game: &Game<'_>, draw: &mut BlockEntityDraw, stack: &ItemStack) {
+        draw.push();
+        draw.translate(self.center);
+        draw.rotate_about([0., 1., 0.], self.yaw, [0.; 3]);
+        draw.rotate_about([1., 0., 0.], self.pitch, [0.; 3]);
+        // The supported saplings and bone meal use flat generated models.
+        draw.scale([0.5 * (0.5 + 1.0 / 64.0); 3]);
+        draw.translate([0., 0., -0.15]);
+        game.native_draw_item(draw, stack, DisplayContext::Fixed, None, 0);
+        draw.pop();
+    }
+}
+
+fn draw_filter(
+    game: &Game<'_>,
+    pos: Pos,
+    facing: Direction,
+    first: bool,
+    entity: &ModBlockEntity,
+    draw: &mut BlockEntityDraw,
+) {
+    let Some(Some(stack)) = read_filter(&entity.nbt) else {
+        return;
+    };
+    if game.player.as_ref().is_some_and(|player| {
+        player.position.distance_squared(Vec3::new(
+            f64::from(pos[0]) + 0.5,
+            f64::from(pos[1]) + 0.5,
+            f64::from(pos[2]) + 0.5,
+        )) > 100.0
+    }) {
+        return;
+    }
+    for side in Direction::ALL {
+        if let Some(slot) = FilterSlot::new(facing, first, side) {
+            slot.draw(game, draw, &stack);
+        }
+    }
 }
 
 pub(super) fn draw_station(
@@ -194,6 +285,7 @@ pub(super) fn draw_station(
         )
     });
     draw_arm(game, draw, facing, first, shaft_angle, arm, holding);
+    draw_filter(game, pos, facing, first, entity, draw);
     if get(&entity.nbt, "Mode") == Some(&Tag::String("USE".into()))
         && let Some(stack) = get(&entity.nbt, "HeldItem")
             .and_then(item_from_nbt)
@@ -584,11 +676,77 @@ fn exchange_target(game: &Game<'_>, pos: Pos, hit: [f64; 3], held: Option<&ItemS
     })
 }
 
+fn filter_target(game: &Game<'_>, hit: &super::Hit) -> bool {
+    use winit::keyboard::KeyCode;
+
+    if !game.native_on("create")
+        || game.native_block(hit.pos) != BLOCK
+        || !game.may_build()
+        || game.keys.contains(&KeyCode::ShiftLeft)
+        || game.keys.contains(&KeyCode::ShiftRight)
+        || game.has_shift_down()
+        || game.stack_in(game.selected).is_some_and(|item| {
+            item.item.as_ref() == "create:clipboard"
+                || (item.item.as_ref() != "create:wrench"
+                    && super::create_port_chassis::wrench(game, item))
+        })
+    {
+        return false;
+    }
+    let Some(facing) = contraption::facing(game, hit.pos) else {
+        return false;
+    };
+    let first = game
+        .native_block_property(hit.pos, "axis_along_first")
+        .as_deref()
+        == Some("true");
+    let Some(side) = Direction::from_vector(hit.face) else {
+        return false;
+    };
+    FilterSlot::new(facing, first, side).is_some_and(|slot| slot.contains(hit.pos, hit.point))
+}
+
+fn configure_filter(game: &mut Game<'_>, pos: Pos) {
+    let Some(entity) = entity(game, pos) else {
+        return;
+    };
+    let sample = game.held().filter(|item| item.count != 0);
+    if sample.is_some_and(|item| !supported_item(item)) || read_filter(&entity.nbt).is_none() {
+        return;
+    }
+    let value = sample.map_or_else(|| Tag::Compound(Compound::new()), item_to_nbt);
+    if game
+        .native_with_mod_block_entity(pos, |entity| {
+            entity.nbt.insert("Filter".into(), value);
+            entity.nbt.entry("UpTo".into()).or_insert(Tag::Byte(1));
+            entity
+                .nbt
+                .entry("FilterAmount".into())
+                .or_insert(Tag::Int(64));
+        })
+        .is_none()
+    {
+        return;
+    }
+    game.native_block_entity_sync(pos);
+    let at = pos.map(|coordinate| f64::from(coordinate) + 0.5);
+    game.with_level(|_, level, _| {
+        level.native_play_sound("minecraft:entity.item_frame.add_item", at, 4, 0.25, 0.1);
+    });
+}
+
 pub(super) fn predicts(game: &Game<'_>, hit: &super::Hit, held: Option<&ItemStack>) -> bool {
-    exchange_target(game, hit.pos, hit.point, held)
+    filter_target(game, hit) || exchange_target(game, hit.pos, hit.point, held)
 }
 
 pub(super) fn right_click(game: &mut Game<'_>, pos: Pos) -> bool {
+    if game
+        .pick()
+        .is_some_and(|hit| hit.pos == pos && filter_target(game, &hit))
+    {
+        configure_filter(game, pos);
+        return true;
+    }
     let held = game.held().cloned();
     let Some(hit) = game
         .pick()
@@ -1153,6 +1311,33 @@ fn decode(saved: &Compound) -> Result<Store, AttachmentError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn deployer_filter_uses_only_the_two_faces_clear_of_the_hand_and_shaft() {
+        let down = FilterSlot::new(Direction::Down, true, Direction::South).unwrap();
+        assert_eq!(down.center, [0.5, 0.625, 0.96875]);
+        assert_eq!((down.yaw, down.pitch), (180.0, 0.0));
+        let up = FilterSlot::new(Direction::East, false, Direction::Up).unwrap();
+        assert_eq!(up.center, [0.375, 0.96875, 0.5]);
+        assert_eq!((up.yaw, up.pitch), (90.0, 90.0));
+        let pos = [1230, 109, 101];
+        let point = [1230.5, 109.625, 101.96875];
+        assert!(down.contains(pos, [point[0] + 0.249, point[1], point[2]]));
+        assert!(!down.contains(pos, [point[0] + 0.25, point[1], point[2]]));
+
+        for facing in Direction::ALL {
+            for first in [false, true] {
+                let active = Direction::ALL
+                    .into_iter()
+                    .filter(|&side| FilterSlot::new(facing, first, side).is_some())
+                    .collect::<Vec<_>>();
+                assert_eq!(active.len(), 2);
+                assert_eq!(active[0].opposite(), active[1]);
+                assert_ne!(active[0].axis(), facing.axis());
+                assert_ne!(active[0].axis(), shaft_axis(facing, first));
+            }
+        }
+    }
 
     const CONTROLLER: Pos = [1159, 99, 55];
     const PLANTER: Pos = [2, 0, 0];

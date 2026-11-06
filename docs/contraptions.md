@@ -78,7 +78,9 @@ decorative outputs, automation and cutting particles remain open.
 Up to two off-center, downward Deployers on a vertical Mechanical Bearing
 can plant ordinary saplings or apply bone meal to a supported crop or oak.
 Each hand refills independently from one mounted chest according to its saved
-filter. Stop the bearing to exchange the held stack by clicking the hand.
+filter. Set a plain sapling or bone meal filter by clicking one of the two
+side slots with the corresponding item. An empty hand clears it. Stop the
+bearing to exchange the held stack by clicking the hand.
 The hands, filters and sampled positions survive a restart. A stationary
 downward Deployer plants saplings in the cell two
 blocks below its body. A stationary Deployer in Use mode shows its ordinary
@@ -86,7 +88,7 @@ sapling in the extending hand, using the original fixed or spinning display
 pose. The moving renderer shows a bare pointing hand even when its inventory
 contains saplings, as in Java. A stationary downward Deployer also uses
 ordinary bone meal on supported crops and oak saplings. Punching, general
-item use, complex filters and their interface remain open.
+item use, filter hover UI and advanced filters remain open.
 [Deployer engine and host boundary](deployer.md)
 
 ## Super Glue
@@ -255,6 +257,8 @@ controller motion. The current implementation is exercised by Rust unit tests.
 - `tools/deployer_moving_meal_checks.py` checks two hands sharing a chest and
   resumes immediately before planting and fertilizing. It covers ordinary
   wheat, a blocked oak, an open oak and a refused third Deployer.
+- `tools/deployer_filter_checks.py` checks ordinary item samples, the two
+  shaft orientations, an untouched held stack and clearing the ghost.
 - A separate Chute-to-Deployer scene matches the Java dock and planting
   observations across 125 ticks. After landing, eight saplings are planted
   and eight remain. One sapling ends in the chest in Horizon and in the

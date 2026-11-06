@@ -1,10 +1,9 @@
 # Original Create identifiers and data
 
-The 0.8.0-alpha.14 development checkpoint supports two independent Deployers
-sharing one mounted chest and preserving their stock, filters and visit
-state across restarts. The moving Deployer uses the pinned Create rotation
-table. The stationary Sticker animates its head and plays attachment
-feedback. Capture and restoration currently share one chunk column.
+The 0.8.0-alpha.15 development checkpoint adds ordinary Deployer filter
+selection on the same two faces as the original. Two moving Deployers can
+share one mounted chest and preserve their stock, filters and visit state
+across restarts. Capture and restoration currently share one chunk column.
 [Contraption guide](contraptions.md)
 
 The sections marked 0.3–0.5 below retain the released historical boundaries.

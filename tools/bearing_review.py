@@ -42,6 +42,7 @@ OFFHAND_TARGET = (919, 83, 197)
 MEAL_DEPLOYER = (904, 84, 213)
 MEAL_CROP = (904, 82, 213)
 MEAL_LEVER = (904, 84, 212)
+DEPLOYER_FILTER = (910, 84, 213)
 PSI_LOADER = (920, 82, 214)
 PSI_LOADER_LEVER = (919, 81, 214)
 PSI_LOADER_SOURCE = (920, 86, 210)
@@ -85,6 +86,10 @@ def farm_input_stations(batch):
     batch.put((903, 84, 213), 'create:creative_motor[facing=east]{ScrollValue:32}')
     batch.put(MEAL_LEVER, 'minecraft:lever[face=wall,facing=north,powered=true]')
     stations.sign(batch, (904, 81, 217), ['BONE MEAL', 'Release the lever.', 'Watch wheat grow.', 'Check hand stock.'])
+    batch.put(DEPLOYER_FILTER, 'create:deployer[facing=down,axis_along_first=true]')
+    batch.put((910, 81, 216), DRY_CHEST + '{Items:[{Slot:0b,id:"minecraft:oak_sapling",count:4},'
+              '{Slot:1b,id:"minecraft:bone_meal",count:4}]}')
+    stations.sign(batch, (910, 81, 217), ['DEPLOYER FILTER', 'Use north/south.', 'Click the slot.', 'Empty to clear.'])
 
     x, y, z = PSI_LOADER
     interface = 'create:portable_storage_interface'
@@ -497,10 +502,11 @@ def review(session, options):
             extra.append(str(screenshot('sticker.png')))
         if options.farm_inputs:
             command('tp @s 909.5 86 216.5')
-            wait_loaded(call, [MEAL_DEPLOYER, PSI_LOADER])
+            wait_loaded(call, [MEAL_DEPLOYER, DEPLOYER_FILTER, PSI_LOADER])
             assert call('block', *MEAL_CROP)['state'] == 'minecraft:wheat[age=4]'
             assert 'minecraft:bone_meal' in snapshot(MEAL_DEPLOYER)['nbt']
             assert 'powered=true' in call('block', *MEAL_LEVER)['state']
+            assert call('block', *DEPLOYER_FILTER)['block'] == 'create:deployer'
             call('look-at', 904.5, 83.5, 213.5)
             call('wait', 12)
             extra.append(str(screenshot('deployer-bone-meal.png')))
