@@ -61,6 +61,7 @@
   "block.create.white_sail": "Парус ветряной мельницы",
   "block.create.deployer": "Автономный активатор",
   "block.create.portable_storage_interface": "Портативный интерфейс хранения",
+  "block.create.chute": "Жёлоб",
   "block.create.linear_chassis": "Линейное шасси",
   "block.create.secondary_linear_chassis": "Вторичное линейное шасси",
   "block.create.radial_chassis": "Радиальное шасси",

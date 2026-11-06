@@ -89,7 +89,7 @@ struct CuttingRecipe {
     outputs: Vec<(ItemStack, f32)>,
 }
 
-fn read_filter(game: &Game<'_>, entity: &ModBlockEntity) -> Option<Option<ItemStack>> {
+pub(super) fn read_filter(game: &Game<'_>, entity: &ModBlockEntity) -> Option<Option<ItemStack>> {
     let Some(saved) = entity.nbt.get(&"Filter".into()) else {
         return Some(None);
     };
@@ -97,16 +97,16 @@ fn read_filter(game: &Game<'_>, entity: &ModBlockEntity) -> Option<Option<ItemSt
         return Some(None);
     }
     let item = item_from_nbt(saved)?;
-    if item.count == 0
-        || matches!(
+    ordinary_filter_item(game, &item).then_some(Some(item))
+}
+
+pub(super) fn ordinary_filter_item(game: &Game<'_>, item: &ItemStack) -> bool {
+    item.count != 0
+        && !matches!(
             item.item.as_ref(),
             "create:filter" | "create:attribute_filter" | "create:package_filter"
         )
-        || game.items().get(&item.item).is_none()
-    {
-        return None;
-    }
-    Some(Some(item))
+        && game.items().get(&item.item).is_some()
 }
 
 fn cutting_recipes(

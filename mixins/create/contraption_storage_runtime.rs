@@ -319,14 +319,68 @@ pub(super) fn withdraw_one(
     matches_filter: impl FnMut(&ItemStack) -> bool,
     receive: impl FnOnce(&mut Game<'_>, &ItemStack) -> bool,
 ) -> Option<ItemStack> {
+    withdraw(
+        game,
+        mount,
+        |_, slots| extract_one(slots, matches_filter),
+        receive,
+    )
+}
+
+pub(super) fn withdraw_for_chute(
+    game: &mut Game<'_>,
+    mount: Mount,
+    receive: impl FnOnce(&mut Game<'_>, &ItemStack) -> bool,
+) -> Option<ItemStack> {
+    use create_engine::chute::{Source, pull_plan};
+
+    withdraw(
+        game,
+        mount,
+        |game, slots| {
+            let candidates = slots.iter().enumerate().filter_map(|(slot, item)| {
+                let stack = item.as_ref()?;
+                Some(Source {
+                    slot,
+                    stack,
+                    count: stack.count,
+                    maximum: super::create_port::stack_maximum(game, stack),
+                })
+            });
+            let plan = pull_plan(candidates, ItemStack::same_item_same_components);
+            let mut result: Option<ItemStack> = None;
+            for (slot, count) in plan {
+                let item = take_from_slot(slots.get_mut(slot)?, count)?;
+                if let Some(result) = &mut result {
+                    result.count += item.count;
+                } else {
+                    result = Some(item);
+                }
+            }
+            result
+        },
+        receive,
+    )
+}
+
+fn withdraw(
+    game: &mut Game<'_>,
+    mount: Mount,
+    extract: impl FnOnce(&Game<'_>, &mut [Option<ItemStack>]) -> Option<ItemStack>,
+    receive: impl FnOnce(&mut Game<'_>, &ItemStack) -> bool,
+) -> Option<ItemStack> {
     let key = contraption::column(mount.controller);
-    let attachments = game.attachment_map_quiet(Holder::Chunk(key)).ok()?;
-    let mut store = attachments.get_existing(&STORAGE).ok()??;
+    let holder = Holder::Chunk(key);
+    let mut store = game
+        .attachment_map_quiet(holder)
+        .ok()?
+        .get_existing(&STORAGE)
+        .ok()??;
     let chest = store
         .get_mut(&mount.controller)
         .filter(|chest| chest.local == mount.local)?;
-    let item = extract_one(&mut chest.slots, matches_filter)?;
-    let before = attachments.clone();
+    let item = extract(game, &mut chest.slots)?;
+    let before = game.attachment_map_quiet(holder).ok()?.clone();
     write_store(game, key, store).ok()?;
     if receive(game, &item) {
         Some(item)
@@ -344,10 +398,14 @@ fn extract_one(
         slot.as_ref()
             .is_some_and(|stack| stack.count > 0 && matches_filter(stack))
     })?;
+    take_from_slot(slot, 1)
+}
+
+fn take_from_slot(slot: &mut Option<ItemStack>, count: u32) -> Option<ItemStack> {
     let stack = slot.as_mut()?;
     let mut item = stack.clone();
-    item.count = 1;
-    stack.count -= 1;
+    item.count = count.min(stack.count);
+    stack.count -= item.count;
     if stack.count == 0 {
         *slot = None;
     }

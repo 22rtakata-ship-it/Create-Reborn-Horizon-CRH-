@@ -31,15 +31,18 @@ checks that the next revolution reconnects after power is removed.
 Horizon supports one moving item interface on a vertical Mechanical Bearing,
 one ordinary mounted chest, and a matching stationary interface in the same
 loaded chunk column. Put a vanilla hopper directly below the stationary
-interface. It extracts through its normal eight-tick cycle and carries the
-original item components. A rejected insertion leaves the stack in the
-mounted chest and the timeout continues counting down.
+interface to extract one item through its normal eight-tick cycle. A
+[Chute](chute.md) in the same position pulls up to 16 matching items into
+its ordinary transit. Both routes carry the original item components. A
+rejected transfer leaves the stack in the mounted chest and the timeout
+continues counting down.
 
 The supplied fallback models use vanilla textures. The optional local JAR
 provides the original casing, stem and head. The adapter renders the paired
 parts at the current connection distance. The moving arm's Java chaser
 interpolation, generic item capabilities, insertion, and fluid interfaces
-remain separate steps. The original survival recipe depends on the Chute.
+remain separate steps. Craft the interface from a Chute and an Andesite
+Casing. [Chute](chute.md)
 
 `tools/portable_storage_native_checks.py` runs the shared geometry headlessly
 and compares bearing, interface, hopper, chest and comparator observations

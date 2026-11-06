@@ -4,6 +4,7 @@
 // A successful automation transfer ending the exposed stack destroys its
 // transported identity immediately, even if another hopper refills this tick.
 fn create_depot_changed(game: &mut crate::game::Game<'_>, pos: (i32, i32, i32)) {
+    crate::game::create_port_chute::external_change(game, pos);
     // Successful native/automation slot mutations reach this callback. Basin
     // only raises its contents flag; its next BE tick schedules the operator.
     crate::game::create_port_basin::notify_contents(game, [pos.0, pos.1, pos.2]);

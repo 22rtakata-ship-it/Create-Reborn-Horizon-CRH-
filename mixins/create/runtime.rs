@@ -148,6 +148,10 @@ pub(super) fn owns(block: &str) -> bool {
 }
 
 pub(super) fn entity(block: &str, entity: &mut Option<(String, Compound)>) {
+    if block == super::create_port_chute::BLOCK && entity.is_none() {
+        *entity = Some((block.into(), super::create_port_chute::default_nbt()));
+        return;
+    }
     if block == super::create_port_portable_storage::BLOCK && entity.is_none() {
         *entity = Some((block.into(), Compound::new()));
         return;
@@ -189,6 +193,7 @@ pub(super) fn entity(block: &str, entity: &mut Option<(String, Compound)>) {
 pub(super) fn ticks(block: &str, ticks: &mut bool) {
     if (owns(block) && block != "create:mechanical_harvester")
         || block == super::create_port_portable_storage::BLOCK
+        || block == super::create_port_chute::BLOCK
     {
         *ticks = true;
     }
@@ -411,7 +416,8 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3], ca
         *canceled = true;
         return;
     }
-    if super::create_port_contraption::right_click(game, pos)
+    if super::create_port_saw_filter::right_click(game, pos)
+        || super::create_port_contraption::right_click(game, pos)
         || super::create_port_piston::right_click(game, pos, face)
         || super::create_port_pulley::right_click(game, pos)
         || super::create_port_gantry::right_click(game, pos)
@@ -1017,6 +1023,10 @@ pub(super) fn apply_network(
 
 pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEntity) {
     let block = game.native_block(pos);
+    if block == super::create_port_chute::BLOCK {
+        super::create_port_chute::tick(game, pos, entity);
+        return;
+    }
     if block == super::create_port_portable_storage::BLOCK {
         super::create_port_portable_storage::tick(game, pos, entity);
         return;
@@ -1357,6 +1367,10 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
 }
 
 pub(super) fn update_tag(entity: &ModBlockEntity, tag: &mut Option<Compound>) {
+    if entity.id == super::create_port_chute::BLOCK && tag.is_none() {
+        *tag = Some(entity.nbt.clone());
+        return;
+    }
     if entity.id == super::create_port_deployer::BLOCK && tag.is_none() {
         *tag = Some(super::create_port_deployer::update_tag(entity));
         return;
@@ -1396,6 +1410,9 @@ pub(super) fn update_tag(entity: &ModBlockEntity, tag: &mut Option<Compound>) {
 pub(super) fn container(block: &str, container: &mut Option<ModContainer>) {
     crate::game::create_port_basin::container(block, container);
     crate::game::create_port_millstone::container(block, container);
+    if block == super::create_port_chute::BLOCK && container.is_none() {
+        *container = Some(super::create_port_chute::container());
+    }
     if block == super::create_port_drill::SAW && container.is_none() {
         *container = Some(super::create_port_saw_processing::container());
     }
@@ -1496,6 +1513,10 @@ pub(super) fn draw(
     entity: &ModBlockEntity,
     draw: &mut BlockEntityDraw,
 ) {
+    if block == super::create_port_chute::BLOCK {
+        super::create_port_chute::draw(game, pos, entity, draw);
+        return;
+    }
     if block == super::create_port_portable_storage::BLOCK {
         super::create_port_portable_storage::draw_station(game, pos, entity, draw);
         return;
@@ -1612,6 +1633,7 @@ pub(super) fn draw(
         draw.pop();
         if facing == Direction::Up {
             super::create_port_saw_processing::draw(game, pos, entity, draw);
+            super::create_port_saw_filter::draw(game, pos, entity, draw);
         }
         return;
     }

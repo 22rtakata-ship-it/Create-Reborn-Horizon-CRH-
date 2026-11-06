@@ -2,7 +2,7 @@
 // Copyright (c) 2026 create-horizon contributors
 // SPDX-License-Identifier: MIT
 
-// Authoritative world adapter for moving Harvesters and Saws.
+// Authoritative world adapter for moving contraption actors.
 
 use super::{
     Game, create_port_contraption as contraption, create_port_contraption_storage as storage,
@@ -16,6 +16,7 @@ use create_engine::{
         drop_velocity,
         harvester::{self, Age, Block, LootTool, Plant, Replacement, Rules},
         saw::{self, Material, Target, TreeBlock, TreeStem},
+        throw_boost,
     },
     deployer as deployer_core,
     kinetics::{Axis, Pos},
@@ -23,12 +24,16 @@ use create_engine::{
 };
 use glam::{DQuat, DVec3};
 use horizon_client_render::create_contraption_scene::Record;
-use horizon_core::{position::BlockPos, random::RandomSource};
+use horizon_core::{
+    geometry::{Aabb, Vec3},
+    position::BlockPos,
+    random::RandomSource,
+};
 use horizon_protocol::packets::play::{self, Clientbound};
 use horizon_world::{
     attachments::{AttachmentType, Holder},
     chunk::BlockState,
-    level::flags,
+    level::{data::state_flags, flags},
     loot::with_native_loot_place,
     registry::BlockStateId,
 };
@@ -528,6 +533,9 @@ fn tick_cutter(
     facing: [f64; 3],
 ) {
     if let Some(position) = movement.visit {
+        if tool == Tool::Plough {
+            throw_plough_mobs(game, position, movement.motion);
+        }
         cutter
             .breaker
             .visit(position, cutter_target(game, tool, position));
@@ -568,6 +576,25 @@ fn tick_cutter(
             }
         }
         _ => unreachable!(),
+    }
+}
+
+fn throw_plough_mobs(game: &mut Game<'_>, position: Pos, motion: [f64; 3]) {
+    let Some(state) = loaded_state(game, position) else {
+        return;
+    };
+    if game.res.behaviours().facts(state).flags & state_flags::CONDUCTOR != 0 {
+        return;
+    }
+    let [x, y, z] = position;
+    let cell = Aabb::block(BlockPos::new(x, y, z));
+    let [x, y, z] = throw_boost(motion);
+    let boost = Vec3::new(x, y, z);
+    for mob in &mut game.mobs {
+        if !mob.removed && mob.alive() && cell.intersects(mob.bounds()) {
+            mob.velocity = mob.velocity.add_vector(boost);
+            mob.needs_sync = true;
+        }
     }
 }
 

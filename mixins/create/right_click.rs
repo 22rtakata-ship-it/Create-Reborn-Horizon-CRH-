@@ -7,6 +7,11 @@ fn create_right_click(
     face: [i32; 3],
     canceled: &mut bool,
 ) {
+    if crate::game::create_port_chute::right_click(game, pos) {
+        game.swing_arm();
+        *canceled = true;
+        return;
+    }
     // Chassis useItemOn handles eligible sticky faces before the glue item
     // starts selecting a volume.
     if crate::game::create_port_chassis::right_click(game, pos, face) {

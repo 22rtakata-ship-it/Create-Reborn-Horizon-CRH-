@@ -198,6 +198,27 @@
         "id": "create:brass_hand"
       }
     },
+    "create/recipe/crafting/kinetics/chute.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "A": {
+          "tag": "c:plates/iron"
+        },
+        "I": {
+          "tag": "c:ingots/iron"
+        }
+      },
+      "pattern": [
+        "A",
+        "I",
+        "A"
+      ],
+      "result": {
+        "count": 4,
+        "id": "create:chute"
+      }
+    },
     "create/recipe/crafting/kinetics/clockwork_bearing.json": {
       "type": "minecraft:crafting_shaped",
       "category": "misc",
@@ -852,6 +873,22 @@
       "result": {
         "count": 8,
         "id": "create:piston_extension_pole"
+      }
+    },
+    "create/recipe/crafting/kinetics/portable_storage_interface.json": {
+      "type": "minecraft:crafting_shapeless",
+      "category": "misc",
+      "ingredients": [
+        {
+          "item": "create:andesite_casing"
+        },
+        {
+          "item": "create:chute"
+        }
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:portable_storage_interface"
       }
     },
     "create/recipe/crafting/kinetics/propeller.json": {
@@ -5629,6 +5666,7 @@
         "create:blaze_burner",
         "create:lit_blaze_burner",
         "create:depot",
+        "create:chute",
         "create:speedometer",
         "create:stressometer",
         "create:mechanical_piston",
@@ -6040,6 +6078,27 @@
         }
       ],
       "random_sequence": "create:blocks/portable_storage_interface"
+    },
+    "create/loot_table/blocks/chute.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:chute"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/chute"
     },
     "create/loot_table/blocks/sail_frame.json": {
       "type": "minecraft:block",

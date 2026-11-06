@@ -1,0 +1,97 @@
+{
+  "template": "minecraft:gold_block",
+  "item": true,
+  "properties": {
+    "hardness": 3.0,
+    "explosion_resistance": 6.0,
+    "occludes": false,
+    "requires_tool": true,
+    "sounds": "minecraft:netherite_block"
+  },
+  "state_properties": {
+    "facing": {
+      "type": "enum",
+      "values": [
+        "down"
+      ]
+    },
+    "shape": {
+      "type": "enum",
+      "values": [
+        "normal",
+        "window",
+        "intersection",
+        "encased"
+      ]
+    },
+    "waterlogged": {
+      "type": "boolean"
+    }
+  },
+  "default_state": {
+    "facing": "down",
+    "shape": "normal",
+    "waterlogged": "false"
+  },
+  "shapes": {
+    "property": "shape",
+    "values": {
+      "normal": [
+        [
+          0.0625,
+          0.5,
+          0.0625,
+          0.9375,
+          1.0,
+          0.9375
+        ],
+        [
+          0.125,
+          0.0,
+          0.125,
+          0.875,
+          0.5,
+          0.875
+        ]
+      ],
+      "window": [
+        [
+          0.0625,
+          0.5,
+          0.0625,
+          0.9375,
+          1.0,
+          0.9375
+        ],
+        [
+          0.125,
+          0.0,
+          0.125,
+          0.875,
+          0.5,
+          0.875
+        ]
+      ],
+      "intersection": [
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      ],
+      "encased": [
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      ]
+    }
+  }
+}

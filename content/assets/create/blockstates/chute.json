@@ -1,0 +1,28 @@
+{
+  "variants": {
+    "facing=down,shape=normal,waterlogged=true": {
+      "model": "create:block/chute/block"
+    },
+    "facing=down,shape=normal,waterlogged=false": {
+      "model": "create:block/chute/block"
+    },
+    "facing=down,shape=window,waterlogged=true": {
+      "model": "create:block/chute/block_window"
+    },
+    "facing=down,shape=window,waterlogged=false": {
+      "model": "create:block/chute/block_window"
+    },
+    "facing=down,shape=intersection,waterlogged=true": {
+      "model": "create:block/chute/block_intersection"
+    },
+    "facing=down,shape=intersection,waterlogged=false": {
+      "model": "create:block/chute/block_intersection"
+    },
+    "facing=down,shape=encased,waterlogged=true": {
+      "model": "create:block/chute/block_intersection"
+    },
+    "facing=down,shape=encased,waterlogged=false": {
+      "model": "create:block/chute/block_intersection"
+    }
+  }
+}

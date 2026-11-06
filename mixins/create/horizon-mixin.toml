@@ -1,6 +1,6 @@
 [mod]
 id = "create"
-version = "0.8.0-alpha.8"
+version = "0.8.0-alpha.9"
 
 [compatibility]
 horizon_revision = "9c7f9b2215dfed497aba5522c44f38926628648d"
@@ -623,6 +623,38 @@ id = "saw-processing"
 file = "crates/horizon-client/src/game.rs"
 name = "create_port_saw_processing"
 source = "saw_processing_runtime.rs"
+
+[[module]]
+id = "saw-filter"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_saw_filter"
+source = "saw_filter_runtime.rs"
+
+[[module]]
+id = "chute-runtime"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_chute"
+source = "chute_runtime.rs"
+
+[[module]]
+id = "chute-container-bridge"
+file = "crates/horizon-client/src/game/machines.rs"
+name = "create_chute_items"
+source = "chute_container_bridge.rs"
+
+[[injection]]
+id = "chute-item-landing"
+target = "horizon_client::game::native_hooks::Game<'_>::native_item_after_vertical_collision"
+kind = "HEAD"
+helper = "chute_landing.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "client", ty = "bool", value = "client" },
+  { name = "pos", ty = "[i32; 3]", value = "block_pos" },
+  { name = "item_pos", ty = "[f64; 3]", value = "item_pos" },
+  { name = "stack", ty = "&mut crate::items::ItemStack", value = "&mut *stack" },
+  { name = "discard", ty = "&mut bool", value = "&mut *discard" },
+]
 
 [[injection]]
 id = "saw-processing-landing"

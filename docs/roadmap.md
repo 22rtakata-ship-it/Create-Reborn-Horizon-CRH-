@@ -15,8 +15,9 @@ The 0.7 checkpoints cover Encased Chain Drive, generator timing, fan component
 handling and the built-in resources. [Gameplay report](reviews/0.7-report.md)
 · [Review route](reviews/0.7-test-world.md)
 
-The 0.8.0-alpha.8 checkpoint adds upward Saw recipes and matches the first
-actor visit on a newly assembled Mechanical Bearing in the shared farm rig.
+The 0.8.0-alpha.9 checkpoint adds dry vertical Chutes, direct unloading
+from a portable interface, ordinary Saw filter selection and Plough contact
+with living mobs.
 [Contraption review route](reviews/0.8-contraption-world.md)
 
 ## Current priority
@@ -230,6 +231,8 @@ with the systems they depend on.
   checked by wheat harvest and Saw output through a portable dock.
 - [ ] Full actor tick ordering and saved movement contexts across all drivers.
 - [x] Moving Plough tilling, snow clearing and protection of farmland crops.
+- [x] Moving Plough impulses on ordinary living mobs, checked for overlap,
+  backward motion and a blocked cell. Exact timing and other entity kinds remain open.
 - [x] Downward Deployer planting from its own stock on a vertical Mechanical
   Bearing, with forty matching Java tick samples and restart coverage.
 - [x] Deployer refill from a single mounted chest and a moving Saw on the same
@@ -247,9 +250,13 @@ with the systems they depend on.
   with saved progress and Java comparisons of the cutting and ejection cycle.
 - [x] Upward Saw's stock vanilla plank variants, stonecutting and Andesite
   Alloy, including recipe rotation and the saved plain output filter.
-- [ ] Remaining Saw recipes, automation, the filter control and cutting particles.
+- [x] Upward Saw ordinary output filter slot, replacement and clearing.
+- [ ] Remaining Saw recipes, automation, advanced filter items, hover feedback
+  and cutting particles.
 - [x] Portable Storage Interface unloading from one moving chest into a
   vanilla hopper, with redstone, comparator, item components and restart.
+- [x] Dry vertical Chutes with container and stacked transfer, manual crafting,
+  and direct unloading from one moving chest through a portable interface.
 - [ ] Portable Storage Interface input, generic item automation, fluid interfaces,
   Deployer filter interface and Plough entity throws.
 - [ ] Shared-schematic checks: identical machines produce identical results in both clients.

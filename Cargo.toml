@@ -1,6 +1,6 @@
 [package]
 name = "create-horizon-core"
-version = "0.8.0-alpha.8"
+version = "0.8.0-alpha.9"
 edition = "2024"
 license = "MIT"
 publish = false

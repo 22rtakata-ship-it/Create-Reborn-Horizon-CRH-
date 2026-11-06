@@ -46,9 +46,11 @@ sweet berries, sugar cane and supported leaves or growing plants. A moving Saw
 pauses its platform while cutting supported vanilla trees, fungi and stalks.
 A horizontal stationary Saw also fells trees. The moving Drill breaks eligible
 vanilla blocks and drops their loot. The Plough tills exposed soil, clears
-snow and protects crops rooted in farmland. Cut progress on moving tools resets
-across restarts. Plough entity throws and block breaking damage to passengers
-remain open.
+snow and protects crops rooted in farmland. When a living mob overlaps a
+visited non-conducting cell, the Plough adds the source impulse. The measured
+impulse starts one tick earlier in Horizon. Player throws, falling blocks,
+full mob contact and block-breaking damage remain open. Cut progress on
+moving tools currently resets across restarts.
 
 An upward stationary Saw strips logs, bark blocks, stems, hyphae and Bamboo
 Blocks, cuts stripped wood into planks, and cycles through plank shapes and
@@ -62,8 +64,10 @@ The Saw uses Horizon's loaded stonecutting recipes with 1.21.1 ID aliases
 where needed. Four additional 26.3 outputs from ordinary stone are excluded
 from the Saw's cycle. Vanilla stonecutters retain their complete recipe list.
 The source recipe order is checked for the original pack set. Extra datapacks
-can change that order in Java. Missing Create decorative outputs, the original
-filter control, automation and cutting particles remain open.
+can change that order in Java. Click the upward Saw's filter slot with an
+ordinary item to copy a visible sample without consuming the held stack.
+An empty hand clears it. Advanced filters, hover feedback, missing Create
+decorative outputs, automation and cutting particles remain open.
 
 A downward Deployer on a vertical Mechanical Bearing plants ordinary saplings
 from its hand and refills one at a time from a single mounted chest. The plain
@@ -103,7 +107,7 @@ drop at the tool. The server saves the inventory with the structure's chunk
 and restores it at landing, including after a restart or controller removal.
 
 A Portable Storage Interface can dock that chest with a stationary interface
-and a vanilla hopper below. The tested path unloads items and preserves their
+and a vanilla hopper or dry vertical Chute below. Both preserve the
 components. [Portable Storage Interface](portable-storage.md)
 
 Access the inventory when the chest has landed. The moving chest menu,
@@ -192,6 +196,9 @@ controller motion. The current implementation is exercised by Rust unit tests.
   a wall slide and an untouched player in the real clients.
 - `tools/plough_checks.py` compares forward and reverse passes, including
   grass, coarse and rooted dirt, farmland crops, three snow layers and drops.
+- `tools/plough_throw_checks.py` compares one strict mob overlap and three
+  controls against Java. The impulse vector differs by less than 0.0002
+  blocks per tick in the recorded scene.
 - `tools/deployer_farm_checks.py` and `tools/deployer_refill_checks.py --combined`
   compare planting ticks and chest slots, then test a restart and a shared
   Saw and Deployer rotor in Horizon.
@@ -202,6 +209,8 @@ controller motion. The current implementation is exercised by Rust unit tests.
   inputs and checks ejection and resumption after a process restart.
 - `tools/saw_recipe_checks.py` compares 29 cycles and 1,254 per-Saw tick
   observations for alloy, planks, stone and saved filters, including a restart.
+- `tools/saw_filter_checks.py` exercises all four upward filter orientations,
+  placement outside the slot, Wrench and an ordinary filter across a restart.
 - `tools/portable_farm_checks.py` uses the same field and wood-cutting scenes in
   the two clients. It checks the crop or log left at the first swept cell and
   the exact item delivered to the stationary chest.

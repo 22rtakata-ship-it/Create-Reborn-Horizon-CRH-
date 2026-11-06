@@ -135,6 +135,17 @@ fn length([x, y, z]: [f64; 3]) -> f64 {
     (x * x + y * y + z * z).sqrt()
 }
 
+/// `BlockBreakingMovementBehaviour.throwEntity` adds a capped world-space
+/// impulse. The entity's pre-existing velocity does not count toward the cap.
+pub fn throw_boost(mut motion: [f64; 3]) -> [f64; 3] {
+    motion[1] += length(motion) / 4.0;
+    let speed = length(motion);
+    if speed > 4.0 {
+        motion = motion.map(|component| component - component / speed * (speed - 4.0));
+    }
+    motion
+}
+
 /// Velocity used for overflow from ordinary movement actors. The caller supplies
 /// the world's random float and spawns at the active point.
 pub fn drop_velocity(mut motion: [f64; 3], random: f32) -> [f64; 3] {
@@ -245,5 +256,16 @@ mod tests {
         assert_eq!(movement.visit, None);
         assert!(step(&mut tracker, [0.9, 0.0, 1.0], false).active);
         assert!(!step(&mut tracker, [0.7, 0.0, 2.0], false).active);
+    }
+
+    #[test]
+    fn plough_uses_world_motion_and_caps_only_the_added_boost() {
+        assert_eq!(throw_boost([0.0; 3]), [0.0; 3]);
+        assert_eq!(throw_boost([0.375, 0.0, -0.5]), [0.375, 0.15625, -0.5]);
+        assert_eq!(throw_boost([0.0, -2.0, 0.0]), [0.0, -1.5, 0.0]);
+        let boost = throw_boost([3.0, 4.0, 0.0]);
+        assert!((length(boost) - 4.0).abs() < 1e-12);
+        assert!((boost[1] / boost[0] - 1.75).abs() < 1e-12);
+        assert_eq!(boost[2], 0.0);
     }
 }

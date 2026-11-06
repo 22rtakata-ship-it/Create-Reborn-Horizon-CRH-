@@ -41,6 +41,8 @@ PORTABLE_CROP = (923, 83, 165)
 STATIONARY_DEPLOYER = (908, 84, 172)
 DEPLOYER_LOCK = (908, 84, 173)
 DEPLOYER_TARGET = (908, 82, 172)
+WINDOW_CHUTE = 'create:chute[facing=down,shape=window,waterlogged=false]'
+CHUTE_OUTPUT = (924, 81, 171)
 CRAFTING_TABLE = (924, 81, 125)
 SAW_TREE = ((920, 83, 87), (920, 84, 87), (920, 85, 87))
 
@@ -160,7 +162,7 @@ def actor_plaza(batch):
     batch.command('fill 897 80 115 925 80 126 minecraft:smooth_stone')
 
 
-def plough_station(batch):
+def plough_station(batch, mob=False):
     farm_drive(batch, PLOUGH)
     x, y, z = PLOUGH
     for i in range(3):
@@ -173,6 +175,10 @@ def plough_station(batch):
         batch.put((x + dx, y, z + dz), 'minecraft:' + soil)
     batch.put((x, y + 1, z - 3), 'minecraft:snow[layers=3]')
     batch.put((x - 1, y + 1, z - 3), 'minecraft:wheat[age=3]')
+    if mob:
+        batch.put((x + 4, y, z - 1), 'minecraft:grass_block')
+        batch.command(f'summon minecraft:pig {x + 4.15} {y + 1} {z - .5} '
+                      '{NoAI:1b,PersistenceRequired:1b,Tags:["create_review_plough"]}')
     sign(batch, (906, 81, 123), ['PLOUGH', 'Release clutch.', 'Tills soil and', 'clears snow.'])
 
 
@@ -266,7 +272,7 @@ def rotary_contact_station(batch):
     sign(batch, (906, 81, 169), ['ROTOR CONTACT', 'Walk between', 'rotor and wall.', 'Try in Survival.'])
 
 
-def portable_storage_station(batch):
+def portable_storage_station(batch, chute=False):
     batch.load(PORTABLE)
     batch.command('fill 914 81 159 925 90 174 minecraft:air')
     batch.command('fill 914 80 159 925 80 174 minecraft:smooth_stone')
@@ -285,7 +291,7 @@ def portable_storage_station(batch):
         batch.put((px, py - 1, pz), 'minecraft:farmland[moisture=7]')
         batch.put((px, py, pz), f'minecraft:wheat[age={age}]')
     batch.put(PORTABLE_DOCK, f'{block}[facing=south]')
-    batch.put((x, y + 1, z - 4), 'minecraft:hopper[facing=down]')
+    batch.put((x, y + 1, z - 4), WINDOW_CHUTE if chute else 'minecraft:hopper[facing=down]')
     batch.put((x, y - 1, z - 4), 'minecraft:smooth_stone')
     batch.put(PORTABLE_OUTPUT, 'minecraft:chest[facing=north]')
     for dz in (5, 6):
@@ -293,6 +299,16 @@ def portable_storage_station(batch):
     batch.put((x, y + 2, z - 5), 'minecraft:comparator[facing=south]')
     batch.put((x, y + 2, z - 6), 'minecraft:redstone_wire')
     sign(batch, (917, 81, 169), ['HARVEST & DOCK', 'Release clutch.', 'Watch it harvest.', 'Check dock chest.'])
+
+
+def chute_station(batch):
+    batch.load(CHUTE_OUTPUT)
+    x, y, z = CHUTE_OUTPUT
+    for dy in (0, 3):
+        batch.put((x, y + dy, z), 'minecraft:chest[facing=west]')
+    for dy in (1, 2):
+        batch.put((x, y + dy, z), WINDOW_CHUTE)
+    sign(batch, (922, 81, 173), ['CHUTES', 'Fill top chest.', 'Watch the windows.', 'Open bottom chest.'])
 
 
 def stationary_deployer_station(batch):

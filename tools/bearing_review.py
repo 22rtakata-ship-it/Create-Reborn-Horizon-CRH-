@@ -69,7 +69,7 @@ def prepare(session, options):
     if options.plough or options.deployer or options.materials:
         stations.actor_plaza(batch)
         if options.plough:
-            stations.plough_station(batch)
+            stations.plough_station(batch, options.plough_throw)
         if options.deployer:
             stations.deployer_station(batch)
         if options.materials:
@@ -83,7 +83,9 @@ def prepare(session, options):
     if options.rotary_contact:
         stations.rotary_contact_station(batch)
     if options.portable_storage:
-        stations.portable_storage_station(batch)
+        stations.portable_storage_station(batch, options.chute)
+    if options.chute:
+        stations.chute_station(batch)
     if options.stationary_deployer:
         stations.stationary_deployer_station(batch)
     if any((options.plough, options.deployer, options.glue, options.upward_saw,
@@ -317,6 +319,15 @@ def review(session, options):
             call('look-at', 920.5, 84.0, 164.5)
             call('wait', 12)
             extra.append(str(screenshot('portable-storage.png')))
+        if options.chute:
+            command('tp @s 919.5 84.5 173.5')
+            wait_loaded(call, [stations.CHUTE_OUTPUT])
+            x, y, z = stations.CHUTE_OUTPUT
+            assert call('block', x, y + 1, z)['block'] == 'create:chute'
+            assert call('block', x, y + 2, z)['block'] == 'create:chute'
+            call('look-at', x + .5, y + 1.8, z + .5)
+            call('wait', 12)
+            extra.append(str(screenshot('chutes.png')))
         if options.stationary_deployer:
             command('tp @s 911.5 85 172.5')
             wait_loaded(call, [stations.STATIONARY_DEPLOYER])
@@ -336,6 +347,8 @@ def review(session, options):
             if options.portable_storage:
                 command('give @s minecraft:stone 8')
                 command('give @s create:andesite_alloy 4')
+            if options.chute:
+                command('give @s minecraft:stone_brick_wall 4')
         if options.chassis:
             command('give @s create:wrench')
         command('tp @s 909.5 81 61.5')
@@ -377,11 +390,15 @@ def main():
     parser.add_argument('--rotary-contact', action='store_true')
     parser.add_argument('--portable-storage', action='store_true')
     parser.add_argument('--stationary-deployer', action='store_true')
+    parser.add_argument('--chute', action='store_true')
+    parser.add_argument('--plough-throw', action='store_true')
     args = parser.parse_args()
     if args.sails and not args.windmill:
         parser.error('--sails requires --windmill')
     if (args.clockwork or args.linear or args.cargo) and not args.farms:
         parser.error('--clockwork, --linear and --cargo require --farms')
+    if (args.chute and not args.portable_storage) or (args.plough_throw and not args.plough):
+        parser.error('--chute requires --portable-storage; --plough-throw requires --plough')
     session = NativeCheckSession(args.game, args.resources, args.ctl, args.create_jar,
                                  name='bearing-review', graphics=True, world=WORLD, username=NAME)
     print(session.scratch, flush=True)

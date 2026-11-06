@@ -43,6 +43,9 @@ pub mod particles;
 #[path = "core/transport.rs"]
 pub mod transport;
 
+#[path = "core/chute.rs"]
+pub mod chute;
+
 #[path = "core/drilling.rs"]
 pub mod drilling;
 #[path = "core/saw_processing.rs"]

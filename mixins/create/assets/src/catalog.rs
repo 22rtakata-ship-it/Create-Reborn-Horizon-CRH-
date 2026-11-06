@@ -48,6 +48,7 @@ pub const BLOCKS: &[&str] = &[
     "linear_chassis",
     "secondary_linear_chassis",
     "radial_chassis",
+    "chute",
     "portable_storage_interface",
 ];
 pub const EXTRA_BLOCKSTATES: &[&str] = &[

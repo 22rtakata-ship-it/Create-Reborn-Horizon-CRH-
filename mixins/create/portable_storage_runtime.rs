@@ -457,67 +457,77 @@ pub(super) fn draw_moving(
     draw_parts(game, draw, facing, extension, paired.is_some());
 }
 
-pub(super) fn hopper_suck(game: &mut Game<'_>, hopper: Pos) -> ControlFlow<bool> {
-    let pos = [hopper[0], hopper[1] + 1, hopper[2]];
+fn withdraw(
+    game: &mut Game<'_>,
+    pos: Pos,
+    take: impl FnOnce(&mut Game<'_>, storage::Mount) -> Option<crate::items::ItemStack>,
+) -> Option<crate::items::ItemStack> {
     let key = contraption::column(pos);
     if !game.native_on("create") || game.native_block(pos) != BLOCK || powered(game, pos) {
-        return ControlFlow::Continue(());
+        return None;
     }
-    let Some(mut runtime) = load(game, key) else {
-        return ControlFlow::Continue(());
-    };
-    let Some(mut station) =
-        station_at(game, &runtime, pos).filter(|s| s.can_transfer(DEFAULT_TIMEOUT))
-    else {
-        return ControlFlow::Continue(());
-    };
-    let Some(owner) = station
-        .owner()
-        .filter(|owner| game.native_block(*owner) == contraption::BLOCK)
-    else {
-        return ControlFlow::Continue(());
-    };
-    let Some(mount) = contraption::entries(game, key).ok().and_then(|records| {
-        let record = records.iter().find(|record| record.controller == owner)?;
-        storage::mounted_chest(record)
-    }) else {
-        return ControlFlow::Continue(());
-    };
-    let Some(slots) = game.native_container_slots(game.dim.id(), hopper, Face::Up) else {
-        return ControlFlow::Continue(());
-    };
-    let limits: Vec<_> = slots
-        .into_iter()
-        .map(|slot| {
-            slot.stack.map(|stack| {
-                let limit = super::create_port::stack_maximum(game, &stack);
-                (stack, limit)
-            })
-        })
-        .collect();
-    let item = storage::withdraw_one(
-        game,
-        mount,
-        |candidate| {
-            limits.iter().any(|slot| match slot {
-                None => true,
-                Some((stack, limit)) => {
-                    stack.count == 0
-                        || (stack.count < *limit && stack.same_item_same_components(candidate))
-                }
-            })
-        },
-        |game, item| {
-            game.native_insert_item(hopper, Face::Up, item.clone())
-                .is_none()
-        },
-    );
-    if item.is_none() {
-        return ControlFlow::Continue(());
-    }
-    station.transferred(DEFAULT_TIMEOUT, 1, false);
+    let mut runtime = load(game, key)?;
+    let mut station =
+        station_at(game, &runtime, pos).filter(|s| s.can_transfer(DEFAULT_TIMEOUT))?;
+    let owner = station.owner().filter(|owner| {
+        contraption::column(*owner) == key && game.native_block(*owner) == contraption::BLOCK
+    })?;
+    let records = contraption::entries(game, key).ok()?;
+    let record = records.iter().find(|record| record.controller == owner)?;
+    let item = take(game, storage::mounted_chest(record)?)?;
+    station.transferred(DEFAULT_TIMEOUT, item.count, false);
     remember(&mut runtime, pos, station);
     save(game, key, runtime);
     publish(game, pos, station, true, false);
-    ControlFlow::Break(true)
+    Some(item)
+}
+
+pub(super) fn pull_chute(
+    game: &mut Game<'_>,
+    station: Pos,
+    receive: impl FnOnce(&mut Game<'_>, &crate::items::ItemStack) -> bool,
+) -> bool {
+    withdraw(game, station, |game, mount| {
+        storage::withdraw_for_chute(game, mount, receive)
+    })
+    .is_some()
+}
+
+pub(super) fn hopper_suck(game: &mut Game<'_>, hopper: Pos) -> ControlFlow<bool> {
+    let pos = [hopper[0], hopper[1] + 1, hopper[2]];
+    let pulled = withdraw(game, pos, |game, mount| {
+        let slots = game.native_container_slots(game.dim.id(), hopper, Face::Up)?;
+        let limits: Vec<_> = slots
+            .into_iter()
+            .map(|slot| {
+                slot.stack.map(|stack| {
+                    let limit = super::create_port::stack_maximum(game, &stack);
+                    (stack, limit)
+                })
+            })
+            .collect();
+        storage::withdraw_one(
+            game,
+            mount,
+            |candidate| {
+                limits.iter().any(|slot| match slot {
+                    None => true,
+                    Some((stack, limit)) => {
+                        stack.count == 0
+                            || (stack.count < *limit && stack.same_item_same_components(candidate))
+                    }
+                })
+            },
+            |game, item| {
+                game.native_insert_item(hopper, Face::Up, item.clone())
+                    .is_none()
+            },
+        )
+    })
+    .is_some();
+    if pulled {
+        ControlFlow::Break(true)
+    } else {
+        ControlFlow::Continue(())
+    }
 }

@@ -12,6 +12,7 @@ use std::ops::ControlFlow;
 type Inventories = &'static [(&'static str, usize, usize)];
 fn schema(id: &str) -> Option<(usize, Inventories)> {
     Some(match id {
+        "create:chute" => (1, &[]),
         "create:depot" => (9, &[("OutputBuffer", 1, 8)]),
         "create:basin" => (18, &[("InputItems", 0, 9), ("OutputItems", 9, 9)]),
         "create:millstone" => (10, &[("InputInventory", 0, 1), ("OutputInventory", 1, 9)]),
@@ -38,6 +39,10 @@ pub fn parse_slots(id: &str, tag: &Tag) -> Option<Vec<Option<ItemStack>>> {
             items[0] = tag
                 .get("HeldItem")
                 .and_then(|held| held.get("Item"))
+                .and_then(horizon_items::item_nbt::item_from_nbt);
+        } else if id == "create:chute" {
+            items[0] = tag
+                .get("Item")
                 .and_then(horizon_items::item_nbt::item_from_nbt);
         }
 
@@ -126,6 +131,7 @@ pub fn receive(entity: &mut ModBlockEntity, packet_type: &str, block: &str, tag:
         .iter()
         .map(|&(key, _, _)| key)
         .chain((packet_type == "create:depot").then_some("HeldItem"))
+        .chain((packet_type == "create:chute").then_some("Item"))
     {
         if tag.get(key).is_none() && entity.nbt.contains_key(&key.into()) {
             entity.nbt.remove(&key.into());

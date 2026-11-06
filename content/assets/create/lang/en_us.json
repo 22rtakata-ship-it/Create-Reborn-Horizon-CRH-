@@ -61,6 +61,7 @@
   "block.create.white_sail": "Windmill Sail",
   "block.create.deployer": "Deployer",
   "block.create.portable_storage_interface": "Portable Storage Interface",
+  "block.create.chute": "Chute",
   "block.create.linear_chassis": "Linear Chassis",
   "block.create.secondary_linear_chassis": "Secondary Linear Chassis",
   "block.create.radial_chassis": "Radial Chassis",
