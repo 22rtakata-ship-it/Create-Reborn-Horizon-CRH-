@@ -10,8 +10,8 @@ use std::f64::consts::PI;
 use crate::{
     contraption::actors::{MotionTracker, Movement, Sample},
     kinetics::Pos,
-    particles::source_sin,
     placement::Direction,
+    source_trig::sin,
 };
 
 const STROKE: i32 = 1000;
@@ -313,7 +313,7 @@ pub fn moving_extension(
         return 0.0;
     }
     let Some(pos) = position.filter(|_| !stalled_or_stationary_timer) else {
-        return source_sin(render_time * 0.5) * 0.25 + 0.25;
+        return sin(render_time * 0.5) * 0.25 + 0.25;
     };
     let center = pos.map(|coordinate| coordinate.floor() + 0.5);
     let before = distance(pos, center);

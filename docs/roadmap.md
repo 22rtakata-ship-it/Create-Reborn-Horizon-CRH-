@@ -244,6 +244,8 @@ with the systems they depend on.
   Bearing, with forty matching Java tick samples and restart coverage.
 - [x] Deployer refill from a single mounted chest and a moving Saw on the same
   farm. First matching slot, blocked planting and restart checked.
+- [x] Two filtered moving Deployers sharing one chest, with separate hand
+  stock, bone meal use and restart at the next visited cell.
 - [x] Stationary downward Deployer planting with plain saplings, redstone
   lock, speed pause and cold-stroke resume.
 - [x] Stationary Deployer held sapling with the original fixed and spinning
@@ -262,7 +264,8 @@ with the systems they depend on.
 - [ ] Original Glue outlines, offhand particles for other players, and
   transfer on other drivers.
 - [x] Sticker redstone latch and bearing capture through its extended head.
-- [ ] Sticker motion animation, bounce, wrench and computer interaction.
+- [x] Sticker head interpolation and stationary attachment feedback.
+- [ ] Sticker bounce, wrench and computer interaction.
 - [x] Upward stationary Saw wood processing through native item collision,
   with saved progress and Java comparisons of the cutting and ejection cycle.
 - [x] Upward Saw's stock vanilla plank variants, stonecutting and Andesite

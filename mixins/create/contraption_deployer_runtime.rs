@@ -2,7 +2,7 @@
 // Copyright (c) 2026 create-horizon contributors
 // SPDX-License-Identifier: MIT
 
-// Bounded stationary item use and mounted sapling planting.
+// Bounded stationary and mounted Deployer item use.
 
 use super::{
     Game, create_port as kinetics, create_port_contraption as contraption,
@@ -41,6 +41,7 @@ use std::collections::BTreeMap;
 pub(super) const BLOCK: &str = "create:deployer";
 const UPDATE_TICK: &str = "create_horizon:DeployerTick";
 const BONE_MEAL: &str = "minecraft:bone_meal";
+const MAX_DEPLOYERS: usize = 2;
 const SAPLINGS: &[&str] = &[
     "minecraft:oak_sapling",
     "minecraft:spruce_sapling",
@@ -51,12 +52,7 @@ const SAPLINGS: &[&str] = &[
     "minecraft:cherry_sapling",
 ];
 
-#[derive(Clone)]
-pub(super) struct Cargo {
-    local: Pos,
-    nbt: Compound,
-}
-
+pub(super) type Cargo = BTreeMap<Pos, Compound>;
 type Store = BTreeMap<Pos, Cargo>;
 type Edit = (Pos, BlockStateId, BlockStateId);
 
@@ -306,8 +302,12 @@ fn supported_item(item: &ItemStack) -> bool {
         && item.data().is_none()
 }
 
-fn mounted_item(item: &ItemStack) -> bool {
-    item.item.as_ref() != BONE_MEAL && supported_item(item)
+fn held_kind(item: &ItemStack) -> Held<'_> {
+    if item.item.as_ref() == BONE_MEAL {
+        Held::Other
+    } else {
+        Held::Block(&item.item)
+    }
 }
 
 fn read_hand(nbt: &Compound) -> Option<Option<ItemStack>> {
@@ -358,11 +358,9 @@ fn valid_nbt(nbt: &Compound) -> bool {
             })
         && read_filter(nbt).is_some_and(|filter| {
             read_hand(nbt).is_some_and(|hand| {
-                hand.as_ref().is_none_or(mounted_item)
-                    && filter.as_ref().is_none_or(|filter| {
-                        mounted_item(filter)
-                            && hand.as_ref().is_none_or(|held| held.item == filter.item)
-                    })
+                filter
+                    .as_ref()
+                    .is_none_or(|filter| hand.as_ref().is_none_or(|held| held.item == filter.item))
             })
         })
 }
@@ -490,13 +488,7 @@ pub(super) fn tick_station(
         }
         let block = game.native_block(target);
         if !should_use(
-            hand.as_ref().map_or(Held::Empty, |stack| {
-                if stack.item.as_ref() == BONE_MEAL {
-                    Held::Other
-                } else {
-                    Held::Block(&stack.item)
-                }
-            }),
+            hand.as_ref().map_or(Held::Empty, held_kind),
             Target {
                 block: &block,
                 fluid: None,
@@ -527,7 +519,7 @@ pub(super) fn tick_station(
     }
     if matches!(action, TickAction::Activate { .. })
         && let Some(mut stack) = hand
-        && use_stationary_item(game, aim, &stack)
+        && use_item(game, aim, &stack, Face::Up)
     {
         stack.count -= 1;
         let remaining = (stack.count != 0).then_some(stack);
@@ -537,9 +529,9 @@ pub(super) fn tick_station(
     changed || action != TickAction::None
 }
 
-fn use_stationary_item(game: &mut Game<'_>, aim: Aim, stack: &ItemStack) -> bool {
+fn use_item(game: &mut Game<'_>, aim: Aim, stack: &ItemStack, fallback: Face) -> bool {
     if stack.item.as_ref() != BONE_MEAL {
-        return sapling_context(game, aim, stack, Face::Up)
+        return sapling_context(game, aim, stack, fallback)
             .is_some_and(|context| place_sapling(game, &context));
     }
     let [x, y, z] = aim.clicked;
@@ -560,10 +552,12 @@ fn use_stationary_item(game: &mut Game<'_>, aim: Aim, stack: &ItemStack) -> bool
     // preserves the ray face. Vanilla growth reports use even on failed rolls.
     let face = clip(game, aim.action_ray())
         .and_then(|hit| native_face(hit.face))
-        .unwrap_or(Face::Up);
+        .unwrap_or(fallback);
     let used = game
         .with_level(|b, level, ticks| b.use_bone_meal(level, ticks, BlockPos::new(x, y, z), face));
-    let _ = game.process_level_events();
+    if used {
+        let _ = game.process_level_events();
+    }
     used
 }
 
@@ -705,12 +699,29 @@ fn source_ok(source: &Tag) -> bool {
     valid_nbt(&nbt)
 }
 
-fn local_deployer(blocks: &[(Pos, BlockState)]) -> Result<Option<Pos>, AttachmentError> {
-    let mut result = None;
+fn valid_local(local: Pos) -> bool {
+    (local[0] != 0 || local[2] != 0)
+        && local
+            .into_iter()
+            .all(|coordinate| coordinate.unsigned_abs() <= 15)
+}
+
+fn local_deployers(blocks: &[(Pos, BlockState)]) -> Result<Vec<Pos>, AttachmentError> {
+    let mut result = Vec::new();
     for (local, block) in blocks.iter().filter(|(_, block)| block.name == BLOCK) {
-        if !block_state(block) || result.replace(*local).is_some() {
+        // Centered actors use the source's separate StationaryTimer path.
+        if !valid_local(*local)
+            || !block_state(block)
+            || block
+                .properties
+                .get("facing")
+                .is_none_or(|face| face != "down")
+            || result.len() == MAX_DEPLOYERS
+            || result.contains(local)
+        {
             return Err(AttachmentError::Decode);
         }
+        result.push(*local);
     }
     Ok(result)
 }
@@ -720,28 +731,29 @@ pub(super) fn capture(
     anchor: Pos,
     blocks: &[(Pos, BlockState)],
 ) -> Result<Option<Cargo>, AttachmentError> {
-    let Some(local) = local_deployer(blocks)? else {
+    let locals = local_deployers(blocks)?;
+    if locals.is_empty() {
         return Ok(None);
-    };
-    // Centered actors use the source's separate StationaryTimer path.
-    if local[0] == 0 && local[2] == 0 {
-        return Err(AttachmentError::Encode);
     }
-    let pos = std::array::from_fn(|i| anchor[i] + local[i]);
-    let entity = entity(game, pos)
-        .filter(|entity| valid_nbt(&entity.nbt))
-        .ok_or(AttachmentError::Encode)?;
-    let mut nbt = entity.nbt.clone();
-    for key in [
-        "Speed",
-        "Stress",
-        "Capacity",
-        "NetworkStatus",
-        "create_horizon",
-    ] {
-        nbt.remove(&key.into());
+    let mut cargo = Cargo::new();
+    for local in locals {
+        let pos = std::array::from_fn(|i| anchor[i] + local[i]);
+        let entity = entity(game, pos)
+            .filter(|entity| valid_nbt(&entity.nbt) && consistent_hand(entity).is_some())
+            .ok_or(AttachmentError::Encode)?;
+        let mut nbt = entity.nbt.clone();
+        for key in [
+            "Speed",
+            "Stress",
+            "Capacity",
+            "NetworkStatus",
+            "create_horizon",
+        ] {
+            nbt.remove(&key.into());
+        }
+        cargo.insert(local, nbt);
     }
-    Ok(Some(Cargo { local, nbt }))
+    Ok(Some(cargo))
 }
 
 pub(super) fn commit_capture(
@@ -759,12 +771,7 @@ pub(super) fn commit_capture(
     transaction(
         game,
         key,
-        |store| {
-            if store.insert(controller, cargo).is_some() {
-                return false;
-            }
-            true
-        },
+        |store| store.insert(controller, cargo).is_none(),
         |game| storage::commit_capture(game, key, records, edits, controller, chest),
     )
 }
@@ -777,52 +784,70 @@ pub(super) fn commit_landing(
     record: &Record,
     turn: QuarterTurn,
 ) -> bool {
-    let local = match local_deployer(&record.blocks) {
-        Ok(Some(local)) => local,
-        Ok(None) => {
-            return storage::commit_landing(game, key, records, edits, record, record.anchor, turn);
-        }
+    let locals = match local_deployers(&record.blocks) {
+        Ok(locals) => locals,
         Err(_) => return false,
     };
-    let Some(pos) = turn.place(record.anchor, local) else {
-        return false;
-    };
-    let entity_pos = (pos[0], pos[1], pos[2]);
-    if game.world.block_entities.contains_key(&entity_pos)
-        || !edits.iter().any(|&(at, _, state)| {
-            at == pos
-                && game
-                    .pack
-                    .assets
-                    .registry
-                    .state(state)
-                    .is_some_and(block_state)
-        })
-    {
-        return false;
+    if locals.is_empty() {
+        return storage::commit_landing(game, key, records, edits, record, record.anchor, turn);
     }
-    let mut cargo = None;
+    let mut destinations = Vec::with_capacity(locals.len());
+    for local in locals {
+        let Some(pos) = turn.place(record.anchor, local) else {
+            return false;
+        };
+        if contraption::column(pos) != key
+            || game
+                .world
+                .block_entities
+                .contains_key(&(pos[0], pos[1], pos[2]))
+            || !edits.iter().any(|&(at, _, state)| {
+                at == pos
+                    && game
+                        .pack
+                        .assets
+                        .registry
+                        .state(state)
+                        .is_some_and(block_state)
+            })
+        {
+            return false;
+        }
+        destinations.push((local, pos));
+    }
+    let mut restored = Vec::with_capacity(destinations.len());
     if !transaction(
         game,
         key,
         |store| {
-            cargo = store
-                .remove(&record.controller)
-                .filter(|cargo| cargo.local == local);
-            cargo.is_some()
+            let Some(mut cargo) = store.remove(&record.controller) else {
+                return false;
+            };
+            if cargo.len() != destinations.len() {
+                return false;
+            }
+            for (local, pos) in destinations {
+                let Some(nbt) = cargo.remove(&local) else {
+                    return false;
+                };
+                let Some(hand) = read_hand(&nbt) else {
+                    return false;
+                };
+                restored.push((pos, nbt, hand));
+            }
+            true
         },
         |game| storage::commit_landing(game, key, records, edits, record, record.anchor, turn),
     ) {
         return false;
     }
-    if let Some(cargo) = cargo {
-        let items = vec![read_hand(&cargo.nbt).flatten()];
+    for (pos, nbt, hand) in restored {
         game.world.block_entities.insert(
-            entity_pos,
+            (pos[0], pos[1], pos[2]),
             BlockEntity::Mod(Box::new(ModBlockEntity::new(ModBlockEntityFields {
                 id: BLOCK.into(),
-                nbt: cargo.nbt,
-                items,
+                nbt,
+                items: vec![hand],
                 ..ModBlockEntityFields::default()
             }))),
         );
@@ -887,13 +912,13 @@ pub(super) fn plant(game: &mut Game<'_>, record: &Record, local: Pos, aim: Aim) 
     else {
         return;
     };
-    let Some(cargo) = store
+    let Some(nbt) = store
         .get(&record.controller)
-        .filter(|cargo| cargo.local == local)
+        .and_then(|cargo| cargo.get(&local))
     else {
         return;
     };
-    let (Some(mut hand), Some(filter)) = (read_hand(&cargo.nbt), read_filter(&cargo.nbt)) else {
+    let (Some(mut hand), Some(filter)) = (read_hand(nbt), read_filter(nbt)) else {
         return;
     };
     // The actor refills on a visit even if shouldActivate or placement later
@@ -910,7 +935,7 @@ pub(super) fn plant(game: &mut Game<'_>, record: &Record, local: Pos, aim: Aim) 
                     .is_none_or(|filter| item.item == filter.item)
             },
             |game, item| {
-                mounted_item(item)
+                supported_item(item)
                     && update_hand(
                         game,
                         key,
@@ -922,14 +947,14 @@ pub(super) fn plant(game: &mut Game<'_>, record: &Record, local: Pos, aim: Aim) 
             },
         );
     }
-    let Some(mut hand) = hand else { return };
+    let Some(hand) = hand else { return };
     if key != contraption::column(target) {
         return;
     }
     let name = game.native_block(target);
     if moving_action(
         Mode::Use,
-        Held::Block(&hand.item),
+        held_kind(&hand),
         Target {
             block: &name,
             fluid: None,
@@ -952,17 +977,15 @@ pub(super) fn plant(game: &mut Game<'_>, record: &Record, local: Pos, aim: Aim) 
     } else {
         Face::South
     };
-    let Some(ctx) = sapling_context(game, aim, &hand, fallback) else {
-        return;
-    };
-    hand.count -= 1;
+    let mut remaining = hand.clone();
+    remaining.count -= 1;
     update_hand(
         game,
         key,
         record.controller,
         local,
-        (hand.count > 0).then_some(hand),
-        |game| place_sapling(game, &ctx),
+        (remaining.count > 0).then_some(remaining),
+        |game| use_item(game, aim, &hand, fallback),
     );
 }
 
@@ -1012,9 +1035,14 @@ fn sapling_context(
 }
 
 fn place_sapling(game: &mut Game<'_>, context: &PlaceContext) -> bool {
-    let placed = game.with_level(|b, l, t| b.place_block(l, t, context));
-    let _ = game.process_level_events();
-    matches!(placed, PlaceOutcome::Placed { .. })
+    let placed = matches!(
+        game.with_level(|b, l, t| b.place_block(l, t, context)),
+        PlaceOutcome::Placed { .. }
+    );
+    if placed {
+        let _ = game.process_level_events();
+    }
+    placed
 }
 
 fn update_hand(
@@ -1029,13 +1057,13 @@ fn update_hand(
         game,
         key,
         |store| {
-            let Some(cargo) = store
+            let Some(nbt) = store
                 .get_mut(&controller)
-                .filter(|cargo| cargo.local == local)
+                .and_then(|cargo| cargo.get_mut(&local))
             else {
                 return false;
             };
-            write_hand(&mut cargo.nbt, hand);
+            write_hand(nbt, hand);
             true
         },
         commit,
@@ -1055,21 +1083,31 @@ fn native_face(normal: Pos) -> Option<Face> {
 }
 
 fn encode(store: &Store) -> Result<Compound, AttachmentError> {
-    if store.len() > MAX_RECORDS || store.values().any(|cargo| !valid_nbt(&cargo.nbt)) {
+    if store.len() > MAX_RECORDS
+        || store.values().any(|cargo| {
+            cargo.is_empty()
+                || cargo.len() > MAX_DEPLOYERS
+                || cargo
+                    .iter()
+                    .any(|(&local, nbt)| !valid_local(local) || !valid_nbt(nbt))
+        })
+    {
         return Err(AttachmentError::Encode);
     }
     let entries = store
         .iter()
-        .map(|(controller, cargo)| {
-            Tag::compound([
-                ("Controller", Tag::IntArray(controller.to_vec())),
-                ("Pos", Tag::IntArray(cargo.local.to_vec())),
-                ("Data", Tag::Compound(cargo.nbt.clone())),
-            ])
+        .flat_map(|(controller, cargo)| {
+            cargo.iter().map(|(local, nbt)| {
+                Tag::compound([
+                    ("Controller", Tag::IntArray(controller.to_vec())),
+                    ("Pos", Tag::IntArray(local.to_vec())),
+                    ("Data", Tag::Compound(nbt.clone())),
+                ])
+            })
         })
         .collect();
     Ok(Compound::from([
-        ("Version".into(), Tag::Int(1)),
+        ("Version".into(), Tag::Int(2)),
         ("Deployers".into(), Tag::List(entries)),
     ]))
 }
@@ -1079,10 +1117,12 @@ fn decode(saved: &Compound) -> Result<Store, AttachmentError> {
     let Some(Tag::List(entries)) = get(saved, "Deployers") else {
         return Err(invalid);
     };
-    if saved.len() != 2
-        || get(saved, "Version") != Some(&Tag::Int(1))
-        || entries.len() > MAX_RECORDS
-    {
+    let limit = match get(saved, "Version") {
+        Some(Tag::Int(1)) => 1,
+        Some(Tag::Int(2)) => MAX_DEPLOYERS,
+        _ => return Err(invalid),
+    };
+    if saved.len() != 2 || entries.len() > MAX_RECORDS * limit {
         return Err(invalid);
     }
     let position = |entry: &Tag, key: &str| match entry.get(key) {
@@ -1100,20 +1140,90 @@ fn decode(saved: &Compound) -> Result<Store, AttachmentError> {
         else {
             return Err(invalid);
         };
-        let cargo = Cargo {
-            local: position(entry, "Pos")?,
-            nbt: nbt.clone(),
-        };
-        if cargo
-            .local
-            .into_iter()
-            .any(|coordinate| coordinate.unsigned_abs() > 15)
-            || store
-                .insert(position(entry, "Controller")?, cargo)
-                .is_some()
+        let local = position(entry, "Pos")?;
+        let cargo = store.entry(position(entry, "Controller")?).or_default();
+        if !valid_local(local) || cargo.len() == limit || cargo.insert(local, nbt.clone()).is_some()
         {
             return Err(invalid);
         }
     }
-    Ok(store)
+    (store.len() <= MAX_RECORDS).then_some(store).ok_or(invalid)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const CONTROLLER: Pos = [1159, 99, 55];
+    const PLANTER: Pos = [2, 0, 0];
+    const FERTILIZER: Pos = [-2, 0, 0];
+    const SAPLING: &str = "minecraft:oak_sapling";
+
+    fn hand(item: &str, count: i32) -> Compound {
+        let mut nbt = default_nbt();
+        let stack =
+            |count| Tag::compound([("id", Tag::String(item.into())), ("count", Tag::Int(count))]);
+        nbt.insert("Filter".into(), stack(1));
+        write_hand(&mut nbt, Some(item_from_nbt(&stack(count)).unwrap()));
+        nbt
+    }
+
+    fn row(controller: Pos, local: Pos, nbt: Compound) -> Tag {
+        Tag::compound([
+            ("Controller", Tag::IntArray(controller.to_vec())),
+            ("Pos", Tag::IntArray(local.to_vec())),
+            ("Data", Tag::Compound(nbt)),
+        ])
+    }
+
+    fn saved(version: i32, entries: Vec<Tag>) -> Compound {
+        Compound::from([
+            ("Version".into(), Tag::Int(version)),
+            ("Deployers".into(), Tag::List(entries)),
+        ])
+    }
+
+    #[test]
+    fn reads_a_legacy_hand_and_writes_it_under_its_local_position() {
+        let nbt = hand(SAPLING, 3);
+        let old = saved(1, vec![row(CONTROLLER, PLANTER, nbt.clone())]);
+        let store = decode(&old).unwrap();
+        assert_eq!(store[&CONTROLLER][&PLANTER], nbt);
+        let upgraded = encode(&store).unwrap();
+        assert_eq!(upgraded, saved(2, vec![row(CONTROLLER, PLANTER, nbt)]));
+        assert_eq!(decode(&upgraded).unwrap(), store);
+    }
+
+    #[test]
+    fn restores_two_hands_with_independent_stock_and_filters() {
+        let store = Store::from([(
+            CONTROLLER,
+            Cargo::from([
+                (PLANTER, hand(SAPLING, 3)),
+                (FERTILIZER, hand(BONE_MEAL, 7)),
+            ]),
+        )]);
+        let reloaded = decode(&encode(&store).unwrap()).unwrap();
+        assert_eq!(reloaded, store);
+        for (local, item, count) in [(PLANTER, SAPLING, 3), (FERTILIZER, BONE_MEAL, 7)] {
+            let nbt = &reloaded[&CONTROLLER][&local];
+            assert_eq!(read_hand(nbt).unwrap().unwrap().count, count);
+            assert_eq!(read_filter(nbt).unwrap().unwrap().item.as_ref(), item);
+        }
+    }
+
+    #[test]
+    fn refuses_duplicate_actors_and_too_many_hands() {
+        let nbt = hand(SAPLING, 1);
+        let planter = row(CONTROLLER, PLANTER, nbt.clone());
+        let fertilizer = row(CONTROLLER, FERTILIZER, nbt.clone());
+        assert!(decode(&saved(1, vec![planter.clone(), fertilizer.clone()])).is_err());
+        assert!(decode(&saved(2, vec![planter.clone(), planter.clone()])).is_err());
+        let third = row(CONTROLLER, [0, 0, 2], nbt.clone());
+        assert!(decode(&saved(2, vec![planter, fertilizer, third])).is_err());
+        let excess_controllers = (0..=MAX_RECORDS as i32)
+            .map(|x| row([x, 99, 55], PLANTER, nbt.clone()))
+            .collect();
+        assert!(decode(&saved(2, excess_controllers)).is_err());
+    }
 }

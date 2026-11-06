@@ -8,8 +8,8 @@ use crate::{
     fan::{self, ProcessingType, Segment},
     kinetics::{Axis, Pos},
     placement::Direction,
+    source_trig::rotate,
 };
-use std::sync::OnceLock;
 
 /// Supply the particle's own random, or the level random where explicitly noted.
 /// Keeping these separate preserves the source's draw ordering.
@@ -42,40 +42,6 @@ pub fn mix_colors(a: u32, b: u32, amount: f32) -> u32 {
 pub fn offset_randomly(random: &mut impl ParticleRandom, range: f32) -> [f64; 3] {
     std::array::from_fn(|_| f64::from((random.next_float() - 0.5) * 2.0 * range))
 }
-fn sine_table() -> &'static [f32] {
-    static TABLE: OnceLock<Box<[f32]>> = OnceLock::new();
-    TABLE.get_or_init(|| {
-        (0..65536)
-            .map(|i| ((f64::from(i) * std::f64::consts::PI * 2.0 / 65536.0).sin()) as f32)
-            .collect()
-    })
-}
-/// Pinned Minecraft 1.21.1 `Mth.sin(float)`. Its float index multiplication is
-/// different from the newer platform's double-index sine helper.
-pub fn source_sin(angle: f32) -> f32 {
-    sine_table()[((angle * 10430.378) as i32 & 65535) as usize]
-}
-/// Pinned Minecraft 1.21.1 `Mth.cos(float)` uses a float quarter-turn shift
-/// before truncating its table index.
-pub(crate) fn source_cos(angle: f32) -> f32 {
-    sine_table()[((angle * 10430.378 + 16384.0) as i32 & 65535) as usize]
-}
-fn rotate(offset: [f64; 3], degrees: f32, axis: Axis) -> [f64; 3] {
-    if degrees == 0.0 {
-        return offset;
-    }
-    // Catnip VecHelper.rotate delegates to the original Mth lookup table.
-    let radians = (f64::from(degrees) / 180.0 * std::f64::consts::PI) as f32;
-    let sin = f64::from(source_sin(radians));
-    let cos = f64::from(source_cos(radians));
-    let [x, y, z] = offset;
-    match axis {
-        Axis::X => [x, y * cos - z * sin, z * cos + y * sin],
-        Axis::Y => [x * cos + z * sin, y, z * cos - x * sin],
-        Axis::Z => [x * cos - y * sin, y * cos + x * sin, z],
-    }
-}
-
 /// SuperGlueItem.spawnParticles with fullBlock set, as used on the first click.
 pub fn glue_face(
     pos: Pos,

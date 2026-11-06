@@ -7,11 +7,7 @@
 //! is a source-reference/oracle boundary only: the current native adapter uses
 //! `Visual`. Keeping both specifications does not select or detect a backend.
 //! World queries, actual player bearing and renderer submission are adapters.
-use crate::{
-    burner::Heat,
-    particles::{ParticleRandom, source_sin},
-    placement::Direction,
-};
+use crate::{burner::Heat, particles::ParticleRandom, placement::Direction, source_trig::sin};
 
 pub fn shortest(mut from: f64, mut to: f64) -> f32 {
     from %= 360.0;
@@ -221,9 +217,8 @@ impl Visual {
         let render_tick = time + (phase % 13) as f32 * 16.0;
         let offset_mult = if heat >= Heat::Fading { 64.0 } else { 16.0 };
         let wave = |extra: f64| {
-            source_sin(
-                ((f64::from(render_tick / 16.0) + extra) % (2.0 * std::f64::consts::PI)) as f32,
-            ) / offset_mult
+            sin(((f64::from(render_tick / 16.0) + extra) % (2.0 * std::f64::consts::PI)) as f32)
+                / offset_mult
         };
         Frame {
             head: head_model(heat, above),
@@ -314,9 +309,8 @@ impl RendererFrame {
             16.0
         };
         let wave = |extra: f64| {
-            source_sin(
-                ((f64::from(render_tick / 16.0) + extra) % (2.0 * std::f64::consts::PI)) as f32,
-            ) / offset_mult
+            sin(((f64::from(render_tick / 16.0) + extra) % (2.0 * std::f64::consts::PI)) as f32)
+                / offset_mult
         };
         let flame = (input.can_draw_flame && above).then(|| {
             let speed = 1.0 / 32.0 + 1.0 / 64.0 * input.heat as u8 as f32;

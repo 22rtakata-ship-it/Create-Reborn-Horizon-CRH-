@@ -5,11 +5,19 @@
 use super::{
     Game, create_port_contraption as contraption, native_block_entity_draw::BlockEntityDraw,
 };
-use create_engine::{contraption::sticker::State, kinetics::Pos, placement::Direction};
+use create_engine::{
+    contraption::{
+        CaptureView, Cell,
+        sticker::{Head, State},
+    },
+    kinetics::Pos,
+    placement::Direction,
+};
 use horizon_world::{
     chunk::BlockState,
     level::flags,
     nbt::{Compound, Tag},
+    registry::BlockStateId,
 };
 use std::{
     cell::RefCell,
@@ -21,6 +29,28 @@ pub(super) const BLOCK: &str = "create:sticker";
 thread_local! {
     static CHANGED: RefCell<BTreeMap<&'static str, BTreeSet<Pos>>> =
         const { RefCell::new(BTreeMap::new()) };
+}
+
+#[derive(Default)]
+struct ClientHeads {
+    world: Option<(usize, &'static str)>,
+    active: BTreeMap<Pos, (Head, Option<bool>)>,
+}
+
+impl ClientHeads {
+    fn check_world(&mut self, game: &Game<'_>) {
+        let world = (std::ptr::from_ref(&game.world) as usize, game.dim.id());
+        if self.world != Some(world) {
+            self.world = Some(world);
+            self.active.clear();
+        }
+    }
+}
+
+thread_local! {
+    static HEADS: RefCell<ClientHeads> = const {
+        RefCell::new(ClientHeads { world: None, active: BTreeMap::new() })
+    };
 }
 
 pub(super) fn default_nbt() -> Compound {
@@ -141,10 +171,126 @@ pub(super) fn placed(game: &mut Game<'_>, pos: Pos) {
     update(game, pos, true);
 }
 
+pub(super) fn client_changed(
+    game: &Game<'_>,
+    pos: Pos,
+    previous: Option<BlockStateId>,
+    state: BlockStateId,
+) {
+    if game.remote.is_none() || !game.native_on("create") {
+        return;
+    }
+    let Some(previous) = previous else { return };
+    let registry = game.pack.assets.registry;
+    let old = registry.state(previous).and_then(decode);
+    let new = registry.state(state).and_then(decode);
+    if old.is_none() && new.is_none() {
+        return;
+    }
+    HEADS.with_borrow_mut(|heads| {
+        heads.check_world(game);
+        match (old, new) {
+            (Some(old), Some(new)) if old.extended != new.extended => {
+                let row = heads
+                    .active
+                    .entry(pos)
+                    .or_insert((Head::settled(old.extended), None));
+                row.1 = Some(new.extended);
+            }
+            (Some(_), Some(_)) => {}
+            _ => {
+                heads.active.remove(&pos);
+            }
+        }
+    });
+}
+
+fn has_support(game: &Game<'_>, pos: Pos, direction: Direction) -> bool {
+    let Some(target) = neighbor(pos, direction) else {
+        return false;
+    };
+    let Cell::Block(rules) = contraption::Capture(game).inspect(target) else {
+        return false;
+    };
+    let side = direction.opposite();
+    if Direction::ALL
+        .into_iter()
+        .zip(rules.attached)
+        .any(|(face, attached)| face == side && attached)
+    {
+        return true;
+    }
+    game.pack
+        .assets
+        .registry
+        .state(contraption::state(game, target))
+        .is_some_and(|block| target_supports(block, side))
+}
+
+pub(super) fn client_tick(game: &mut Game<'_>) {
+    let mut feedback = Vec::new();
+    HEADS.with_borrow_mut(|heads| {
+        heads.check_world(game);
+        heads.active.retain(|&pos, (head, update)| {
+            let Some(state) = game
+                .pack
+                .assets
+                .registry
+                .state(contraption::state(game, pos))
+                .and_then(decode)
+            else {
+                return false;
+            };
+            let (attached, detached) = head.tick(update.take());
+            if (attached || detached) && has_support(game, pos, state.facing) {
+                feedback.push((pos, state.facing, attached, detached));
+            }
+            !head.idle()
+        });
+    });
+    for (pos, face, attached, detached) in feedback {
+        let at = pos.map(|v| f64::from(v) + 0.5);
+        if attached {
+            super::create_port_super_glue::spawn_face(game, pos, face);
+            game.audio
+                .play_unshared("minecraft:block.slime_block.place", Some(at), 0.35, 0.75);
+        }
+        if detached {
+            game.audio
+                .play_unshared("minecraft:block.slime_block.place", Some(at), 0.35, 0.2);
+        }
+    }
+}
+
+pub(super) fn draw_station(
+    game: &Game<'_>,
+    pos: Pos,
+    draw: &mut BlockEntityDraw,
+    block: &BlockState,
+) {
+    let Some(state) = decode(block) else { return };
+    let offset = HEADS.with_borrow(|heads| {
+        heads.active.get(&pos).map_or_else(
+            || Head::settled(state.extended).offset(1.0),
+            |(head, _)| head.offset(draw.partial),
+        )
+    });
+    draw_head(game, draw, state.facing, offset);
+}
+
 pub(super) fn draw(game: &Game<'_>, draw: &mut BlockEntityDraw, block: &BlockState) {
     let Some(state) = decode(block) else { return };
+    draw_head(
+        game,
+        draw,
+        state.facing,
+        Head::settled(state.extended).offset(1.0),
+    );
+}
+
+fn draw_head(game: &Game<'_>, draw: &mut BlockEntityDraw, facing: Direction, offset: f32) {
     draw.push();
-    match state.facing {
+    match facing {
         Direction::Up => {}
         Direction::Down => draw.rotate_about([1.0, 0.0, 0.0], 180.0, [0.5; 3]),
         side => {
@@ -152,9 +298,7 @@ pub(super) fn draw(game: &Game<'_>, draw: &mut BlockEntityDraw, block: &BlockSta
             draw.rotate_about([1.0, 0.0, 0.0], 90.0, [0.5; 3]);
         }
     }
-    if state.extended {
-        draw.translate([0.0, 0.25, 0.0]);
-    }
+    draw.translate([0.0, offset, 0.0]);
     game.native_draw_model(draw, "create:block/sticker/head", 0xFFFFFF);
     draw.pop();
 }

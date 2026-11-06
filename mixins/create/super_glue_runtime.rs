@@ -335,6 +335,10 @@ pub(super) fn receive_face(game: &mut Game<'_>, channel: &str, data: &[u8]) {
     };
     let pos =
         std::array::from_fn(|i| i32::from_be_bytes(data[4 * i..4 * i + 4].try_into().unwrap()));
+    spawn_face(game, pos, face);
+}
+
+pub(super) fn spawn_face(game: &mut Game<'_>, pos: Pos, face: Direction) {
     let options = game.item_particle(&ItemStack::new("minecraft:slime_ball", 1));
     let particles = glue_face(pos, face, || game.particles.level_random().next_float());
     for (at, velocity) in particles {

@@ -59,6 +59,7 @@ pub(super) fn attached_actor(block: &str) -> bool {
 struct Actor {
     tracker: MotionTracker,
     cutter: Option<MovingCutter>,
+    mounted_deployer: bool,
 }
 
 #[derive(Clone)]
@@ -87,16 +88,19 @@ fn vector_tag(vector: [f64; 3]) -> Tag {
     )
 }
 
-// Idle motion trackers are inexpensive to recreate. Store only live cuts,
-// whose saved motion and stall determine whether the drive may advance.
+// Live cuts constrain the driver. Moving Deployers also retain the previous
+// visit across reload so that a shared chest item is consumed at most once.
 fn actor_tag(local: Pos, actor: &Actor) -> Option<Tag> {
     let motion = actor.tracker.state();
-    let state = actor.cutter.as_ref()?.breaker.state();
-    if !state.stalled {
+    let cut = actor
+        .cutter
+        .as_ref()
+        .map(|cutter| cutter.breaker.state())
+        .filter(|state| state.stalled);
+    if !actor.mounted_deployer && cut.is_none() {
         return None;
     }
-    let target = state.target?;
-    Some(Tag::Compound(Compound::from([
+    let mut nbt = Compound::from([
         ("Local".into(), Tag::IntArray(local.to_vec())),
         ("Position".into(), vector_tag(motion.position?)),
         ("Motion".into(), vector_tag(motion.motion)),
@@ -105,36 +109,48 @@ fn actor_tag(local: Pos, actor: &Actor) -> Option<Tag> {
             "FirstMovement".into(),
             Tag::Byte(i8::from(motion.first_movement)),
         ),
-        ("BreakingPos".into(), Tag::IntArray(target.to_vec())),
-        ("Progress".into(), Tag::Int(i32::from(state.progress))),
-        (
+    ]);
+    if let Some(state) = cut {
+        nbt.insert("BreakingPos".into(), Tag::IntArray(state.target?.to_vec()));
+        nbt.insert("Progress".into(), Tag::Int(i32::from(state.progress)));
+        nbt.insert(
             "TicksUntilNextProgress".into(),
             Tag::Int(state.ticks_until_progress),
-        ),
-    ])))
+        );
+    } else {
+        nbt.insert("Deployer".into(), Tag::Byte(1));
+    }
+    Some(Tag::Compound(nbt))
 }
 
 fn encode(actors: &Actors) -> Result<Compound, AttachmentError> {
     if actors.len() > MAX_RECORDS || actors.values().any(|group| group.len() > MAX_BLOCKS) {
         return Err(AttachmentError::Encode);
     }
+    let mut version = 1;
     let structures = actors
         .iter()
         .filter_map(|(controller, group)| {
-            let cuts: Vec<_> = group
+            let saved: Vec<_> = group
                 .iter()
-                .filter_map(|(&local, actor)| actor_tag(local, actor))
+                .filter_map(|(&local, actor)| {
+                    let tag = actor_tag(local, actor)?;
+                    if actor.mounted_deployer {
+                        version = 2;
+                    }
+                    Some(tag)
+                })
                 .collect();
-            (!cuts.is_empty()).then(|| {
+            (!saved.is_empty()).then(|| {
                 Tag::Compound(Compound::from([
                     ("Controller".into(), Tag::IntArray(controller.to_vec())),
-                    ("Actors".into(), Tag::List(cuts)),
+                    ("Actors".into(), Tag::List(saved)),
                 ]))
             })
         })
         .collect();
     Ok(Compound::from([
-        ("Version".into(), Tag::Int(1)),
+        ("Version".into(), Tag::Int(version)),
         ("Structures".into(), Tag::List(structures)),
     ]))
 }
@@ -160,7 +176,7 @@ fn decode(attachment: &Compound) -> Result<Actors, AttachmentError> {
             _ => None,
         }
     }
-    fn read_actor(tag: &Compound) -> Option<(Pos, Actor)> {
+    fn read_actor(tag: &Compound, version: i32) -> Option<(Pos, Actor)> {
         let local = load_pos(tag.get(&"Local".into())?)?;
         let tracker = MotionTracker::restore(MotionState {
             position: Some(load_vector(tag.get(&"Position".into())?)?),
@@ -168,6 +184,16 @@ fn decode(attachment: &Compound) -> Result<Actors, AttachmentError> {
             relative_motion: load_vector(tag.get(&"RelativeMotion".into())?)?,
             first_movement: load_flag(tag.get(&"FirstMovement".into())?)?,
         })?;
+        if let Some(deployer) = tag.get(&"Deployer".into()) {
+            return (version == 2 && *deployer == Tag::Byte(1) && tag.len() == 6).then_some((
+                local,
+                Actor {
+                    tracker,
+                    cutter: None,
+                    mounted_deployer: true,
+                },
+            ));
+        }
         let (Some(Tag::Int(progress)), Some(Tag::Int(ticks))) = (
             tag.get(&"Progress".into()),
             tag.get(&"TicksUntilNextProgress".into()),
@@ -189,12 +215,13 @@ fn decode(attachment: &Compound) -> Result<Actors, AttachmentError> {
             Actor {
                 tracker,
                 cutter: Some(cutter),
+                mounted_deployer: false,
             },
         ))
     }
 
     let error = AttachmentError::Decode;
-    let (Some(Tag::Int(1)), Some(Tag::List(structures))) = (
+    let (Some(Tag::Int(version @ (1 | 2))), Some(Tag::List(structures))) = (
         attachment.get(&"Version".into()),
         attachment.get(&"Structures".into()),
     ) else {
@@ -223,7 +250,7 @@ fn decode(attachment: &Compound) -> Result<Actors, AttachmentError> {
             let Tag::Compound(entry) = entry else {
                 return Err(error);
             };
-            let (local, actor) = read_actor(entry).ok_or(error)?;
+            let (local, actor) = read_actor(entry, *version).ok_or(error)?;
             if local_actors.insert(local, actor).is_some() {
                 return Err(error);
             }
@@ -355,7 +382,13 @@ fn tick_actors(game: &mut Game<'_>, previous: &Record, current: &Record, phase: 
             if !actors.contains_key(local) && previous.angle == 0.0 {
                 continue;
             }
-            let point = world_point(origin_before, before, local_point);
+            let angle = previous.angle;
+            let center = DVec3::splat(0.5);
+            let rotate = |point, angle| create_engine::source_trig::rotate(point, angle, Axis::Y);
+            let point = (origin_before
+                + center
+                + DVec3::from_array(rotate((local_point - center).to_array(), angle)))
+            .to_array();
             let sample = |position| Sample {
                 position,
                 facing,
@@ -364,16 +397,16 @@ fn tick_actors(game: &mut Game<'_>, previous: &Record, current: &Record, phase: 
                 allow_stationary_first_visit: false,
             };
             let actor = actors.entry(*local).or_default();
+            actor.mounted_deployer = true;
             let movement = deployer_core::track_actor(
                 &mut actor.tracker,
                 sample(point),
                 |m| m,
-                |m| (before.conjugate() * DVec3::from_array(m)).to_array(),
+                |m| rotate(m, -angle),
             );
             if let Some(cell) = movement.visit {
-                let forward =
-                    (before * DVec3::from_array(facing.vector().map(f64::from))).to_array();
-                let vertical = (before * DVec3::Z).to_array();
+                let forward = rotate(facing.vector().map(f64::from), angle);
+                let vertical = rotate(DVec3::Z.to_array(), angle);
                 deployer::plant(
                     game,
                     current,

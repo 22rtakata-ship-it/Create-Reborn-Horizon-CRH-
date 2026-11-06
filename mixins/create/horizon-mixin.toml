@@ -1,6 +1,6 @@
 [mod]
 id = "create"
-version = "0.8.0-alpha.13"
+version = "0.8.0-alpha.14"
 
 [compatibility]
 horizon_revision = "9c7f9b2215dfed497aba5522c44f38926628648d"
@@ -1447,6 +1447,18 @@ helper = "contraption_sync_hook.rs"
 bindings = [
   { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
   { name = "data", ty = "&[u8]", value = "data" },
+]
+
+[[injection]]
+id = "sticker-client-state"
+target = "horizon_client::game::remote::Game<'_>::sync_block_entity"
+kind = "HEAD"
+helper = "sticker_client_state.rs"
+bindings = [
+  { name = "game", ty = "&crate::game::Game<'_>", value = "self" },
+  { name = "pos", ty = "(i32, i32, i32)", value = "pos" },
+  { name = "previous", ty = "Option<horizon_world::registry::BlockStateId>", value = "previous" },
+  { name = "state", ty = "horizon_world::registry::BlockStateId", value = "state" },
 ]
 
 [[injection]]

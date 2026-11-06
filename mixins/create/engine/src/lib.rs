@@ -40,6 +40,9 @@ pub mod fan_entities;
 #[path = "core/particles.rs"]
 pub mod particles;
 
+#[path = "core/source_trig.rs"]
+pub mod source_trig;
+
 #[path = "core/transport.rs"]
 pub mod transport;
 

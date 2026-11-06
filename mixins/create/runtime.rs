@@ -1519,7 +1519,7 @@ pub(super) fn draw(
 ) {
     if block == super::create_port_sticker::BLOCK {
         if let Some(state) = game.pack.assets.registry.state(state) {
-            super::create_port_sticker::draw(game, draw, state);
+            super::create_port_sticker::draw_station(game, pos, draw, state);
         }
         return;
     }

@@ -49,30 +49,36 @@ stages under the actor identity.
 
 The native adapter registers `create:deployer` with the original six-way
 `facing`, `axis_along_first`, block entity ID and idle USE data. Clicking the
-hand exchanges a stack of plain saplings. In the supported assembly, one
-downward Deployer can ride away from the axis of a vertical Mechanical Bearing.
-It visits the original active cells and plants through Horizon's ordinary
-`PlaceContext` and block-item survival checks. Its sapling stock is finite.
-When the hand is empty, it takes one sapling from the first matching slot of a
-single ordinary mounted chest before attempting that visit. Occupied cells
-and invalid soil leave a withdrawn sapling in the hand. Planting consumes
-exactly one sapling.
+hand exchanges a stack of plain saplings or bone meal. A vertical Mechanical
+Bearing can carry up to two downward Deployers away from its axis. They visit
+the original active cells. Planting uses Horizon's ordinary `PlaceContext`
+and block-item survival checks. Bone meal uses vanilla growth for oak
+saplings, wheat, carrots, potatoes and beetroots. A valid use can consume bone
+meal without growing a tree. A mature crop or invalid target keeps the stock.
+
+An empty hand takes one item from the first matching slot of the shared
+ordinary mounted chest before attempting the visit. Each Deployer keeps its
+own filter and stock. Occupied cells and invalid soil leave a withdrawn
+sapling in the hand.
 
 The controller column stores the moving hand privately under
-`create:mounted_deployer`. Capture, landing, and item consumption use the
-same column's terrain and attachment transaction. The restored block entity
-retains `Owner`, `Mode`, `Inventory` and `HeldItem`. The native private slot
-backs ordinary inventory spill. This slice runs on the integrated server,
-checks the border, and accepts targets in the controller column. The general
-owner-aware item and entity dispatch described above remains a separate API.
+`create:mounted_deployer`, keyed by controller and the Deployer's position
+inside the assembly. Version 1 saves with one Deployer per controller still
+load. The movement tracker retains each hand's previous visit across restart.
+Capture, landing and item consumption use the controller column's terrain and
+attachment transaction. The restored block entities retain `Owner`, `Mode`,
+`Filter`, `Inventory` and `HeldItem`. The native private slot backs ordinary
+inventory spill. This slice runs on the integrated server, checks the border,
+and accepts targets in the controller column. The general owner-aware item
+and entity dispatch described above remains a separate API.
 
 Refill accepts an empty filter or the canonical `Filter` stack for a plain
-sapling. The latter matches by item ID and skips unrelated slots. With an
+sapling or bone meal. The latter matches by item ID and skips unrelated slots. With an
 empty filter, an unsupported item in the first occupied slot stops the
 bounded adapter at that slot. The chest withdrawal and the new hand are saved
 together, with placement consumption in the subsequent same-column write.
 
-Centered or multiple actors, other drivers, PUNCH,
+Centered actors, other drivers, PUNCH,
 filter controls, complex filters and placement with custom item components
 remain pending. The moving render uses the source pole and hand pose. Held item rendering and
 shaft animation are pending.
@@ -82,6 +88,8 @@ reference for the original stationary and piston planting. Run
 `python3 tools/deployer_farm_checks.py --help` for the shared rotating layout,
 tick comparison and native process restart. `tools/deployer_refill_checks.py`
 compares the one-sapling blocked refill, depletion and restored chest slots.
+Run `python3 tools/deployer_moving_meal_checks.py --help` for the shared chest,
+simultaneous planting and fertilizing, and cold restart comparison.
 
 ## Stationary planting
 

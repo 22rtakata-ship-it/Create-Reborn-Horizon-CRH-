@@ -45,6 +45,33 @@ MEAL_LEVER = (904, 84, 212)
 PSI_LOADER = (920, 82, 214)
 PSI_LOADER_LEVER = (919, 81, 214)
 PSI_LOADER_SOURCE = (920, 86, 210)
+TWO_HANDS = (903, 82, 231)
+TWO_HANDS_LEVER = (904, 81, 231)
+TWO_HANDS_CHEST = (903, 83, 232)
+TWO_HANDS_WHEAT = (901, 81, 232)
+TWO_HANDS_PLANT = (905, 81, 230)
+
+
+def two_deployer_station(batch):
+    batch.load(TWO_HANDS)
+    batch.command('fill 897 81 224 910 90 239 minecraft:air')
+    batch.command('fill 897 80 222 910 80 239 minecraft:smooth_stone')
+    batch.put(TWO_HANDS, 'create:mechanical_bearing[facing=up]')
+    batch.put((903, 81, 231), 'create:clutch[axis=y,powered=true]')
+    batch.put(TWO_HANDS_LEVER, 'minecraft:lever[face=wall,facing=east,powered=true]')
+    batch.put((903, 80, 231), 'create:creative_motor[facing=up]{ScrollValue:32}')
+    for x in range(902, 905):
+        batch.put((x, 83, 231), 'minecraft:slime_block')
+    for x, item in ((901, 'minecraft:bone_meal'), (905, 'minecraft:oak_sapling')):
+        batch.put((x, 83, 231), 'create:deployer[facing=down,axis_along_first=false]'
+                  f'{{Mode:"USE",Inventory:[],Filter:{{id:"{item}",count:1}},FilterAmount:64,UpTo:1b}}')
+    batch.put(TWO_HANDS_CHEST, DRY_CHEST
+              + '{Items:[{Slot:0b,id:"minecraft:oak_sapling",count:2},'
+                '{Slot:1b,id:"minecraft:bone_meal",count:24},{Slot:2b,id:"minecraft:stick",count:4}]}')
+    batch.put((905, 80, 230), 'minecraft:dirt')
+    batch.put((901, 80, 232), 'minecraft:farmland[moisture=7]')
+    batch.put(TWO_HANDS_WHEAT, 'minecraft:wheat[age=6]')
+    stations.sign(batch, (903, 81, 235), ['TWO DEPLOYERS', 'Release clutch.', 'Sapling + wheat.', 'One shared chest.'])
 
 
 def farm_input_stations(batch):
@@ -188,10 +215,12 @@ def prepare(session, options):
         adhesive_stations(batch)
     if options.farm_inputs:
         farm_input_stations(batch)
+    if options.two_deployers:
+        two_deployer_station(batch)
     if any((options.plough, options.deployer, options.glue, options.upward_saw,
             options.chassis, options.materials, options.rotary_contact,
             options.portable_storage, options.stationary_deployer, options.linear_cargo,
-            options.adhesives, options.farm_inputs)):
+            options.adhesives, options.farm_inputs, options.two_deployers)):
         batch.command('tp @s 909.5 81 61.5')
     batch.tick(30 if options.farms else 12)
     batch.data(BEARING)
@@ -482,6 +511,17 @@ def review(session, options):
             call('look-at', 920.5, 84.5, 212.5)
             call('wait', 12)
             extra.append(str(screenshot('portable-storage-input.png')))
+        if options.two_deployers:
+            command('tp @s 909.5 86 235.5')
+            wait_loaded(call, [TWO_HANDS, TWO_HANDS_CHEST])
+            assert 'powered=true' in call('block', *TWO_HANDS_LEVER)['state']
+            assert call('block', *TWO_HANDS_WHEAT)['state'] == 'minecraft:wheat[age=6]'
+            assert call('block', *TWO_HANDS_PLANT)['block'] == 'minecraft:air'
+            assert 'minecraft:bone_meal' in snapshot((901, 83, 231))['nbt']
+            assert 'minecraft:oak_sapling' in snapshot((905, 83, 231))['nbt']
+            call('look-at', 903.5, 83.5, 231.5)
+            call('wait', 12)
+            extra.append(str(screenshot('two-moving-deployers.png')))
         call('key', 'f1', 'tap')
         command('gamemode creative')
         if options.glue:
@@ -531,6 +571,7 @@ def main():
     parser.add_argument('--glue', action='store_true')
     parser.add_argument('--adhesives', action='store_true')
     parser.add_argument('--farm-inputs', action='store_true')
+    parser.add_argument('--two-deployers', action='store_true')
     parser.add_argument('--upward-saw', action='store_true')
     parser.add_argument('--chassis', action='store_true')
     parser.add_argument('--materials', action='store_true')

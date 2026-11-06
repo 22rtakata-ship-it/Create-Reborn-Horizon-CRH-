@@ -31,9 +31,78 @@ impl State {
     }
 }
 
+/// The client StickerBlockEntity advances its linear chaser before applying
+/// the most recent block update. Settled contraptions need no chaser.
+#[derive(Clone, Copy, Debug)]
+pub struct Head {
+    previous: f32,
+    current: f32,
+    target: f32,
+}
+
+impl Head {
+    pub fn settled(extended: bool) -> Self {
+        let value = if extended { 1.0 } else { 0.0 };
+        Self {
+            previous: value,
+            current: value,
+            target: value,
+        }
+    }
+
+    /// Returns whether the head reached the support or started withdrawing.
+    pub fn tick(&mut self, update: Option<bool>) -> (bool, bool) {
+        self.previous = self.current;
+        let current = f64::from(self.current);
+        let delta = f64::from(self.target) - current;
+        let speed = f64::from(0.4_f32);
+        self.current = if delta.abs() < 1.0e-5 {
+            self.target
+        } else {
+            (current + delta.clamp(-speed, speed)) as f32
+        };
+        let attached = self.current == 1.0 && self.previous != self.current;
+        let detached = update == Some(false) && self.target == 1.0;
+        if let Some(extended) = update {
+            self.target = if extended { 1.0 } else { 0.0 };
+        }
+        (attached, detached)
+    }
+
+    pub fn idle(self) -> bool {
+        self.previous == self.current && self.current == self.target
+    }
+
+    pub fn offset(self, partial: f32) -> f32 {
+        let previous = f64::from(self.previous);
+        let extension =
+            (previous + f64::from(partial) * (f64::from(self.current) - previous)) as f32;
+        extension * extension * 0.25
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn sticker_head_ticks_before_accepting_the_new_target() {
+        let mut head = Head::settled(false);
+        assert_eq!(head.tick(Some(true)), (false, false));
+        assert_eq!(head.offset(1.0), 0.0);
+        assert_eq!(head.tick(None), (false, false));
+        assert!((head.offset(0.5) - 0.01).abs() < 1e-6);
+        assert_eq!(head.tick(None), (false, false));
+        assert_eq!(head.tick(Some(false)), (true, true));
+        assert_eq!(head.offset(1.0), 0.25);
+        assert!(!head.idle());
+        assert_eq!(head.tick(None), (false, false));
+        assert!((head.offset(1.0) - 0.09).abs() < 1e-6);
+        for _ in 0..3 {
+            assert_eq!(head.tick(None), (false, false));
+        }
+        assert!(head.idle());
+    }
 
     #[test]
     fn initial_power_is_not_an_edge_and_only_rising_edges_toggle() {

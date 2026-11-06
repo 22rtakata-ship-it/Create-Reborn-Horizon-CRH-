@@ -75,11 +75,12 @@ ordinary item to copy a visible sample without consuming the held stack.
 An empty hand clears it. Advanced filters, hover feedback, missing Create
 decorative outputs, automation and cutting particles remain open.
 
-A downward Deployer on a vertical Mechanical Bearing plants ordinary saplings
-from its hand and refills one at a time from a single mounted chest. The plain
-sapling filter can be set in saved data. Stop the bearing to swap the held
-stack by clicking the hand. The owner, filter and remaining stock survive a
-restart. A stationary downward Deployer plants saplings in the cell two
+Up to two off-center, downward Deployers on a vertical Mechanical Bearing
+can plant ordinary saplings or apply bone meal to a supported crop or oak.
+Each hand refills independently from one mounted chest according to its saved
+filter. Stop the bearing to exchange the held stack by clicking the hand.
+The hands, filters and sampled positions survive a restart. A stationary
+downward Deployer plants saplings in the cell two
 blocks below its body. A stationary Deployer in Use mode shows its ordinary
 sapling in the extending hand, using the original fixed or spinning display
 pose. The moving renderer shows a bare pointing hand even when its inventory
@@ -127,6 +128,10 @@ drop at the tool. The server saves the inventory with the structure's chunk
 and restores it at its rotated or translated landing position, including
 after a restart or controller removal.
 
+An oak grown inside the landing footprint can leave the structure parked
+until the obstructing leaves are removed. This differs from the original
+Create landing path, which can replace those blocks.
+
 A Portable Storage Interface on a vertical Mechanical Bearing can dock that
 chest with a stationary interface and a vanilla hopper or dry vertical Chute
 below. A dry Chute above the dock can supply the moving chest and holds
@@ -157,7 +162,9 @@ translation, including recovery after a restart and an obstructed landing.
 
 The Sticker latches its head on each rising redstone edge. An extended
 Sticker joins its front block when the latter supports the attachment.
-The capture walk can find the same bond from either end.
+The capture walk can find the same bond from either end. The stationary head
+moves at the source rate and plays the slime-ball burst and sound when it
+reaches a supportive block.
 [Sticker rules and verification](sticker.md)
 
 ## Minecart contraptions
@@ -245,6 +252,13 @@ controller motion. The current implementation is exercised by Rust unit tests.
 - `tools/deployer_farm_checks.py` and `tools/deployer_refill_checks.py --combined`
   compare planting ticks and chest slots, then test a restart and a shared
   Saw and Deployer rotor in Horizon.
+- `tools/deployer_moving_meal_checks.py` checks two hands sharing a chest and
+  resumes immediately before planting and fertilizing. It covers ordinary
+  wheat, a blocked oak, an open oak and a refused third Deployer.
+- A separate Chute-to-Deployer scene matches the Java dock and planting
+  observations across 125 ticks. After landing, eight saplings are planted
+  and eight remain. One sapling ends in the chest in Horizon and in the
+  hand in Java.
 - `tools/deployer_grounded_farm_checks.py` grows an oak through vanilla
   worldgen, joins a low Saw to the rotor by ordinary Super Glue clicks and
   checks same-cell replanting, stock and the cut tree across a restart.

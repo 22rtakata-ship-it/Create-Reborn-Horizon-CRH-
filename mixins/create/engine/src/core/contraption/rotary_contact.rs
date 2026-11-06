@@ -6,7 +6,7 @@
 use super::contact::ContactBox;
 use crate::{
     kinetics::Pos,
-    particles::{source_cos, source_sin},
+    source_trig::{cos, sin},
 };
 
 const BODY_INFLATION: f64 = 1.0e-7;
@@ -104,10 +104,7 @@ pub fn upright_rotary_contact(
     let (sin, cos) = if radians == 0.0 {
         (0.0, 1.0)
     } else {
-        (
-            f64::from(source_sin(radians)),
-            f64::from(source_cos(radians)),
-        )
+        (f64::from(sin(radians)), f64::from(cos(radians)))
     };
     let rows = [[cos, 0.0, sin], AXES[Y], [-sin, 0.0, cos]];
     let columns = [[cos, 0.0, -sin], AXES[Y], [sin, 0.0, cos]];

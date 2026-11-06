@@ -1,10 +1,11 @@
 # Original Create identifiers and data
 
-The 0.8.0-alpha.13 development checkpoint adds Chute input into a moving
-chest through a portable item dock and ordinary bone meal in a stationary
-Deployer. Moving tool visuals use the driver's reported stall state. Capture
-and restoration currently share one chunk column. See the supported drivers,
-payloads, actors and verification in the [contraption guide](contraptions.md).
+The 0.8.0-alpha.14 development checkpoint supports two independent Deployers
+sharing one mounted chest and preserving their stock, filters and visit
+state across restarts. The moving Deployer uses the pinned Create rotation
+table. The stationary Sticker animates its head and plays attachment
+feedback. Capture and restoration currently share one chunk column.
+[Contraption guide](contraptions.md)
 
 The sections marked 0.3–0.5 below retain the released historical boundaries.
 The installed review checkpoint is **0.6.0-alpha.2**: see [REPORT_06.md](https://github.com/Delete228/create-horizon/blob/eb8b96e8ea1db698b79bb61fd1caf6c963f31652/REPORT_06.md)
