@@ -45,8 +45,10 @@ integration remains a separate milestone.
 The Harvester handles wheat, carrots, potatoes, beetroot, Nether Wart, cocoa,
 sweet berries, sugar cane and supported leaves or growing plants. Its moving
 blade rolls by distance, using the Flywheel phase calculation. A stall or
-backwards travel holds the current blade phase. A moving Saw
-pauses its platform while cutting supported vanilla trees, fungi and stalks.
+backwards travel holds the current blade phase. The moving Drill accumulates
+head rotation in the direction of operation and while cutting. The moving
+Saw pauses its platform while cutting supported vanilla trees, fungi and
+stalks, and selects its blade from the actual stalled state.
 A horizontal stationary Saw also fells trees. The moving Drill breaks eligible
 vanilla blocks and drops their loot. The Plough tills exposed soil, clears
 snow and protects crops rooted in farmland. When a living mob overlaps a
@@ -81,8 +83,9 @@ restart. A stationary downward Deployer plants saplings in the cell two
 blocks below its body. A stationary Deployer in Use mode shows its ordinary
 sapling in the extending hand, using the original fixed or spinning display
 pose. The moving renderer shows a bare pointing hand even when its inventory
-contains saplings, as in Java. Punching, general item use, complex filters and
-their interface remain open.
+contains saplings, as in Java. A stationary downward Deployer also uses
+ordinary bone meal on supported crops and oak saplings. Punching, general
+item use, complex filters and their interface remain open.
 [Deployer engine and host boundary](deployer.md)
 
 ## Super Glue
@@ -126,7 +129,9 @@ after a restart or controller removal.
 
 A Portable Storage Interface on a vertical Mechanical Bearing can dock that
 chest with a stationary interface and a vanilla hopper or dry vertical Chute
-below. Both preserve the components. [Portable Storage Interface](portable-storage.md)
+below. A dry Chute above the dock can supply the moving chest and holds
+anything the chest could not accept. Both directions preserve the components.
+[Portable Storage Interface](portable-storage.md)
 
 Access the inventory when the chest has landed. The moving chest menu,
 multiple or double chests, named, locked and loot-table chests
@@ -236,6 +241,7 @@ controller motion. The current implementation is exercised by Rust unit tests.
 - `tools/harvester_blade_checks.py` compares 1,600 blade angles with the
   actual Flywheel actor class from the pinned Create JAR. A separate Horizon
   capture checks changing blade poses during single-player bearing travel.
+  The `--drill` mode compares 2,400 head angles across all six faces.
 - `tools/deployer_farm_checks.py` and `tools/deployer_refill_checks.py --combined`
   compare planting ticks and chest slots, then test a restart and a shared
   Saw and Deployer rotor in Horizon.

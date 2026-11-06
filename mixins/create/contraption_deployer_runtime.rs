@@ -2,7 +2,7 @@
 // Copyright (c) 2026 create-horizon contributors
 // SPDX-License-Identifier: MIT
 
-// Bounded sapling use for stationary and mounted Deployers.
+// Bounded stationary item use and mounted sapling planting.
 
 use super::{
     Game, create_port as kinetics, create_port_contraption as contraption,
@@ -40,6 +40,7 @@ use std::collections::BTreeMap;
 
 pub(super) const BLOCK: &str = "create:deployer";
 const UPDATE_TICK: &str = "create_horizon:DeployerTick";
+const BONE_MEAL: &str = "minecraft:bone_meal";
 const SAPLINGS: &[&str] = &[
     "minecraft:oak_sapling",
     "minecraft:spruce_sapling",
@@ -202,7 +203,7 @@ pub(super) fn draw_station(
             .and_then(item_from_nbt)
             .filter(supported_item)
     {
-        draw_held_sapling(
+        draw_held_item(
             game,
             draw,
             facing,
@@ -213,8 +214,8 @@ pub(super) fn draw_station(
     }
 }
 
-// DeployerRenderer.renderItem: every supported sapling has a flat generated model.
-fn draw_held_sapling(
+// DeployerRenderer.renderItem: the supported items use flat generated models.
+fn draw_held_item(
     game: &Game<'_>,
     draw: &mut BlockEntityDraw,
     facing: Direction,
@@ -299,10 +300,14 @@ fn get<'a>(nbt: &'a Compound, key: &str) -> Option<&'a Tag> {
 }
 
 fn supported_item(item: &ItemStack) -> bool {
-    SAPLINGS.contains(&item.item.as_ref())
+    (SAPLINGS.contains(&item.item.as_ref()) || item.item.as_ref() == BONE_MEAL)
         && (1..=64).contains(&item.count)
         && item.damage == 0
         && item.data().is_none()
+}
+
+fn mounted_item(item: &ItemStack) -> bool {
+    item.item.as_ref() != BONE_MEAL && supported_item(item)
 }
 
 fn read_hand(nbt: &Compound) -> Option<Option<ItemStack>> {
@@ -353,9 +358,11 @@ fn valid_nbt(nbt: &Compound) -> bool {
             })
         && read_filter(nbt).is_some_and(|filter| {
             read_hand(nbt).is_some_and(|hand| {
-                filter
-                    .as_ref()
-                    .is_none_or(|filter| hand.as_ref().is_none_or(|held| held.item == filter.item))
+                hand.as_ref().is_none_or(mounted_item)
+                    && filter.as_ref().is_none_or(|filter| {
+                        mounted_item(filter)
+                            && hand.as_ref().is_none_or(|held| held.item == filter.item)
+                    })
             })
         })
 }
@@ -483,8 +490,13 @@ pub(super) fn tick_station(
         }
         let block = game.native_block(target);
         if !should_use(
-            hand.as_ref()
-                .map_or(Held::Empty, |stack| Held::Block(&stack.item)),
+            hand.as_ref().map_or(Held::Empty, |stack| {
+                if stack.item.as_ref() == BONE_MEAL {
+                    Held::Other
+                } else {
+                    Held::Block(&stack.item)
+                }
+            }),
             Target {
                 block: &block,
                 fluid: None,
@@ -515,8 +527,7 @@ pub(super) fn tick_station(
     }
     if matches!(action, TickAction::Activate { .. })
         && let Some(mut stack) = hand
-        && let Some(ctx) = sapling_context(game, aim, &stack, Face::Up)
-        && place_sapling(game, &ctx)
+        && use_stationary_item(game, aim, &stack)
     {
         stack.count -= 1;
         let remaining = (stack.count != 0).then_some(stack);
@@ -524,6 +535,36 @@ pub(super) fn tick_station(
         write_hand(&mut entity.nbt, remaining);
     }
     changed || action != TickAction::None
+}
+
+fn use_stationary_item(game: &mut Game<'_>, aim: Aim, stack: &ItemStack) -> bool {
+    if stack.item.as_ref() != BONE_MEAL {
+        return sapling_context(game, aim, stack, Face::Up)
+            .is_some_and(|context| place_sapling(game, &context));
+    }
+    let [x, y, z] = aim.clicked;
+    if !contraption::resident(game, aim.clicked)
+        || !game.border.contains(f64::from(x), f64::from(z))
+        || !matches!(
+            game.native_block(aim.clicked).as_str(),
+            "minecraft:oak_sapling"
+                | "minecraft:wheat"
+                | "minecraft:carrots"
+                | "minecraft:potatoes"
+                | "minecraft:beetroots"
+        )
+    {
+        return false;
+    }
+    // DeployerHandler forces the action ray onto the prescribed cell and
+    // preserves the ray face. Vanilla growth reports use even on failed rolls.
+    let face = clip(game, aim.action_ray())
+        .and_then(|hit| native_face(hit.face))
+        .unwrap_or(Face::Up);
+    let used = game
+        .with_level(|b, level, ticks| b.use_bone_meal(level, ticks, BlockPos::new(x, y, z), face));
+    let _ = game.process_level_events();
+    used
 }
 
 pub(super) fn placed(game: &mut Game<'_>, pos: Pos) {
@@ -869,7 +910,7 @@ pub(super) fn plant(game: &mut Game<'_>, record: &Record, local: Pos, aim: Aim) 
                     .is_none_or(|filter| item.item == filter.item)
             },
             |game, item| {
-                supported_item(item)
+                mounted_item(item)
                     && update_hand(
                         game,
                         key,

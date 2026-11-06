@@ -418,6 +418,61 @@ fn take_from_slot(slot: &mut Option<ItemStack>, count: u32) -> Option<ItemStack>
     Some(item)
 }
 
+/// ChuteBlockEntity uses ItemHandlerHelper.insertItemStacked. A preview
+/// mutates only the copied chest, and a commit reports the saved count.
+pub(super) fn insert_from_chute(
+    game: &mut Game<'_>,
+    mount: Mount,
+    source: Pos,
+    stack: &ItemStack,
+    simulate: bool,
+) -> u32 {
+    let key = contraption::column(mount.controller);
+    if contraption::column(source) != key {
+        return 0;
+    }
+    let Ok(Some(mut store)) = game
+        .attachment_map_quiet(Holder::Chunk(key))
+        .and_then(|map| map.get_existing(&STORAGE))
+    else {
+        return 0;
+    };
+    let Some(chest) = store
+        .get_mut(&mount.controller)
+        .filter(|chest| chest.local == mount.local)
+    else {
+        return 0;
+    };
+    let limit = super::create_port::stack_maximum(game, stack).min(SLOT_LIMIT);
+    let inserted = insert_stacked(&mut chest.slots, stack, limit);
+    if inserted == 0 {
+        return 0;
+    }
+    if simulate {
+        if checked_slots(&chest.slots).is_err() {
+            return 0;
+        }
+    } else if write_store(game, key, store).is_err() {
+        return 0;
+    }
+    inserted
+}
+
+fn insert_stacked(slots: &mut [Option<ItemStack>], stack: &ItemStack, limit: u32) -> u32 {
+    let merged = insert(slots.iter_mut().filter(|slot| slot.is_some()), stack, limit);
+    if merged == stack.count {
+        return merged;
+    }
+    let mut remainder = stack.clone();
+    remainder.count -= merged;
+    merged
+        + insert(
+            slots.iter_mut().filter(|slot| slot.is_none()),
+            &remainder,
+            limit,
+        )
+}
+
 /// Insert a block's drops in their loot-table order. Suppress accepted stacks
 /// only when their new inventory snapshot was saved successfully.
 pub(super) fn deposit(game: &mut Game<'_>, mount: Mount, source: Pos, drops: &mut [ItemStack]) {
@@ -468,7 +523,11 @@ pub(super) fn deposit(game: &mut Game<'_>, mount: Mount, source: Pos, drops: &mu
     }
 }
 
-fn insert(slots: &mut [Option<ItemStack>], stack: &ItemStack, limit: u32) -> u32 {
+fn insert<'a>(
+    slots: impl IntoIterator<Item = &'a mut Option<ItemStack>>,
+    stack: &ItemStack,
+    limit: u32,
+) -> u32 {
     let mut remaining = stack.count;
     if limit == 0 || stack.item.as_ref() == "minecraft:air" {
         return 0;
@@ -638,6 +697,23 @@ mod tests {
         assert_eq!(slots[1].as_ref().unwrap().count, 64);
         assert_eq!(slots[2], Some(named));
         assert_eq!(slots[3].as_ref().unwrap().count, 2);
+    }
+
+    #[test]
+    fn chute_insertion_merges_existing_stacks_before_using_earlier_empty_slots() {
+        let item = ItemStack::new("minecraft:oak_sapling", 16);
+        let mut slots = [None, Some(ItemStack::new(item.item.as_ref(), 60))];
+        assert_eq!(insert_stacked(&mut slots, &item, 64), 16);
+        assert_eq!(slots[0], Some(ItemStack::new(item.item.as_ref(), 12)));
+        assert_eq!(slots[1], Some(ItemStack::new(item.item.as_ref(), 64)));
+
+        let mut slots = [
+            Some(ItemStack::new("minecraft:stone", 64)),
+            Some(ItemStack::new(item.item.as_ref(), 60)),
+        ];
+        assert_eq!(insert_stacked(&mut slots, &item, 64), 4);
+        assert_eq!(insert_stacked(&mut slots, &item, 64), 0);
+        assert_eq!(slots[1], Some(ItemStack::new(item.item.as_ref(), 64)));
     }
 
     #[test]

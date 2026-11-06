@@ -13,7 +13,7 @@ use super::{
 };
 use crate::containers::{BlockEntity, ModBlockEntity};
 use create_engine::{
-    contraption::actors::{Tool, harvester::Blade, points_backwards},
+    contraption::actors::{Spin, Tool, animation_speed, harvester::Blade, points_backwards},
     contraption::bearing::{Bearing, Mode, TickAction},
     contraption::windmill::{Config as WindmillConfig, RotationDirection, Windmill},
     contraption::{
@@ -24,7 +24,7 @@ use create_engine::{
 };
 use glam::DVec3;
 use horizon_client_render::create_contraption_scene::{
-    ACTIVE, ClockHand, HARVESTER_KEY, KEY, MAX_BLOCKS, MAX_RECORDS, RECORDS, Record, StrokeKind,
+    ACTIVE, ACTOR_VISUAL_KEY, ClockHand, KEY, MAX_BLOCKS, MAX_RECORDS, RECORDS, Record, StrokeKind,
     read,
 };
 use horizon_core::position::BlockPos;
@@ -649,6 +649,7 @@ fn assemble(
         angle: 0.0,
         previous_angle: 0.0,
         rpm: generated,
+        stalled: false,
         return_home: windmill,
         stroke: None,
         clock_hand: None,
@@ -844,6 +845,7 @@ pub(super) fn tick(
         record.previous_angle = record.angle;
         record.angle = controller.angle();
         record.rpm = rpm;
+        record.stalled = stalled;
         let current = record.clone();
         if set_records(game, key, next).is_ok() {
             write_controller(entity, true, controller.angle());
@@ -914,16 +916,52 @@ pub(super) fn recover_orphans(game: &mut Game<'_>) {
     }
 }
 
-#[derive(Clone, Default)]
-struct HarvesterBlades {
-    tick: u64,
-    blades: BTreeMap<(Pos, Pos), (DVec3, Blade)>,
+#[derive(Clone, Copy)]
+enum ToolSpin {
+    Harvester(Blade),
+    Drill(Spin),
 }
 
-const HARVESTER_BLADES: AttachmentType<HarvesterBlades> = AttachmentType {
+impl ToolSpin {
+    fn tick(&mut self, distance: f64, stalled: bool, backwards: bool) {
+        match self {
+            Self::Harvester(blade) => blade.tick(distance, !stalled && !backwards),
+            Self::Drill(head) => {
+                let degrees = if backwards {
+                    0.0
+                } else {
+                    animation_speed(distance, stalled) / 20.0
+                };
+                head.advance(degrees);
+            }
+        }
+    }
+
+    fn angle(self, partial: f32) -> f32 {
+        match self {
+            Self::Harvester(blade) => blade.angle(partial),
+            Self::Drill(head) => head.angle(partial),
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+struct ActorVisual {
+    point: DVec3,
+    backwards: bool,
+    spin: ToolSpin,
+}
+
+#[derive(Clone, Default)]
+struct ActorVisuals {
+    tick: u64,
+    states: BTreeMap<(Pos, Pos), ActorVisual>,
+}
+
+const ACTOR_VISUALS: AttachmentType<ActorVisuals> = AttachmentType {
     namespace: "create",
-    name: HARVESTER_KEY,
-    default: HarvesterBlades::default,
+    name: ACTOR_VISUAL_KEY,
+    default: ActorVisuals::default,
     codec: None,
     copy_on_death: false,
     sync: false,
@@ -934,44 +972,56 @@ fn actor_facing(state: &BlockState) -> Option<Direction> {
     Direction::ALL.into_iter().find(|d| d.name() == facing)
 }
 
-fn update_harvester_blades(map: &mut Attachments, records: &[Record], tick: u64, reset: bool) {
+fn update_actor_visuals(map: &mut Attachments, records: &[Record], tick: u64, reset: bool) {
     let old = if reset {
         None
     } else {
-        decoded(map, &HARVESTER_BLADES)
+        decoded(map, &ACTOR_VISUALS)
     };
-    let mut blades = BTreeMap::new();
+    let mut states = BTreeMap::new();
     for record in records {
         let rotation = record.orientation(record.angle);
         let pivot = DVec3::splat(0.5);
         let origin = DVec3::from_array(record.origin_at(1.0)) + pivot;
         for (local, block) in &record.blocks {
-            if block.name != "create:mechanical_harvester" {
-                continue;
-            }
+            let (tool, spin) = match block.name.as_str() {
+                "create:mechanical_harvester" => {
+                    (Tool::Harvester, ToolSpin::Harvester(Blade::default()))
+                }
+                "create:mechanical_drill" => (Tool::Drill, ToolSpin::Drill(Spin::default())),
+                _ => continue,
+            };
             let Some(facing) = actor_facing(block) else {
                 continue;
             };
-            let point = origin
-                + rotation
-                    * (DVec3::from_array(Tool::Harvester.active_point(*local, facing)) - pivot);
+            let point =
+                origin + rotation * (DVec3::from_array(tool.active_point(*local, facing)) - pivot);
             let key = (record.controller, *local);
-            let mut blade = Blade::default();
-            if let Some(&(previous, phase)) = old.and_then(|v| v.blades.get(&key)) {
-                let motion = point - previous;
-                blade = phase;
-                blade.tick(
-                    motion.length(),
-                    !points_backwards((rotation.conjugate() * motion).to_array(), facing),
-                );
+            let mut state = ActorVisual {
+                point,
+                backwards: false,
+                spin,
+            };
+            if let Some(previous) = old.and_then(|v| v.states.get(&key)) {
+                let motion = point - previous.point;
+                // MovementContext retains its last relative motion during a stall.
+                state.backwards = if record.stalled {
+                    previous.backwards
+                } else {
+                    points_backwards((rotation.conjugate() * motion).to_array(), facing)
+                };
+                state.spin = previous.spin;
+                state
+                    .spin
+                    .tick(motion.length(), record.stalled, state.backwards);
             }
-            blades.insert(key, (point, blade));
+            states.insert(key, state);
         }
     }
-    if blades.is_empty() {
-        let _ = map.remove(&HARVESTER_BLADES);
+    if states.is_empty() {
+        let _ = map.remove(&ACTOR_VISUALS);
     } else {
-        let _ = map.set(&HARVESTER_BLADES, HarvesterBlades { tick, blades });
+        let _ = map.set(&ACTOR_VISUALS, ActorVisuals { tick, states });
     }
 }
 
@@ -993,7 +1043,7 @@ pub(super) fn mirror_sync(game: &mut Game<'_>, data: &[u8]) {
         let extras = Arc::make_mut(chunk.saved.get_or_insert_with(Default::default));
         extras.attachments.apply_sync(change);
         if let Ok(records) = extras.attachments.get_existing(&RECORDS) {
-            update_harvester_blades(
+            update_actor_visuals(
                 &mut extras.attachments,
                 records.as_deref().unwrap_or_default(),
                 game.ticks,
@@ -1010,7 +1060,7 @@ fn draw_actor(
     record: &Record,
     local: Pos,
     state: &BlockState,
-    blades: Option<&HarvesterBlades>,
+    visuals: Option<&ActorVisuals>,
 ) {
     if state.name == sticker::BLOCK {
         sticker::draw(game, draw, state);
@@ -1034,24 +1084,26 @@ fn draw_actor(
         return;
     };
     super::create_port::face_south(draw, facing);
-    if tool == Tool::Harvester {
-        let angle = blades
+    if matches!(tool, Tool::Harvester | Tool::Drill) {
+        let angle = visuals
             .and_then(|v| {
-                let (_, blade) = v.blades.get(&(record.controller, local))?;
+                let state = v.states.get(&(record.controller, local))?;
                 let partial = if game.ticks <= v.tick.saturating_add(1) {
                     draw.partial
                 } else {
                     1.0
                 };
-                Some(blade.angle(partial))
+                Some(state.spin.angle(partial))
             })
             .unwrap_or_default();
-        draw.rotate_about([1.0, 0.0, 0.0], angle, [0.5, 6.0 / 16.0, 9.0 / 16.0]);
-        game.native_draw_model(
-            draw,
-            "create:block/mechanical_harvester/moving_blade",
-            0xFFFFFF,
-        );
+        let model = if tool == Tool::Harvester {
+            draw.rotate_about([1.0, 0.0, 0.0], angle, [0.5, 6.0 / 16.0, 9.0 / 16.0]);
+            "create:block/mechanical_harvester/moving_blade"
+        } else {
+            draw.rotate_about([0.0, 0.0, 1.0], angle, [0.5; 3]);
+            "create:block/mechanical_drill/head"
+        };
+        game.native_draw_model(draw, model, 0xFFFFFF);
         return;
     }
     let pivot = DVec3::splat(0.5);
@@ -1063,22 +1115,9 @@ fn draw_actor(
         + after * point
         - before * point;
     let backwards = points_backwards((after.conjugate() * motion).to_array(), facing);
-    let length = motion.length();
-    let moving = length >= 1.0 / 512.0;
+    let moving = animation_speed(motion.length(), false) != 0.0;
     match tool {
-        Tool::Plough | Tool::Harvester => {}
-        Tool::Drill => {
-            let speed = if !moving && record.rpm != 0.0 {
-                700.0
-            } else if moving && !backwards {
-                ((-length * 1000.0 - 100.0) as i32 / 100 * 100) as f64
-            } else {
-                0.0
-            };
-            let time = (draw.game_time as f64 + f64::from(draw.partial)) / 20.0;
-            draw.rotate_about([0.0, 0.0, 1.0], ((time * speed) % 360.0) as f32, [0.5; 3]);
-            game.native_draw_model(draw, "create:block/mechanical_drill/head", 0xFFFFFF);
-        }
+        Tool::Plough | Tool::Harvester | Tool::Drill => {}
         Tool::Saw => {
             let vertical = facing.axis() == Axis::Y;
             if vertical
@@ -1091,10 +1130,11 @@ fn draw_actor(
             }
             let direction = after * DVec3::from_array(facing.vector().map(f64::from));
             let horizontal_in_world = direction.x.abs().max(direction.z.abs()) > direction.y.abs();
-            // For the moving structures supported here, a powered saw that
-            // has halted is waiting for its cut to finish.
-            let cutting = !moving && record.rpm != 0.0 && horizontal_in_world;
-            let active = cutting || (moving && !backwards);
+            let active = if record.stalled {
+                horizontal_in_world
+            } else {
+                moving && !backwards
+            };
             let model = match (vertical, active) {
                 (true, true) => "create:block/mechanical_saw/moving_vertical",
                 (true, false) => "create:block/mechanical_saw/moving_vertical_idle",
@@ -1116,10 +1156,10 @@ pub(super) fn draw_structures(game: &Game<'_>, draw: &mut NativeWorldDraw) {
             continue;
         }
         let Ok(records) = read(chunk) else { continue };
-        let blades = chunk
+        let visuals = chunk
             .saved
             .as_ref()
-            .and_then(|saved| decoded(&saved.attachments, &HARVESTER_BLADES));
+            .and_then(|saved| decoded(&saved.attachments, &ACTOR_VISUALS));
         for record in records.iter() {
             pulley::draw_line(game, draw, record);
             let anchor = record.origin_at(draw.partial);
@@ -1158,7 +1198,7 @@ pub(super) fn draw_structures(game: &Game<'_>, draw: &mut NativeWorldDraw) {
                 if !chest {
                     game.native_draw_block(draw, &block.name, &properties);
                 }
-                draw_actor(game, draw, record, *local, block, blades);
+                draw_actor(game, draw, record, *local, block, visuals);
                 draw.pop();
             }
             draw.light = previous_light;
@@ -1252,7 +1292,8 @@ pub(super) fn tick_windmill(
     }
     let mut driver = Windmill::restored(true, record.angle, record.rpm, false);
     let previous = record.clone();
-    driver.finish_tick(record.rpm, effective, actors::stalled(game, pos));
+    record.stalled = actors::stalled(game, pos);
+    driver.finish_tick(record.rpm, effective, record.stalled);
     record.previous_angle = record.angle;
     record.angle = driver.angle();
     let current = record.clone();

@@ -39,6 +39,40 @@ STICKER = (904, 83, 197)
 STICKER_POWER = (903, 83, 197)
 STICKER_CLUTCH = (905, 81, 197)
 OFFHAND_TARGET = (919, 83, 197)
+MEAL_DEPLOYER = (904, 84, 213)
+MEAL_CROP = (904, 82, 213)
+MEAL_LEVER = (904, 84, 212)
+PSI_LOADER = (920, 82, 214)
+PSI_LOADER_LEVER = (919, 81, 214)
+PSI_LOADER_SOURCE = (920, 86, 210)
+
+
+def farm_input_stations(batch):
+    batch.load(MEAL_DEPLOYER)
+    batch.command('fill 899 81 207 925 91 221 minecraft:air')
+    batch.command('fill 899 80 205 925 80 221 minecraft:smooth_stone')
+    batch.put((904, 81, 213), 'minecraft:farmland[moisture=7]')
+    batch.put(MEAL_CROP, 'minecraft:wheat[age=4]')
+    batch.put(MEAL_DEPLOYER, 'create:deployer[facing=down,axis_along_first=true]'
+              '{Mode:"USE",Inventory:[{Slot:0b,id:"minecraft:bone_meal",count:16}]}')
+    batch.put((903, 84, 213), 'create:creative_motor[facing=east]{ScrollValue:32}')
+    batch.put(MEAL_LEVER, 'minecraft:lever[face=wall,facing=north,powered=true]')
+    stations.sign(batch, (904, 81, 217), ['BONE MEAL', 'Release the lever.', 'Watch wheat grow.', 'Check hand stock.'])
+
+    x, y, z = PSI_LOADER
+    interface = 'create:portable_storage_interface'
+    batch.put(PSI_LOADER, 'create:mechanical_bearing[facing=up]')
+    batch.put((x, y - 1, z), 'create:clutch[axis=y,powered=true]')
+    batch.put(PSI_LOADER_LEVER, 'minecraft:lever[face=wall,facing=west,powered=true]')
+    batch.put((x, y - 2, z), 'create:creative_motor[facing=up]{ScrollValue:32}')
+    for dx in (0, 1, 2):
+        batch.put((x + dx, y + 1, z), 'minecraft:slime_block')
+    batch.put((x + 2, y + 2, z), interface + '[facing=east]')
+    batch.put((x - 1, y + 1, z), DRY_CHEST)
+    batch.put((x, y + 2, z - 4), interface + '[facing=south]')
+    batch.put((x, y + 3, z - 4), stations.WINDOW_CHUTE)
+    batch.put(PSI_LOADER_SOURCE, DRY_CHEST + '{Items:[{Slot:0b,id:"minecraft:oak_sapling",count:16}]}')
+    stations.sign(batch, (921, 81, 217), ['LOAD THE ROTOR', 'Release clutch.', 'Watch the chute.', 'Stop; open chest.'])
 
 
 def adhesive_stations(batch):
@@ -152,9 +186,12 @@ def prepare(session, options):
         linear_cargo_stations(batch)
     if options.adhesives:
         adhesive_stations(batch)
+    if options.farm_inputs:
+        farm_input_stations(batch)
     if any((options.plough, options.deployer, options.glue, options.upward_saw,
             options.chassis, options.materials, options.rotary_contact,
-            options.portable_storage, options.stationary_deployer, options.linear_cargo, options.adhesives)):
+            options.portable_storage, options.stationary_deployer, options.linear_cargo,
+            options.adhesives, options.farm_inputs)):
         batch.command('tp @s 909.5 81 61.5')
     batch.tick(30 if options.farms else 12)
     batch.data(BEARING)
@@ -429,6 +466,22 @@ def review(session, options):
             call('look-at', 904.5, 82.8, 197.5)
             call('wait', 12)
             extra.append(str(screenshot('sticker.png')))
+        if options.farm_inputs:
+            command('tp @s 909.5 86 216.5')
+            wait_loaded(call, [MEAL_DEPLOYER, PSI_LOADER])
+            assert call('block', *MEAL_CROP)['state'] == 'minecraft:wheat[age=4]'
+            assert 'minecraft:bone_meal' in snapshot(MEAL_DEPLOYER)['nbt']
+            assert 'powered=true' in call('block', *MEAL_LEVER)['state']
+            call('look-at', 904.5, 83.5, 213.5)
+            call('wait', 12)
+            extra.append(str(screenshot('deployer-bone-meal.png')))
+            command('tp @s 925.5 87 216.5')
+            wait_loaded(call, [PSI_LOADER_SOURCE])
+            assert 'powered=true' in call('block', *PSI_LOADER_LEVER)['state']
+            assert call('block', 920, 85, 210)['block'] == 'create:chute'
+            call('look-at', 920.5, 84.5, 212.5)
+            call('wait', 12)
+            extra.append(str(screenshot('portable-storage-input.png')))
         call('key', 'f1', 'tap')
         command('gamemode creative')
         if options.glue:
@@ -477,6 +530,7 @@ def main():
     parser.add_argument('--deployer', action='store_true')
     parser.add_argument('--glue', action='store_true')
     parser.add_argument('--adhesives', action='store_true')
+    parser.add_argument('--farm-inputs', action='store_true')
     parser.add_argument('--upward-saw', action='store_true')
     parser.add_argument('--chassis', action='store_true')
     parser.add_argument('--materials', action='store_true')

@@ -5,10 +5,18 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.util.Locale;
+import java.util.List;
+import java.util.Map;
 import com.simibubi.create.content.contraptions.Contraption;
 import com.simibubi.create.content.contraptions.actors.harvester.HarvesterActorVisual;
 import com.simibubi.create.content.contraptions.bearing.BearingContraption;
 import com.simibubi.create.content.contraptions.behaviour.MovementContext;
+import com.simibubi.create.content.kinetics.drill.DrillActorVisual;
+import net.minecraft.SharedConstants;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.server.Bootstrap;
+import net.minecraft.world.level.Level;
+import net.neoforged.fml.loading.LoadingModList;
 import com.simibubi.create.content.contraptions.render.ActorVisual;
 import net.createmod.catnip.math.AngleHelper;
 import net.minecraft.core.Direction;
@@ -23,14 +31,26 @@ public class HarvesterBladeOracle {
     }
     public static void main(String[] args) throws Exception {
         Unsafe unsafe = (Unsafe) field(Unsafe.class, "theUnsafe").get(null);
-        var blade = (HarvesterActorVisual) unsafe.allocateInstance(HarvesterActorVisual.class);
+        boolean drill = args.length > 0 && args[0].equals("drill");
+        Class<? extends ActorVisual> actorType = drill ? DrillActorVisual.class : HarvesterActorVisual.class;
+        var blade = (ActorVisual) unsafe.allocateInstance(actorType);
         var contraption = (Contraption) unsafe.allocateInstance(BearingContraption.class);
         var context = (MovementContext) unsafe.allocateInstance(MovementContext.class);
+        if (drill) {
+            // getAnimationSpeed consults the level side. Bootstrap the pinned
+            // client classes without starting the game or constructing a level.
+            SharedConstants.tryDetectVersion();
+            LoadingModList.of(List.of(), List.of(), List.of(), List.of(), Map.of());
+            Bootstrap.bootStrap();
+            var level = (ClientLevel) unsafe.allocateInstance(ClientLevel.class);
+            field(Level.class, "isClientSide").setBoolean(level, true);
+            context.world = level;
+        }
         context.contraption = contraption;
         field(ActorVisual.class, "context").set(blade, context);
-        Field facing = field(HarvesterActorVisual.class, "facing");
-        Field previous = field(HarvesterActorVisual.class, "previousRotation");
-        Field rotation = field(HarvesterActorVisual.class, "rotation");
+        Field facing = field(actorType, "facing");
+        Field previous = field(actorType, "previousRotation");
+        Field rotation = field(actorType, "rotation");
         try (var reader = new BufferedReader(new InputStreamReader(System.in))) {
             for (String line; (line = reader.readLine()) != null;) {
                 var a = line.split(" ");

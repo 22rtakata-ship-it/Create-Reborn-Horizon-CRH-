@@ -248,6 +248,8 @@ with the systems they depend on.
   lock, speed pause and cold-stroke resume.
 - [x] Stationary Deployer held sapling with the original fixed and spinning
   display poses.
+- [x] Stationary downward Deployer applying ordinary bone meal to supported
+  targets, including valid attempts where growth fails.
 - [x] Super Glue selection and transfer planner. Deployer stroke, target and
   storage rules checked against Java traces.
 - [x] Two-click Super Glue and single-column bearing transfer, with durability
@@ -272,8 +274,10 @@ with the systems they depend on.
   vanilla hopper, with redstone, comparator, item components and restart.
 - [x] Dry vertical Chutes with container and stacked transfer, manual crafting,
   and direct unloading from one moving chest through a portable interface.
-- [ ] Portable Storage Interface input, generic item automation, fluid interfaces,
-  Deployer filter interface and Plough entity throws.
+- [x] Chute input into a moving chest through a portable interface, including
+  partial transfer and component preservation.
+- [ ] Generic portable item automation, fluid interfaces, Deployer filter
+  interface and Plough contact with players and falling blocks.
 - [ ] Shared-schematic checks: identical machines produce identical results in both clients.
 
 ## 5. Fluids, railways and other content

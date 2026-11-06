@@ -90,6 +90,7 @@ fn assemble(game: &mut Game<'_>, controller: Pos, facing: Direction) -> Option<(
             angle: clockwork::RESTORE_ANGLE,
             previous_angle: clockwork::RESTORE_ANGLE,
             rpm: 0.0,
+            stalled: false,
             return_home: true,
             stroke: None,
             clock_hand: Some(hand),

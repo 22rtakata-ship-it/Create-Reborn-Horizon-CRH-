@@ -167,6 +167,36 @@ fn length([x, y, z]: [f64; 3]) -> f64 {
     (x * x + y * y + z * z).sqrt()
 }
 
+/// Accumulated phase shared by the Flywheel tool visuals.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Spin {
+    previous: f64,
+    rotation: f64,
+}
+
+impl Spin {
+    pub fn advance(&mut self, degrees: f32) {
+        self.previous = self.rotation;
+        self.rotation = (self.rotation + f64::from(degrees)) % 360.0;
+    }
+
+    pub fn angle(self, partial: f32) -> f32 {
+        let difference = (((self.rotation - self.previous) % 360.0 + 540.0) % 360.0 - 180.0) as f32;
+        (self.previous + f64::from(difference) * f64::from(partial)) as f32
+    }
+}
+
+/// MovementContext.getAnimationSpeed on a client.
+pub fn animation_speed(distance: f64, stalled: bool) -> f32 {
+    if stalled {
+        700.0
+    } else if distance < 1.0 / 512.0 {
+        0.0
+    } else {
+        ((-distance * 1000.0 - 100.0) as i32 / 100 * 100) as f32
+    }
+}
+
 /// `BlockBreakingMovementBehaviour.throwEntity` adds a capped world-space
 /// impulse. The entity's pre-existing velocity does not count toward the cap.
 pub fn throw_boost(mut motion: [f64; 3]) -> [f64; 3] {

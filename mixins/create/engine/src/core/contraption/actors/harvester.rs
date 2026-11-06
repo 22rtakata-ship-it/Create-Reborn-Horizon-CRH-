@@ -4,29 +4,29 @@
 
 //! Crop and cut decisions from Java `HarvesterMovementBehaviour`.
 
+use super::Spin;
+
 /// The Flywheel HarvesterActorVisual accumulates rotation from distance.
 /// A stall or backwards movement leaves the blade at its current phase.
 #[derive(Clone, Copy, Debug, Default)]
-pub struct Blade {
-    previous: f64,
-    rotation: f64,
-}
+pub struct Blade(Spin);
 
 impl Blade {
     pub fn tick(&mut self, distance: f64, active: bool) {
-        self.previous = self.rotation;
-        if active {
+        let degrees = if active {
             let radians = distance * 16.0 / 6.5;
             let degrees = (radians * 180.0 / std::f64::consts::PI) as f32;
             // The division in HarvesterActorVisual is between two Java ints.
             let degrees = (degrees * 3000.0) as i32 / 3000;
-            self.rotation = (self.rotation + f64::from(degrees) * 1.25) % 360.0;
-        }
+            degrees as f32 * 1.25
+        } else {
+            0.0
+        };
+        self.0.advance(degrees);
     }
 
     pub fn angle(self, partial: f32) -> f32 {
-        let difference = (((self.rotation - self.previous) % 360.0 + 540.0) % 360.0 - 180.0) as f32;
-        (self.previous + f64::from(difference) * f64::from(partial)) as f32
+        self.0.angle(partial)
     }
 }
 

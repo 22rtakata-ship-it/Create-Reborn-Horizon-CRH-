@@ -5,7 +5,10 @@ use super::{
     Game, GameLevel, create_port_contraption as contraption,
     create_port_contraption_storage as storage, native_block_entity_draw::BlockEntityDraw,
 };
-use crate::containers::{BlockEntity, ModBlockEntity};
+use crate::{
+    containers::{BlockEntity, ModBlockEntity},
+    items::ItemStack,
+};
 use create_engine::{
     contraption::portable_storage::{
         Actor, DEFAULT_TIMEOUT, Endpoint, PowerUpdate, Probe, Station, TickUpdate,
@@ -457,35 +460,67 @@ pub(super) fn draw_moving(
     draw_parts(game, draw, facing, extension, paired.is_some());
 }
 
-fn withdraw(
-    game: &mut Game<'_>,
-    pos: Pos,
-    take: impl FnOnce(&mut Game<'_>, storage::Mount) -> Option<crate::items::ItemStack>,
-) -> Option<crate::items::ItemStack> {
+fn connected_mount(game: &mut Game<'_>, pos: Pos) -> Option<(Runtime, Station, storage::Mount)> {
     let key = contraption::column(pos);
     if !game.native_on("create") || game.native_block(pos) != BLOCK || powered(game, pos) {
         return None;
     }
-    let mut runtime = load(game, key)?;
-    let mut station =
-        station_at(game, &runtime, pos).filter(|s| s.can_transfer(DEFAULT_TIMEOUT))?;
+    let runtime = load(game, key)?;
+    let station = station_at(game, &runtime, pos).filter(|s| s.can_transfer(DEFAULT_TIMEOUT))?;
     let owner = station.owner().filter(|owner| {
         contraption::column(*owner) == key && game.native_block(*owner) == contraption::BLOCK
     })?;
     let records = contraption::entries(game, key).ok()?;
     let record = records.iter().find(|record| record.controller == owner)?;
-    let item = take(game, storage::mounted_chest(record)?)?;
-    station.transferred(DEFAULT_TIMEOUT, item.count, false);
-    remember(&mut runtime, pos, station);
-    save(game, key, runtime);
-    publish(game, pos, station, true, false);
+    Some((runtime, station, storage::mounted_chest(record)?))
+}
+
+fn finish_transfer(
+    game: &mut Game<'_>,
+    pos: Pos,
+    mut runtime: Runtime,
+    mut station: Station,
+    count: u32,
+) {
+    if station.transferred(DEFAULT_TIMEOUT, count, false) {
+        remember(&mut runtime, pos, station);
+        save(game, contraption::column(pos), runtime);
+        publish(game, pos, station, true, false);
+    }
+}
+
+fn withdraw(
+    game: &mut Game<'_>,
+    pos: Pos,
+    take: impl FnOnce(&mut Game<'_>, storage::Mount) -> Option<ItemStack>,
+) -> Option<ItemStack> {
+    let (runtime, station, mount) = connected_mount(game, pos)?;
+    let item = take(game, mount)?;
+    finish_transfer(game, pos, runtime, station, item.count);
     Some(item)
+}
+
+pub(super) fn push_chute(
+    game: &mut Game<'_>,
+    station_pos: Pos,
+    source: Pos,
+    stack: &ItemStack,
+    simulate: bool,
+) -> u32 {
+    let Some((runtime, station, mount)) = connected_mount(game, station_pos) else {
+        return 0;
+    };
+    let inserted = storage::insert_from_chute(game, mount, source, stack, simulate);
+    if !simulate && inserted != 0 {
+        finish_transfer(game, station_pos, runtime, station, inserted);
+    }
+    inserted
 }
 
 pub(super) fn pull_chute(
     game: &mut Game<'_>,
     station: Pos,
-    receive: impl FnOnce(&mut Game<'_>, &crate::items::ItemStack) -> bool,
+    receive: impl FnOnce(&mut Game<'_>, &ItemStack) -> bool,
 ) -> bool {
     withdraw(game, station, |game, mount| {
         storage::withdraw_for_chute(game, mount, receive)

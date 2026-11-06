@@ -183,16 +183,25 @@ enum Route {
     Blocked,
     Chute,
     Container,
+    PortableStorage,
     Drop,
 }
 
-fn route(game: &mut Game<'_>, below: Pos, stack: &ItemStack) -> Route {
+fn route(game: &mut Game<'_>, pos: Pos, below: Pos, stack: &ItemStack) -> Route {
     if !super::create_port_contraption::resident(game, below) {
         return Route::Blocked;
     }
     if game.native_block(below) == BLOCK {
         return if dry(game, below) && entity_at(game, below).is_some_and(empty) {
             Route::Chute
+        } else {
+            Route::Blocked
+        };
+    }
+    if game.native_block(below) == super::create_port_portable_storage::BLOCK {
+        let moved = super::create_port_portable_storage::push_chute(game, below, pos, stack, true);
+        return if moved != 0 {
+            Route::PortableStorage
         } else {
             Route::Blocked
         };
@@ -256,7 +265,7 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity) {
     let below = [pos[0], pos[1] - 1, pos[2]];
     let mut output = Route::Blocked;
     match chute::step(offset, || {
-        output = route(game, below, stack);
+        output = route(game, pos, below, stack);
         !matches!(output, Route::Blocked)
     }) {
         Step::Position(next) => {
@@ -272,11 +281,16 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity) {
             let stack = stack.clone();
             match output {
                 Route::Chute if enter(game, below, stack.clone()) => set_item(entity, None, ENTRY),
-                Route::Container => {
+                Route::Container | Route::PortableStorage => {
                     let mut rest = stack;
-                    let moved = game
-                        .chute_insert((below[0], below[1], below[2]), &rest, false)
-                        .unwrap_or(0);
+                    let moved = if matches!(output, Route::PortableStorage) {
+                        super::create_port_portable_storage::push_chute(
+                            game, below, pos, &rest, false,
+                        )
+                    } else {
+                        game.chute_insert((below[0], below[1], below[2]), &rest, false)
+                            .unwrap_or(0)
+                    };
                     rest.count -= moved;
                     let previous = previous(game, pos, offset);
                     set_item(entity, (rest.count != 0).then_some(rest), previous);

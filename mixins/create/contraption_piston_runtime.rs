@@ -165,6 +165,7 @@ fn capture(game: &mut Game<'_>, pos: Pos, facing: Direction, rpm: f32) -> Option
         angle: 0.0,
         previous_angle: 0.0,
         rpm,
+        stalled: false,
         return_home: false,
         clock_hand: None,
         stroke: Some(Stroke {
@@ -616,6 +617,7 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity, r
         ..stroke
     });
     record.rpm = rpm;
+    record.stalled = stalled;
     let current = record.clone();
     if set_records(game, key, records).is_ok() {
         write(entity, true, actuator.offset());

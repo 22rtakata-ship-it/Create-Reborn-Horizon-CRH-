@@ -37,10 +37,16 @@ its ordinary transit. Both routes carry the original item components. A
 rejected transfer leaves the stack in the mounted chest and the timeout
 continues counting down.
 
+A dry Chute above the same stationary interface feeds the moving chest.
+It first simulates insertion at the midpoint, then commits at the exit.
+Existing matching stacks fill before empty slots. The unaccepted remainder
+stays in the Chute. A successful insertion refreshes the link. A full chest
+or interrupted link leaves the source stack intact and does not refresh it.
+
 The supplied fallback models use vanilla textures. The optional local JAR
 provides the original casing, stem and head. The adapter renders the paired
 parts at the current connection distance. The moving arm's Java chaser
-interpolation, generic item capabilities, insertion, and fluid interfaces
+interpolation, generic item capabilities, and fluid interfaces
 remain separate steps. Craft the interface from a Chute and an Andesite
 Casing. [Chute](chute.md)
 
@@ -48,3 +54,5 @@ Casing. [Chute](chute.md)
 and compares bearing, interface, hopper, chest and comparator observations
 against the Java trace. Separate cases exercise an incompatible nearly full
 hopper and a process restart during transfer.
+`tools/portable_chute_input_checks.py` checks full, partial, tagged and
+power-interrupted insertion in both clients, including a native restart.

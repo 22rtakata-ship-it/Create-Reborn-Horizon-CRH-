@@ -15,7 +15,7 @@ pub type Pos = [i32; 3];
 pub const MAX_BLOCKS: usize = 64;
 pub const MAX_RECORDS: usize = 4;
 pub const KEY: &str = "moving_structures";
-pub const HARVESTER_KEY: &str = "harvester_visuals";
+pub const ACTOR_VISUAL_KEY: &str = "actor_visuals";
 
 #[derive(Clone, Debug)]
 pub struct Record {
@@ -25,6 +25,7 @@ pub struct Record {
     pub angle: f32,
     pub previous_angle: f32,
     pub rpm: f32,
+    pub stalled: bool,
     pub return_home: bool,
     pub stroke: Option<Stroke>,
     pub clock_hand: Option<ClockHand>,
@@ -135,6 +136,9 @@ fn encode(records: &Vec<Record>) -> Result<Compound, AttachmentError> {
                 ("ReturnHome".into(), Tag::Byte(i8::from(record.return_home))),
                 ("Blocks".into(), Tag::List(blocks)),
             ]);
+            if record.stalled {
+                entry.insert("Stalled".into(), Tag::Byte(1));
+            }
             if let Some(stroke) = record.stroke {
                 entry.insert(
                     "Stroke".into(),
@@ -319,6 +323,7 @@ fn decode(encoded: &Compound) -> Result<Vec<Record>, AttachmentError> {
                 angle,
                 previous_angle,
                 rpm: float(entry, "Speed")?,
+                stalled: matches!(entry.get("Stalled"), Some(Tag::Byte(1))),
                 return_home,
                 stroke,
                 clock_hand,
@@ -557,6 +562,7 @@ mod collision_tests {
             angle,
             previous_angle: angle,
             rpm: 32.0,
+            stalled: false,
             return_home: true,
             stroke: None,
             clock_hand: Some(clock_hand),
@@ -641,6 +647,7 @@ mod collision_tests {
             angle: 0.0,
             previous_angle: 0.0,
             rpm: 8.0,
+            stalled: false,
             return_home: false,
             clock_hand: None,
             stroke: Some(Stroke {
@@ -668,6 +675,7 @@ mod collision_tests {
             angle: 0.0,
             previous_angle: 0.0,
             rpm: 16.0,
+            stalled: false,
             return_home: false,
             clock_hand: None,
             blocks: Vec::new(),

@@ -268,6 +268,7 @@ fn capture(
         angle: 0.0,
         previous_angle: 0.0,
         rpm: shaft.rpm,
+        stalled: false,
         return_home: false,
         clock_hand: None,
         stroke: Some(Stroke {
@@ -397,9 +398,10 @@ fn tick_record(game: &mut Game<'_>, owner: Pos, age: u32) {
         return;
     };
     let axis = record.axis;
+    let stalled = actors::stalled(game, owner);
     let action = motion.tick(
         age,
-        actors::stalled(game, owner),
+        stalled,
         |p| shaft(game, p).filter(|shaft| shaft.facing.axis().index() == axis),
         |from, movement| {
             let to: [f64; 3] = std::array::from_fn(|i| from[i] + movement[i]);
@@ -427,6 +429,7 @@ fn tick_record(game: &mut Game<'_>, owner: Pos, age: u32) {
             let previous = record.clone();
             let record = &mut records[index];
             record.rpm = -motion.axis_motion() * 512.0;
+            record.stalled = stalled;
             record.stroke = Some(Stroke {
                 offset: (motion.anchor()[axis] - f64::from(record.anchor[axis])) as f32,
                 previous: stroke.offset,

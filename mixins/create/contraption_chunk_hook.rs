@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 fn create_contraption_chunk(world: &crate::world::World, chunk: &mut crate::chunk::Chunk) {
-    use crate::create_contraption_scene::{HARVESTER_KEY, KEY, RECORDS};
+    use crate::create_contraption_scene::{ACTOR_VISUAL_KEY, KEY, RECORDS};
     use horizon_world::attachments::create_contraption_attachment::copy_entry;
 
     let Some(saved) = world
@@ -23,6 +23,6 @@ fn create_contraption_chunk(world: &crate::world::World, chunk: &mut crate::chun
         &saved.attachments,
         &mut incoming.attachments,
         "create",
-        HARVESTER_KEY,
+        ACTOR_VISUAL_KEY,
     );
 }

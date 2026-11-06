@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # Copyright (c) 2026 create-horizon contributors
 # SPDX-License-Identifier: MIT
-"""Compare the moving Harvester blade with Flywheel's actor in the pinned JAR."""
+"""Compare moving tool phases with Flywheel actors in the pinned JAR."""
+import argparse
 import itertools
 import json
 import os
@@ -15,13 +16,15 @@ from reference_java import CREATE_SHA256, digest
 
 PROBE = r'''
 use create_horizon_core::{
-    contraption::actors::{harvester::Blade, points_backwards},
+    contraption::actors::{Spin, animation_speed, harvester::Blade, points_backwards},
     placement::Direction,
 };
 use std::io::{self, BufRead};
 
 fn main() {
+    let drill = std::env::args().nth(1).as_deref() == Some("drill");
     let mut blade = Blade::default();
+    let mut head = Spin::default();
     for line in io::stdin().lock().lines() {
         let line = line.unwrap();
         let mut words = line.split_whitespace();
@@ -31,15 +34,25 @@ fn main() {
             std::array::from_fn(|_| words.next().unwrap().parse().unwrap());
         let stalled = words.next() == Some("1");
         let disabled = words.next() == Some("1");
-        blade.tick((x*x + y*y + z*z).sqrt(), !stalled && !disabled
-            && !points_backwards([a,b,c], facing));
-        println!("{}", blade.angle(0.5));
+        let distance = (x * x + y * y + z * z).sqrt();
+        let active = !disabled && !points_backwards([a, b, c], facing);
+        if drill {
+            head.advance(if active { animation_speed(distance, stalled) / 20.0 } else { 0.0 });
+            println!("{}", head.angle(0.5));
+        } else {
+            blade.tick(distance, active && !stalled);
+            println!("{}", blade.angle(0.5));
+        }
     }
 }
 '''
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--drill', action='store_true')
+    args = parser.parse_args()
+    tool = 'drill' if args.drill else 'harvester'
     reference = ROOT / '.local/java-reference'
     manifest = json.loads((reference / 'manifest.json').read_text())
     assert manifest['create'] == PINS['create_version']
@@ -62,15 +75,16 @@ def main():
     rng = random.Random(610)
     cases = []
     for facing, (stall, disabled) in itertools.product(
+            ('north', 'south', 'east', 'west', 'up', 'down') if args.drill else
             ('north', 'south', 'east', 'west'), itertools.product((0, 1), repeat=2)):
         for i in range(100):
             motion = [rng.uniform(-2, 2) for _ in range(3)] if i else [0.0, 0.0, 0.0]
             relative = [rng.uniform(-1, 1) for _ in range(3)]
             cases.append(' '.join(map(str, (facing, *motion, *relative, stall, disabled))))
     stream = '\n'.join(cases) + '\n'
-    java = subprocess.check_output([jdk / 'java', '-cp', cp, 'HarvesterBladeOracle'],
+    java = subprocess.check_output([jdk / 'java', '-cp', cp, 'HarvesterBladeOracle', tool],
                                    text=True, input=stream, cwd=out)
-    rust = subprocess.check_output([out / 'probe'], text=True, input=stream)
+    rust = subprocess.check_output([out / 'probe', tool], text=True, input=stream)
     (out / 'inputs.txt').write_text(stream)
     (out / 'java.txt').write_text(java)
     (out / 'rust.txt').write_text(rust)
@@ -79,7 +93,9 @@ def main():
     assert len(expected) == len(actual) == len(cases), out
     for case, want, got in zip(cases, expected, actual):
         assert abs(want-got) < 1e-5, (case, want, got, out)
-    print(json.dumps(dict(passed=True, observations=len(cases), directory=str(out))))
+    result = dict(passed=True, tool=tool, observations=len(cases), directory=str(out))
+    (out / 'result.json').write_text(json.dumps(result, indent=2) + '\n')
+    print(json.dumps(result))
 
 
 if __name__ == '__main__':

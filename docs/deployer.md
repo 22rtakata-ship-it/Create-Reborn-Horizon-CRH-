@@ -100,6 +100,20 @@ open. `tools/deployer_stationary_reference_checks.py` records the Java state
 sequence and `tools/deployer_stationary_native_checks.py` compares the native
 sequence and cold reload of a paused stroke.
 
+### Bone meal
+
+A stationary downward Deployer in Use mode can hold plain bone meal and
+fertilize an oak sapling, wheat, carrots, potatoes or beetroots two blocks
+below it. Each successful vanilla use spends one item and emits the normal
+growth effect. A valid sapling can consume bone meal without growing. The
+Deployer can itself obstruct the trunk above an oak sapling, so allow the
+tree a clear growth path before using this arrangement for a farm.
+
+Invalid targets and mature crops still take a normal hand stroke and keep
+the stock. The existing redstone lock controls the start of each stroke.
+`tools/deployer_bone_meal_checks.py` compares the held count, target state
+and stroke timer against Create 6.0.10.
+
 ## Survival crafting
 
 Craft Rose Quartz from a Nether quartz and eight redstone dust. Craft either
