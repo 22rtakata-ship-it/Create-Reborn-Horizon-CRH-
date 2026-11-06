@@ -33,6 +33,13 @@ UPWARD_SAW = (920, 82, 136)
 LINEAR_CHASSIS = (904, 82, 152)
 RADIAL_CHASSIS = (920, 82, 152)
 ROTARY_CONTACT = (904, 81, 166)
+PORTABLE = (920, 82, 166)
+PORTABLE_LEVER = (919, 81, 166)
+PORTABLE_DOCK = (920, 83, 162)
+PORTABLE_OUTPUT = (920, 81, 162)
+STATIONARY_DEPLOYER = (908, 84, 172)
+DEPLOYER_LOCK = (908, 84, 173)
+DEPLOYER_TARGET = (908, 82, 172)
 CRAFTING_TABLE = (924, 81, 125)
 SAW_TREE = ((920, 83, 87), (920, 84, 87), (920, 85, 87))
 
@@ -256,3 +263,42 @@ def rotary_contact_station(batch):
     batch.put((x + 1, y + 1, z), 'minecraft:stone')
     batch.command(f'fill {x} {y} {z - 2} {x + 3} {y + 2} {z - 2} minecraft:stone_bricks')
     sign(batch, (906, 81, 169), ['ROTOR CONTACT', 'Walk between', 'rotor and wall.', 'Try in Survival.'])
+
+
+def portable_storage_station(batch):
+    batch.load(PORTABLE)
+    batch.command('fill 914 81 159 925 90 174 minecraft:air')
+    batch.command('fill 914 80 159 925 80 174 minecraft:smooth_stone')
+    x, y, z = PORTABLE
+    block = 'create:portable_storage_interface'
+    batch.put(PORTABLE, 'create:mechanical_bearing[facing=up]')
+    batch.put((x, y - 1, z), 'create:clutch[axis=y]')
+    batch.put(PORTABLE_LEVER, 'minecraft:lever[face=wall,facing=west,powered=true]')
+    batch.put((x, y - 2, z), 'create:creative_motor[facing=up]{ScrollValue:32}')
+    for dx in (0, 1):
+        batch.put((x + dx, y + 1, z), 'minecraft:slime_block')
+    batch.put((x + 2, y + 1, z), f'{block}[facing=east]')
+    batch.put((x - 1, y + 1, z), 'minecraft:chest[facing=north]{Items:['
+              '{Slot:5b,id:"minecraft:wheat",count:3},'
+              '{Slot:26b,id:"minecraft:stick",count:2}]}')
+    batch.put(PORTABLE_DOCK, f'{block}[facing=south]')
+    batch.put((x, y, z - 4), 'minecraft:hopper[facing=down]')
+    batch.put(PORTABLE_OUTPUT, 'minecraft:chest[facing=north]')
+    for dz in (5, 6):
+        batch.put((x, y, z - dz), 'minecraft:stone')
+    batch.put((x, y + 1, z - 5), 'minecraft:comparator[facing=south]')
+    batch.put((x, y + 1, z - 6), 'minecraft:redstone_wire')
+    sign(batch, (917, 81, 169), ['ITEM INTERFACE', 'Release clutch.', 'Watch it dock.', 'Check floor chest.'])
+
+
+def stationary_deployer_station(batch):
+    batch.load(STATIONARY_DEPLOYER)
+    batch.command('fill 905 80 170 912 80 174 minecraft:smooth_stone')
+    batch.command('fill 906 81 170 910 89 174 minecraft:air')
+    x, y, z = STATIONARY_DEPLOYER
+    batch.put((x, y - 3, z), 'minecraft:dirt')
+    batch.put(STATIONARY_DEPLOYER, 'create:deployer[facing=down,axis_along_first=true]'
+              '{Mode:"USE",Inventory:[{Slot:0b,id:"minecraft:oak_sapling",count:4}]}')
+    batch.put((x - 1, y, z), 'create:creative_motor[facing=east]{ScrollValue:32}')
+    batch.put(DEPLOYER_LOCK, 'minecraft:lever[face=wall,facing=south,powered=true]')
+    sign(batch, (910, 81, 173), ['DEPLOYER', 'Release the lever.', 'It plants one oak.', 'Clear to repeat.'])

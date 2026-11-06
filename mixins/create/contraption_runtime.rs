@@ -5,6 +5,7 @@ use super::create_port_chassis as chassis;
 use super::create_port_contraption_actors as actors;
 use super::create_port_contraption_storage as storage;
 use super::create_port_deployer as deployer;
+use super::create_port_portable_storage as psi;
 use super::{
     Game, create_port_clockwork as clockwork, create_port_pulley as pulley,
     native_block_entity_draw::BlockEntityDraw, native_world_draw::NativeWorldDraw,
@@ -478,7 +479,9 @@ impl CaptureView for MountedCapture<'_, '_> {
         let game = self.base.0;
         let block = game.pack.assets.registry.state(state(game, p))?;
         if (self.allow_inventory
-            && (storage::can_capture(game, p, block) || deployer::can_capture(game, p, block)))
+            && (storage::can_capture(game, p, block)
+                || deployer::can_capture(game, p, block)
+                || psi::can_capture(game, p, block)))
             || (self.allow_chassis && chassis::can_capture(game, p, block))
         {
             return Some(block.clone());
@@ -532,7 +535,14 @@ fn assemble(
         };
         Assembly::capture(&capture, anchor, Some(controller), None, MAX_BLOCKS).ok()?
     };
-    if shape.blocks().is_empty() {
+    if shape.blocks().is_empty()
+        || shape
+            .blocks()
+            .iter()
+            .filter(|(_, block)| block.name == psi::BLOCK)
+            .count()
+            > 1
+    {
         return None;
     }
     let generated = if windmill {
@@ -610,7 +620,11 @@ fn rotate_state(state: &BlockState, turn: QuarterTurn) -> Option<BlockState> {
     if chassis::is_chassis(&state.name) {
         return chassis::rotate_state(state, turn);
     }
-    if !supported(state) && !storage::chest_state(state) && !deployer::block_state(state) {
+    if !supported(state)
+        && !storage::chest_state(state)
+        && !deployer::block_state(state)
+        && !psi::block_state(state)
+    {
         return None;
     }
     let mut rotated = state.clone();
@@ -678,7 +692,8 @@ fn land(game: &mut Game<'_>, controller: Pos, angle: f32) -> bool {
         return false;
     };
     let turn = rotation.snapped();
-    let Ok(glue) = super::create_port_glue_transfer::landing(game, key, &record, record.anchor, turn)
+    let Ok(glue) =
+        super::create_port_glue_transfer::landing(game, key, &record, record.anchor, turn)
     else {
         return false;
     };
@@ -690,6 +705,7 @@ fn land(game: &mut Game<'_>, controller: Pos, angle: f32) -> bool {
         return false;
     }
     actors::remove(game, controller);
+    psi::remove(game, controller);
     movement_sound(game, controller, false);
     true
 }
@@ -747,6 +763,9 @@ pub(super) fn tick(
         2 => Mode::NeverPlace,
         _ => Mode::Place,
     };
+    if let Some(record) = current {
+        stalled |= psi::advance(game, record);
+    }
     let action = controller.tick(raw_rpm, rpm, mode, stalled, || {
         assemble(game, pos, facing, false, false).is_some()
     });
@@ -874,6 +893,10 @@ fn draw_actor(
 ) {
     if state.name == deployer::BLOCK {
         deployer::draw_moving(game, draw, record, local, state);
+        return;
+    }
+    if state.name == psi::BLOCK {
+        psi::draw_moving(game, draw, record, local, state);
         return;
     }
     let tool = match state.name.as_str() {

@@ -10,6 +10,7 @@ from gantry_content import gantry
 from sail_content import COLORED_SAILS, sails
 from chassis_content import chassis
 from deployer_content import deployer
+from portable_storage_content import PSI, portable_storage
 
 CONTENT = ROOT / "content"
 BLOCKS = ["creative_motor", "shaft", "cogwheel", "large_cogwheel", "mechanical_press", "depot"]
@@ -661,6 +662,7 @@ def foundation():
     gantry(write, model)
     sails(write, model)
     chassis(write)
+    portable_storage(write, model, axial_boxes)
     deployer(write, model)
     contraption_actors()
     basin_mixer()
@@ -717,6 +719,7 @@ def foundation():
     extra_blocks.update({name: name.replace('_', ' ').title() for name in COLORED_SAILS})
     extra_blocks.update({'sail_frame': 'Windmill Sail Frame', 'white_sail': 'Windmill Sail'})
     extra_blocks['deployer'] = 'Deployer'
+    extra_blocks[PSI] = 'Portable Storage Interface'
     extra_blocks.update({'linear_chassis': 'Linear Chassis',
                          'secondary_linear_chassis': 'Secondary Linear Chassis',
                          'radial_chassis': 'Radial Chassis'})
@@ -773,6 +776,7 @@ def foundation():
             lang.update({'block.create.sail_frame': 'Рама паруса ветряной мельницы',
                          'block.create.white_sail': 'Парус ветряной мельницы'})
             lang['block.create.deployer'] = 'Автономный активатор'
+            lang['block.create.' + PSI] = 'Портативный интерфейс хранения'
             lang.update({"block.create.mechanical_piston": "Механический поршень",
                          "block.create.sticky_mechanical_piston": "Липкий механический поршень",
                          "block.create.mechanical_piston_head": "Головка механического поршня",
@@ -805,7 +809,7 @@ def main():
     CONTENT.mkdir(exist_ok=True)
     (CONTENT / "horizon-mod.toml").write_text('''id = "create"
 name = "Create for Horizon"
-version = "0.8.0-alpha.6"
+version = "0.8.0-alpha.7"
 description = "Build rotating machines and small factories in Horizon. The original Create JAR is optional and supplies its models and textures."
 authors = ["create-horizon contributors"]
 api = "0.2"

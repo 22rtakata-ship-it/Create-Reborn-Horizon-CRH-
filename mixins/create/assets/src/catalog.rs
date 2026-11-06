@@ -48,6 +48,7 @@ pub const BLOCKS: &[&str] = &[
     "linear_chassis",
     "secondary_linear_chassis",
     "radial_chassis",
+    "portable_storage_interface",
 ];
 pub const EXTRA_BLOCKSTATES: &[&str] = &[
     "lit_blaze_burner",
@@ -159,6 +160,9 @@ pub const PARTS: &[&str] = &[
     "deployer/pole",
     "deployer/hand_pointing",
     "deployer/hand_holding",
+    "portable_storage_interface/block_middle",
+    "portable_storage_interface/block_middle_powered",
+    "portable_storage_interface/block_top",
     "blaze_burner/block",
     "blaze_burner/blaze/inert",
     "blaze_burner/blaze/idle",

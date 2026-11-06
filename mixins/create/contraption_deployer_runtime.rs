@@ -2,11 +2,11 @@
 // Copyright (c) 2026 create-horizon contributors
 // SPDX-License-Identifier: MIT
 
-// Bounded Deployer USE adapter for tree saplings on vertical-axis bearings.
+// Bounded sapling use for stationary and mounted Deployers.
 
 use super::{
-    Game, create_port_contraption as contraption, create_port_contraption_storage as storage,
-    native_block_entity_draw::BlockEntityDraw,
+    Game, create_port as kinetics, create_port_contraption as contraption,
+    create_port_contraption_storage as storage, native_block_entity_draw::BlockEntityDraw,
 };
 use crate::{
     containers::{BlockEntity, ModBlockEntity, ModBlockEntityFields},
@@ -14,7 +14,10 @@ use crate::{
 };
 use create_engine::{
     contraption::QuarterTurn,
-    deployer::{Aim, Held, Mode, MovingAction, Target, grabs_from_storage, moving_action},
+    deployer::{
+        Aim, Held, Mode, MovingAction, Phase, Segment, Stationary, Target, TickAction, Waiting,
+        grabs_from_storage, moving_action, should_use, stationary_aim, timer_speed,
+    },
     kinetics::{Axis, Pos},
     placement::Direction,
 };
@@ -35,6 +38,7 @@ use horizon_world::{
 use std::collections::BTreeMap;
 
 pub(super) const BLOCK: &str = "create:deployer";
+const UPDATE_TICK: &str = "create_horizon:DeployerTick";
 const SAPLINGS: &[&str] = &[
     "minecraft:oak_sapling",
     "minecraft:spruce_sapling",
@@ -86,10 +90,16 @@ pub(super) fn default_nbt() -> Compound {
 }
 
 pub(super) fn update_tag(entity: &ModBlockEntity) -> Compound {
-    ["Mode", "HeldItem"]
+    let mut update: Compound = ["Mode", "HeldItem", "State", "Timer", "Speed", "Powered"]
         .into_iter()
         .filter_map(|key| get(&entity.nbt, key).map(|tag| (key.into(), tag.clone())))
-        .collect()
+        .collect();
+    let reach = entity.data.first().copied().unwrap_or(0) as u32;
+    update.insert("Reach".into(), Tag::Float(reach));
+    if let Some(&tick) = entity.data.get(1) {
+        update.insert(UPDATE_TICK.into(), Tag::Int(tick));
+    }
+    update
 }
 
 fn draw_arm(
@@ -97,6 +107,7 @@ fn draw_arm(
     draw: &mut BlockEntityDraw,
     facing: Direction,
     first: bool,
+    shaft_angle: f32,
     extension: f32,
     holding: bool,
 ) {
@@ -124,6 +135,11 @@ fn draw_arm(
         }
     };
     draw.push();
+    draw.rotate_about(
+        create_engine::visual::positive_axis(shaft_axis),
+        shaft_angle,
+        [0.5; 3],
+    );
     match shaft_axis {
         Axis::X => draw.rotate_about([0., 0., 1.], 90., [0.5; 3]),
         Axis::Z => draw.rotate_about([1., 0., 0.], 90., [0.5; 3]),
@@ -163,7 +179,23 @@ pub(super) fn draw_station(
         .as_deref()
         == Some("true");
     let holding = get(&entity.nbt, "HeldItem").is_some_and(|held| held.get("id").is_some());
-    draw_arm(game, draw, facing, first, 0.0, holding);
+    let rpm = kinetics::number(&entity.nbt, "Speed");
+    let arm = station_state(&entity.nbt).map_or(0.0, |mut cycle| {
+        cycle.reach = kinetics::number(&entity.nbt, "Reach");
+        if let Some(Tag::Int(sample)) = get(&entity.nbt, UPDATE_TICK) {
+            let elapsed = (draw.game_time as i32).wrapping_sub(*sample).clamp(0, 128);
+            cycle.timer = (cycle.timer - elapsed * timer_speed(rpm)).max(0);
+        }
+        cycle.hand_extension(rpm, draw.partial, holding)
+    });
+    let shaft_angle = kinetics::node(game, pos).map_or(0.0, |node| {
+        create_engine::visual::angle(
+            draw.game_time as f64 + f64::from(draw.partial),
+            rpm,
+            create_engine::visual::rotation_offset(pos, node.axis, false),
+        )
+    });
+    draw_arm(game, draw, facing, first, shaft_angle, arm, holding);
 }
 
 pub(super) fn draw_moving(
@@ -201,7 +233,7 @@ pub(super) fn draw_moving(
         .properties
         .get("axis_along_first")
         .is_some_and(|value| value == "true");
-    draw_arm(game, draw, facing, first, extension, false);
+    draw_arm(game, draw, facing, first, 0.0, extension, false);
 }
 
 fn get<'a>(nbt: &'a Compound, key: &str) -> Option<&'a Tag> {
@@ -248,13 +280,17 @@ fn valid_nbt(nbt: &Compound) -> bool {
             .all(|(key, val)| match key.to_string().as_deref() {
                 Ok("Mode" | "Inventory" | "HeldItem") => true,
                 Ok("State") => *val == Tag::String("WAITING".into()),
-                Ok("Timer") => *val == Tag::Int(0),
+                Ok("Timer") => matches!(val, Tag::Int(-511..=5120)),
                 Ok("Powered") => *val == Tag::Byte(0),
                 Ok("Owner") => matches!(val, Tag::IntArray(uuid) if uuid.len() == 4),
                 Ok("Overflow") => matches!(val, Tag::List(items) if items.is_empty()),
                 Ok("Filter") => true,
                 Ok("FilterAmount") => matches!(val, Tag::Int(0..=64)),
                 Ok("UpTo") => matches!(val, Tag::Byte(0 | 1)),
+                Ok("Speed") => *val == Tag::Float(0),
+                Ok("Stress" | "Capacity") => matches!(val, Tag::Float(_)),
+                Ok("NetworkStatus") => matches!(val, Tag::String(_)),
+                Ok("create_horizon") => detached_ports(val),
                 _ => false,
             })
         && read_filter(nbt).is_some_and(|filter| {
@@ -264,6 +300,17 @@ fn valid_nbt(nbt: &Compound) -> bool {
                     .is_none_or(|filter| hand.as_ref().is_none_or(|held| held.item == filter.item))
             })
         })
+}
+
+fn detached_ports(tag: &Tag) -> bool {
+    let Tag::Compound(data) = tag else {
+        return false;
+    };
+    data.len() == 2
+        && get(data, "TheoreticalSpeed") == Some(&Tag::Float(0))
+        && matches!(get(data, "Ports"), Some(Tag::Compound(ports)) if ports.len() == 6
+            && Direction::ALL.into_iter().all(|face| get(ports, face.name()) == Some(&Tag::Float(0)))
+        )
 }
 
 fn read_filter(nbt: &Compound) -> Option<Option<ItemStack>> {
@@ -286,21 +333,139 @@ fn write_hand(nbt: &mut Compound, hand: Option<ItemStack>) {
     nbt.insert("Inventory".into(), encode_items(&[hand]));
 }
 
+fn consistent_hand(entity: &ModBlockEntity) -> Option<Option<ItemStack>> {
+    let hand = read_hand(&entity.nbt)?;
+    // Java-shaped commands may initialize only Inventory. The native slot
+    // tracks hand swaps and is spillable when an ordinary block breaks.
+    (entity.items.len() <= 1
+        && entity
+            .items
+            .first()
+            .is_none_or(|item| item.is_none() || *item == hand))
+    .then_some(hand)
+}
+
 fn entity<'a>(game: &'a Game<'_>, pos: Pos) -> Option<&'a ModBlockEntity> {
     let Some(BlockEntity::Mod(entity)) = game.world.block_entities.get(&(pos[0], pos[1], pos[2]))
     else {
         return None;
     };
-    if entity.id != BLOCK || !valid_nbt(&entity.nbt) || entity.items.len() > 1 {
+    (entity.id == BLOCK && consistent_hand(entity).is_some()).then_some(entity)
+}
+
+fn station_state(nbt: &Compound) -> Option<Stationary> {
+    if get(nbt, "Mode") != Some(&Tag::String("USE".into())) {
         return None;
     }
-    // Java-shaped commands may initialize only Inventory. Native hand swaps
-    // and restoration also fill the host's one private, spillable slot.
-    (entity
-        .items
-        .first()
-        .is_none_or(|item| item.is_none() || read_hand(&entity.nbt).as_ref() == Some(item)))
-    .then_some(entity)
+    let phase = match get(nbt, "State") {
+        None => Phase::Waiting,
+        Some(Tag::String(phase)) => match phase.to_string().ok()?.as_str() {
+            "WAITING" => Phase::Waiting,
+            "EXPANDING" => Phase::Expanding,
+            "RETRACTING" => Phase::Retracting,
+            _ => return None,
+        },
+        _ => return None,
+    };
+    let timer = match get(nbt, "Timer") {
+        None => 0,
+        Some(Tag::Int(timer)) if (-511..=5120).contains(timer) => *timer,
+        _ => return None,
+    };
+    Some(Stationary {
+        phase,
+        timer,
+        ..Stationary::default()
+    })
+}
+
+pub(super) fn tick_station(
+    game: &mut Game<'_>,
+    pos: Pos,
+    entity: &mut ModBlockEntity,
+    rpm: f32,
+) -> bool {
+    if contraption::facing(game, pos) != Some(Direction::Down)
+        || !matches!(get(&entity.nbt, "Powered"), None | Some(Tag::Byte(0 | 1)))
+        || !get(&entity.nbt, "Overflow")
+            .is_none_or(|v| matches!(v, Tag::List(items) if items.is_empty()))
+    {
+        return false;
+    }
+    let (Some(aim), Some(mut cycle), Some(hand), Some(filter)) = (
+        stationary_aim(pos, Direction::Down),
+        station_state(&entity.nbt),
+        consistent_hand(entity),
+        read_filter(&entity.nbt),
+    ) else {
+        return false;
+    };
+    if filter.is_some_and(|filter| hand.as_ref().is_some_and(|held| held.item != filter.item)) {
+        return false;
+    }
+    let target = aim.clicked;
+    let dim = game.dim.id().to_owned();
+    let powered = i8::from(game.native_neighbor_signal(&dim, pos) != 0);
+    let mut changed = get(&entity.nbt, "Powered") != Some(&Tag::Byte(powered));
+    if changed {
+        entity.nbt.insert("Powered".into(), Tag::Byte(powered));
+    }
+    if let Some(stack) = &hand
+        && entity.items.first().is_none_or(Option::is_none)
+    {
+        entity.items = vec![Some(stack.clone())];
+        write_hand(&mut entity.nbt, hand.clone());
+        changed = true;
+    }
+    cycle.reach = f32::from_bits(entity.data.first().copied().unwrap_or(0) as u32);
+    let previous = cycle;
+    let action = cycle.tick(rpm, |_| {
+        if !contraption::resident(game, target) {
+            return Waiting::Locked;
+        }
+        let block = game.native_block(target);
+        if !should_use(
+            hand.as_ref()
+                .map_or(Held::Empty, |stack| Held::Block(&stack.item)),
+            Target {
+                block: &block,
+                fluid: None,
+                transports_items: matches!(block.as_str(), "create:belt" | "create:depot"),
+            },
+            Some(Direction::Down),
+        ) {
+            return Waiting::Retry;
+        }
+        if powered != 0 {
+            return Waiting::Locked;
+        }
+        let probe = aim.reach_probe();
+        Waiting::Start {
+            reach: aim.reach(clip(game, probe).map_or(probe.end, |hit| hit.point)),
+        }
+    });
+    if cycle != previous || changed || entity.data.len() != 2 {
+        entity.data = vec![cycle.reach.to_bits() as i32, game.world.game_time as i32];
+        if cycle.timer != previous.timer || get(&entity.nbt, "Timer").is_none() {
+            entity.nbt.insert("Timer".into(), Tag::Int(cycle.timer));
+        }
+        if cycle.phase != previous.phase || get(&entity.nbt, "State").is_none() {
+            entity
+                .nbt
+                .insert("State".into(), Tag::String(cycle.phase.saved_name().into()));
+        }
+    }
+    if matches!(action, TickAction::Activate { .. })
+        && let Some(mut stack) = hand
+        && let Some(ctx) = sapling_context(game, aim, &stack, Face::Up)
+        && place_sapling(game, &ctx)
+    {
+        stack.count -= 1;
+        let remaining = (stack.count != 0).then_some(stack);
+        entity.items = vec![remaining.clone()];
+        write_hand(&mut entity.nbt, remaining);
+    }
+    changed || action != TickAction::None
 }
 
 pub(super) fn placed(game: &mut Game<'_>, pos: Pos) {
@@ -341,10 +506,10 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: Pos) -> bool {
     let Some(entity) = entity(game, hit.pos) else {
         return false;
     };
-    let Some(previous) = read_hand(&entity.nbt) else {
+    let (Some(previous), Some(filter)) = (read_hand(&entity.nbt), read_filter(&entity.nbt)) else {
         return false;
     };
-    if let (Some(item), Some(Some(filter))) = (held.as_ref(), read_filter(&entity.nbt))
+    if let (Some(item), Some(filter)) = (held.as_ref(), filter)
         && item.item != filter.item
     {
         return false;
@@ -372,7 +537,7 @@ pub(super) fn can_capture(game: &Game<'_>, pos: Pos, state: &BlockState) -> bool
             .properties
             .get("facing")
             .is_none_or(|face| face != "down")
-        || entity(game, pos).is_none()
+        || !entity(game, pos).is_some_and(|entity| valid_nbt(&entity.nbt))
     {
         return false;
     }
@@ -464,11 +629,20 @@ pub(super) fn capture(
         return Err(AttachmentError::Encode);
     }
     let pos = std::array::from_fn(|i| anchor[i] + local[i]);
-    let entity = entity(game, pos).ok_or(AttachmentError::Encode)?;
-    Ok(Some(Cargo {
-        local,
-        nbt: entity.nbt.clone(),
-    }))
+    let entity = entity(game, pos)
+        .filter(|entity| valid_nbt(&entity.nbt))
+        .ok_or(AttachmentError::Encode)?;
+    let mut nbt = entity.nbt.clone();
+    for key in [
+        "Speed",
+        "Stress",
+        "Capacity",
+        "NetworkStatus",
+        "create_horizon",
+    ] {
+        nbt.remove(&key.into());
+    }
+    Ok(Some(Cargo { local, nbt }))
 }
 
 pub(super) fn commit_capture(
@@ -648,13 +822,7 @@ pub(super) fn plant(game: &mut Game<'_>, record: &Record, local: Pos, aim: Aim) 
         );
     }
     let Some(mut hand) = hand else { return };
-    if key != contraption::column(target)
-        || !contraption::resident(game, target)
-        || !game
-            .border
-            .contains(f64::from(target[0]), f64::from(target[2]))
-        || !game.res.facts().is_air(contraption::state(game, target))
-    {
+    if key != contraption::column(target) {
         return;
     }
     let name = game.native_block(target);
@@ -672,21 +840,57 @@ pub(super) fn plant(game: &mut Game<'_>, record: &Record, local: Pos, aim: Aim) 
         return;
     }
     let ray = aim.action_ray();
-    let segment = DVec3::from_array(ray.end) - DVec3::from_array(ray.start);
-    let vector = segment.normalize();
-    let fallback = if vector.x.abs() > vector.z.abs() {
-        if vector.x > 0.0 {
+    let fallback = if (ray.end[0] - ray.start[0]).abs() > (ray.end[2] - ray.start[2]).abs() {
+        if ray.end[0] > ray.start[0] {
             Face::West
         } else {
             Face::East
         }
-    } else if vector.z > 0.0 {
+    } else if ray.end[2] > ray.start[2] {
         Face::North
     } else {
         Face::South
     };
-    let hit = game.clip_ray(ray.start, vector.to_array(), segment.length());
-    let (face, point) = hit.map_or((fallback, ray.end), |hit| {
+    let Some(ctx) = sapling_context(game, aim, &hand, fallback) else {
+        return;
+    };
+    hand.count -= 1;
+    update_hand(
+        game,
+        key,
+        record.controller,
+        local,
+        (hand.count > 0).then_some(hand),
+        |game| place_sapling(game, &ctx),
+    );
+}
+
+fn clip(game: &Game<'_>, ray: Segment) -> Option<super::Hit> {
+    let segment = DVec3::from_array(ray.end) - DVec3::from_array(ray.start);
+    let length = segment.length();
+    if !length.is_finite() || length == 0.0 {
+        return None;
+    }
+    game.clip_ray(ray.start, (segment / length).to_array(), length)
+}
+
+fn sapling_context(
+    game: &mut Game<'_>,
+    aim: Aim,
+    stack: &ItemStack,
+    fallback: Face,
+) -> Option<PlaceContext> {
+    let target = aim.clicked;
+    if !contraption::resident(game, target)
+        || !game
+            .border
+            .contains(f64::from(target[0]), f64::from(target[2]))
+        || !game.res.facts().is_air(contraption::state(game, target))
+    {
+        return None;
+    }
+    let ray = aim.action_ray();
+    let (face, point) = clip(game, ray).map_or((fallback, ray.end), |hit| {
         (native_face(hit.face).unwrap_or(fallback), hit.point)
     });
     let pos = BlockPos::new(target[0], target[1], target[2]);
@@ -698,28 +902,18 @@ pub(super) fn plant(game: &mut Game<'_>, record: &Record, local: Pos, aim: Aim) 
         yaw: aim.yaw,
         pitch: aim.pitch,
         sneaking: false,
-        item: hand.item.to_string(),
+        item: stack.item.to_string(),
         can_use_game_master_blocks: false,
     };
-    if game
-        .with_level(|b, l, t| b.placement_state(l, t, &ctx))
-        .is_none_or(|(at, _)| at != pos)
-    {
-        return;
-    }
-    hand.count -= 1;
-    update_hand(
-        game,
-        key,
-        record.controller,
-        local,
-        (hand.count > 0).then_some(hand),
-        |game| {
-            let placed = game.with_level(|b, l, t| b.place_block(l, t, &ctx));
-            let _ = game.process_level_events();
-            matches!(placed, PlaceOutcome::Placed { .. })
-        },
-    );
+    game.with_level(|b, l, t| b.placement_state(l, t, &ctx))
+        .is_some_and(|(at, _)| at == pos)
+        .then_some(ctx)
+}
+
+fn place_sapling(game: &mut Game<'_>, context: &PlaceContext) -> bool {
+    let placed = game.with_level(|b, l, t| b.place_block(l, t, context));
+    let _ = game.process_level_events();
+    matches!(placed, PlaceOutcome::Placed { .. })
 }
 
 fn update_hand(

@@ -42,6 +42,7 @@
     "create:mechanical_drill",
     "create:mechanical_saw",
     "create:deployer",
+    "create:portable_storage_interface",
     "create:mechanical_harvester",
     "create:mechanical_plough",
     "create:andesite_casing",

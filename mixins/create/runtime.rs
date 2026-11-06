@@ -119,6 +119,7 @@ pub(super) fn owns(block: &str) -> bool {
             | super::create_port_gantry::SHAFT
             | super::create_port_gantry::CARRIAGE
             | super::create_port_pulley::BLOCK
+            | super::create_port_deployer::BLOCK
             | "create:mechanical_press"
             | "create:depot"
             | "create:gearbox"
@@ -147,6 +148,10 @@ pub(super) fn owns(block: &str) -> bool {
 }
 
 pub(super) fn entity(block: &str, entity: &mut Option<(String, Compound)>) {
+    if block == super::create_port_portable_storage::BLOCK && entity.is_none() {
+        *entity = Some((block.into(), Compound::new()));
+        return;
+    }
     if entity.is_none()
         && let Some(chassis) = super::create_port_chassis::factory(block)
     {
@@ -182,7 +187,9 @@ pub(super) fn entity(block: &str, entity: &mut Option<(String, Compound)>) {
 }
 
 pub(super) fn ticks(block: &str, ticks: &mut bool) {
-    if owns(block) && block != "create:mechanical_harvester" {
+    if (owns(block) && block != "create:mechanical_harvester")
+        || block == super::create_port_portable_storage::BLOCK
+    {
         *ticks = true;
     }
 }
@@ -608,6 +615,7 @@ pub(super) fn node(game: &Game<'_>, pos: [i32; 3]) -> Option<Node> {
     if matches!(block.as_str(), "create:speedometer" | "create:stressometer")
         || super::create_port_piston::is_piston(&block)
         || block == super::create_port_gantry::CARRIAGE
+        || block == super::create_port_deployer::BLOCK
         || (block == super::create_port_drill::SAW && axis == Axis::Y)
     {
         let first = game
@@ -669,7 +677,8 @@ pub(super) fn node(game: &Game<'_>, pos: [i32; 3]) -> Option<Node> {
         }
         super::create_port_piston::NORMAL
         | super::create_port_piston::STICKY
-        | super::create_port_pulley::BLOCK => Kind::LinearActuator,
+        | super::create_port_pulley::BLOCK
+        | super::create_port_deployer::BLOCK => Kind::LinearActuator,
         super::create_port_drill::SAW if direction[1] == 0 => Kind::Consumer {
             facing: direction.map(|v| -v),
             impact: 4.0,
@@ -1008,6 +1017,10 @@ pub(super) fn apply_network(
 
 pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEntity) {
     let block = game.native_block(pos);
+    if block == super::create_port_portable_storage::BLOCK {
+        super::create_port_portable_storage::tick(game, pos, entity);
+        return;
+    }
     if !owns(&block) {
         return;
     }
@@ -1179,6 +1192,8 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
         super::create_port_gantry::tick_carriage(game, pos, entity);
     } else if block == super::create_port_pulley::BLOCK {
         sync |= super::create_port_pulley::tick(game, pos, entity, running_rpm);
+    } else if block == super::create_port_deployer::BLOCK {
+        sync |= super::create_port_deployer::tick_station(game, pos, entity, running_rpm);
     }
     sync |= crate::game::create_port_belt::tick(game, pos, entity, running_rpm);
     if block == "create:millstone" {
@@ -1481,6 +1496,10 @@ pub(super) fn draw(
     entity: &ModBlockEntity,
     draw: &mut BlockEntityDraw,
 ) {
+    if block == super::create_port_portable_storage::BLOCK {
+        super::create_port_portable_storage::draw_station(game, pos, entity, draw);
+        return;
+    }
     if block == super::create_port_deployer::BLOCK {
         super::create_port_deployer::draw_station(game, pos, entity, draw);
         return;

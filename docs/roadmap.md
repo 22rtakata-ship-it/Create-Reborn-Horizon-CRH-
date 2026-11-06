@@ -15,8 +15,8 @@ The 0.7 checkpoints cover Encased Chain Drive, generator timing, fan component
 handling and the built-in resources. [Gameplay report](reviews/0.7-report.md)
 · [Review route](reviews/0.7-test-world.md)
 
-The 0.8.0-alpha.6 checkpoint adds chassis and glue on two linear drivers,
-the Wrench range board and upright rotor side contact.
+The 0.8.0-alpha.7 checkpoint adds chassis and glue on mechanical pistons,
+stationary sapling planting, and item unloading through a portable interface.
 [Contraption review route](reviews/0.8-contraption-world.md)
 
 ## Current priority
@@ -191,6 +191,8 @@ with the systems they depend on.
   landing and saved ranges after an obstructed restart.
 - [x] Chassis on a dry Rope Pulley with the selected range restored after
   restart and landing.
+- [x] Chassis and glue on regular and sticky Mechanical Pistons, including
+  forced linear rows, radial cargo and saved ranges after a cold restart.
 - [x] Wrench range board for the three chassis variants, with single and Ctrl
   group settings and the saved value on reopen.
 - [ ] Chassis attached-block outlines, other drivers and complete block movement rules.
@@ -222,11 +224,14 @@ with the systems they depend on.
   and cross-chunk persistence.
 - [x] Harvester on supported crops, moving Saw and Drill with cutting stalls,
   and horizontal stationary Saw tree felling.
+- [ ] First active-cell timing and cutting order for newly assembled Saw rotors.
 - [x] Moving Plough tilling, snow clearing and protection of farmland crops.
 - [x] Downward Deployer planting from its own stock on a vertical Mechanical
   Bearing, with forty matching Java tick samples and restart coverage.
 - [x] Deployer refill from a single mounted chest and a moving Saw on the same
   farm. First matching slot, blocked planting and restart checked.
+- [x] Stationary downward Deployer planting with plain saplings, redstone
+  lock, speed pause and cold-stroke resume.
 - [x] Super Glue selection and transfer planner. Deployer stroke, target and
   storage rules checked against Java traces.
 - [x] Two-click Super Glue and single-column bearing transfer, with durability
@@ -237,8 +242,10 @@ with the systems they depend on.
 - [x] Upward stationary Saw wood processing through native item collision,
   with saved progress and Java comparisons of the cutting and ejection cycle.
 - [ ] Remaining Saw recipes, automation, filter and cutting particles.
-- [ ] Deployer filter interface, Plough entity throws, portable storage and
-  fluid interfaces.
+- [x] Portable Storage Interface unloading from one moving chest into a
+  vanilla hopper, with redstone, comparator, item components and restart.
+- [ ] Portable Storage Interface input, generic item automation, fluid interfaces,
+  Deployer filter interface and Plough entity throws.
 - [ ] Shared-schematic checks: identical machines produce identical results in both clients.
 
 ## 5. Fluids, railways and other content

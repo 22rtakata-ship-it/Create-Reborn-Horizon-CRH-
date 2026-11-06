@@ -50,6 +50,7 @@
     "create:linear_chassis",
     "create:secondary_linear_chassis",
     "create:radial_chassis",
+    "create:portable_storage_interface",
     "create:iron_sheet",
     "create:golden_sheet",
     "create:copper_sheet",

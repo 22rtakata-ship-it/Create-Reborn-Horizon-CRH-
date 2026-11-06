@@ -15,6 +15,8 @@ pub mod gantry;
 pub mod glue;
 pub mod linear;
 pub mod piston;
+pub mod portable_storage;
+
 pub mod pulley;
 pub mod rotary_contact;
 mod transform;

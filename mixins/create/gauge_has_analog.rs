@@ -7,7 +7,13 @@ fn create_gauge_has_analog(
     output: &mut bool,
 ) {
     crate::game::create_port_basin::has_analog(game, state, output);
-    if game.native_state_block(state) == Some(crate::game::create_port_burner::BLOCK) {
+    if matches!(
+        game.native_state_block(state),
+        Some(
+            crate::game::create_port_burner::BLOCK
+                | crate::game::create_port_portable_storage::BLOCK
+        )
+    ) {
         *output = true;
     }
     if matches!(

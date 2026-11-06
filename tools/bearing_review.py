@@ -82,8 +82,13 @@ def prepare(session, options):
         stations.chassis_stations(batch)
     if options.rotary_contact:
         stations.rotary_contact_station(batch)
+    if options.portable_storage:
+        stations.portable_storage_station(batch)
+    if options.stationary_deployer:
+        stations.stationary_deployer_station(batch)
     if any((options.plough, options.deployer, options.glue, options.upward_saw,
-            options.chassis, options.materials, options.rotary_contact)):
+            options.chassis, options.materials, options.rotary_contact,
+            options.portable_storage, options.stationary_deployer)):
         batch.command('tp @s 909.5 81 61.5')
     batch.tick(30 if options.farms else 12)
     batch.data(BEARING)
@@ -296,6 +301,26 @@ def review(session, options):
             call('look-at', 904.5, 82.5, 166.5)
             call('wait', 12)
             extra.append(str(screenshot('rotary-contact.png')))
+        if options.portable_storage:
+            command('tp @s 925.5 86 166.5')
+            wait_loaded(call, [stations.PORTABLE, stations.PORTABLE_DOCK])
+            assert call('block', *stations.PORTABLE_DOCK)['block'] == 'create:portable_storage_interface'
+            assert call('block', *stations.PORTABLE_OUTPUT)['block'] == 'minecraft:chest'
+            assert 'powered=true' in call('block', *stations.PORTABLE_LEVER)['state']
+            assert 'minecraft:wheat' in snapshot((919, 83, 166))['nbt']
+            call('look-at', 920.5, 83.5, 164.5)
+            call('wait', 12)
+            extra.append(str(screenshot('portable-storage.png')))
+        if options.stationary_deployer:
+            command('tp @s 911.5 85 172.5')
+            wait_loaded(call, [stations.STATIONARY_DEPLOYER])
+            nbt = snapshot(stations.STATIONARY_DEPLOYER)
+            assert number(nbt, 'Speed') == 32 and number(nbt, 'Powered') == 1, nbt
+            assert 'minecraft:oak_sapling' in nbt['nbt']
+            assert call('block', *stations.DEPLOYER_TARGET)['block'] == 'minecraft:air'
+            call('look-at', 908.5, 83.5, 172.5)
+            call('wait', 12)
+            extra.append(str(screenshot('stationary-deployer.png')))
         call('key', 'f1', 'tap')
         command('gamemode creative')
         if options.glue:
@@ -341,6 +366,8 @@ def main():
     parser.add_argument('--chassis', action='store_true')
     parser.add_argument('--materials', action='store_true')
     parser.add_argument('--rotary-contact', action='store_true')
+    parser.add_argument('--portable-storage', action='store_true')
+    parser.add_argument('--stationary-deployer', action='store_true')
     args = parser.parse_args()
     if args.sails and not args.windmill:
         parser.error('--sails requires --windmill')

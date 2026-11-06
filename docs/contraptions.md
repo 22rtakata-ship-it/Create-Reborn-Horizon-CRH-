@@ -19,9 +19,9 @@ same chunk save. It refuses unsupported snapshots and occupied landing cells
 instead of discarding blocks. Capture is limited to an allowlist of stateless
 blocks, idle tools and a single ordinary chest and Deployer on a vertical
 Mechanical Bearing. The three chassis variants can expand capture on a
-vertical Mechanical Bearing, Gantry or Rope Pulley. Other inventories and fluid-containing
-payloads still need adapters. The supported Gantry path has a fixed loaded
-rail span.
+vertical Mechanical Bearing, Gantry, Rope Pulley or Mechanical Piston.
+Other inventories and fluid-containing payloads still need adapters. The
+supported Gantry path has a fixed loaded rail span.
 The Rope Pulley supports dry rope and cargo. The clockwork hands are captured
 and restored together and currently accept vanilla payloads only.
 
@@ -61,8 +61,9 @@ A downward Deployer on a vertical Mechanical Bearing plants ordinary saplings
 from its hand and refills one at a time from a single mounted chest. The plain
 sapling filter can be set in saved data. Stop the bearing to swap the held
 stack by clicking the hand. The owner, filter and remaining stock survive a
-restart. Stationary operation, punching, complex filters and their interface
-remain open.
+restart. A stationary downward Deployer plants saplings in the cell two
+blocks below its body. Punching, general item use, complex
+filters and their interface remain open.
 [Deployer engine and host boundary](deployer.md)
 
 ## Super Glue
@@ -74,8 +75,10 @@ the two durability calls in Create 6.0.10. Creative leaves the item intact.
 
 Volumes currently fit in one loaded chunk column. Mechanical and Windmill
 Bearings transfer them with their payload and restore them at the snapped
-landing pose. Gantry and dry Rope Pulley transfer volumes relative to their
-current cargo origin, including starts away from the zero-stroke position.
+landing pose. Gantry, dry Rope Pulley and Mechanical Pistons transfer volumes
+relative to their current cargo origin, including starts away from zero stroke.
+A piston carries glue on its cargo. A volume that crosses its head or pole
+is refused before assembly.
 A volume that would be split or include a stationary block stops capture.
 The mounted volume shares the chunk save with the structure. The original
 selection outlines, particles, offhand placement and transfer on other drivers
@@ -90,6 +93,10 @@ slot order, matching Java's `ChestMountedStorage` and
 `ItemHandlerHelper.insertItem`. Overflow and loot from neighboring columns
 drop at the tool. The server saves the inventory with the structure's chunk
 and restores it at landing, including after a restart or controller removal.
+
+A Portable Storage Interface can dock that chest with a stationary interface
+and a vanilla hopper below. The tested path unloads items and preserves their
+components. [Portable Storage Interface](portable-storage.md)
 
 Access the inventory when the chest has landed. The moving chest menu,
 multiple or double chests, other drivers, named, locked and loot-table chests
@@ -108,9 +115,9 @@ canvas bounce and fall damping remain open.
 ## Chassis
 
 Linear, Secondary Linear and Radial Chassis expand capture on vertical
-Mechanical Bearings, dry Gantry Carriages and dry Rope Pulleys. Sticky faces and ranges are
-restored after a quarter turn or a carriage translation, including recovery
-after a restart and an obstructed landing.
+Mechanical Bearings, dry Gantry Carriages, dry Rope Pulleys and Mechanical
+Pistons. Sticky faces and ranges are restored after a quarter turn or a linear
+translation, including recovery after a restart and an obstructed landing.
 [Chassis rules and verification](chassis.md)
 
 ## Minecart contraptions
@@ -167,6 +174,9 @@ controller motion. The current implementation is exercised by Rust unit tests.
 - `tools/piston_interaction_checks.py` verifies applying slime, preserving the
   facing and shaft axis, wrenching retracted pistons and breaking a pole in
   both clients.
+- `tools/piston_payload_checks.py` checks chassis and glue on ordinary and
+  sticky strokes, including a saved moving payload and a refused glue volume
+  crossing the piston head.
 - `tools/contraption_contact_oracle.py` runs 945 comparisons against the
   discrete horizontal resolver in the pinned original JAR.
 - `tools/rotary_contact_oracle.py` compares 17,280 upright contact cases with

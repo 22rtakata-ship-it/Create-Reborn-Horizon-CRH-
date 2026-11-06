@@ -108,8 +108,9 @@ def run(session, report):
         command('tp @s 1155.5 98 56.5')
         call('wait', 4)
         call('select', 1)
-        command('item replace entity @s weapon.mainhand with minecraft:bone_meal 32')
+        command('item replace entity @s hotbar.0 with minecraft:bone_meal 32')
         call('wait', 5)
+        assert call('inventory')['hotbar'][0]['item'] == 'minecraft:bone_meal'
         for _ in range(24):
             if block(TREE) == LOG:
                 return

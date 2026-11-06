@@ -6,6 +6,7 @@ import subprocess
 from common import CREATE, PINS, ROOT
 from catalog import BLOCKS, ITEMS, INTERNAL_BLOCKS
 from sail_content import COLORED_SAILS, SAIL_ITEMS
+from portable_storage_content import PSI
 
 
 def loot_for_horizon(value):
@@ -306,6 +307,7 @@ def main():
         'create/loot_table/blocks/mechanical_harvester.json',
         'create/loot_table/blocks/mechanical_saw.json',
         'create/loot_table/blocks/deployer.json',
+        f'create/loot_table/blocks/{PSI}.json',
         *[f'create/loot_table/blocks/{name}.json' for name in SAIL_ITEMS + COLORED_SAILS],
     ]}
     result = {'reference': PINS['create_revision'], 'license': 'MIT recipe/data-map/loot data; original definitions of vanilla convention tags', 'recipes': recipes, 'tags': tags, 'data_maps':maps, 'loot_tables':loot}

@@ -1,6 +1,6 @@
 [mod]
 id = "create"
-version = "0.8.0-alpha.6"
+version = "0.8.0-alpha.7"
 
 [compatibility]
 horizon_revision = "9c7f9b2215dfed497aba5522c44f38926628648d"
@@ -1307,6 +1307,24 @@ id = "contraption-chassis-runtime"
 file = "crates/horizon-client/src/game.rs"
 name = "create_port_chassis"
 source = "contraption_chassis_runtime.rs"
+
+[[module]]
+id = "portable-storage-runtime"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_portable_storage"
+source = "portable_storage_runtime.rs"
+
+# A dynamic item interface is not a fixed block entity slot container.
+[[injection]]
+id = "portable-storage-hopper"
+target = "horizon_client::game::machines::Game<'_>::hopper_suck"
+kind = "HEAD"
+cancellable = true
+helper = "portable_storage_hopper.rs"
+bindings = [
+ {name="game",ty="&mut crate::game::Game<'_>",value="&mut *self"},
+ {name="pos",ty="(i32,i32,i32)",value="pos"},
+]
 
 [[module]]
 id = "sail-runtime"

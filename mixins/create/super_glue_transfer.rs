@@ -4,12 +4,15 @@
 
 // Transfer glue through the same chunk transaction as the bearing payload.
 
-use super::{Game, create_port_contraption as contraption, create_port_super_glue as glue};
+use super::{
+    Game, create_port_contraption as contraption, create_port_piston as piston,
+    create_port_super_glue as glue,
+};
 use create_engine::{
     contraption::{QuarterTurn, glue::Volume},
     kinetics::Pos,
 };
-use horizon_client_render::create_contraption_scene::{MAX_RECORDS, Record};
+use horizon_client_render::create_contraption_scene::{MAX_RECORDS, Record, StrokeKind};
 use horizon_world::{
     attachments::{AttachmentCodec, AttachmentError, AttachmentType, Holder},
     nbt::{Compound, Tag},
@@ -106,22 +109,49 @@ pub(super) struct Update {
     mounted: Mounted,
 }
 
-fn footprint_valid(game: &Game<'_>, key: [i32; 2], volume: Volume, owns: &HashSet<Pos>) -> bool {
-    let [min, max] = volume.corners();
-    if [min, max]
-        .into_iter()
-        .any(|p| contraption::column(p) != key || !contraption::resident(game, p))
-    {
-        return false;
+struct Footprint {
+    cargo: HashSet<Pos>,
+    drive: HashSet<Pos>,
+}
+
+impl Footprint {
+    fn at(record: &Record, origin: Pos, turn: QuarterTurn) -> Option<Self> {
+        let mut cargo = HashSet::with_capacity(record.blocks.len());
+        let mut drive = HashSet::new();
+        let piston = record.stroke_kind() == Some(StrokeKind::Piston);
+        for (local, block) in &record.blocks {
+            let at = turn.place(origin, *local)?;
+            // The piston stores its normalized head and rods in the same
+            // scene as payload. They can become its stationary base on landing
+            // and must never be used to crop or fill a moving glue volume.
+            if piston && matches!(block.name.as_str(), piston::HEAD | piston::POLE) {
+                drive.insert(at);
+            } else {
+                cargo.insert(at);
+            }
+        }
+        Some(Self { cargo, drive })
     }
-    (min[0]..=max[0]).all(|x| {
-        (min[1]..=max[1]).all(|y| {
-            (min[2]..=max[2]).all(|z| {
-                let p = [x, y, z];
-                owns.contains(&p) || game.res.facts().is_air(contraption::state(game, p))
+
+    fn valid(&self, game: &Game<'_>, key: [i32; 2], volume: Volume) -> bool {
+        let [min, max] = volume.corners();
+        if [min, max]
+            .into_iter()
+            .any(|p| contraption::column(p) != key || !contraption::resident(game, p))
+        {
+            return false;
+        }
+        (min[0]..=max[0]).all(|x| {
+            (min[1]..=max[1]).all(|y| {
+                (min[2]..=max[2]).all(|z| {
+                    let p = [x, y, z];
+                    !self.drive.contains(&p)
+                        && (self.cargo.contains(&p)
+                            || game.res.facts().is_air(contraption::state(game, p)))
+                })
             })
         })
-    })
+    }
 }
 
 pub(super) fn capture(
@@ -139,26 +169,25 @@ pub(super) fn capture(
     if static_volumes.is_empty() {
         return Ok(None);
     }
-    let positions = record
-        .blocks
-        .iter()
-        .map(|(local, _)| QuarterTurn::IDENTITY.place(origin, *local))
-        .collect::<Option<HashSet<_>>>()
-        .ok_or(error)?;
+    let footprint = Footprint::at(record, origin, QuarterTurn::IDENTITY).ok_or(error)?;
     let mut retained = Vec::new();
     let mut moving = Vec::new();
     for &volume in static_volumes.iter() {
         // Create's face lookup never captures an entity with only one cell.
-        if volume.is_single_block() || !positions.iter().any(|&position| volume.contains(position))
+        if volume.is_single_block()
+            || !footprint
+                .cargo
+                .iter()
+                .any(|&position| volume.contains(position))
         {
             retained.push(volume);
             continue;
         }
-        if !footprint_valid(game, key, volume, &positions) {
+        if !footprint.valid(game, key, volume) {
             return Err(error);
         }
         let local = volume
-            .fit_to(positions.iter().copied())
+            .fit_to(footprint.cargo.iter().copied())
             .and_then(|fit| fit.relative_to(origin))
             .ok_or(error)?;
         moving.push(local);
@@ -185,22 +214,17 @@ pub(super) fn landing(
     let Some(volumes) = mounted.remove(&record.controller) else {
         return Ok(None);
     };
-    let positions = record
-        .blocks
-        .iter()
-        .map(|(local, _)| turn.place(origin, *local))
-        .collect::<Option<HashSet<_>>>()
-        .ok_or(error)?;
+    let footprint = Footprint::at(record, origin, turn).ok_or(error)?;
     let mut static_volumes = glue::read(game, key)?.into_owned();
     if static_volumes.len() + volumes.len() > glue::MAX_VOLUMES {
         return Err(error);
     }
     for volume in volumes {
-        if volume.fit_to(record.blocks.iter().map(|(local, _)| *local)) != Some(volume) {
+        let landed = volume.place(origin, turn).ok_or(error)?;
+        if landed.fit_to(footprint.cargo.iter().copied()) != Some(landed) {
             return Err(AttachmentError::Decode);
         }
-        let landed = volume.place(origin, turn).ok_or(error)?;
-        if !footprint_valid(game, key, landed, &positions) {
+        if !footprint.valid(game, key, landed) {
             return Err(error);
         }
         static_volumes.push(landed);

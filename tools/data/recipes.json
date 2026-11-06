@@ -3434,6 +3434,7 @@
         "create:mechanical_drill",
         "create:mechanical_saw",
         "create:deployer",
+        "create:portable_storage_interface",
         "create:mechanical_harvester",
         "create:mechanical_plough",
         "create:sail_frame",
@@ -3502,6 +3503,7 @@
         "create:mechanical_drill",
         "create:mechanical_saw",
         "create:deployer",
+        "create:portable_storage_interface",
         "create:mechanical_harvester",
         "create:mechanical_plough",
         "create:andesite_casing",
@@ -3873,6 +3875,27 @@
         }
       ],
       "random_sequence": "create:blocks/deployer"
+    },
+    "create/loot_table/blocks/portable_storage_interface.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:portable_storage_interface"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/portable_storage_interface"
     },
     "create/loot_table/blocks/sail_frame.json": {
       "type": "minecraft:block",

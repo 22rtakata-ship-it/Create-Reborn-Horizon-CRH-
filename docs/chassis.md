@@ -17,10 +17,11 @@ rotated sticky faces from the host's movement classification.
 
 ## Current support
 
-Chassis can expand a vertical Mechanical Bearing, a dry Gantry Carriage or a
-dry Rope Pulley within one chunk column. Like `GantryContraption.assemble`
-and `PulleyContraption.assemble`, the translating drivers require a sticky
-face to capture a row in the direction of travel. The range of each captured
+Chassis can expand a vertical Mechanical Bearing, a dry Gantry Carriage, a
+dry Rope Pulley or a Mechanical Piston within one chunk column. Gantry and
+Rope Pulley pass no forced direction into the attachment search. Pistons
+pass their stroke direction, so a parallel Linear Chassis row can be taken
+without a sticky face. A sticky piston can pull cargo back. The range of each captured
 chassis is saved by local position and restored with its block state at the
 rotated or translated landing. Unknown block-entity data, unloaded cells and
 chassis offsets outside −15 to 15 on any axis fail before world edits.
@@ -58,3 +59,5 @@ preserve every source block.
 the mounted data before a process restart and the landed ranges and volumes
 after it. `tools/chassis_value_settings_checks.py` exercises the real board,
 single and group updates, authorization, and the saved selection on reopen.
+`tools/piston_payload_checks.py` covers both piston strokes, a radial branch,
+saved range and glue ownership, and a volume that crosses the head.

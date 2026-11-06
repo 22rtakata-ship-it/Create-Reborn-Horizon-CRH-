@@ -72,7 +72,7 @@ empty filter, an unsupported item in the first occupied slot stops the
 bounded adapter at that slot. The chest withdrawal and the new hand are saved
 together, with placement consumption in the subsequent same-column write.
 
-Centered or multiple actors, other drivers, stationary operation, PUNCH,
+Centered or multiple actors, other drivers, PUNCH,
 filter controls, complex filters and placement with custom item components
 remain pending. The moving render uses the source pole and hand pose. Held item rendering and
 shaft animation are pending.
@@ -82,6 +82,23 @@ reference for the original stationary and piston planting. Run
 `python3 tools/deployer_farm_checks.py --help` for the shared rotating layout,
 tick comparison and native process restart. `tools/deployer_refill_checks.py`
 compares the one-sapling blocked refill, depletion and restored chest slots.
+
+## Stationary planting
+
+A downward Deployer accepts plain saplings through the hand interaction.
+Connect either shaft face and put plantable soil three blocks below the body.
+The hand visits the cell two blocks below the body. It leaves the stock alone
+if the target is occupied or the soil rejects the sapling. A redstone signal
+prevents starting a new stroke. A stroke in progress keeps its phase and
+timer when rotation stops and continues on the next powered turn.
+
+The block saves `State`, `Timer`, `Powered` and the remaining hand stack. The
+render update carries `Reach` and a timer sample for interpolation. The
+animated pole, hand and shaft use the existing Deployer partial models.
+Held item rendering, other stationary actions and filtered automation remain
+open. `tools/deployer_stationary_reference_checks.py` records the Java state
+sequence and `tools/deployer_stationary_native_checks.py` compares the native
+sequence and cold reload of a paused stroke.
 
 ## Survival crafting
 

@@ -4,9 +4,10 @@
 use super::{
     Game,
     create_port_contraption::{
-        Capture, column, commit, entries, facing, movement_sound, resident, set_records, state,
+        Capture, MountedCapture, column, commit_linear_capture, commit_linear_landing, entries,
+        facing, movement_sound, resident, set_records, state,
     },
-    create_port_contraption_actors as actors,
+    create_port_contraption_actors as actors, create_port_super_glue as glue,
 };
 use crate::containers::ModBlockEntity;
 use create_engine::{
@@ -111,7 +112,7 @@ fn world_cell(record: &Record, local: Pos, offset: u32) -> Pos {
 
 fn capture(game: &mut Game<'_>, pos: Pos, facing: Direction, rpm: f32) -> Option<u32> {
     let key = column(pos);
-    let mut records = entries(game, key).ok()?;
+    let records = entries(game, key).ok()?;
     if records.len() >= MAX_RECORDS || records.iter().any(|r| r.controller == pos) {
         return None;
     }
@@ -132,8 +133,14 @@ fn capture(game: &mut Game<'_>, pos: Pos, facing: Direction, rpm: f32) -> Option
     let seeds = layout
         .payload_frontier(speed < 0.0, piston::MAX_CHASSIS_RANGE, |p| inspect(game, p))
         .ok()?;
+    let movement = if speed > 0.0 {
+        facing
+    } else {
+        facing.opposite()
+    };
+    let volumes = glue::read(game, key).ok()?;
     let payload = Assembly::capture_from(
-        &Capture(game),
+        &MountedCapture::for_linear(game, &volumes),
         origin,
         seeds,
         |p| {
@@ -143,7 +150,7 @@ fn capture(game: &mut Game<'_>, pos: Pos, facing: Direction, rpm: f32) -> Option
                     .iter()
                     .any(|part| layout.world_cell(part.local, layout.initial_offset) == Ok(p))
         },
-        (speed > 0.0).then_some(facing),
+        Some(movement),
         MAX_BLOCKS - layout.parts.len(),
     )
     .ok()?;
@@ -205,18 +212,12 @@ fn capture(game: &mut Game<'_>, pos: Pos, facing: Direction, rpm: f32) -> Option
     // Java checks the next terrain slice before removing blocks. Treat the
     // current source cells as air; they move together as a single structure.
     let owned: std::collections::BTreeSet<_> = edits.iter().map(|&(p, _, _)| p).collect();
-    let movement = if speed > 0.0 {
-        facing
-    } else {
-        facing.opposite()
-    }
-    .vector();
+    let movement = movement.vector();
     let leading = std::array::from_fn(|i| origin[i] + movement[i]);
     if collides_at(game, &record, leading, movement, |p| owned.contains(&p)) {
         return None;
     }
-    records.push(record);
-    if !commit(game, key, records, &edits) {
+    if !commit_linear_capture(game, key, records, record, origin, &edits) {
         return None;
     }
     movement_sound(game, pos, true);
@@ -324,7 +325,8 @@ fn land(game: &mut Game<'_>, pos: Pos, grid_offset: u32, owned: bool) -> bool {
         let Some(after) = after else { return false };
         edits.push((p, before, after));
     }
-    if !commit(game, key, records, &edits) {
+    let origin = world_cell(&record, [0; 3], grid_offset);
+    if !commit_linear_landing(game, key, records, &record, origin, &edits) {
         return false;
     }
     movement_sound(game, pos, false);
