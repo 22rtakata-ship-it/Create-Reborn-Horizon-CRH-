@@ -215,7 +215,8 @@ def main():
             raise RuntimeError(name+' failed; inspect '+str(work/name))
     env=environment();env['CARGO_TARGET_DIR']=str(target);env['CARGO_BUILD_JOBS']=str(args.jobs)
     try:
-        source_snapshot = work/'source'
+        # Keep Finder metadata out of the immutable Mixins input on macOS.
+        source_snapshot = work/'.source'
         result['source_snapshot'] = snapshot_source(source, revision, source_snapshot)
         save()
         previous = None

@@ -3,6 +3,7 @@ import collections
 import json
 import re
 from common import ROOT
+from native_motors import replace_motor
 
 OFFSET = 12
 
@@ -192,8 +193,8 @@ def automation(call, offset, reset, clear, tp):
     assert all(s is None for s in slots()),slots()
     print('Automation: falling item captured and retrieved with its original custom data',flush=True)
     reset();clear();tp(3.5,64,-3)
-    for x,block in [(0,'create:creative_motor[facing=east]'),(1,'create:shaft[axis=x]'),(2,'create:mechanical_press[facing=east]')]:call('setblock',offset+x,66,0,block)
-    call('command',f'data merge block {offset} 66 0 {{ScrollValue:128}}')
+    replace_motor(call, (offset, 66, 0), 128, 'east')
+    for x,block in [(1,'create:shaft[axis=x]'),(2,'create:mechanical_press[facing=east]')]:call('setblock',offset+x,66,0,block)
     call('setblock',offset+2,64,0,'minecraft:smooth_stone')
     call('command',f'summon minecraft:item {offset+2.5} 65.3 .5 {{Item:{{id:"minecraft:iron_ingot",count:3}},PickupDelay:32767}}')
     call('wait',150)

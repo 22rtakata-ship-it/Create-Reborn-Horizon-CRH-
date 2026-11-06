@@ -9,6 +9,7 @@ import subprocess
 import tempfile
 import time
 from common import ROOT
+from native_motors import replace_motor
 import interaction_checks
 import foundation_checks
 import engineering_checks
@@ -188,7 +189,6 @@ def main():
                     assert requested <= returned, (pos, block, actual)
             # Interrupt after the first stroke: return both the remaining inputs
             # and the buffer, then let the abandoned cycle finish without duplication.
-            call("command", "data merge block 0 66 0 {ScrollValue:16}")
             input_stack("minecraft:iron_ingot", 8)
             for _ in range(90):
                 sample = call("container", 3,64,1)["slots"]
@@ -206,7 +206,7 @@ def main():
             if args.offscreen: rendered((3,64,1),None)
             print("Mid-cycle pickup: seven inputs plus one result returned exactly once; no ghost output",flush=True)
             call("command", "clear @s")
-            call("command", "data merge block 0 66 0 {ScrollValue:128}")
+            replace_motor(call, (0, 66, 0), 128, 'east')
             before_strokes = log_path.read_text().count("Create sound: create:mechanical_press_activation [3, 66, 1]")
             call("container", 3, 64, 1, "minecraft:iron_ingot", 8)
             call("wait", 150)

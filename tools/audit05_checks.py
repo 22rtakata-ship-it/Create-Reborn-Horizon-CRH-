@@ -11,6 +11,7 @@ import re
 import subprocess
 
 from common import ROOT
+from native_motors import replace_motor
 
 
 X = 108
@@ -22,6 +23,23 @@ DIRECTIONS = [
     ('west', (-1, 0, 0), 'east', 'x', -1),
     ('east', (1, 0, 0), 'west', 'x', 1),
 ]
+
+
+def sprint_ticks(call, ticks):
+    """Run an exact unfrozen interval, then return to the frozen fixture."""
+    def game_time():
+        chat = call('command', 'time query gametime')['chat']
+        match = re.search(r'\b(\d+) tick', ' '.join(chat))
+        assert match, chat
+        return int(match[1])
+
+    before = game_time()
+    # Create exposes zero RPM during vanilla /tick step. A sprint runs the
+    # requested ticks unfrozen and restores the earlier frozen state.
+    call('command', f'tick sprint {ticks}t')
+    call('wait', ticks + 4)
+    after = game_time()
+    assert after - before == ticks, (before, after, ticks)
 
 
 def run(call, graphics=False, log=None, scratch=None):
@@ -56,8 +74,7 @@ def run(call, graphics=False, log=None, scratch=None):
         call('wait', 4)
 
     def drive(rpm):
-        setblock(-1, 69, 0, 'create:creative_motor[facing=east]')
-        call('command', f'data merge block {X - 1} 69 0 {{ScrollValue:{rpm}}}')
+        replace_motor(call, (X - 1, 69, 0), rpm, 'east')
 
     def fan_line(rpm=256, catalyst='minecraft:soul_campfire[lit=true]'):
         setblock(0, 69, 0, 'create:encased_fan[facing=east]')
@@ -163,16 +180,13 @@ def run(call, graphics=False, log=None, scratch=None):
         try:
             fan_line()
             setblock(2, 68, 0, 'create:depot')
-            call('command', 'tick step 1')
-            call('wait', 5)
+            sprint_ticks(call, 1)
             call('container', X + 2, 68, 0, 'minecraft:cobblestone', count)
             call('command', f'data merge block {X + 2} 68 0 '
                  f'{{HeldItem:{{Item:{{id:"minecraft:cobblestone",count:{count}}}}}}}')
-            call('command', f'tick step {ticks - 1}')
-            call('wait', ticks + 3)
+            sprint_ticks(call, ticks - 1)
             assert counts(slots(2)) == {'minecraft:cobblestone': count}, (count, slots(2))
-            call('command', 'tick step 1')
-            call('wait', 5)
+            sprint_ticks(call, 1)
             assert counts(slots(2)) == {'minecraft:blackstone': count}, (count, slots(2))
         finally:
             call('command', 'tick unfreeze')
@@ -186,8 +200,7 @@ def run(call, graphics=False, log=None, scratch=None):
     try:
         fan_line()
         setblock(2, 68, 0, 'create:depot')
-        call('command', 'tick step 1')
-        call('wait', 5)
+        sprint_ticks(call, 1)
         call('container', X + 2, 68, 0, 'minecraft:blackstone', 1)
         call('command', f'data merge block {X + 2} 68 0 '
              '{HeldItem:{Item:{id:"minecraft:blackstone",count:1},'
@@ -198,22 +211,18 @@ def run(call, graphics=False, log=None, scratch=None):
         call('container', X + 3, 68, 0, 'minecraft:cobblestone', 1)
         # Let the side hopper's insertion cooldown expire while the occupied
         # depot refuses its input and the lower hopper remains powered.
-        call('command', 'tick step 8')
-        call('wait', 12)
+        sprint_ticks(call, 8)
         assert counts(slots(2)) == {'minecraft:blackstone': 1}, slots(2)
         setblock(2, 66, 0, 'minecraft:air')
-        call('command', 'tick step 1')
-        call('wait', 5)
+        sprint_ticks(call, 1)
         assert counts(slots(2)) == {'minecraft:cobblestone': 1}, slots(2)
         assert counts(slots(2, 67)) == {'minecraft:blackstone': 1}, slots(2, 67)
         assert counts(slots(3)) == {}, slots(3)
         setblock(2, 66, 0, 'minecraft:redstone_block')
-        call('command', 'tick step 3')
-        call('wait', 7)
+        sprint_ticks(call, 3)
         timer = number(2, 'FanProcessingTime', 68)
         assert 0 < timer <= 151, text(2, 68)
-        call('command', 'tick step 160')
-        call('wait', 165)
+        sprint_ticks(call, 160)
         assert counts(slots(2)) == {'minecraft:blackstone': 1}, slots(2)
         assert counts(slots(2, 67)) == {'minecraft:blackstone': 1}, slots(2, 67)
     finally:
@@ -255,16 +264,14 @@ def prepare_dropped_reload(call):
     call('command', 'tick freeze')
     try:
         for x, y, name in [
-            (-1, 69, 'create:creative_motor[facing=east]'),
             (0, 69, 'create:encased_fan[facing=east]'),
             (1, 68, 'minecraft:stone'),
             (1, 69, 'minecraft:soul_campfire[lit=true]'),
             (4, 69, 'minecraft:stone'),
         ]:
             call('setblock', DROP_X + x, y, 0, name)
-        call('command', f'data merge block {DROP_X - 1} 69 0 {{ScrollValue:256}}')
-        call('command', 'tick step 1')
-        call('wait', 5)
+        replace_motor(call, (DROP_X - 1, 69, 0), 256, 'east')
+        sprint_ticks(call, 1)
         # The barrier keeps the item inside airflow; no gravity/pickup or depot
         # may move the stack out before processing. Unknown neighboring keys
         # must survive each timer update in the raw entity compound.
@@ -272,14 +279,12 @@ def prepare_dropped_reload(call):
              '{Tags:["audit05_dropped_progress"],NoGravity:1b,PickupDelay:32767,'
              'Item:{id:"minecraft:cobblestone",count:17},NeoForgeData:{'
              'audit05_neoforge_sibling:501,CreateData:{audit05_create_sibling:502}}}')
-        call('command', 'tick step 20')
-        call('wait', 24)
+        sprint_ticks(call, 20)
         timer = dropped_timer(call)
         assert 0 < timer < 301, (timer, dropped_text(call))
         check_dropped_siblings(call)
         call('setblock', DROP_X - 1, 69, 0, 'minecraft:air')
-        call('command', 'tick step 1')
-        call('wait', 5)
+        sprint_ticks(call, 1)
         assert dropped_timer(call) == timer, dropped_text(call)
         call('command', 'data merge entity ' + DROP_SELECTOR +
              ' {Motion:[0d,0d,0d],NeoForgeData:{CreateData:{Processing:{audit05_processing_sibling:503}}}}')
@@ -299,22 +304,18 @@ def reloaded_dropped(call, fixture):
     assert 'audit05_processing_sibling: 503' in dropped_text(call, 'NeoForgeData.CreateData.Processing')
     call('command', 'tick freeze')
     try:
-        call('setblock', DROP_X - 1, 69, 0, 'create:creative_motor[facing=east]')
-        call('command', f'data merge block {DROP_X - 1} 69 0 {{ScrollValue:256}}')
-        call('command', f"tick step {fixture['timer'] - 1}")
-        call('wait', fixture['timer'] + 3)
+        replace_motor(call, (DROP_X - 1, 69, 0), 256, 'east')
+        sprint_ticks(call, fixture['timer'] - 1)
         stack = dropped_text(call, 'Item')
         assert 'minecraft:cobblestone' in stack and re.search(r'\bcount:\s*17\b', stack), stack
         assert dropped_timer(call) == 1, dropped_text(call)
-        call('command', 'tick step 1')
-        call('wait', 5)
+        sprint_ticks(call, 1)
         stack = dropped_text(call, 'Item')
         assert 'minecraft:blackstone' in stack and re.search(r'\bcount:\s*17\b', stack), stack
         assert dropped_timer(call) == 0, dropped_text(call)
         check_dropped_siblings(call)
         assert 'audit05_processing_sibling: 503' in dropped_text(call, 'NeoForgeData.CreateData.Processing')
-        call('command', 'tick step 3')
-        call('wait', 7)
+        sprint_ticks(call, 3)
         assert dropped_timer(call) == -1, dropped_text(call)
         assert 'minecraft:blackstone' in dropped_text(call, 'Item')
         call('setblock', DROP_X - 1, 69, 0, 'minecraft:air')
@@ -348,10 +349,6 @@ def press_resets_fan_progress(call):
                 result[stack['item']] = result.get(stack['item'], 0) + stack['count']
         return result
 
-    def step(ticks):
-        call('command', f'tick step {ticks}')
-        call('wait', ticks + 4)
-
     for count, expected in [
         (1, {'create:iron_sheet': 1}),
         (2, {'minecraft:iron_ingot': 1, 'create:iron_sheet': 1}),
@@ -363,8 +360,7 @@ def press_resets_fan_progress(call):
         call('command', 'kill @e[type=minecraft:item]')
         call('command', 'tick freeze')
         try:
-            block(-1, 69, 0, 'create:creative_motor[facing=east]')
-            call('command', f'data merge block {origin - 1} 69 0 {{ScrollValue:0}}')
+            replace_motor(call, (origin - 1, 69, 0), 0, 'east')
             block(0, 69, 0, 'create:encased_fan[facing=east]')
             # Iron bars pass source fan air but keep the lava catalyst in its
             # glass cell. This fixture cannot flood the depot or press.
@@ -376,26 +372,26 @@ def press_resets_fan_progress(call):
             block(2, 70, 0, 'create:creative_motor[facing=east]')
             block(3, 70, 0, 'create:mechanical_press[facing=east]')
             # Newly placed depots allocate their item slot on the first tick.
-            step(1)
+            sprint_ticks(call, 1)
             call('container', origin + 3, 68, 0, 'minecraft:iron_ingot', count)
             call('command', f'data merge block {origin + 3} 68 0 '
                  f'{{HeldItem:{{Item:{{id:"minecraft:iron_ingot",count:{count}}},'
                  'FanProcessingType:"create:blasting",FanProcessingTime:5,audit05_transport_marker:504}}')
             call('command', f'data merge block {origin + 3} 70 0 '
                  '{Running:1b,Ticks:120,Applied:0,Mode:1}')
-            step(1)
+            sprint_ticks(call, 1)
             assert counts() == expected, (count, counts())
             held = data(3, 68, 'HeldItem')
             assert 'FanProcessingType' not in held and 'FanProcessingTime' not in held, held
             assert 'audit05_transport_marker: 504' in held, held
             # Stop further strokes; the real fan now receives power and must
             # initialize a fresh 151 timer for the new held transported stack.
-            call('command', f'data merge block {origin + 2} 70 0 {{ScrollValue:0}}')
-            call('command', f'data merge block {origin - 1} 69 0 {{ScrollValue:256}}')
-            step(1)
+            replace_motor(call, (origin + 2, 70, 0), 0, 'east')
+            replace_motor(call, (origin - 1, 69, 0), 256, 'east')
+            sprint_ticks(call, 1)
             held = data(3, 68, 'HeldItem')
             assert 'create:blasting' in held and re.search(r'\bFanProcessingTime:\s*151\b', held), held
-            step(10)
+            sprint_ticks(call, 10)
             assert counts() == expected, (count, counts())
             held = data(3, 68, 'HeldItem')
             assert re.search(r'\bFanProcessingTime:\s*141\b', held), held

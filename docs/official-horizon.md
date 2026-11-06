@@ -24,6 +24,10 @@ combined build uses the stock atlas declarations, item fluid operations, invento
 and block entity draw pose. Chunk attachments and Create's recipe and tank rules
 live in the mod.
 
+The exact fan timing tests use the ordinary `/tick sprint` command. The separate
+sprint boundary fix is for the test runner and vanilla tick behavior. It does
+not change the native mod interface. [Horizon #11143](https://github.com/horizon-rust/horizon/pull/11143)
+
 ## Check a Nightly before publishing
 
 1. Pick an official Nightly that includes the required changes. Check the full

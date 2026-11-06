@@ -7,6 +7,7 @@ import subprocess
 import sys
 import time
 from common import ROOT
+from native_motors import replace_motor
 import foundation_checks
 
 X=36
@@ -51,7 +52,7 @@ def run(call,graphics,log,scratch):
     # A real comparator reads the source's ceil(target*14), updates after RPM changes.
     setblock(1,64,1,'minecraft:stone');setblock(1,65,1,'minecraft:comparator[facing=north]');setblock(1,64,2,'minecraft:stone');setblock(1,65,2,'minecraft:redstone_wire');call('wait',10)
     assert 'power=4' in block(1,65,2)['state'],block(1,65,2)
-    call('command',f'data merge block {X} 65 0 {{ScrollValue:256}}');call('wait',20)
+    replace_motor(call, (X, 65, 0), 256, 'east');call('wait',20)
     assert abs(number(1,65,0,'Value')-1.125)<1e-5
     assert 'power=15' in block(1,65,2)['state'],block(1,65,2)
     if graphics:
@@ -100,7 +101,7 @@ def run(call,graphics,log,scratch):
         print('Engineering: actual crank base and smoothed handle poses agree on all six facings',flush=True)
 
     # Brass default pressing is one item per stroke and returns all outputs.
-    reset();setblock(0,67,0,'create:creative_motor[facing=east]');call('command',f'data merge block {X} 67 0 {{ScrollValue:256}}');setblock(1,67,0,'create:mechanical_press[facing=east]');setblock(1,65,0,'create:depot');call('container',X+1,65,0,'create:brass_ingot',8);call('wait',150)
+    reset();replace_motor(call, (X, 67, 0), 256, 'east');setblock(1,67,0,'create:mechanical_press[facing=east]');setblock(1,65,0,'create:depot');call('container',X+1,65,0,'create:brass_ingot',8);call('wait',150)
     stacks=call('container',X+1,65,0)['slots'];assert sum(s.get('count',0) for s in stacks if s and s['item']=='create:brass_sheet')==8,stacks
     setblock(1,65,2,'minecraft:stone');tp(1.5,66,2.5);clear();click(1,65,0,'up');assert call('inventory')['counts'].get('create:brass_sheet')==8
     print('Engineering: eight brass ingots press into eight retrievable brass sheets',flush=True)
