@@ -738,7 +738,9 @@ pub(super) fn commit_landing(
 ) -> bool {
     let local = match local_deployer(&record.blocks) {
         Ok(Some(local)) => local,
-        Ok(None) => return storage::commit_landing(game, key, records, edits, record, turn),
+        Ok(None) => {
+            return storage::commit_landing(game, key, records, edits, record, record.anchor, turn);
+        }
         Err(_) => return false,
     };
     let Some(pos) = turn.place(record.anchor, local) else {
@@ -768,7 +770,7 @@ pub(super) fn commit_landing(
                 .filter(|cargo| cargo.local == local);
             cargo.is_some()
         },
-        |game| storage::commit_landing(game, key, records, edits, record, turn),
+        |game| storage::commit_landing(game, key, records, edits, record, record.anchor, turn),
     ) {
         return false;
     }

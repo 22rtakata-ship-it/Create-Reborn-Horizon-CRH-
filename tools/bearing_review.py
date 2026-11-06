@@ -26,6 +26,43 @@ SAIL_PANEL = [
     ((905, 83, 71), 'blue_sail'), ((905, 85, 71), 'black_sail'),
 ]
 AXIAL_SAIL = (906, 84, 72)
+GANTRY_FARM = (904, 83, 183)
+GANTRY_FARM_LEVER = (906, 82, 184)
+GANTRY_FARM_CHEST = (904, 84, 182)
+GANTRY_FARM_CROP = (905, 84, 184)
+PISTON_CHESTS = (
+    ((919, 82, 180), False, 'minecraft:iron_ingot'),
+    ((919, 82, 185), True, 'minecraft:gold_ingot'),
+)
+DRY_CHEST = 'minecraft:chest[facing=south,type=single,waterlogged=false]'
+
+
+def linear_cargo_stations(batch):
+    batch.load(GANTRY_FARM)
+    batch.command('fill 899 81 175 925 89 188 minecraft:air')
+    batch.command('fill 899 80 175 925 80 188 minecraft:smooth_stone')
+    batch.command('gamerule minecraft:random_tick_speed 0')
+    x, y, z = GANTRY_FARM
+    batch.put(GANTRY_FARM, 'create:gantry_carriage[facing=up,axis_along_first=false]')
+    for dx, part in enumerate(('start', 'middle', 'end')):
+        batch.put((x + dx, y - 1, z), f'create:gantry_shaft[facing=east,part={part},powered=true]')
+    batch.put(GANTRY_FARM_LEVER, 'minecraft:lever[face=wall,facing=south,powered=true]')
+    batch.put((x - 1, y - 1, z), 'create:creative_motor[facing=east]{ScrollValue:-32}')
+    batch.put((x, y + 1, z), 'minecraft:slime_block')
+    batch.put((x, y + 1, z + 1), 'create:mechanical_harvester[facing=east,waterlogged=false]')
+    batch.put((x + 1, y, z + 1), 'minecraft:farmland[moisture=7]')
+    batch.put(GANTRY_FARM_CROP, 'minecraft:wheat[age=7]')
+    batch.put(GANTRY_FARM_CHEST, DRY_CHEST + '{Items:[{Slot:5b,id:"minecraft:apple",count:4}]}')
+    stations.sign(batch, (904, 81, 186), ['GANTRY HARVEST', 'Release rail stop.', 'Wait for landing.', 'Open the chest.'])
+
+    for base, sticky, item in PISTON_CHESTS:
+        x, y, z = base
+        stations.piston(batch, base, sticky)
+        batch.put((x, y, z - 2), 'create:creative_motor[facing=south]{ScrollValue:-32}')
+        batch.put((x - 1, y, z - 1), 'minecraft:lever[face=wall,facing=west,powered=true]')
+        batch.put((x + 1, y, z), DRY_CHEST + f'{{Items:[{{Slot:5b,id:"{item}",count:4}}]}}')
+        title, result = ('STICKY CARGO', 'Chest comes back.') if sticky else ('PISTON CARGO', 'Chest stays out.')
+        stations.sign(batch, (919, 81, z + 1), [title, 'Flip to extend.', 'Flip to retract.', result])
 
 
 def prepare(session, options):
@@ -88,9 +125,11 @@ def prepare(session, options):
         stations.chute_station(batch)
     if options.stationary_deployer:
         stations.stationary_deployer_station(batch)
+    if options.linear_cargo:
+        linear_cargo_stations(batch)
     if any((options.plough, options.deployer, options.glue, options.upward_saw,
             options.chassis, options.materials, options.rotary_contact,
-            options.portable_storage, options.stationary_deployer)):
+            options.portable_storage, options.stationary_deployer, options.linear_cargo)):
         batch.command('tp @s 909.5 81 61.5')
     batch.tick(30 if options.farms else 12)
     batch.data(BEARING)
@@ -338,6 +377,23 @@ def review(session, options):
             call('look-at', 908.5, 83.5, 172.5)
             call('wait', 12)
             extra.append(str(screenshot('stationary-deployer.png')))
+        if options.linear_cargo:
+            command('tp @s 909.5 86 187.5')
+            wait_loaded(call, [GANTRY_FARM, GANTRY_FARM_CHEST, GANTRY_FARM_CROP])
+            assert 'powered=true' in call('block', *GANTRY_FARM_LEVER)['state']
+            assert call('block', *GANTRY_FARM_CROP)['state'] == 'minecraft:wheat[age=7]'
+            assert 'minecraft:apple' in snapshot(GANTRY_FARM_CHEST)['nbt']
+            call('look-at', 905, 83, 183)
+            call('wait', 12)
+            extra.append(str(screenshot('gantry-harvest-cargo.png')))
+            command('tp @s 925.5 87 187.5')
+            wait_loaded(call, [base for base, _, _ in PISTON_CHESTS])
+            for (x, y, z), _, item in PISTON_CHESTS:
+                assert 'state=retracted' in call('block', x, y, z)['state']
+                assert item in snapshot((x + 1, y, z))['nbt']
+            call('look-at', 919, 82, 182)
+            call('wait', 12)
+            extra.append(str(screenshot('piston-chest-cargo.png')))
         call('key', 'f1', 'tap')
         command('gamemode creative')
         if options.glue:
@@ -379,6 +435,7 @@ def main():
     parser.add_argument('--farms', action='store_true')
     parser.add_argument('--clockwork', action='store_true')
     parser.add_argument('--linear', action='store_true')
+    parser.add_argument('--linear-cargo', action='store_true')
     parser.add_argument('--cargo', action='store_true')
     parser.add_argument('--sails', action='store_true')
     parser.add_argument('--plough', action='store_true')

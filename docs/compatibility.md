@@ -1,11 +1,11 @@
 # Original Create identifiers and data
 
-The 0.8.0-alpha.10 development checkpoint preserves cutting progress across
-restarts and aligns the Mechanical Bearing's Saw, Drill and Plough timing in
-the tested scenes. The stationary Deployer shows its sapling, and Super Glue
-emits its original selection bursts. Capture and restoration currently share
-one chunk column. See the supported drivers, payloads, actors and verification
-in the [contraption guide](contraptions.md).
+The 0.8.0-alpha.11 development checkpoint carries a dry ordinary chest on
+Gantry, Rope Pulley and either Mechanical Piston. The Gantry Harvester puts
+crops into its mounted chest and the moving blade rolls according to the
+distance traveled. Capture and restoration currently share one chunk column.
+See the supported drivers, payloads, actors and verification in the
+[contraption guide](contraptions.md).
 
 The sections marked 0.3–0.5 below retain the released historical boundaries.
 The installed review checkpoint is **0.6.0-alpha.2**: see [REPORT_06.md](https://github.com/Delete228/create-horizon/blob/eb8b96e8ea1db698b79bb61fd1caf6c963f31652/REPORT_06.md)

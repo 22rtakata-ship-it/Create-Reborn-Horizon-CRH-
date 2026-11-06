@@ -4,6 +4,32 @@
 
 //! Crop and cut decisions from Java `HarvesterMovementBehaviour`.
 
+/// The Flywheel HarvesterActorVisual accumulates rotation from distance.
+/// A stall or backwards movement leaves the blade at its current phase.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Blade {
+    previous: f64,
+    rotation: f64,
+}
+
+impl Blade {
+    pub fn tick(&mut self, distance: f64, active: bool) {
+        self.previous = self.rotation;
+        if active {
+            let radians = distance * 16.0 / 6.5;
+            let degrees = (radians * 180.0 / std::f64::consts::PI) as f32;
+            // The division in HarvesterActorVisual is between two Java ints.
+            let degrees = (degrees * 3000.0) as i32 / 3000;
+            self.rotation = (self.rotation + f64::from(degrees) * 1.25) % 360.0;
+        }
+    }
+
+    pub fn angle(self, partial: f32) -> f32 {
+        let difference = (((self.rotation - self.previous) % 360.0 + 540.0) % 360.0 - 180.0) as f32;
+        (self.previous + f64::from(difference) * f64::from(partial)) as f32
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Rules {
     pub harvest_partial: bool,
@@ -167,6 +193,21 @@ impl Harvest {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn blade_rolls_from_distance_and_keeps_its_phase_when_stopped() {
+        let mut blade = Blade::default();
+        blade.tick(0.25, true);
+        assert_eq!(blade.angle(0.5), 21.875);
+        blade.tick(0.25, false);
+        assert_eq!(blade.angle(0.5), 43.75);
+        for _ in 0..7 {
+            blade.tick(0.25, true);
+        }
+        blade.tick(0.25, true);
+        assert_eq!(blade.angle(0.5), 371.875);
+        assert_eq!(blade.angle(1.0) % 360.0, 33.75);
+    }
 
     fn crop(value: u32) -> Block {
         Block {

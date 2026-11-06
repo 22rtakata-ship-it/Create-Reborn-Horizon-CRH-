@@ -10,7 +10,7 @@ use create_engine::{
     contraption::QuarterTurn,
     kinetics::{Axis, Pos},
 };
-use horizon_client_render::create_contraption_scene::{MAX_RECORDS, Record};
+use horizon_client_render::create_contraption_scene::{MAX_RECORDS, Record, StrokeKind};
 use horizon_items::item_nbt::{encode_items, item_from_nbt};
 use horizon_world::{
     attachments::{AttachmentCodec, AttachmentError, AttachmentType, Attachments, Holder},
@@ -139,19 +139,23 @@ fn plain_source(tag: &Tag) -> bool {
 fn local_chest(blocks: &[(Pos, BlockState)]) -> Result<Option<Pos>, AttachmentError> {
     let mut result = None;
     for (position, block) in blocks.iter().filter(|(_, block)| block.name == BLOCK) {
-        if !chest_state(block) || result.replace(*position).is_some() {
+        if !chest_state(block) || !valid_local(*position) || result.replace(*position).is_some() {
             return Err(AttachmentError::Decode);
         }
     }
     Ok(result)
 }
 
+fn valid_local(pos: Pos) -> bool {
+    pos.iter().all(|component| component.unsigned_abs() <= 15)
+}
+
 pub(super) fn mounted_chest(record: &Record) -> Option<Mount> {
-    if record.axis != Axis::Y.index()
-        || record.stroke.is_some()
-        || record.clock_hand.is_some()
-        || record.return_home
-    {
+    let supported = match record.stroke_kind() {
+        Some(StrokeKind::Gantry | StrokeKind::RopePulley | StrokeKind::Piston) => true,
+        None => record.axis == Axis::Y.index(),
+    };
+    if !supported || record.clock_hand.is_some() || record.return_home {
         return None;
     }
     Some(Mount {
@@ -218,6 +222,7 @@ pub(super) fn commit_landing(
     records: Vec<Record>,
     edits: &[Edit],
     record: &Record,
+    origin: Pos,
     turn: QuarterTurn,
 ) -> bool {
     let local = match local_chest(&record.blocks) {
@@ -234,11 +239,12 @@ pub(super) fn commit_landing(
     else {
         return false;
     };
-    let Some(position) = turn.place(record.anchor, chest.local) else {
+    let Some(position) = turn.place(origin, chest.local) else {
         return false;
     };
     let target = (position[0], position[1], position[2]);
-    if game.world.block_entities.contains_key(&target)
+    if contraption::column(position) != key
+        || game.world.block_entities.contains_key(&target)
         || !edits.iter().any(|(p, _, after)| {
             *p == position
                 && game
@@ -491,7 +497,7 @@ fn insert(slots: &mut [Option<ItemStack>], stack: &ItemStack, limit: u32) -> u32
 }
 
 fn encode(store: &Store) -> Result<Compound, AttachmentError> {
-    if store.len() > MAX_RECORDS {
+    if store.len() > MAX_RECORDS || store.values().any(|chest| !valid_local(chest.local)) {
         return Err(AttachmentError::Encode);
     }
     let entries = store
@@ -553,7 +559,7 @@ fn decode(saved: &Compound) -> Result<Store, AttachmentError> {
             max_bytes: MAX_STORAGE_BYTES,
             ..Limits::default()
         };
-        if local.iter().any(|component| component.unsigned_abs() > 15)
+        if !valid_local(local)
             || write_network(items, limits).is_err()
             || store.insert(controller, Chest { local, slots }).is_some()
         {
@@ -652,6 +658,9 @@ mod tests {
             decode(&encode(&records).unwrap()).unwrap()[&[1, 70, 2]].slots,
             slots
         );
+        let mut outside = records.clone();
+        outside.get_mut(&[1, 70, 2]).unwrap().local = [0, 16, 0];
+        assert!(encode(&outside).is_err());
         let mut attachment = Attachments::default();
         attachment.set(&STORAGE, records).unwrap();
         assert!(attachment.synced().is_empty());

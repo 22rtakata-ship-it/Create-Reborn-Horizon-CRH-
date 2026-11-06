@@ -221,12 +221,17 @@ with the systems they depend on.
   Bearing, with a pinned JAR geometry oracle and separate live-client tests.
 - [x] One ordinary mounted chest on a vertical Mechanical Bearing, with crop
   and cutter loot, item components, restart and landing recovery.
+- [x] Ordinary chest cargo on Gantry, dry Rope Pulley and both Mechanical
+  Pistons. Preserve components and slot order through translated landing and
+  an obstructed restart.
 - [ ] Full entity contact, multiple mounted inventories and moving chest menus.
 - [ ] Cross-chunk capture and restoration. First validate a durable two-column
   write with both columns loaded. Recovery must replay an interrupted write
   before either column becomes visible, including across a region boundary.
 - [x] Harvester on supported crops, moving Saw and Drill with cutting stalls,
   and horizontal stationary Saw tree felling.
+- [x] Harvester blade phase based on distance traveled, including reverse and
+  stopped motion.
 - [x] First active-cell selection on a newly assembled Mechanical Bearing,
   checked by wheat harvest and Saw output through a portable dock.
 - [x] Saw and Drill stall timing on a Mechanical Bearing, with cutting

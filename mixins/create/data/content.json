@@ -970,5 +970,5 @@
   "data/minecraft/tags/damage_type/bypasses_shield.json": "{\n  \"values\": [\n    \"create:fan_fire\",\n    \"create:fan_lava\"\n  ]\n}\n",
   "data/minecraft/tags/damage_type/is_fire.json": "{\n  \"values\": [\n    \"create:fan_fire\",\n    \"create:fan_lava\"\n  ]\n}\n",
   "data/minecraft/tags/item/enchantable/durability.json": "{\n  \"values\": [\n    \"create:super_glue\"\n  ]\n}\n",
-  "horizon-mod.toml": "id = \"create\"\nname = \"Create for Horizon\"\nversion = \"0.8.0-alpha.10\"\ndescription = \"Build rotating machines and small factories in Horizon. The original Create JAR is optional and supplies its models and textures.\"\nauthors = [\"create-horizon contributors\"]\napi = \"0.2\"\nside = \"both\"\ncapabilities = [\"registries\"]\n"
+  "horizon-mod.toml": "id = \"create\"\nname = \"Create for Horizon\"\nversion = \"0.8.0-alpha.11\"\ndescription = \"Build rotating machines and small factories in Horizon. The original Create JAR is optional and supplies its models and textures.\"\nauthors = [\"create-horizon contributors\"]\napi = \"0.2\"\nside = \"both\"\ncapabilities = [\"registries\"]\n"
 }

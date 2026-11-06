@@ -12,7 +12,7 @@ use super::{
 };
 use crate::containers::{BlockEntity, ModBlockEntity};
 use create_engine::{
-    contraption::actors::{Tool, points_backwards},
+    contraption::actors::{Tool, harvester::Blade, points_backwards},
     contraption::bearing::{Bearing, Mode, TickAction},
     contraption::windmill::{Config as WindmillConfig, RotationDirection, Windmill},
     contraption::{
@@ -27,13 +27,16 @@ use horizon_client_render::create_contraption_scene::{
 };
 use horizon_core::position::BlockPos;
 use horizon_world::{
-    attachments::{AttachmentError, Holder},
+    attachments::{
+        AttachmentError, AttachmentType, Attachments, Holder,
+        create_contraption_attachment::decoded,
+    },
     chunk::BlockState,
     level::flags,
     nbt::Tag,
     registry::BlockStateId,
 };
-use std::sync::Arc;
+use std::{collections::BTreeMap, sync::Arc};
 
 pub(super) const BLOCK: &str = "create:mechanical_bearing";
 pub(super) const WINDMILL: &str = "create:windmill_bearing";
@@ -402,7 +405,8 @@ impl CaptureView for Capture<'_, '_> {
 
 pub(super) struct MountedCapture<'g, 'a> {
     base: Capture<'g, 'a>,
-    allow_inventory: bool,
+    allow_chest: bool,
+    allow_actor_data: bool,
     allow_chassis: bool,
     glue: &'g [create_engine::contraption::glue::Volume],
 }
@@ -414,16 +418,16 @@ impl<'g, 'a> MountedCapture<'g, 'a> {
     ) -> Self {
         Self {
             base: Capture(game),
-            allow_inventory: false,
+            allow_chest: true,
+            allow_actor_data: false,
             allow_chassis: true,
             glue,
         }
     }
 }
 
-/// Transfer the saved chassis ranges and glue along with the blocks. The
-/// grid origin belongs to the payload at capture, which can differ from the
-/// zero-stroke anchor used by its driver.
+/// Transfer saved inventories, chassis ranges and glue with the blocks.
+/// The current payload origin can differ from the driver's zero-stroke anchor.
 pub(super) fn commit_linear_capture(
     game: &mut Game<'_>,
     key: [i32; 2],
@@ -436,6 +440,9 @@ pub(super) fn commit_linear_capture(
     let Ok(ranges) = chassis::capture(game, origin, &record.blocks) else {
         return false;
     };
+    let Ok(chest) = storage::capture(game, origin, &record.blocks) else {
+        return false;
+    };
     let Ok(update) = glue::capture(game, key, &record, origin) else {
         return false;
     };
@@ -443,7 +450,7 @@ pub(super) fn commit_linear_capture(
     records.push(record);
     glue::commit(game, key, update, |game| {
         chassis::commit_capture(game, key, controller, ranges, |game| {
-            commit(game, key, records, edits)
+            storage::commit_capture(game, key, records, edits, controller, chest)
         })
     })
 }
@@ -463,7 +470,7 @@ pub(super) fn commit_linear_landing(
     };
     glue::commit(game, key, update, |game| {
         chassis::commit_landing(game, key, record, origin, turn, edits, |game| {
-            commit(game, key, records, edits)
+            storage::commit_landing(game, key, records, edits, record, origin, turn)
         })
     })
 }
@@ -478,10 +485,9 @@ impl CaptureView for MountedCapture<'_, '_> {
     fn snapshot(&self, p: Pos) -> Option<BlockState> {
         let game = self.base.0;
         let block = game.pack.assets.registry.state(state(game, p))?;
-        if (self.allow_inventory
-            && (storage::can_capture(game, p, block)
-                || deployer::can_capture(game, p, block)
-                || psi::can_capture(game, p, block)))
+        if (self.allow_chest && storage::can_capture(game, p, block))
+            || (self.allow_actor_data
+                && (deployer::can_capture(game, p, block) || psi::can_capture(game, p, block)))
             || (self.allow_chassis && chassis::can_capture(game, p, block))
         {
             return Some(block.clone());
@@ -529,7 +535,8 @@ fn assemble(
         let allow_mounted_data = !windmill && facing.axis() == Axis::Y;
         let capture = MountedCapture {
             base: Capture(game),
-            allow_inventory: allow_mounted_data,
+            allow_chest: allow_mounted_data,
+            allow_actor_data: allow_mounted_data,
             allow_chassis: allow_mounted_data,
             glue: &glue,
         };
@@ -863,6 +870,67 @@ pub(super) fn recover_orphans(game: &mut Game<'_>) {
     }
 }
 
+#[derive(Clone, Default)]
+struct HarvesterBlades {
+    tick: u64,
+    blades: BTreeMap<(Pos, Pos), (DVec3, Blade)>,
+}
+
+const HARVESTER_BLADES: AttachmentType<HarvesterBlades> = AttachmentType {
+    namespace: "create",
+    name: "harvester_visuals",
+    default: HarvesterBlades::default,
+    codec: None,
+    copy_on_death: false,
+    sync: false,
+};
+
+fn actor_facing(state: &BlockState) -> Option<Direction> {
+    let facing = state.properties.get("facing")?;
+    Direction::ALL.into_iter().find(|d| d.name() == facing)
+}
+
+fn update_harvester_blades(map: &mut Attachments, records: &[Record], tick: u64, reset: bool) {
+    let old = if reset {
+        None
+    } else {
+        decoded(map, &HARVESTER_BLADES)
+    };
+    let mut blades = BTreeMap::new();
+    for record in records {
+        let rotation = record.orientation(record.angle);
+        let pivot = DVec3::splat(0.5);
+        let origin = DVec3::from_array(record.origin_at(1.0)) + pivot;
+        for (local, block) in &record.blocks {
+            if block.name != "create:mechanical_harvester" {
+                continue;
+            }
+            let Some(facing) = actor_facing(block) else {
+                continue;
+            };
+            let point = origin
+                + rotation
+                    * (DVec3::from_array(Tool::Harvester.active_point(*local, facing)) - pivot);
+            let key = (record.controller, *local);
+            let mut blade = Blade::default();
+            if let Some(&(previous, phase)) = old.and_then(|v| v.blades.get(&key)) {
+                let motion = point - previous;
+                blade = phase;
+                blade.tick(
+                    motion.length(),
+                    !points_backwards((rotation.conjugate() * motion).to_array(), facing),
+                );
+            }
+            blades.insert(key, (point, blade));
+        }
+    }
+    if blades.is_empty() {
+        let _ = map.remove(&HARVESTER_BLADES);
+    } else {
+        let _ = map.set(&HARVESTER_BLADES, HarvesterBlades { tick, blades });
+    }
+}
+
 pub(super) fn mirror_sync(game: &mut Game<'_>, data: &[u8]) {
     let Ok(message) = horizon_protocol::attachment_sync::decode(data) else {
         return;
@@ -880,7 +948,14 @@ pub(super) fn mirror_sync(game: &mut Game<'_>, data: &[u8]) {
         let chunk = Arc::make_mut(chunk);
         let extras = Arc::make_mut(chunk.saved.get_or_insert_with(Default::default));
         extras.attachments.apply_sync(change);
-        let _ = extras.attachments.get_existing(&RECORDS);
+        if let Ok(records) = extras.attachments.get_existing(&RECORDS) {
+            update_harvester_blades(
+                &mut extras.attachments,
+                records.as_deref().unwrap_or_default(),
+                game.ticks,
+                message.replace,
+            );
+        }
         let _ = game.world.attachments.set(&ACTIVE, true);
     }
 }
@@ -891,6 +966,7 @@ fn draw_actor(
     record: &Record,
     local: Pos,
     state: &BlockState,
+    blades: Option<&HarvesterBlades>,
 ) {
     if state.name == deployer::BLOCK {
         deployer::draw_moving(game, draw, record, local, state);
@@ -906,13 +982,30 @@ fn draw_actor(
         "create:mechanical_drill" => Tool::Drill,
         _ => return,
     };
-    let Some(facing) = state
-        .properties
-        .get("facing")
-        .and_then(|facing| Direction::ALL.into_iter().find(|d| d.name() == facing))
-    else {
+    let Some(facing) = actor_facing(state) else {
         return;
     };
+    super::create_port::face_south(draw, facing);
+    if tool == Tool::Harvester {
+        let angle = blades
+            .and_then(|v| {
+                let (_, blade) = v.blades.get(&(record.controller, local))?;
+                let partial = if game.ticks <= v.tick.saturating_add(1) {
+                    draw.partial
+                } else {
+                    1.0
+                };
+                Some(blade.angle(partial))
+            })
+            .unwrap_or_default();
+        draw.rotate_about([1.0, 0.0, 0.0], angle, [0.5, 6.0 / 16.0, 9.0 / 16.0]);
+        game.native_draw_model(
+            draw,
+            "create:block/mechanical_harvester/moving_blade",
+            0xFFFFFF,
+        );
+        return;
+    }
     let pivot = DVec3::splat(0.5);
     let point = DVec3::from_array(tool.active_point(local, facing)) - pivot;
     let before = record.orientation(record.previous_angle);
@@ -924,27 +1017,8 @@ fn draw_actor(
     let backwards = points_backwards((after.conjugate() * motion).to_array(), facing);
     let length = motion.length();
     let moving = length >= 1.0 / 512.0;
-    super::create_port::face_south(draw, facing);
     match tool {
-        Tool::Plough => {}
-        Tool::Harvester => {
-            let speed = if moving && !backwards {
-                ((-length * 1000.0 - 100.0) as i32 / 100 * 100) as f64
-            } else {
-                0.0
-            };
-            let time = (draw.game_time as f64 + f64::from(draw.partial)) / 20.0;
-            draw.rotate_about(
-                [-1.0, 0.0, 0.0],
-                ((time * speed) % 360.0) as f32,
-                [0.0, 6.0 / 16.0, 9.0 / 16.0],
-            );
-            game.native_draw_model(
-                draw,
-                "create:block/mechanical_harvester/moving_blade",
-                0xFFFFFF,
-            );
-        }
+        Tool::Plough | Tool::Harvester => {}
         Tool::Drill => {
             let speed = if !moving && record.rpm != 0.0 {
                 700.0
@@ -994,6 +1068,10 @@ pub(super) fn draw_structures(game: &Game<'_>, draw: &mut NativeWorldDraw) {
             continue;
         }
         let Ok(records) = read(chunk) else { continue };
+        let blades = chunk
+            .saved
+            .as_ref()
+            .and_then(|saved| decoded(&saved.attachments, &HARVESTER_BLADES));
         for record in records.iter() {
             pulley::draw_line(game, draw, record);
             let anchor = record.origin_at(draw.partial);
@@ -1032,7 +1110,7 @@ pub(super) fn draw_structures(game: &Game<'_>, draw: &mut NativeWorldDraw) {
                 if !chest {
                     game.native_draw_block(draw, &block.name, &properties);
                 }
-                draw_actor(game, draw, record, *local, block);
+                draw_actor(game, draw, record, *local, block, blades);
                 draw.pop();
             }
             draw.light = previous_light;

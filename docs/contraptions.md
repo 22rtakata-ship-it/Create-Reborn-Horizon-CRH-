@@ -17,9 +17,10 @@ The current native adapter limits each structure and its swept footprint to one
 loaded chunk column. This keeps the source, target and persistent record in the
 same chunk save. It refuses unsupported snapshots and occupied landing cells
 instead of discarding blocks. Capture is limited to an allowlist of stateless
-blocks, idle tools and a single ordinary chest and Deployer on a vertical
-Mechanical Bearing. The three chassis variants can expand capture on a
-vertical Mechanical Bearing, Gantry, Rope Pulley or Mechanical Piston.
+blocks and idle tools. A vertical Mechanical Bearing can carry a Deployer.
+A vertical Mechanical Bearing, Gantry, Rope Pulley or Mechanical Piston can
+carry one ordinary chest. All four can use the three chassis variants to
+expand capture.
 Other inventories and fluid-containing payloads still need adapters. The
 supported Gantry path has a fixed loaded rail span.
 The Rope Pulley supports dry rope and cargo. The clockwork hands are captured
@@ -42,7 +43,9 @@ pose timing, mounted mobs and downward lock behavior remain open. Sable
 integration remains a separate milestone.
 
 The Harvester handles wheat, carrots, potatoes, beetroot, Nether Wart, cocoa,
-sweet berries, sugar cane and supported leaves or growing plants. A moving Saw
+sweet berries, sugar cane and supported leaves or growing plants. Its moving
+blade rolls by distance, using the Flywheel phase calculation. A stall or
+backwards travel holds the current blade phase. A moving Saw
 pauses its platform while cutting supported vanilla trees, fungi and stalks.
 A horizontal stationary Saw also fells trees. The moving Drill breaks eligible
 vanilla blocks and drops their loot. The Plough tills exposed soil, clears
@@ -77,8 +80,9 @@ stack by clicking the hand. The owner, filter and remaining stock survive a
 restart. A stationary downward Deployer plants saplings in the cell two
 blocks below its body. A stationary Deployer in Use mode shows its ordinary
 sapling in the extending hand, using the original fixed or spinning display
-pose. The held item on a moving Deployer, punching, general item use, complex
-filters and their interface remain open.
+pose. The moving renderer shows a bare pointing hand even when its inventory
+contains saplings, as in Java. Punching, general item use, complex filters and
+their interface remain open.
 [Deployer engine and host boundary](deployer.md)
 
 ## Super Glue
@@ -102,20 +106,21 @@ offhand placement and transfer on other drivers remain open.
 
 ## Mounted chest
 
-An ordinary dry single chest on a vertical Mechanical Bearing keeps all 27
-slots and item components while the structure is moving. Harvesters, Saws and
-Drills on that structure insert loot from the same chunk column in ascending
-slot order, matching Java's `ChestMountedStorage` and
+An ordinary dry single chest keeps all 27 slots and item components on a
+vertical Mechanical Bearing, Gantry, dry Rope Pulley or Mechanical Piston.
+Harvesters, Saws and Drills on that structure insert loot from the same chunk
+column in ascending slot order, matching Java's `ChestMountedStorage` and
 `ItemHandlerHelper.insertItem`. Overflow and loot from neighboring columns
 drop at the tool. The server saves the inventory with the structure's chunk
-and restores it at landing, including after a restart or controller removal.
+and restores it at its rotated or translated landing position, including
+after a restart or controller removal.
 
-A Portable Storage Interface can dock that chest with a stationary interface
-and a vanilla hopper or dry vertical Chute below. Both preserve the
-components. [Portable Storage Interface](portable-storage.md)
+A Portable Storage Interface on a vertical Mechanical Bearing can dock that
+chest with a stationary interface and a vanilla hopper or dry vertical Chute
+below. Both preserve the components. [Portable Storage Interface](portable-storage.md)
 
 Access the inventory when the chest has landed. The moving chest menu,
-multiple or double chests, other drivers, named, locked and loot-table chests
+multiple or double chests, named, locked and loot-table chests
 are outside the current adapter.
 
 ## Windmill sails
@@ -209,6 +214,9 @@ controller motion. The current implementation is exercised by Rust unit tests.
   after a cold Horizon restart during the cut.
 - `tools/deployer_held_checks.py` captures both clients in five states with
   the same camera. The three fixed sapling poses have the same visible bounds.
+- `tools/harvester_blade_checks.py` compares 1,600 blade angles with the
+  actual Flywheel actor class from the pinned Create JAR. A separate Horizon
+  capture checks changing blade poses during single-player bearing travel.
 - `tools/deployer_farm_checks.py` and `tools/deployer_refill_checks.py --combined`
   compare planting ticks and chest slots, then test a restart and a shared
   Saw and Deployer rotor in Horizon.
@@ -233,6 +241,11 @@ controller motion. The current implementation is exercised by Rust unit tests.
 - `tools/mounted_storage_checks.py` checks Java slot order, rotated landing,
   custom item components, a full chest's overflow and Horizon recovery after
   an obstructed landing and real process restarts.
+- `tools/linear_storage_checks.py` checks a dry single chest on Gantry, Rope
+  Pulley, regular Piston and sticky Piston. It verifies source and destination
+  states against Java, durability and custom components by slot, and blocked
+  placement over a native process restart. A Gantry Harvester fixture checks
+  replanting and delivery of the crop to its moving chest.
 - `tools/sail_reference_checks.py` and `tools/sail_native_checks.py` verify
   placement, dye, shear, axial exclusion and 1 RPM generation with eight
   sails or frames. The native runs cover restart, landing and both art packs.
