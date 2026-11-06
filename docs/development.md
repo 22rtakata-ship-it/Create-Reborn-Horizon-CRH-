@@ -30,3 +30,5 @@ Game tests use disposable instances. Original Create resources are optional and
 can be supplied locally using the [resource guide](assets.md). The latest
 gameplay results and their limits are in the [0.7 report](reviews/0.7-report.md).
 [Earlier verification](../VALIDATION.md) · [Roadmap](roadmap.md)
+
+[Official Horizon migration and Nightly checks](official-horizon.md)

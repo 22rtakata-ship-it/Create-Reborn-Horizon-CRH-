@@ -31,8 +31,12 @@ Create release. Read `compatibility.json`, `docs/compatibility.md` and
 - Reuse Horizon's normal movement, damage, inventory, particles and networking
   paths. Do not replace missing semantics with teleporting, direct health edits,
   decorative-only mechanisms or untested client/server duplication.
-- Prefer named native hooks and narrow pinned adapters. If exact behavior needs
-  an upstream API extension, implement and validate that boundary explicitly.
+- Check official Horizon and pending upstream work for a suitable API before
+  adding an adapter. Prefer named native hooks and use narrow pinned mixins
+  for compatibility with existing engine behavior.
+- For a missing engine capability, open a focused upstream pull request with
+  a regression test. Before submitting a registry update, build the complete
+  package on an official Nightly and run the affected gameplay checks.
 - Preserve existing player worlds and Prism instances. Develop and compare in
   separate instances or disposable copies. Never publish account/session data.
 - Ship coherent tested increments with a prepared review world and an actionable

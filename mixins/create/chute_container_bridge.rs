@@ -62,7 +62,8 @@ impl Game<'_> {
                     count,
                     ..stack.clone()
                 };
-                let (rest, _) = self.move_in_item(None, &view, portion, slot);
+                let (rest, _) =
+                    self.move_in_item(None, &view, portion, slot, Some(Direction::Up));
                 moved += count - rest.map_or(0, |stack| stack.count);
             }
         }

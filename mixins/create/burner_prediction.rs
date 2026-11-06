@@ -48,7 +48,7 @@ pub(in crate::game) fn entity(game: &mut Game<'_>, hand: Hand) -> bool {
     if game.spectator() {
         return false;
     }
-    let Some((index, distance)) = game.mob_hit() else {
+    let Some((index, distance, _)) = game.mob_hit() else {
         return false;
     };
     if !game.before_block(distance)

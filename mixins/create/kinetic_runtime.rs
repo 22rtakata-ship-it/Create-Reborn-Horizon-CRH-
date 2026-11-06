@@ -5,6 +5,7 @@
 // is published by initialize/updateGeneratedRotation, not by reading a setting.
 // This preserves supported stationary-machine event ordering; it is not a
 // complete RotationPropagator implementation (source ownership/flicker/breakage).
+use super::create_port_block_entity_revision::EntityRevision as _;
 use super::Game;
 use crate::containers::{BlockEntity, ModBlockEntity, ModRevision};
 use create_engine::{
@@ -103,7 +104,7 @@ fn with_lifetime<R>(
         let world = cache.dimension(std::ptr::from_ref(&game.world) as usize, game.dim.id());
         let state = world.nodes.entry(pos).or_default();
         let owner = entity.revision();
-        if state.owner.is_some_and(|old| !old.same_entity(owner)) {
+        if state.owner.is_some_and(|old| !old.is_same_create_entity(owner)) {
             *state = Lifetime::default();
         }
         state.owner = Some(owner);
@@ -375,7 +376,7 @@ pub(super) fn transmission_detached(game: &Game<'_>, pos: Pos) -> bool {
             .get(&pos)
             .is_some_and(|owner| {
                 // The host takes the currently ticking entity out of the map.
-                transmission_owner(game, pos).is_none_or(|current| owner.same_entity(current))
+                transmission_owner(game, pos).is_none_or(|current| owner.is_same_create_entity(current))
             })
     })
 }
@@ -456,7 +457,7 @@ pub(super) fn begin_transmission_tick(game: &mut Game<'_>) {
         let mut cache = cell.borrow_mut();
         let state = cache.dimension(std::ptr::from_ref(&game.world) as usize, game.dim.id());
         state.maintain(game.world.game_time, |pos, owner| {
-            transmission_owner(game, pos).is_some_and(|current| owner.same_entity(current))
+            transmission_owner(game, pos).is_some_and(|current| owner.is_same_create_entity(current))
         });
         std::mem::take(&mut state.reattach)
     });
@@ -466,7 +467,7 @@ pub(super) fn begin_transmission_tick(game: &mut Game<'_>) {
     invalidate();
     for (pos, owner) in pending {
         if transmission_block(&game.native_block(pos))
-            && transmission_owner(game, pos).is_some_and(|current| owner.same_entity(current))
+            && transmission_owner(game, pos).is_some_and(|current| owner.is_same_create_entity(current))
         {
             publish_transmission(game, pos);
         }
@@ -584,8 +585,8 @@ mod lifetime_tests {
         live.nbt
             .insert("ScrollValue".into(), horizon_world::nbt::Tag::Int(64));
         states.maintain(20, |pos, owner| match pos[0] {
-            1 => owner.same_entity(live.revision()),
-            3 => owner.same_entity(replacement.revision()),
+            1 => owner.is_same_create_entity(live.revision()),
+            3 => owner.is_same_create_entity(replacement.revision()),
             _ => false,
         });
         assert_eq!(states.nodes.len(), 1);

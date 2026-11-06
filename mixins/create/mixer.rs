@@ -4,6 +4,7 @@
 // MechanicalMixerBlockEntity + BasinOperatingBlockEntity, Create 6.0.10.
 // Source heat-aware item/water/lava mixing and ordinary shapeless crafting. processingTicks and
 // currentRecipe deliberately remain transient, exactly as the source serializer.
+use super::create_port_block_entity_revision::EntityRevision as _;
 use super::create_port_basin_recipes::Recipe;
 use super::{Game, create_port_basin as basin, native_block_entity_draw::BlockEntityDraw};
 use crate::containers::{BlockEntity, ModBlockEntity, ModRevision};
@@ -134,7 +135,7 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity, r
     let received = saved(entity);
     // Source transient fields belong to the BE object, not its coordinate or
     // saved counters. Ordinary load/update writes retain that object's timer.
-    if state.tick.is_some_and(|t| t > now) || state.owner.is_some_and(|old| !old.same_entity(owner))
+    if state.tick.is_some_and(|t| t > now) || state.owner.is_some_and(|old| !old.is_same_create_entity(owner))
     {
         state = Running::default();
     }
@@ -283,7 +284,7 @@ pub(super) fn draw(
             .get(&pos)
             .filter(|c| {
                 c.owner
-                    .is_some_and(|old| old.same_entity(entity.revision()))
+                    .is_some_and(|old| old.is_same_create_entity(entity.revision()))
             })
             .map_or_else(
                 || {
@@ -357,7 +358,7 @@ pub(super) fn client_tick(game: &mut Game<'_>) {
         let particles = with_world(game, |w| {
             let c = w.client.entry(pos).or_default();
             if c.tick.is_some_and(|t| t > time)
-                || c.owner.is_some_and(|old| !old.same_entity(owner))
+                || c.owner.is_some_and(|old| !old.is_same_create_entity(owner))
             {
                 *c = Client::default();
             }

@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 // MechanicalPressBlockEntity's BasinOperating/PressingBehaviour server boundary,
 // Create ac0c444d9828da3453ae8cc65338e8de063286fb (6.0.10).
+use super::create_port_block_entity_revision::EntityRevision as _;
 use super::{
     Game, create_port_basin as basin,
     create_port_basin_recipes::{self as recipes, Operator, Recipe},
@@ -75,7 +76,7 @@ pub(super) fn basin_removed(game: &Game<'_>, pos: Pos) {
     let owner = entity.revision();
     with_world(game, |world| {
         let state = world.entry(pos).or_default();
-        if state.owner.is_some_and(|old| !old.same_entity(owner)) {
+        if state.owner.is_some_and(|old| !old.is_same_create_entity(owner)) {
             *state = Running::default();
         }
         state.owner = Some(owner);
@@ -117,7 +118,7 @@ pub(super) fn tick(
     let mut state = with_world(game, |world| world.remove(&pos).unwrap_or_default());
     let owner = entity.revision();
     if state.tick.is_some_and(|tick| tick > now)
-        || state.owner.is_some_and(|old| !old.same_entity(owner))
+        || state.owner.is_some_and(|old| !old.is_same_create_entity(owner))
     {
         state = Running::default();
     }

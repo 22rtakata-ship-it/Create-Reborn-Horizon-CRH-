@@ -1048,14 +1048,22 @@ file = "crates/horizon-client/src/game.rs"
 name = "create_port_burner_presentation"
 source = "burner_presentation.rs"
 
-[[injection]]
-id = "burner-standalone-sprites"
-target = "horizon_client::game::native_hooks::Game<'_>::native_terrain_model_sprites"
-kind = "HEAD"
-helper = "burner_sprites.rs"
-bindings = [
- {name="sprites",ty="&mut Vec<String>",value="&mut *sprites"},
-]
+[[bridge]]
+id = "block-entity-identity"
+kind = "GET"
+target = "horizon_client_render::chunk::block_entity::ModRevision"
+member = "born"
+
+[[module]]
+id = "block-entity-revision"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_block_entity_revision"
+source = "block_entity_revision.rs"
+
+[[bridge]]
+id = "apply-block-entity-pose"
+kind = "INVOKE"
+target = "horizon_client::game::native_block_entity_draw::BlockEntityDraw::apply"
 
 [[injection]]
 id = "burner-stateful-entity"
@@ -1463,12 +1471,33 @@ bindings = [
 
 [[injection]]
 id = "contraption-client-column-replacement"
-target = "horizon_client_render::streaming::Streaming::replace_remote"
+target = "horizon_client_render::streaming::take_resent_column"
 kind = "HEAD"
 helper = "contraption_chunk_hook.rs"
 bindings = [
   { name = "world", ty = "&crate::world::World", value = "&*world" },
   { name = "chunk", ty = "&mut crate::chunk::Chunk", value = "&mut chunk" },
+]
+
+[[module]]
+id = "contraption-column-attachments"
+file = "crates/horizon-client-render/src/streaming.rs"
+name = "create_contraption_column_attachments"
+source = "contraption_column_attachments.rs"
+
+[[injection]]
+id = "contraption-unlit-column-replacement"
+target = "horizon_client_render::streaming::Streaming::replace_remote"
+kind = "WRAP_OPERATION"
+selector = "self.insert_remote"
+ordinal = 1
+require = 2
+helper = "contraption_unlit_chunk_hook.rs"
+bindings = [
+  { name = "streaming", ty = "&mut Streaming", value = "$receiver" },
+  { name = "world", ty = "&mut crate::world::World", value = "$arg0" },
+  { name = "chunk", ty = "crate::chunk::Chunk", value = "$arg1" },
+  { name = "original", ty = "impl FnOnce(&mut Streaming, &mut crate::world::World, crate::chunk::Chunk) -> ()", value = "$operation" },
 ]
 
 [[injection]]

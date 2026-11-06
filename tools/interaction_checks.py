@@ -21,6 +21,7 @@ def placement(call):
         call("wait", 5)
         call("select", "create:" + item)
         call("command", "tp @s " + player)
+        call("wait", 3)
         # Publish rotation before the click reaches the integrated server.
         # `interact` alone aims and clicks within one client frame.
         call("look-at", "block", 0, 64, 0, "up")

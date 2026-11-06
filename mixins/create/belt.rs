@@ -6,6 +6,7 @@
 // normal world writes, component-preserving NBT, controller lifetime and drawing.
 // Casings/dyes and passengers remain separate integrations. Processor callbacks
 // use the portable transport result/queue contract.
+use super::create_port_block_entity_revision::EntityRevision as _;
 use super::{Game, native_block_entity_draw::BlockEntityDraw};
 use crate::{
     containers::{BlockEntity, ModBlockEntity, ModRevision},
@@ -49,7 +50,7 @@ impl KnownChain {
     fn owns_segment(&self, game: &Game<'_>, index: usize) -> bool {
         let segment = &self.chain.segments[index];
         let pos = segment.pos;
-        belt_revision(game, pos).is_some_and(|live| self.owners[index].same_entity(live))
+        belt_revision(game, pos).is_some_and(|live| self.owners[index].is_same_create_entity(live))
             && facing(game, pos) == self.chain.facing
             && slope(game, pos) == self.chain.slope
             && part(game, pos) == segment.part

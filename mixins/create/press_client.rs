@@ -2,6 +2,7 @@
 // Copyright (c) 2026 create-horizon contributors
 // SPDX-License-Identifier: MIT
 // PressingBehaviour's actual client read/tick boundary, Create 6.0.10.
+use super::create_port_block_entity_revision::EntityRevision as _;
 use super::{Game, create_port as port};
 use crate::{
     containers::{BlockEntity, ModBlockEntity, ModRevision},
@@ -62,7 +63,7 @@ fn saved(nbt: &Compound) -> Option<PressPacket> {
     })
 }
 fn bind(client: &mut Client, owner: ModRevision, initial: PressPacket) {
-    if !client.owner.is_some_and(|old| old.same_entity(owner)) {
+    if !client.owner.is_some_and(|old| old.is_same_create_entity(owner)) {
         *client = Client::default();
         client.owner = Some(owner);
         client.cycle.read(initial);
@@ -207,7 +208,7 @@ pub(super) fn travel(game: &Game<'_>, pos: Pos, entity: &ModBlockEntity, partial
             .filter(|client| {
                 client
                     .owner
-                    .is_some_and(|old| old.same_entity(entity.revision()))
+                    .is_some_and(|old| old.is_same_create_entity(entity.revision()))
             })
             .map_or_else(
                 || {

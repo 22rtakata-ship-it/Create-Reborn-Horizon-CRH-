@@ -226,14 +226,10 @@ pub(super) fn interact_entity(game: &mut Game<'_>, id: i32, kind: &str) -> bool 
     {
         return false;
     }
-    let Some(mob) = game.mobs.iter().find(|m| m.id as i32 == id && !m.removed) else {
+    let Some(mob) = game.native_mob(game.dim.id(), id as u32) else {
         return false;
     };
-    let at = [mob.position.x, mob.position.y, mob.position.z];
-    if game.native_mob(game.dim.id(), id as u32).is_none() {
-        return false;
-    }
-    capture_sound(game, at);
+    capture_sound(game, mob.pos);
     capture_item(game);
     game.native_remove_mob(game.dim.id(), id as u32)
 }

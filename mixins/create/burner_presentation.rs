@@ -3,6 +3,7 @@
 
 // Source burner presentation and opt-in observation of the actual client renderer input.
 // No original resources are bundled; models/textures come from the player's pinned JAR.
+use super::create_port_block_entity_revision::EntityRevision as _;
 use super::Game;
 use super::native_block_entity_draw::BlockEntityDraw;
 use crate::{
@@ -20,6 +21,7 @@ use create_engine::{
 };
 use horizon_core::random::{LegacyRandom, RandomSource};
 use horizon_world::registry::BlockStateId;
+use glam::{Mat4, Quat, Vec3};
 use std::{cell::RefCell, collections::BTreeMap, sync::OnceLock};
 
 #[derive(Clone, PartialEq, Eq)]
@@ -61,7 +63,7 @@ impl TraceState {
         // every previously rendered, removed burner until time resumed. Bound
         // this opt-in diagnostic to actual live client entities instead.
         self.entries.retain(|pos, (identity, _)| {
-            live(*pos).is_some_and(|current| identity.same_entity(current))
+            live(*pos).is_some_and(|current| identity.is_same_create_entity(current))
         });
         self.entries
             .insert(pos, (identity, snapshot.clone()))
@@ -111,7 +113,7 @@ impl Client {
         // position or every content revision. A same-ID /data load keeps the
         // BE; removing/replacing it or unloading its chunk does not.
         self.entries.retain(|pos, entry| {
-            live(*pos).is_some_and(|identity| entry.identity.same_entity(identity))
+            live(*pos).is_some_and(|identity| entry.identity.is_same_create_entity(identity))
         });
     }
     fn reload_visuals(&mut self, mut above: impl FnMut([i32; 3]) -> bool) {
@@ -129,7 +131,7 @@ impl Client {
         if self
             .entries
             .get(&pos)
-            .is_some_and(|e| !e.identity.same_entity(identity))
+            .is_some_and(|e| !e.identity.is_same_create_entity(identity))
         {
             self.entries.remove(&pos);
         }
@@ -322,6 +324,15 @@ pub(super) fn burst(game: &mut Game<'_>, pos: [i32; 3], soul: bool) {
     }
 }
 
+fn rotate_y(draw: &mut BlockEntityDraw, radians: f32) {
+    let pivot = Vec3::splat(0.5);
+    draw.__horizon_mixins_create_apply_block_entity_pose(
+        Mat4::from_translation(pivot)
+            * Mat4::from_quat(Quat::from_rotation_y(radians))
+            * Mat4::from_translation(-pivot),
+    );
+}
+
 fn part(
     game: &Game<'_>,
     draw: &mut BlockEntityDraw,
@@ -334,7 +345,7 @@ fn part(
     draw.push();
     draw.translate([0.0, y, 0.0]);
     if let Some(angle) = angle {
-        draw.rotate_about_radians([0.0, 1.0, 0.0], angle, [0.5; 3]);
+        rotate_y(draw, angle);
     }
     game.native_draw_terrain_model(
         draw,
@@ -403,11 +414,7 @@ pub(super) fn draw(
         draw.push();
         draw.translate([0.0, frame.head_y, 0.0]);
         draw.translate([0.0, 0.75, 0.0]);
-        draw.rotate_about_radians(
-            [0.0, 1.0, 0.0],
-            frame.angle + std::f32::consts::PI,
-            [0.5; 3],
-        );
+        rotate_y(draw, frame.angle + std::f32::consts::PI);
         draw.translate([0.5, 0.0, 0.5]);
         game.native_draw_terrain_model(
             draw,
@@ -492,16 +499,6 @@ pub(super) fn resources_reloaded(game: &Game<'_>) {
         cache.prepare(game);
         cache.reload_visuals(|pos| valid_above(game, pos));
     });
-}
-
-pub(super) fn sprites(out: &mut Vec<String>) {
-    out.extend(
-        [
-            "create:block/blaze_burner_flame_scroll",
-            "create:block/blaze_burner_flame_superheated_scroll",
-        ]
-        .map(str::to_owned),
-    );
 }
 
 /// Called only by the actual client submit path. The opt-in gate precedes all collection,

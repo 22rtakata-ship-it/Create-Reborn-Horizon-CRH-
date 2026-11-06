@@ -780,6 +780,17 @@ fn bundled_content_repairs_itself_without_changing_other_mods_or_settings() {
 fn generated_distribution_passes_the_native_content_allowlist() {
     let home = Stage::new(&std::env::temp_dir()).unwrap();
     let path = bundled_content(&home.0, include_bytes!("../../data/content.json")).unwrap();
+    let atlas: serde_json::Value = serde_json::from_slice(
+        &fs::read(path.join("assets/minecraft/atlases/blocks.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        atlas["sources"],
+        json!([
+            {"type": "minecraft:single", "resource": "create:block/blaze_burner_flame_scroll"},
+            {"type": "minecraft:single", "resource": "create:block/blaze_burner_flame_superheated_scroll"}
+        ])
+    );
     for name in [
         "data/create/horizon/block/gantry_shaft.json",
         "data/create/horizon/block/rope_pulley.json",
@@ -796,6 +807,7 @@ fn bundled_content_rejects_paths_outside_its_namespace_before_writing() {
     for name in [
         "../escape",
         "assets/minecraft/override.json",
+        "assets/minecraft/atlases/gui.json",
         "data/create/../../escape",
         "/absolute",
     ] {

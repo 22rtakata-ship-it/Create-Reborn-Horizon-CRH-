@@ -86,7 +86,8 @@ pub fn bundled_content(game_dir: &Path, bytes: &[u8]) -> io::Result<PathBuf> {
                     || name.starts_with("data/create/")
                     || matches!(
                         name.as_str(),
-                        "data/minecraft/tags/damage_type/is_fire.json"
+                        "assets/minecraft/atlases/blocks.json"
+                            | "data/minecraft/tags/damage_type/is_fire.json"
                             | "data/minecraft/tags/damage_type/bypasses_armor.json"
                             | "data/minecraft/tags/damage_type/bypasses_shield.json"
                             | "data/minecraft/tags/block/climbable.json"
