@@ -229,23 +229,29 @@ with the systems they depend on.
   and horizontal stationary Saw tree felling.
 - [x] First active-cell selection on a newly assembled Mechanical Bearing,
   checked by wheat harvest and Saw output through a portable dock.
+- [x] Saw and Drill stall timing on a Mechanical Bearing, with cutting
+  progress resumed after a cold restart.
 - [ ] Full actor tick ordering and saved movement contexts across all drivers.
 - [x] Moving Plough tilling, snow clearing and protection of farmland crops.
 - [x] Moving Plough impulses on ordinary living mobs, checked for overlap,
-  backward motion and a blocked cell. Exact timing and other entity kinds remain open.
+  backward motion, a blocked cell and the original launch tick.
 - [x] Downward Deployer planting from its own stock on a vertical Mechanical
   Bearing, with forty matching Java tick samples and restart coverage.
 - [x] Deployer refill from a single mounted chest and a moving Saw on the same
   farm. First matching slot, blocked planting and restart checked.
 - [x] Stationary downward Deployer planting with plain saplings, redstone
   lock, speed pause and cold-stroke resume.
+- [x] Stationary Deployer held sapling with the original fixed and spinning
+  display poses.
 - [x] Super Glue selection and transfer planner. Deployer stroke, target and
   storage rules checked against Java traces.
 - [x] Two-click Super Glue and single-column bearing transfer, with durability
   and saved volume checks.
 - [x] Super Glue transfer on dry Gantry and Rope Pulley, with off-origin
   capture and bounds restored after a cold native restart.
-- [ ] Original Glue outlines and particles, offhand placement and transfer on other drivers.
+- [x] Super Glue first-corner face particles and confirmed or removed volume
+  edge particles.
+- [ ] Original Glue outlines, offhand placement and transfer on other drivers.
 - [x] Upward stationary Saw wood processing through native item collision,
   with saved progress and Java comparisons of the cutting and ejection cycle.
 - [x] Upward Saw's stock vanilla plank variants, stonecutting and Andesite

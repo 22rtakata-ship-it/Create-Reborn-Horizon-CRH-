@@ -19,7 +19,7 @@ fn create_right_click(
         *canceled = true;
         return;
     }
-    if crate::game::create_port_super_glue::right_click(game, pos) {
+    if crate::game::create_port_super_glue::right_click(game, pos, face) {
         *canceled = true;
         return;
     }

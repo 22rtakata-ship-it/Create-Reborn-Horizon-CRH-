@@ -14,12 +14,20 @@ use create_engine::{
         glue::{Search, SelectionError, Volume, selection},
     },
     kinetics::Pos,
+    particles::{glue_edges, glue_face},
     placement::Direction,
 };
 use horizon_client::{
-    item_render::cit::stack_max_damage, items::ItemStack, mod_api::Holder, text::Text,
+    item_render::cit::stack_max_damage,
+    items::ItemStack,
+    mod_api::Holder,
+    particles::{ParticleOptions, ParticleType},
+    text::Text,
 };
-use horizon_core::geometry::{Aabb, Vec3};
+use horizon_core::{
+    geometry::{Aabb, Vec3},
+    random::RandomSource,
+};
 use horizon_world::{
     attachments::{AttachmentCodec, AttachmentError, AttachmentType, Attachments},
     nbt::{Compound, Tag},
@@ -29,6 +37,7 @@ use std::borrow::Cow;
 
 const ITEM: &str = "create:super_glue";
 const ATTACK_CHANNEL: &str = "create:remove_super_glue";
+const FACE_CHANNEL: &str = "create:super_glue_face";
 pub(super) const MAX_VOLUMES: usize = 128;
 const MAX_SELECTION_BLOCKS: usize = 32_768;
 const KEY: &str = "super_glue";
@@ -244,6 +253,48 @@ fn sound(game: &mut Game<'_>, pos: Pos, pitch: f32) {
     });
 }
 
+fn send_face(game: &mut Game<'_>, pos: Pos, face: [i32; 3]) {
+    let Some(index) = Direction::ALL.iter().position(|d| d.vector() == face) else {
+        return;
+    };
+    let mut data = [0; 13];
+    for (bytes, coord) in data[..12].chunks_exact_mut(4).zip(pos) {
+        bytes.copy_from_slice(&coord.to_be_bytes());
+    }
+    data[12] = index as u8;
+    let player = game.native_acting_id();
+    let _ = game.native_net_send_to_player(player, FACE_CHANNEL, &data);
+}
+
+pub(super) fn receive_face(game: &mut Game<'_>, channel: &str, data: &[u8]) {
+    if channel != FACE_CHANNEL
+        || !game.native_window()
+        || !game.native_on("create")
+        || data.len() != 13
+    {
+        return;
+    }
+    let Some(&face) = Direction::ALL.get(usize::from(data[12])) else {
+        return;
+    };
+    let pos =
+        std::array::from_fn(|i| i32::from_be_bytes(data[4 * i..4 * i + 4].try_into().unwrap()));
+    let options = game.item_particle(&ItemStack::new("minecraft:slime_ball", 1));
+    let particles = glue_face(pos, face, || game.particles.level_random().next_float());
+    for (at, velocity) in particles {
+        game.particles.add(&options, at, velocity);
+    }
+}
+
+fn send_edges(game: &mut Game<'_>, volume: Volume) {
+    let options = ParticleOptions::simple(ParticleType::ItemSlime);
+    game.with_level(|_, level, _| {
+        glue_edges(volume, |at| {
+            level.native_send_particles(&options, None, at, [0.0; 3], 0.0, 1);
+        });
+    });
+}
+
 fn vector([x, y, z]: [f64; 3]) -> Vec3 {
     Vec3::new(x, y, z)
 }
@@ -329,7 +380,7 @@ pub(super) fn left_click(game: &mut Game<'_>) -> bool {
         return true;
     };
     let mut volumes = volumes.into_owned();
-    volumes.remove(index);
+    let volume = volumes.remove(index);
     let Ok(map) = game.native_attachments(Holder::Chunk(column)) else {
         return true;
     };
@@ -339,6 +390,7 @@ pub(super) fn left_click(game: &mut Game<'_>) -> bool {
         map.set(&VOLUMES, volumes)
     };
     if removed.is_ok() {
+        send_edges(game, volume);
         let sound_pos = at.map(|value| value.floor() + 0.5);
         game.with_level(|_, level, _| {
             level.native_play_sound("minecraft:block.slime_block.place", sound_pos, 4, 0.5, 0.5);
@@ -360,7 +412,7 @@ pub(super) fn player_tick(game: &mut Game<'_>) {
     }
 }
 
-pub(super) fn right_click(game: &mut Game<'_>, pos: Pos) -> bool {
+pub(super) fn right_click(game: &mut Game<'_>, pos: Pos, face: [i32; 3]) -> bool {
     if !game.native_on("create")
         || game.held_slot() != game.selected
         || !holds_glue(game)
@@ -390,6 +442,7 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: Pos) -> bool {
         {
             status(game, "create.super_glue.first_pos");
             sound(game, pos, 0.85);
+            send_face(game, pos, face);
         }
         return true;
     };
@@ -457,6 +510,7 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: Pos) -> bool {
     // the next glue in ordinary inventory order, if one remains.
     spend(game);
     spend(game);
+    send_edges(game, volume);
     status(game, "create.super_glue.success");
     sound(game, pos, 0.95);
     true

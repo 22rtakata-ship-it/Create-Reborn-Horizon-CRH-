@@ -4,8 +4,9 @@
 //! Create-specific particle controllers. Vanilla particle construction, lighting,
 //! sprite-atlas lookup and rendering remain the platform adapter's responsibility.
 use crate::{
+    contraption::glue::Volume,
     fan::{self, ProcessingType, Segment},
-    kinetics::Axis,
+    kinetics::{Axis, Pos},
     placement::Direction,
 };
 use std::sync::OnceLock;
@@ -72,6 +73,107 @@ fn rotate(offset: [f64; 3], degrees: f32, axis: Axis) -> [f64; 3] {
         Axis::X => [x, y * cos - z * sin, z * cos + y * sin],
         Axis::Y => [x * cos + z * sin, y, z * cos - x * sin],
         Axis::Z => [x * cos - y * sin, y * cos + x * sin, z],
+    }
+}
+
+/// SuperGlueItem.spawnParticles with fullBlock set, as used on the first click.
+pub fn glue_face(
+    pos: Pos,
+    face: Direction,
+    mut next_float: impl FnMut() -> f32,
+) -> [([f64; 3], [f64; 3]); 40] {
+    let normal = face.vector().map(f64::from);
+    let plane = normal.map(|v| 1.0 - v.abs());
+    let center = std::array::from_fn::<_, 3, _>(|i| f64::from(pos[i]) + 0.5 + normal[i] * 0.5);
+    std::array::from_fn(|_| {
+        let offset = rotate(plane, 360.0 * next_float(), face.axis());
+        let length = offset.iter().map(|v| v * v).sum::<f64>().sqrt();
+        let velocity = offset.map(|v| v / length / 16.0);
+        let at = std::array::from_fn(|i| center[i] + offset[i].clamp(-0.5, 0.5));
+        (at, velocity)
+    })
+}
+
+/// SuperGlueEntity.spawnParticles visits the twelve edges in axis order.
+/// Each edge includes both endpoints, so each corner is emitted three times.
+pub fn glue_edges(volume: Volume, mut emit: impl FnMut([f64; 3])) {
+    let [min, max] = volume.corners();
+    let min = min.map(f64::from);
+    let max = max.map(|v| f64::from(v) + 1.0);
+    for axis in 0..3 {
+        let [a, b] = match axis {
+            0 => [1, 2],
+            1 => [0, 2],
+            _ => [0, 1],
+        };
+        let steps = ((max[axis] - min[axis]) * 2.0) as i64;
+        for step in 0..=steps {
+            for x in [min[a], max[a]] {
+                for y in [min[b], max[b]] {
+                    let mut point = min;
+                    point[axis] += step as f64 * 0.5;
+                    point[a] = x;
+                    point[b] = y;
+                    emit(point);
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod glue_tests {
+    use super::*;
+
+    #[test]
+    fn first_corner_burst_uses_the_face_plane_and_unclamped_motion() {
+        for face in Direction::ALL {
+            let pos = [3, -4, 5];
+            let axis = face.axis().index();
+            let mut draws = 0;
+            let particles = glue_face(pos, face, || {
+                draws += 1;
+                (draws - 1) as f32 / 40.0
+            });
+            assert_eq!(draws, 40);
+            assert_eq!(
+                particles[0].0,
+                std::array::from_fn(
+                    |i| f64::from(pos[i]) + if face.vector()[i] < 0 { 0.0 } else { 1.0 }
+                )
+            );
+            for (at, motion) in particles {
+                assert_eq!(motion[axis], 0.0);
+                assert_eq!(at[axis], particles[0].0[axis]);
+                assert!(
+                    (motion.iter().map(|v| v * v).sum::<f64>().sqrt() - 1.0 / 16.0).abs() < 1e-12
+                );
+                assert!(
+                    (0..3).all(|i| (f64::from(pos[i])..=f64::from(pos[i]) + 1.0).contains(&at[i]))
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn volume_burst_walks_every_edge_in_half_block_steps() {
+        let mut points = Vec::new();
+        glue_edges(Volume::span([3, 2, -1], [4, 2, -1]), |p| points.push(p));
+        assert_eq!(points.len(), 44);
+        assert_eq!(
+            &points[..5],
+            &[
+                [3., 2., -1.],
+                [3., 2., 0.],
+                [3., 3., -1.],
+                [3., 3., 0.],
+                [3.5, 2., -1.]
+            ],
+        );
+        assert_eq!(points[20], [3., 2., -1.]);
+        assert_eq!(points[24], [3., 2.5, -1.]);
+        assert_eq!(points[36], [3., 2., -0.5]);
+        assert_eq!(points.iter().filter(|&&p| p == [5., 3., 0.]).count(), 3);
     }
 }
 

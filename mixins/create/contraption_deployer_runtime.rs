@@ -22,6 +22,7 @@ use create_engine::{
     placement::Direction,
 };
 use glam::DVec3;
+use horizon_assets::item_model::DisplayContext;
 use horizon_client_render::create_contraption_scene::{MAX_RECORDS, Record};
 use horizon_core::{
     geometry::{Direction as Face, Vec3},
@@ -196,6 +197,63 @@ pub(super) fn draw_station(
         )
     });
     draw_arm(game, draw, facing, first, shaft_angle, arm, holding);
+    if get(&entity.nbt, "Mode") == Some(&Tag::String("USE".into()))
+        && let Some(stack) = get(&entity.nbt, "HeldItem")
+            .and_then(item_from_nbt)
+            .filter(supported_item)
+    {
+        draw_held_sapling(
+            game,
+            draw,
+            facing,
+            kinetics::running_speed(game, &entity.nbt),
+            arm,
+            &stack,
+        );
+    }
+}
+
+// DeployerRenderer.renderItem: every supported sapling has a flat generated model.
+fn draw_held_sapling(
+    game: &Game<'_>,
+    draw: &mut BlockEntityDraw,
+    facing: Direction,
+    rpm: f32,
+    extension: f32,
+    stack: &ItemStack,
+) {
+    draw.push();
+    draw.translate(
+        facing
+            .vector()
+            .map(|component| 0.5 + component as f32 * extension),
+    );
+    let yaw = match facing {
+        Direction::North => 0.0,
+        Direction::East => -90.0,
+        Direction::West => 90.0,
+        _ => 180.0,
+    };
+    draw.rotate_about([0., 1., 0.], yaw, [0.; 3]);
+    let display = if facing == Direction::Up && rpm == 0.0 {
+        draw.translate([0., 11. / 16., 0.]);
+        // Catnip's client animation clock advances one degree per tick.
+        let spin = super::create_port_particles::animation_time(draw.partial);
+        draw.rotate_about([0., 1., 0.], spin, [0.; 3]);
+        DisplayContext::Ground
+    } else {
+        let pitch = match facing {
+            Direction::Up => 90.0,
+            Direction::Down => -90.0,
+            _ => 0.0,
+        };
+        draw.rotate_about([1., 0., 0.], pitch, [0.; 3]);
+        draw.translate([0., 0., -11. / 16.]);
+        draw.scale([0.5; 3]);
+        DisplayContext::Fixed
+    };
+    game.native_draw_item(draw, stack, display, None, 0);
+    draw.pop();
 }
 
 pub(super) fn draw_moving(

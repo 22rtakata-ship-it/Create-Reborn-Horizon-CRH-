@@ -11,8 +11,8 @@ use super::{
 use crate::items::ItemStack;
 use create_engine::{
     contraption::actors::{
-        MotionTracker, Movement, Sample, Tool,
-        breaking::{self, Breaker, ContraptionKind, Step},
+        MotionState, MotionTracker, Movement, Sample, Tool,
+        breaking::{self, BreakState, Breaker, ContraptionKind, Step},
         drop_velocity,
         harvester::{self, Age, Block, LootTool, Plant, Replacement, Rules},
         saw::{self, Material, Target, TreeBlock, TreeStem},
@@ -23,7 +23,7 @@ use create_engine::{
     placement::Direction,
 };
 use glam::{DQuat, DVec3};
-use horizon_client_render::create_contraption_scene::Record;
+use horizon_client_render::create_contraption_scene::{MAX_BLOCKS, MAX_RECORDS, Record};
 use horizon_core::{
     geometry::{Aabb, Vec3},
     position::BlockPos,
@@ -31,10 +31,11 @@ use horizon_core::{
 };
 use horizon_protocol::packets::play::{self, Clientbound};
 use horizon_world::{
-    attachments::{AttachmentType, Holder},
+    attachments::{AttachmentCodec, AttachmentError, AttachmentType, Holder},
     chunk::BlockState,
     level::{data::state_flags, flags},
     loot::with_native_loot_place,
+    nbt::{Compound, Tag},
     registry::BlockStateId,
 };
 use std::{
@@ -72,10 +73,167 @@ const ACTORS: AttachmentType<Actors> = AttachmentType {
     namespace: "create",
     name: "moving_actor_ticks",
     default: Actors::new,
-    codec: None,
+    codec: Some(AttachmentCodec { encode, decode }),
     copy_on_death: false,
     sync: false,
 };
+
+fn vector_tag(vector: [f64; 3]) -> Tag {
+    Tag::List(
+        vector
+            .into_iter()
+            .map(|v| Tag::Double(v.to_bits()))
+            .collect(),
+    )
+}
+
+// Idle motion trackers are inexpensive to recreate. Store only live cuts,
+// whose saved motion and stall determine whether the drive may advance.
+fn actor_tag(local: Pos, actor: &Actor) -> Option<Tag> {
+    let motion = actor.tracker.state();
+    let state = actor.cutter.as_ref()?.breaker.state();
+    if !state.stalled {
+        return None;
+    }
+    let target = state.target?;
+    Some(Tag::Compound(Compound::from([
+        ("Local".into(), Tag::IntArray(local.to_vec())),
+        ("Position".into(), vector_tag(motion.position?)),
+        ("Motion".into(), vector_tag(motion.motion)),
+        ("RelativeMotion".into(), vector_tag(motion.relative_motion)),
+        (
+            "FirstMovement".into(),
+            Tag::Byte(i8::from(motion.first_movement)),
+        ),
+        ("BreakingPos".into(), Tag::IntArray(target.to_vec())),
+        ("Progress".into(), Tag::Int(i32::from(state.progress))),
+        (
+            "TicksUntilNextProgress".into(),
+            Tag::Int(state.ticks_until_progress),
+        ),
+    ])))
+}
+
+fn encode(actors: &Actors) -> Result<Compound, AttachmentError> {
+    if actors.len() > MAX_RECORDS || actors.values().any(|group| group.len() > MAX_BLOCKS) {
+        return Err(AttachmentError::Encode);
+    }
+    let structures = actors
+        .iter()
+        .filter_map(|(controller, group)| {
+            let cuts: Vec<_> = group
+                .iter()
+                .filter_map(|(&local, actor)| actor_tag(local, actor))
+                .collect();
+            (!cuts.is_empty()).then(|| {
+                Tag::Compound(Compound::from([
+                    ("Controller".into(), Tag::IntArray(controller.to_vec())),
+                    ("Actors".into(), Tag::List(cuts)),
+                ]))
+            })
+        })
+        .collect();
+    Ok(Compound::from([
+        ("Version".into(), Tag::Int(1)),
+        ("Structures".into(), Tag::List(structures)),
+    ]))
+}
+
+fn decode(attachment: &Compound) -> Result<Actors, AttachmentError> {
+    fn load_pos(tag: &Tag) -> Option<Pos> {
+        match tag {
+            Tag::IntArray(coords) => coords.as_slice().try_into().ok(),
+            _ => None,
+        }
+    }
+    fn load_vector(tag: &Tag) -> Option<[f64; 3]> {
+        let Tag::List(coords) = tag else { return None };
+        let [Tag::Double(x), Tag::Double(y), Tag::Double(z)] = coords.as_slice() else {
+            return None;
+        };
+        Some([*x, *y, *z].map(f64::from_bits))
+    }
+    fn load_flag(tag: &Tag) -> Option<bool> {
+        match tag {
+            Tag::Byte(0) => Some(false),
+            Tag::Byte(1) => Some(true),
+            _ => None,
+        }
+    }
+    fn read_actor(tag: &Compound) -> Option<(Pos, Actor)> {
+        let local = load_pos(tag.get(&"Local".into())?)?;
+        let tracker = MotionTracker::restore(MotionState {
+            position: Some(load_vector(tag.get(&"Position".into())?)?),
+            motion: load_vector(tag.get(&"Motion".into())?)?,
+            relative_motion: load_vector(tag.get(&"RelativeMotion".into())?)?,
+            first_movement: load_flag(tag.get(&"FirstMovement".into())?)?,
+        })?;
+        let (Some(Tag::Int(progress)), Some(Tag::Int(ticks))) = (
+            tag.get(&"Progress".into()),
+            tag.get(&"TicksUntilNextProgress".into()),
+        ) else {
+            return None;
+        };
+        let breaker = Breaker::restore(BreakState {
+            target: Some(load_pos(tag.get(&"BreakingPos".into())?)?),
+            progress: u8::try_from(*progress).ok()?,
+            ticks_until_progress: *ticks,
+            stalled: true,
+        })?;
+        let cutter = MovingCutter {
+            breaker,
+            id: NEXT_BREAKER.fetch_add(1, Ordering::Relaxed),
+        };
+        Some((
+            local,
+            Actor {
+                tracker,
+                cutter: Some(cutter),
+            },
+        ))
+    }
+
+    let error = AttachmentError::Decode;
+    let (Some(Tag::Int(1)), Some(Tag::List(structures))) = (
+        attachment.get(&"Version".into()),
+        attachment.get(&"Structures".into()),
+    ) else {
+        return Err(error);
+    };
+    if structures.len() > MAX_RECORDS {
+        return Err(error);
+    }
+    let mut actors = Actors::new();
+    for structure in structures {
+        let Tag::Compound(structure) = structure else {
+            return Err(error);
+        };
+        let controller = structure
+            .get(&"Controller".into())
+            .and_then(load_pos)
+            .ok_or(error)?;
+        let Some(Tag::List(group)) = structure.get(&"Actors".into()) else {
+            return Err(error);
+        };
+        if group.len() > MAX_BLOCKS {
+            return Err(error);
+        }
+        let mut local_actors = BTreeMap::new();
+        for entry in group {
+            let Tag::Compound(entry) = entry else {
+                return Err(error);
+            };
+            let (local, actor) = read_actor(entry).ok_or(error)?;
+            if local_actors.insert(local, actor).is_some() {
+                return Err(error);
+            }
+        }
+        if actors.insert(controller, local_actors).is_some() {
+            return Err(error);
+        }
+    }
+    Ok(actors)
+}
 
 pub(super) fn stalled(game: &mut Game<'_>, controller: Pos) -> bool {
     let [x, z] = contraption::column(controller);
@@ -127,30 +285,41 @@ pub(super) fn remove(game: &mut Game<'_>, controller: Pos) {
 }
 
 pub(super) fn tick(game: &mut Game<'_>, previous: &Record, current: &Record) {
-    tick_with_start(game, previous, current, true);
+    tick_actors(game, previous, current, Phase::Driver);
 }
 
-pub(super) fn tick_after_bearing_assembly(
-    game: &mut Game<'_>,
-    previous: &Record,
-    current: &Record,
-) {
-    tick_with_start(game, previous, current, false);
+pub(super) fn tick_bearing_tools(game: &mut Game<'_>, published: &Record) {
+    // Java's entity visits the last published pose before the bearing's block
+    // entity advances it. A stall started or released here affects that turn.
+    tick_actors(game, published, published, Phase::BearingTools);
 }
 
-fn tick_with_start(
-    game: &mut Game<'_>,
-    previous: &Record,
-    current: &Record,
-    sample_previous_pose: bool,
-) {
+pub(super) fn tick_bearing_deployer(game: &mut Game<'_>, previous: &Record, current: &Record) {
+    tick_actors(game, previous, current, Phase::BearingDeployer);
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Phase {
+    Driver,
+    BearingTools,
+    BearingDeployer,
+}
+
+impl Phase {
+    fn handles(self, name: &str) -> bool {
+        if name == deployer::BLOCK {
+            return self != Self::BearingTools;
+        }
+        self != Self::BearingDeployer && matches!(name, HARVESTER | PLOUGH | SAW | DRILL)
+    }
+}
+
+fn tick_actors(game: &mut Game<'_>, previous: &Record, current: &Record, phase: Phase) {
     if game.options.execution_role.is_client()
-        || !current.blocks.iter().any(|(_, state)| {
-            matches!(
-                state.name.as_str(),
-                HARVESTER | PLOUGH | SAW | DRILL | deployer::BLOCK
-            )
-        })
+        || !current
+            .blocks
+            .iter()
+            .any(|(_, state)| phase.handles(state.name.as_str()))
     {
         return;
     }
@@ -168,6 +337,9 @@ fn tick_with_start(
     let origin_after = DVec3::from_array(current.origin_at(1.0));
     let mount = storage::mounted_chest(current);
     for (local, state) in &current.blocks {
+        if !phase.handles(state.name.as_str()) {
+            continue;
+        }
         let Some(facing) = state
             .properties
             .get("facing")
@@ -226,9 +398,9 @@ fn tick_with_start(
         let identity = |motion| motion;
         let actor = actors.entry(*local).or_insert_with(|| {
             let mut actor = Actor::default();
-            // A fresh Java bearing advances its angle before its newly
-            // spawned contraption samples a MovementContext with no position.
-            if sample_previous_pose {
+            // A newly spawned bearing entity starts with no previous actor
+            // position. The other drivers still use their advancing pose.
+            if phase == Phase::Driver {
                 actor.tracker.sample(
                     Sample {
                         position: world_point(origin_before, before, point),

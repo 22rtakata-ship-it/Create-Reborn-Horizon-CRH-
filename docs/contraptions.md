@@ -47,10 +47,11 @@ pauses its platform while cutting supported vanilla trees, fungi and stalks.
 A horizontal stationary Saw also fells trees. The moving Drill breaks eligible
 vanilla blocks and drops their loot. The Plough tills exposed soil, clears
 snow and protects crops rooted in farmland. When a living mob overlaps a
-visited non-conducting cell, the Plough adds the source impulse. The measured
-impulse starts one tick earlier in Horizon. Player throws, falling blocks,
-full mob contact and block-breaking damage remain open. Cut progress on
-moving tools currently resets across restarts.
+visited non-conducting cell, the Plough adds the source impulse. In the tested
+Mechanical Bearing setup it launches the mob on the same tick as Java. The
+Saw and Drill use the previously published bearing pose and resume their
+cutting target and progress after a restart. Player throws, falling blocks,
+full mob contact and block-breaking damage remain open.
 
 An upward stationary Saw strips logs, bark blocks, stems, hyphae and Bamboo
 Blocks, cuts stripped wood into planks, and cycles through plank shapes and
@@ -74,7 +75,9 @@ from its hand and refills one at a time from a single mounted chest. The plain
 sapling filter can be set in saved data. Stop the bearing to swap the held
 stack by clicking the hand. The owner, filter and remaining stock survive a
 restart. A stationary downward Deployer plants saplings in the cell two
-blocks below its body. Punching, general item use, complex
+blocks below its body. A stationary Deployer in Use mode shows its ordinary
+sapling in the extending hand, using the original fixed or spinning display
+pose. The held item on a moving Deployer, punching, general item use, complex
 filters and their interface remain open.
 [Deployer engine and host boundary](deployer.md)
 
@@ -92,9 +95,10 @@ relative to their current cargo origin, including starts away from zero stroke.
 A piston carries glue on its cargo. A volume that crosses its head or pole
 is refused before assembly.
 A volume that would be split or include a stationary block stops capture.
-The mounted volume shares the chunk save with the structure. The original
-selection outlines, particles, offhand placement and transfer on other drivers
-remain open.
+The mounted volume shares the chunk save with the structure. The first corner
+emits a slime-ball burst on the clicked face. Confirming or removing the volume
+emits particles at half-block intervals along its edges. Selection outlines,
+offhand placement and transfer on other drivers remain open.
 
 ## Mounted chest
 
@@ -197,8 +201,14 @@ controller motion. The current implementation is exercised by Rust unit tests.
 - `tools/plough_checks.py` compares forward and reverse passes, including
   grass, coarse and rooted dirt, farmland crops, three snow layers and drops.
 - `tools/plough_throw_checks.py` compares one strict mob overlap and three
-  controls against Java. The impulse vector differs by less than 0.0002
-  blocks per tick in the recorded scene.
+  controls against Java. The launch tick matches and the impulse vector
+  differs by less than 0.0002 blocks per tick in the recorded scene.
+- `tools/bearing_actor_phase_checks.py` compares 140 Java and Horizon ticks
+  across a Saw and a Drill stall, including the cut and resumed rotation.
+  `tools/moving_cut_restart_checks.py` checks 46 subsequent ticks per tool
+  after a cold Horizon restart during the cut.
+- `tools/deployer_held_checks.py` captures both clients in five states with
+  the same camera. The three fixed sapling poses have the same visible bounds.
 - `tools/deployer_farm_checks.py` and `tools/deployer_refill_checks.py --combined`
   compare planting ticks and chest slots, then test a restart and a shared
   Saw and Deployer rotor in Horizon.

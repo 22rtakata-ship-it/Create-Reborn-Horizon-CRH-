@@ -167,6 +167,7 @@ def main():
             assert error < 0.0002, error
             report['motion_error'] = error
             report['launch_tick_delta'] = report['launch']['tick'] - source['launch']['tick']
+            assert report['launch_tick_delta'] == 0, report['launch_tick_delta']
         report['passed'] = True
     finally:
         path.write_text(json.dumps(report, indent=2) + '\n')

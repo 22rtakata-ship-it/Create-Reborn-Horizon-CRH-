@@ -742,12 +742,10 @@ pub(super) fn tick(
     let previous_raw = super::create_port::number(&entity.nbt, POWER);
     let previous_rpm = current.map_or(previous_raw, |r| r.rpm);
     let mut controller = current.map_or_else(Bearing::default, |r| Bearing::resume(r.angle));
-    let mut stalled = actors::stalled(game, pos);
     if (raw_rpm != previous_raw || rpm != previous_rpm)
-        && controller.speed_changed(previous_rpm, rpm, stalled, None)
+        && controller.speed_changed(previous_rpm, rpm, actors::stalled(game, pos), None)
     {
         actors::remove(game, pos);
-        stalled = false;
     }
     if entity.nbt.remove(&REQUEST.into()).is_some() && controller.toggle() {
         if land(game, pos, controller.angle()) {
@@ -763,10 +761,12 @@ pub(super) fn tick(
         2 => Mode::NeverPlace,
         _ => Mode::Place,
     };
-    if let Some(record) = current {
-        stalled |= psi::advance(game, record);
-    }
-    let had_assembly = current.is_some();
+    let stalled = current.is_some_and(|record| {
+        actors::tick_bearing_tools(game, record);
+        let cutting = actors::stalled(game, pos);
+        let docked = psi::advance(game, record);
+        cutting || docked
+    });
     let action = controller.tick(raw_rpm, rpm, mode, stalled, || {
         assemble(game, pos, facing, false, false).is_some()
     });
@@ -796,11 +796,7 @@ pub(super) fn tick(
         let current = record.clone();
         if set_records(game, key, next).is_ok() {
             write_controller(entity, true, controller.angle());
-            if had_assembly {
-                actors::tick(game, &previous, &current);
-            } else {
-                actors::tick_after_bearing_assembly(game, &previous, &current);
-            }
+            actors::tick_bearing_deployer(game, &previous, &current);
         }
     } else if owned {
         write_controller(entity, false, 0.0);

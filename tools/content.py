@@ -813,7 +813,7 @@ def main():
     CONTENT.mkdir(exist_ok=True)
     (CONTENT / "horizon-mod.toml").write_text('''id = "create"
 name = "Create for Horizon"
-version = "0.8.0-alpha.9"
+version = "0.8.0-alpha.10"
 description = "Build rotating machines and small factories in Horizon. The original Create JAR is optional and supplies its models and textures."
 authors = ["create-horizon contributors"]
 api = "0.2"

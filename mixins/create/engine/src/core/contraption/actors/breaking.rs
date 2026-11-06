@@ -50,7 +50,36 @@ pub struct Breaker {
     stalled: bool,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct BreakState {
+    pub target: Option<Pos>,
+    pub progress: u8,
+    pub ticks_until_progress: i32,
+    pub stalled: bool,
+}
+
 impl Breaker {
+    pub fn state(self) -> BreakState {
+        BreakState {
+            target: self.target,
+            progress: self.progress,
+            ticks_until_progress: self.ticks_until_progress,
+            stalled: self.stalled,
+        }
+    }
+
+    pub fn restore(state: BreakState) -> Option<Self> {
+        (state.progress < 10
+            && state.ticks_until_progress >= 0
+            && (!state.stalled || state.target.is_some()))
+        .then_some(Self {
+            target: state.target,
+            progress: state.progress,
+            ticks_until_progress: state.ticks_until_progress,
+            stalled: state.stalled,
+        })
+    }
+
     pub fn stalled(&self) -> bool {
         self.stalled
     }
@@ -154,4 +183,51 @@ pub fn contact_boost(mut motion: [f64; 3]) -> [f64; 3] {
         return motion;
     }
     motion.map(|component| component - component / magnitude * (magnitude - 4.0))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn restored_cut_keeps_progress_and_cooldown() {
+        let position = [4, 65, 3];
+        let target = Target {
+            hardness: 2.0,
+            breakable: true,
+        };
+        let motion = [0.4, 0.0, 0.0];
+        let advance =
+            |cut: &mut Breaker| cut.tick(motion, motion, ContraptionKind::Other, |_| target);
+        let mut original = Breaker::default();
+        original.visit(position, target);
+        assert_eq!(
+            advance(&mut original),
+            Step::Hit {
+                position,
+                progress: 1
+            }
+        );
+        let state = original.state();
+        let mut restored = Breaker::restore(state).unwrap();
+        assert!(restored.stalled());
+        for _ in 0..32 {
+            assert_eq!(advance(&mut restored), advance(&mut original));
+        }
+        assert!(!restored.stalled());
+        assert!(
+            Breaker::restore(BreakState {
+                progress: 10,
+                ..state
+            })
+            .is_none()
+        );
+        assert!(
+            Breaker::restore(BreakState {
+                target: None,
+                ..state
+            })
+            .is_none()
+        );
+    }
 }

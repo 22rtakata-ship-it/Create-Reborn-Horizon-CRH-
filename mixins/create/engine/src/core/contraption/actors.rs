@@ -60,6 +60,14 @@ pub struct MotionTracker {
     first_movement: bool,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct MotionState {
+    pub position: Option<[f64; 3]>,
+    pub motion: [f64; 3],
+    pub relative_motion: [f64; 3],
+    pub first_movement: bool,
+}
+
 impl Default for MotionTracker {
     fn default() -> Self {
         Self {
@@ -72,6 +80,30 @@ impl Default for MotionTracker {
 }
 
 impl MotionTracker {
+    pub fn state(self) -> MotionState {
+        MotionState {
+            position: self.position,
+            motion: self.motion,
+            relative_motion: self.relative_motion,
+            first_movement: self.first_movement,
+        }
+    }
+
+    pub fn restore(state: MotionState) -> Option<Self> {
+        state
+            .position
+            .into_iter()
+            .chain([state.motion, state.relative_motion])
+            .flatten()
+            .all(f64::is_finite)
+            .then_some(Self {
+                position: state.position,
+                motion: state.motion,
+                relative_motion: state.relative_motion,
+                first_movement: state.first_movement,
+            })
+    }
+
     /// `effective_motion` can normalize carriage motion to actual train speed.
     /// `inverse_rotation` transforms a vector without the pose's translation.
     pub fn sample(
@@ -190,6 +222,29 @@ mod tests {
         assert_eq!(
             step(&mut tracker, [0.01, 8.5, -4.5], false).visit,
             Some([0, 8, -5])
+        );
+    }
+
+    #[test]
+    fn a_saved_stall_keeps_local_motion_without_repeating_the_visit() {
+        let mut original = MotionTracker::default();
+        step(&mut original, [1.25, 3.0, 2.0], false);
+        assert_eq!(
+            step(&mut original, [1.5, 3.0, 2.0], false).visit,
+            Some([1, 3, 2])
+        );
+        let saved = original.state();
+        let mut restored = MotionTracker::restore(saved).unwrap();
+        let held = step(&mut restored, [1.5, 3.0, 2.0], true);
+        assert_eq!(held, step(&mut original, [1.5, 3.0, 2.0], true));
+        assert_eq!(held.motion, [0.25, 0.0, 0.0]);
+        assert_eq!(held.visit, None);
+        assert!(
+            MotionTracker::restore(MotionState {
+                motion: [f64::NAN, 0.0, 0.0],
+                ..saved
+            })
+            .is_none()
         );
     }
 
