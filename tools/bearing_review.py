@@ -106,9 +106,14 @@ def review(session, options):
         return {'nbt': ' '.join(command('data get block ' + xyz(pos))['chat'])}
 
     def interact(pos, face):
-        call('look-at', 'block', *pos, face)
-        call('wait', 4)
-        call('looking-at')
+        for _ in range(6):
+            call('look-at', 'block', *pos, face)
+            call('wait', 4)
+            hit = call('looking-at')['block']
+            if hit and hit['pos'] == list(pos):
+                break
+        else:
+            raise AssertionError(('could not aim at review block', pos, face, hit))
         call('mouse', 'right', 'click')
         call('wait', 6)
 
@@ -210,9 +215,10 @@ def review(session, options):
             assert call('block', *stations.GANTRY_CARGO[1])['block'] == 'minecraft:spruce_planks'
             assert call('block', *stations.STATIONARY_SAW)['block'] == 'create:mechanical_saw'
             assert call('block', 920, 82, 110)['block'] == 'minecraft:oak_log'
-            command('tp @s 915.5 83 102.5')
             command('item replace entity @s weapon.mainhand with create:super_glue')
             for plank in stations.GANTRY_CARGO:
+                command(f'tp @s 915.5 81 {plank[2]}.5')
+                call('wait', 6)
                 interact(plank, 'west')
             command('clear @s create:super_glue')
             command('tp @s 920.5 81 107.5')
@@ -307,8 +313,8 @@ def review(session, options):
             assert call('block', *stations.PORTABLE_DOCK)['block'] == 'create:portable_storage_interface'
             assert call('block', *stations.PORTABLE_OUTPUT)['block'] == 'minecraft:chest'
             assert 'powered=true' in call('block', *stations.PORTABLE_LEVER)['state']
-            assert 'minecraft:wheat' in snapshot((919, 83, 166))['nbt']
-            call('look-at', 920.5, 83.5, 164.5)
+            assert call('block', *stations.PORTABLE_CROP)['state'] == 'minecraft:wheat[age=7]'
+            call('look-at', 920.5, 84.0, 164.5)
             call('wait', 12)
             extra.append(str(screenshot('portable-storage.png')))
         if options.stationary_deployer:
@@ -327,6 +333,9 @@ def review(session, options):
             command('give @s create:super_glue')
         if options.upward_saw:
             command('give @s minecraft:oak_log 8')
+            if options.portable_storage:
+                command('give @s minecraft:stone 8')
+                command('give @s create:andesite_alloy 4')
         if options.chassis:
             command('give @s create:wrench')
         command('tp @s 909.5 81 61.5')

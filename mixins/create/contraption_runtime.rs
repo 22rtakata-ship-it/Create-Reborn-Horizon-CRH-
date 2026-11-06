@@ -766,6 +766,7 @@ pub(super) fn tick(
     if let Some(record) = current {
         stalled |= psi::advance(game, record);
     }
+    let had_assembly = current.is_some();
     let action = controller.tick(raw_rpm, rpm, mode, stalled, || {
         assemble(game, pos, facing, false, false).is_some()
     });
@@ -795,7 +796,11 @@ pub(super) fn tick(
         let current = record.clone();
         if set_records(game, key, next).is_ok() {
             write_controller(entity, true, controller.angle());
-            actors::tick(game, &previous, &current);
+            if had_assembly {
+                actors::tick(game, &previous, &current);
+            } else {
+                actors::tick_after_bearing_assembly(game, &previous, &current);
+            }
         }
     } else if owned {
         write_controller(entity, false, 0.0);

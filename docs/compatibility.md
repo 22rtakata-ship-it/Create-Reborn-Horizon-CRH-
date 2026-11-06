@@ -1,10 +1,10 @@
 # Original Create identifiers and data
 
-The 0.8.0-alpha.7 development checkpoint adds dry Mechanical Piston cargo
-attachments, stationary sapling planting and item unloading from a rotating
-chest through a Portable Storage Interface. Capture and restoration currently
-share one chunk column. See the supported drivers, payloads, actors and
-verification in the [contraption guide](contraptions.md).
+The 0.8.0-alpha.8 development checkpoint extends the upward Saw's recipes
+and compares the first swept cell of a fresh bearing with Java. A shared
+farm fixture delivers harvested wheat and cut wood through a portable dock.
+Capture and restoration currently share one chunk column. See the supported
+drivers, payloads, actors and verification in the [contraption guide](contraptions.md).
 
 The sections marked 0.3–0.5 below retain the released historical boundaries.
 The installed review checkpoint is **0.6.0-alpha.2**: see [REPORT_06.md](https://github.com/Delete228/create-horizon/blob/eb8b96e8ea1db698b79bb61fd1caf6c963f31652/REPORT_06.md)

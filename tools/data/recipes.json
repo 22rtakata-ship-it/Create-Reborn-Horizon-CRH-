@@ -1496,6 +1496,35 @@
         "id": "create:zinc_nugget"
       }
     },
+    "create/recipe/cutting/andesite_alloy.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "create:andesite_alloy"
+        }
+      ],
+      "processing_time": 200,
+      "results": [
+        {
+          "count": 6,
+          "id": "create:shaft"
+        }
+      ]
+    },
+    "create/recipe/cutting/bamboo_planks.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:bamboo_planks"
+        }
+      ],
+      "processing_time": 20,
+      "results": [
+        {
+          "id": "minecraft:bamboo_mosaic"
+        }
+      ]
+    },
     "create/recipe/haunting/blackstone.json": {
       "type": "create:haunting",
       "ingredients": [
@@ -3045,6 +3074,2121 @@
       "results": [
         {
           "id": "minecraft:white_wool"
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/acacia_log_to_stripped_acacia_log.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:acacia_log"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:stripped_acacia_log",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/acacia_planks_to_acacia_button.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:acacia_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:acacia_button",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/acacia_planks_to_acacia_door.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:acacia_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:acacia_door",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/acacia_planks_to_acacia_fence.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:acacia_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:acacia_fence",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/acacia_planks_to_acacia_fence_gate.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:acacia_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:acacia_fence_gate",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/acacia_planks_to_acacia_pressure_plate.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:acacia_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:acacia_pressure_plate",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/acacia_planks_to_acacia_sign.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:acacia_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:acacia_sign",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/acacia_planks_to_acacia_slab.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:acacia_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:acacia_slab",
+          "count": 2
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/acacia_planks_to_acacia_stairs.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:acacia_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:acacia_stairs",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/acacia_planks_to_acacia_trapdoor.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:acacia_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:acacia_trapdoor",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/acacia_wood_to_stripped_acacia_wood.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:acacia_wood"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:stripped_acacia_wood",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/bamboo_block_to_stripped_bamboo_block.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:bamboo_block"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:stripped_bamboo_block",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/bamboo_planks_to_bamboo_button.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:bamboo_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:bamboo_button",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/bamboo_planks_to_bamboo_door.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:bamboo_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:bamboo_door",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/bamboo_planks_to_bamboo_fence.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:bamboo_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:bamboo_fence",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/bamboo_planks_to_bamboo_fence_gate.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:bamboo_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:bamboo_fence_gate",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/bamboo_planks_to_bamboo_pressure_plate.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:bamboo_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:bamboo_pressure_plate",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/bamboo_planks_to_bamboo_sign.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:bamboo_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:bamboo_sign",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/bamboo_planks_to_bamboo_slab.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:bamboo_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:bamboo_slab",
+          "count": 2
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/bamboo_planks_to_bamboo_stairs.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:bamboo_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:bamboo_stairs",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/bamboo_planks_to_bamboo_trapdoor.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:bamboo_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:bamboo_trapdoor",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/birch_log_to_stripped_birch_log.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:birch_log"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:stripped_birch_log",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/birch_planks_to_birch_button.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:birch_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:birch_button",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/birch_planks_to_birch_door.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:birch_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:birch_door",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/birch_planks_to_birch_fence.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:birch_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:birch_fence",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/birch_planks_to_birch_fence_gate.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:birch_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:birch_fence_gate",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/birch_planks_to_birch_pressure_plate.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:birch_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:birch_pressure_plate",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/birch_planks_to_birch_sign.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:birch_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:birch_sign",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/birch_planks_to_birch_slab.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:birch_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:birch_slab",
+          "count": 2
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/birch_planks_to_birch_stairs.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:birch_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:birch_stairs",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/birch_planks_to_birch_trapdoor.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:birch_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:birch_trapdoor",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/birch_wood_to_stripped_birch_wood.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:birch_wood"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:stripped_birch_wood",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/cherry_log_to_stripped_cherry_log.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:cherry_log"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:stripped_cherry_log",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/cherry_planks_to_cherry_button.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:cherry_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:cherry_button",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/cherry_planks_to_cherry_door.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:cherry_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:cherry_door",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/cherry_planks_to_cherry_fence.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:cherry_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:cherry_fence",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/cherry_planks_to_cherry_fence_gate.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:cherry_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:cherry_fence_gate",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/cherry_planks_to_cherry_pressure_plate.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:cherry_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:cherry_pressure_plate",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/cherry_planks_to_cherry_sign.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:cherry_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:cherry_sign",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/cherry_planks_to_cherry_slab.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:cherry_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:cherry_slab",
+          "count": 2
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/cherry_planks_to_cherry_stairs.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:cherry_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:cherry_stairs",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/cherry_planks_to_cherry_trapdoor.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:cherry_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:cherry_trapdoor",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/cherry_wood_to_stripped_cherry_wood.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:cherry_wood"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:stripped_cherry_wood",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/crimson_hyphae_to_stripped_crimson_hyphae.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:crimson_hyphae"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:stripped_crimson_hyphae",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/crimson_planks_to_crimson_button.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:crimson_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:crimson_button",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/crimson_planks_to_crimson_door.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:crimson_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:crimson_door",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/crimson_planks_to_crimson_fence.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:crimson_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:crimson_fence",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/crimson_planks_to_crimson_fence_gate.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:crimson_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:crimson_fence_gate",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/crimson_planks_to_crimson_pressure_plate.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:crimson_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:crimson_pressure_plate",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/crimson_planks_to_crimson_sign.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:crimson_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:crimson_sign",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/crimson_planks_to_crimson_slab.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:crimson_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:crimson_slab",
+          "count": 2
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/crimson_planks_to_crimson_stairs.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:crimson_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:crimson_stairs",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/crimson_planks_to_crimson_trapdoor.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:crimson_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:crimson_trapdoor",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/crimson_stem_to_stripped_crimson_stem.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:crimson_stem"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:stripped_crimson_stem",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/dark_oak_log_to_stripped_dark_oak_log.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:dark_oak_log"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:stripped_dark_oak_log",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/dark_oak_planks_to_dark_oak_button.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:dark_oak_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:dark_oak_button",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/dark_oak_planks_to_dark_oak_door.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:dark_oak_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:dark_oak_door",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/dark_oak_planks_to_dark_oak_fence.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:dark_oak_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:dark_oak_fence",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/dark_oak_planks_to_dark_oak_fence_gate.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:dark_oak_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:dark_oak_fence_gate",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/dark_oak_planks_to_dark_oak_pressure_plate.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:dark_oak_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:dark_oak_pressure_plate",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/dark_oak_planks_to_dark_oak_sign.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:dark_oak_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:dark_oak_sign",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/dark_oak_planks_to_dark_oak_slab.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:dark_oak_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:dark_oak_slab",
+          "count": 2
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/dark_oak_planks_to_dark_oak_stairs.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:dark_oak_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:dark_oak_stairs",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/dark_oak_planks_to_dark_oak_trapdoor.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:dark_oak_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:dark_oak_trapdoor",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/dark_oak_wood_to_stripped_dark_oak_wood.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:dark_oak_wood"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:stripped_dark_oak_wood",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/jungle_log_to_stripped_jungle_log.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:jungle_log"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:stripped_jungle_log",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/jungle_planks_to_jungle_button.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:jungle_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:jungle_button",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/jungle_planks_to_jungle_door.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:jungle_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:jungle_door",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/jungle_planks_to_jungle_fence.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:jungle_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:jungle_fence",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/jungle_planks_to_jungle_fence_gate.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:jungle_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:jungle_fence_gate",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/jungle_planks_to_jungle_pressure_plate.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:jungle_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:jungle_pressure_plate",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/jungle_planks_to_jungle_sign.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:jungle_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:jungle_sign",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/jungle_planks_to_jungle_slab.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:jungle_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:jungle_slab",
+          "count": 2
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/jungle_planks_to_jungle_stairs.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:jungle_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:jungle_stairs",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/jungle_planks_to_jungle_trapdoor.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:jungle_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:jungle_trapdoor",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/jungle_wood_to_stripped_jungle_wood.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:jungle_wood"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:stripped_jungle_wood",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/mangrove_log_to_stripped_mangrove_log.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:mangrove_log"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:stripped_mangrove_log",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/mangrove_planks_to_mangrove_button.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:mangrove_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:mangrove_button",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/mangrove_planks_to_mangrove_door.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:mangrove_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:mangrove_door",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/mangrove_planks_to_mangrove_fence.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:mangrove_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:mangrove_fence",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/mangrove_planks_to_mangrove_fence_gate.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:mangrove_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:mangrove_fence_gate",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/mangrove_planks_to_mangrove_pressure_plate.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:mangrove_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:mangrove_pressure_plate",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/mangrove_planks_to_mangrove_sign.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:mangrove_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:mangrove_sign",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/mangrove_planks_to_mangrove_slab.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:mangrove_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:mangrove_slab",
+          "count": 2
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/mangrove_planks_to_mangrove_stairs.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:mangrove_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:mangrove_stairs",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/mangrove_planks_to_mangrove_trapdoor.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:mangrove_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:mangrove_trapdoor",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/mangrove_wood_to_stripped_mangrove_wood.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:mangrove_wood"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:stripped_mangrove_wood",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/oak_log_to_stripped_oak_log.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:oak_log"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:stripped_oak_log",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/oak_planks_to_oak_button.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:oak_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:oak_button",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/oak_planks_to_oak_door.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:oak_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:oak_door",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/oak_planks_to_oak_fence.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:oak_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:oak_fence",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/oak_planks_to_oak_fence_gate.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:oak_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:oak_fence_gate",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/oak_planks_to_oak_pressure_plate.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:oak_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:oak_pressure_plate",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/oak_planks_to_oak_sign.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:oak_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:oak_sign",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/oak_planks_to_oak_slab.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:oak_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:oak_slab",
+          "count": 2
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/oak_planks_to_oak_stairs.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:oak_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:oak_stairs",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/oak_planks_to_oak_trapdoor.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:oak_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:oak_trapdoor",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/oak_wood_to_stripped_oak_wood.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:oak_wood"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:stripped_oak_wood",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/spruce_log_to_stripped_spruce_log.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:spruce_log"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:stripped_spruce_log",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/spruce_planks_to_spruce_button.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:spruce_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:spruce_button",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/spruce_planks_to_spruce_door.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:spruce_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:spruce_door",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/spruce_planks_to_spruce_fence.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:spruce_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:spruce_fence",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/spruce_planks_to_spruce_fence_gate.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:spruce_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:spruce_fence_gate",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/spruce_planks_to_spruce_pressure_plate.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:spruce_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:spruce_pressure_plate",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/spruce_planks_to_spruce_sign.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:spruce_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:spruce_sign",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/spruce_planks_to_spruce_slab.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:spruce_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:spruce_slab",
+          "count": 2
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/spruce_planks_to_spruce_stairs.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:spruce_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:spruce_stairs",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/spruce_planks_to_spruce_trapdoor.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:spruce_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:spruce_trapdoor",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/spruce_wood_to_stripped_spruce_wood.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:spruce_wood"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:stripped_spruce_wood",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/stripped_acacia_log_to_acacia_planks.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:stripped_acacia_log"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:acacia_planks",
+          "count": 6
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/stripped_acacia_wood_to_acacia_planks.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:stripped_acacia_wood"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:acacia_planks",
+          "count": 6
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/stripped_bamboo_block_to_bamboo_planks.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:stripped_bamboo_block"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:bamboo_planks",
+          "count": 3
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/stripped_birch_log_to_birch_planks.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:stripped_birch_log"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:birch_planks",
+          "count": 6
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/stripped_birch_wood_to_birch_planks.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:stripped_birch_wood"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:birch_planks",
+          "count": 6
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/stripped_cherry_log_to_cherry_planks.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:stripped_cherry_log"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:cherry_planks",
+          "count": 6
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/stripped_cherry_wood_to_cherry_planks.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:stripped_cherry_wood"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:cherry_planks",
+          "count": 6
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/stripped_crimson_hyphae_to_crimson_planks.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:stripped_crimson_hyphae"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:crimson_planks",
+          "count": 6
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/stripped_crimson_stem_to_crimson_planks.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:stripped_crimson_stem"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:crimson_planks",
+          "count": 6
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/stripped_dark_oak_log_to_dark_oak_planks.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:stripped_dark_oak_log"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:dark_oak_planks",
+          "count": 6
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/stripped_dark_oak_wood_to_dark_oak_planks.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:stripped_dark_oak_wood"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:dark_oak_planks",
+          "count": 6
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/stripped_jungle_log_to_jungle_planks.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:stripped_jungle_log"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:jungle_planks",
+          "count": 6
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/stripped_jungle_wood_to_jungle_planks.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:stripped_jungle_wood"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:jungle_planks",
+          "count": 6
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/stripped_mangrove_log_to_mangrove_planks.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:stripped_mangrove_log"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:mangrove_planks",
+          "count": 6
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/stripped_mangrove_wood_to_mangrove_planks.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:stripped_mangrove_wood"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:mangrove_planks",
+          "count": 6
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/stripped_oak_log_to_oak_planks.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:stripped_oak_log"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:oak_planks",
+          "count": 6
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/stripped_oak_wood_to_oak_planks.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:stripped_oak_wood"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:oak_planks",
+          "count": 6
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/stripped_spruce_log_to_spruce_planks.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:stripped_spruce_log"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:spruce_planks",
+          "count": 6
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/stripped_spruce_wood_to_spruce_planks.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:stripped_spruce_wood"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:spruce_planks",
+          "count": 6
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/stripped_warped_hyphae_to_warped_planks.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:stripped_warped_hyphae"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:warped_planks",
+          "count": 6
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/stripped_warped_stem_to_warped_planks.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:stripped_warped_stem"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:warped_planks",
+          "count": 6
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/warped_hyphae_to_stripped_warped_hyphae.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:warped_hyphae"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:stripped_warped_hyphae",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/warped_planks_to_warped_button.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:warped_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:warped_button",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/warped_planks_to_warped_door.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:warped_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:warped_door",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/warped_planks_to_warped_fence.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:warped_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:warped_fence",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/warped_planks_to_warped_fence_gate.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:warped_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:warped_fence_gate",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/warped_planks_to_warped_pressure_plate.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:warped_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:warped_pressure_plate",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/warped_planks_to_warped_sign.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:warped_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:warped_sign",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/warped_planks_to_warped_slab.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:warped_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:warped_slab",
+          "count": 2
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/warped_planks_to_warped_stairs.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:warped_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:warped_stairs",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/warped_planks_to_warped_trapdoor.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:warped_planks"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:warped_trapdoor",
+          "count": 1
+        }
+      ]
+    },
+    "create/recipe/cutting/runtime_generated/compat/minecraft/warped_stem_to_stripped_warped_stem.json": {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "minecraft:warped_stem"
+        }
+      ],
+      "processing_time": 50,
+      "results": [
+        {
+          "id": "minecraft:stripped_warped_stem",
+          "count": 1
         }
       ]
     }

@@ -183,6 +183,34 @@ mod tests {
     }
 
     #[test]
+    fn fresh_bearing_samples_the_first_advanced_pose_before_visiting() {
+        // The first two published 32 RPM poses in the Java portable farm.
+        // The Saw leaves the oak cell on the second pose, while the shorter
+        // Harvester reach still intersects the wheat in that same cell.
+        for (tool, first_visit) in [(Tool::Saw, [3, 0, -2]), (Tool::Harvester, [3, 0, -1])] {
+            let [x, y, z] = tool.active_point([3, 0, 0], Direction::North);
+            let mut tracker = MotionTracker::default();
+            for (angle, visit) in [(9.6_f64, None), (19.2, Some(first_visit))] {
+                let (sin, cos) = angle.to_radians().sin_cos();
+                let (x, z) = (x - 0.5, z - 0.5);
+                let sample = Sample {
+                    position: [0.5 + cos * x + sin * z, y, 0.5 - sin * x + cos * z],
+                    facing: Direction::North,
+                    stalled: false,
+                    disabled: false,
+                    allow_stationary_first_visit: false,
+                };
+                let movement = tracker.sample(
+                    sample,
+                    |motion| motion,
+                    |[x, y, z]| [cos * x - sin * z, y, sin * x + cos * z],
+                );
+                assert_eq!(movement.visit, visit, "{tool:?} at {angle} degrees");
+            }
+        }
+    }
+
+    #[test]
     fn backward_or_stalled_steps_do_not_consume_the_first_active_visit() {
         let mut tracker = MotionTracker::default();
         step(&mut tracker, [1.25, 0.0, 0.0], false);

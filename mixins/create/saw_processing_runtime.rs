@@ -4,13 +4,16 @@
 
 use super::{Game, create_port as create, native_block_entity_draw::BlockEntityDraw};
 use crate::{
-    containers::{ModBlockEntity, ModContainer},
+    containers::{BlockEntity, ModBlockEntity, ModContainer},
     items::ItemStack,
 };
 use create_engine::{
     kinetics::Pos,
+    milling::roll_count,
     saw_processing::{self, Action, CuttingCycle},
 };
+use horizon_core::random::RandomSource;
+use horizon_items::item_nbt::item_from_nbt;
 use horizon_world::nbt::{Compound, Tag};
 
 const SLOTS: usize = 32;
@@ -81,44 +84,153 @@ fn save(entity: &mut ModBlockEntity, cycle: CuttingCycle) {
         .insert("RecipeIndex".into(), Tag::Int(cycle.recipe_index as i32));
 }
 
-// RuntimeDataGenerator.cuttingRecipes provides these recipes for the original
-// vanilla logs and bark blocks. The ordinary default cycle uses 50 ticks.
-fn wood_recipe(stack: &ItemStack) -> Option<ItemStack> {
-    const WOODS: &[&str] = &[
-        "oak", "spruce", "birch", "jungle", "acacia", "dark_oak", "mangrove", "cherry",
-    ];
-    let item = stack.item.strip_prefix("minecraft:")?;
-    let stripped = item.strip_prefix("stripped_");
-    let (wood, suffix) = stripped.unwrap_or(item).rsplit_once('_')?;
-    let count = match (wood, suffix) {
-        ("bamboo", "block") => 3,
-        ("crimson" | "warped", "stem" | "hyphae") => 6,
-        (wood, "log" | "wood") if WOODS.contains(&wood) => 6,
-        _ => return None,
-    };
-    let (output, count) = if stripped.is_some() {
-        (format!("minecraft:{wood}_planks"), count)
-    } else {
-        (format!("minecraft:stripped_{item}"), 1)
-    };
-    Some(ItemStack::new(output.as_str(), count))
+struct CuttingRecipe {
+    duration: u32,
+    outputs: Vec<(ItemStack, f32)>,
 }
 
-fn unfiltered(entity: &ModBlockEntity) -> bool {
-    match entity.nbt.get(&"Filter".into()) {
-        None => true,
-        Some(Tag::Compound(filter)) => filter.is_empty(),
-        _ => false,
+fn read_filter(game: &Game<'_>, entity: &ModBlockEntity) -> Option<Option<ItemStack>> {
+    let Some(saved) = entity.nbt.get(&"Filter".into()) else {
+        return Some(None);
+    };
+    if matches!(saved, Tag::Compound(values) if values.is_empty()) {
+        return Some(None);
     }
+    let item = item_from_nbt(saved)?;
+    if item.count == 0
+        || matches!(
+            item.item.as_ref(),
+            "create:filter" | "create:attribute_filter" | "create:package_filter"
+        )
+        || game.items().get(&item.item).is_none()
+    {
+        return None;
+    }
+    Some(Some(item))
 }
 
-fn start(cycle: &mut CuttingCycle, input: &ItemStack) {
-    let durations: &[u32] = if wood_recipe(input).is_some() {
-        &[50]
-    } else {
-        &[]
-    };
-    cycle.start(input.count, durations);
+fn cutting_recipes(
+    game: &Game<'_>,
+    input: &ItemStack,
+    filter: Option<&ItemStack>,
+) -> Vec<CuttingRecipe> {
+    let accepts = |item: &ItemStack| filter.is_none_or(|filter| filter.item == item.item);
+    let custom = game.native_recipes_of_type("create:cutting");
+    let mut recipes: Vec<_> = custom
+        .iter()
+        .filter_map(|recipe| {
+            if !saw_processing::automated_recipe(&recipe.id) {
+                return None;
+            }
+            let [ingredient] = recipe.json["ingredients"].as_array()?.as_slice() else {
+                return None;
+            };
+            // Bundled single-item recipes use qualified strings. Skip
+            // unrelated ones before resolving tags or allocating ingredients.
+            if ingredient.as_str().is_some_and(|id| {
+                !id.starts_with('#') && id.contains(':') && id != input.item.as_ref()
+            }) {
+                return None;
+            }
+            let ingredient = create::ingredient(ingredient)
+                .and_then(|json| game.native_recipe_ingredient(&json))?;
+            if !ingredient.test(input) {
+                return None;
+            }
+            let duration = recipe
+                .json
+                .get("processing_time")
+                .or_else(|| recipe.json.get("processingTime"))
+                .map_or(Some(0), |value| u32::try_from(value.as_u64()?).ok())?;
+            let results = recipe.json["results"].as_array()?;
+            if !(1..=4).contains(&results.len()) {
+                return None;
+            }
+            let outputs = results
+                .iter()
+                .map(|output| {
+                    let chance = output
+                        .get("chance")
+                        .map_or(Some(1.0), |value| value.as_f64())?;
+                    if !(0.0..=1.0).contains(&chance) {
+                        return None;
+                    }
+                    let stack = if output.get("id").is_some() {
+                        game.native_recipe_result(output)
+                    } else {
+                        let mut output = output.clone();
+                        output["id"] = output["item"].clone();
+                        game.native_recipe_result(&output)
+                    }?;
+                    Some((stack, chance as f32))
+                })
+                .collect::<Option<Vec<_>>>()?;
+            accepts(&outputs[0].0)
+                .then_some((recipe.id.as_str(), CuttingRecipe { duration, outputs }))
+        })
+        .collect();
+    // The same authoritative provider as the native Stonecutter, including
+    // merged world recipes and item tags. The original default enables these.
+    recipes.extend(
+        game.stations()
+            .recipes
+            .stonecutting
+            .iter()
+            .filter_map(|recipe| {
+                let id = saw_processing::stonecutting_source_id(&recipe.id)?;
+                (saw_processing::automated_recipe(id)
+                    && recipe.input.test(input)
+                    && accepts(&recipe.result)
+                    && game.items().get(&recipe.result.item).is_some())
+                .then(|| {
+                    (
+                        id,
+                        CuttingRecipe {
+                            duration: 50,
+                            outputs: vec![(recipe.result.clone(), 1.0)],
+                        },
+                    )
+                })
+            }),
+    );
+    recipes.sort_by_key(|(id, _)| saw_processing::source_recipe_order(id));
+    recipes.into_iter().map(|(_, recipe)| recipe).collect()
+}
+
+fn start(game: &Game<'_>, cycle: &mut CuttingCycle, input: &ItemStack, filter: Option<&ItemStack>) {
+    let durations: Vec<_> = cutting_recipes(game, input, filter)
+        .into_iter()
+        .map(|recipe| recipe.duration)
+        .collect();
+    cycle.start(input.count, &durations);
+}
+
+fn apply(
+    game: &mut Game<'_>,
+    entity: &mut ModBlockEntity,
+    input: &ItemStack,
+    recipe: &CuttingRecipe,
+) {
+    entity.items.fill(None);
+    let remainder = game
+        .items()
+        .get(&input.item)
+        .and_then(|item| item.crafting_remainder.as_ref())
+        .map(|id| ItemStack::new(id, 1));
+    for _ in 0..input.count {
+        for (stack, chance) in &recipe.outputs {
+            let mut output = stack.clone();
+            output.count = roll_count(output.count, *chance, || game.world.random.next_float());
+            if output.count > 0 {
+                let max = create::stack_maximum(game, &output);
+                super::create_port_inventory::insert(&mut entity.items[1..], output, max);
+            }
+        }
+        if let Some(output) = &remainder {
+            let max = create::stack_maximum(game, output);
+            super::create_port_inventory::insert(&mut entity.items[1..], output.clone(), max);
+        }
+    }
 }
 
 pub(super) fn landed(game: &mut Game<'_>, pos: Pos, stack: &mut ItemStack) -> bool {
@@ -129,27 +241,30 @@ pub(super) fn landed(game: &mut Game<'_>, pos: Pos, stack: &mut ItemStack) -> bo
     {
         return false;
     }
-    let frozen = game.clock.frozen();
+    let Some(BlockEntity::Mod(entity)) = game.world.block_entities.get(&(pos[0], pos[1], pos[2]))
+    else {
+        return false;
+    };
+    if game.clock.frozen()
+        || create::number(&entity.nbt, "Speed") == 0.0
+        || entity.items.len() != SLOTS
+        || entity.items.iter().any(Option::is_some)
+    {
+        return false;
+    }
+    let (Some(filter), Some(mut cycle)) = (read_filter(game, entity), cycle(entity)) else {
+        return false;
+    };
     let mut inserted = stack.clone();
     inserted.count = 1;
-    let accepted = game.native_with_mod_block_entity(pos, |entity| {
-        if frozen
-            || create::number(&entity.nbt, "Speed") == 0.0
-            || !unfiltered(entity)
-            || entity.items.len() != SLOTS
-            || entity.items.iter().any(Option::is_some)
-        {
-            return false;
-        }
-        let Some(mut cycle) = cycle(entity) else {
-            return false;
-        };
-        start(&mut cycle, &inserted);
-        entity.items[0] = Some(inserted);
-        save(entity, cycle);
-        true
-    });
-    if accepted != Some(true) {
+    start(game, &mut cycle, &inserted, filter.as_ref());
+    if game
+        .native_with_mod_block_entity(pos, |entity| {
+            entity.items[0] = Some(inserted);
+            save(entity, cycle);
+        })
+        .is_none()
+    {
         return false;
     }
     stack.count -= 1;
@@ -158,10 +273,10 @@ pub(super) fn landed(game: &mut Game<'_>, pos: Pos, stack: &mut ItemStack) -> bo
 }
 
 pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity, rpm: f32) -> bool {
-    if entity.items.len() != SLOTS || !unfiltered(entity) {
+    if entity.items.len() != SLOTS {
         return false;
     }
-    let Some(mut cycle) = cycle(entity) else {
+    let (Some(filter), Some(mut cycle)) = (read_filter(game, entity), cycle(entity)) else {
         return false;
     };
     let first = game
@@ -179,14 +294,12 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity, r
     };
     match cycle.tick(rpm, entity.items[0].is_some()) {
         Action::Idle => return false,
-        Action::Start => start(&mut cycle, &input),
+        Action::Start => start(game, &mut cycle, &input, filter.as_ref()),
         Action::Advance => {}
         Action::Apply => {
-            if let Some(mut output) = wood_recipe(&input) {
-                output.count *= input.count;
-                entity.items[0] = None;
-                let max = create::stack_maximum(game, &output);
-                super::create_port_inventory::insert(&mut entity.items[1..], output, max);
+            let recipes = cutting_recipes(game, &input, filter.as_ref());
+            if let Some(index) = cycle.select_current(recipes.len()) {
+                apply(game, entity, &input, &recipes[index]);
             }
             cycle.finish_application();
             activation_sound(game, pos, &input);

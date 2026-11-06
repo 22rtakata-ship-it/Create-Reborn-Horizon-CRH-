@@ -9,6 +9,36 @@ from sail_content import COLORED_SAILS, SAIL_ITEMS
 from portable_storage_content import PSI
 
 
+VANILLA_LOG_FAMILIES = ['acacia', 'birch', 'cherry', 'dark_oak', 'jungle', 'mangrove', 'oak', 'spruce']
+
+
+def runtime_wood_cutting():
+    """RuntimeDataGenerator.cuttingRecipes for the pinned 1.21.1 vanilla registry."""
+    recipes = {}
+
+    def add(source, result, count=1):
+        path = f'create/recipe/cutting/runtime_generated/compat/minecraft/{source}_to_{result}.json'
+        recipes[path] = {
+            'type': 'create:cutting', 'ingredients': [{'item': 'minecraft:' + source}],
+            'processing_time': 50, 'results': [{'id': 'minecraft:' + result, 'count': count}],
+        }
+
+    families = [*((wood, ('log', 'wood'), 6) for wood in VANILLA_LOG_FAMILIES),
+                ('crimson', ('stem', 'hyphae'), 6), ('warped', ('stem', 'hyphae'), 6),
+                ('bamboo', ('block',), 3)]
+    for wood, variants, plank_count in families:
+        planks = f'{wood}_planks'
+        for suffix in variants:
+            unstripped = f'{wood}_{suffix}'
+            stripped = f'stripped_{unstripped}'
+            add(unstripped, stripped)
+            add(stripped, planks, plank_count)
+        for shape in ('stairs', 'slab', 'fence', 'fence_gate', 'door', 'trapdoor',
+                      'pressure_plate', 'button', 'sign'):
+            add(planks, f'{wood}_{shape}', 2 if shape == 'slab' else 1)
+    return dict(sorted(recipes.items()))
+
+
 def loot_for_horizon(value):
     """Use the 26.3 condition discriminator without changing the loot rules."""
     if isinstance(value, list):
@@ -135,7 +165,7 @@ def main():
             for child in value: yield from dependencies(child)
     recipes = {}
     processing = {'create:milling', 'create:splashing', 'create:haunting', 'create:mixing', 'create:compacting',
-                  'create:sandpaper_polishing'}
+                  'create:sandpaper_polishing', 'create:cutting'}
     cooking = {'minecraft:smelting', 'minecraft:smoking', 'minecraft:blasting'}
     for name in names:
         if not name.startswith(base + 'create/recipe/') or not name.endswith('.json'): continue
@@ -161,6 +191,7 @@ def main():
         # real vanilla cooking recipes for supported Create ingredients (dough).
         if output not in known and kind not in processing and not (kind in cooking and any(d in known for d in deps)): continue
         recipes[name[len(base):]] = r
+    recipes.update(runtime_wood_cutting())
     # Retain upstream tag contents. Horizon's loader drops unregistered entries,
     # as documented; this does not register or pretend to implement other items.
     tags = {}
@@ -189,7 +220,7 @@ def main():
     conventional['c:sands/red'] = ['minecraft:red_sand']
     conventional['create:not_upright_on_belt'] = []
     # NeoForge 21.1.227 convention tags used by Create's manual casing recipes.
-    woods = ['acacia', 'birch', 'cherry', 'dark_oak', 'jungle', 'mangrove', 'oak', 'spruce']
+    woods = VANILLA_LOG_FAMILIES
     conventional['c:stripped_logs'] = [
         *[f'minecraft:stripped_{wood}_log' for wood in woods],
         'minecraft:stripped_bamboo_block', 'minecraft:stripped_crimson_stem', 'minecraft:stripped_warped_stem',

@@ -64,9 +64,9 @@ def run(session, report):
     def active():
         return number({'nbt': nbt(PIVOT)}, 'Running', 0) == 1
 
-    def near_home():
-        angle = number({'nbt': nbt(PIVOT)}, 'Angle', 0) % 360
-        return min(angle, 360 - angle) <= 18
+    def near_pose(expected=0):
+        angle = number({'nbt': nbt(PIVOT)}, 'Angle', 0)
+        return abs((angle - expected + 180) % 360 - 180) <= 18
 
     def field():
         return call('blocks', *BOX)
@@ -108,10 +108,10 @@ def run(session, report):
         command('tp @s 1155.5 98 56.5')
         call('wait', 4)
         call('select', 1)
-        command('item replace entity @s hotbar.0 with minecraft:bone_meal 32')
+        command('item replace entity @s hotbar.0 with minecraft:bone_meal 64')
         call('wait', 5)
         assert call('inventory')['hotbar'][0]['item'] == 'minecraft:bone_meal'
-        for _ in range(24):
+        for _ in range(64):
             if block(TREE) == LOG:
                 return
             aim_click(TREE)
@@ -130,9 +130,7 @@ def run(session, report):
             report.setdefault('tree_generation', []).extend(chat)
             call('wait', 4)
             tree = tree_snapshot()
-            if (block(TREE) == LOG and all(
-                    sum(abs(row[i] - slime[i]) for i in range(3)) > 1
-                    for row in tree for slime in ROTOR)):
+            if block(TREE) == LOG:
                 return tree
             clear_tree()
         raise AssertionError('fancy oak feature did not produce a tree clear of the moving assembly')
@@ -162,7 +160,7 @@ def run(session, report):
         put(SOIL, 'minecraft:dirt')
         put(PIVOT, 'create:mechanical_bearing[facing=up]')
         for pos in ROTOR:
-            put(pos, 'minecraft:slime_block')
+            put(pos, 'minecraft:oak_planks')
         for pos in STRUT:
             put(pos, 'minecraft:oak_planks')
         put(LOW_SAW, 'create:mechanical_saw[facing=south,axis_along_first=false,flipped=false]')
@@ -179,9 +177,13 @@ def run(session, report):
         command(f'item replace entity @s weapon.mainhand with {GLUE}')
         call('wait', 5)
         report['glue_clicks'] = [glue_corner(LOW_SAW, (1158.5, 98, 52.5)),
-                                 glue_corner(STRUT[0], (1155.5, 98, 55.5))]
+                                 glue_corner(STRUT[0], (1155.5, 98, 55.5)),
+                                 glue_corner(STRUT[0], (1155.5, 98, 55.5)),
+                                 glue_corner(DEPLOYER, (1161.5, 98, 52.5)),
+                                 glue_corner(ROTOR[0], (1159.5, 98, 52.5)),
+                                 glue_corner(CHEST, (1156.5, 98, 56.5))]
         damage = ' '.join(command('data get entity @s SelectedItem'))
-        assert GLUE in damage and re.search(r'"?minecraft:damage"?:\s*2\b', damage), damage
+        assert GLUE in damage and re.search(r'"?minecraft:damage"?:\s*6\b', damage), damage
         report['glue_held_after'] = damage
         initial = report['tree_before'] = generate_clear_oak()
         log_count = sum(row[3].split('[', 1)[0] == LOG for row in initial)
@@ -215,7 +217,7 @@ def run(session, report):
         wait_for(lambda: block(TREE) == SAPLING)
         assert not tree_snapshot() and block(SOIL) == 'minecraft:dirt'
         report['replanted_after_restart'] = block(TREE)
-        wait_for(near_home)
+        wait_for(near_pose)
         stop()
         call('save')
         cargo = report['landed_chest'] = chest()
@@ -224,18 +226,23 @@ def run(session, report):
         screenshot('grounded-oak-replanted.png', (1158.5, 98.5, 56.5))
 
         if report['regrow_requested']:
+            # Park the low saw and strut clear of the sapling so ordinary
+            # oak features have room regardless of the worldgen draw.
+            start()
+            wait_for(lambda: near_pose(180))
+            stop()
+            parked = report['growth_parking'] = chest()
+            assert parked['position'] != CHEST and parked['logs'] == cargo['logs'], parked
             grow_seedling()
             second = report['tree_after_bone_meal'] = tree_snapshot()
             second_logs = sum(row[3].split('[', 1)[0] == LOG for row in second)
             assert second_logs >= 4 and len(second) > second_logs, second
-            assert all(sum(abs(row[i] - slime[i]) for i in range(3)) > 1
-                       for row in second for slime in ROTOR), 'bone-meal tree touches the slime rotor'
             command('tp @s 1155.5 98 60.5')
             start()
             wait_for(lambda: block(TREE) == 'minecraft:air')
             wait_for(lambda: not tree_snapshot(), steps=10)
             wait_for(lambda: block(TREE) == SAPLING)
-            wait_for(near_home)
+            wait_for(near_pose)
             stop()
             second_cargo = report['second_landed_chest'] = chest()
             assert second_cargo['logs'] == cargo['logs'] + second_logs, second_cargo

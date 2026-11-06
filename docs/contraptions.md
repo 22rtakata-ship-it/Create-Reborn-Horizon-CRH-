@@ -50,12 +50,20 @@ snow and protects crops rooted in farmland. Cut progress on moving tools resets
 across restarts. Plough entity throws and block breaking damage to passengers
 remain open.
 
-An upward stationary Saw strips ordinary vanilla logs, bark blocks, stems,
-hyphae and Bamboo Blocks. It cuts their stripped forms into planks. Drop the
-item on the powered blade. The Saw holds one input at a time, saves the
-current cycle and ejects the output in the direction set by the shaft and
-rotation. The current slice covers these wood recipes. Stonecutting, other
-recipe types, automation, the filter UI and cutting particles remain open.
+An upward stationary Saw strips logs, bark blocks, stems, hyphae and Bamboo
+Blocks, cuts stripped wood into planks, and cycles through plank shapes and
+stonecutting results. It also cuts Andesite Alloy into six shafts. Drop an
+item on the powered blade. The default Saw takes one input at a time and
+ejects its output in the direction set by the shaft and rotation. The saved
+`RecipeIndex` and ordinary output filter select the next recipe in the pinned
+Java order. A Saw with no matching recipe passes the item through unchanged.
+
+The Saw uses Horizon's loaded stonecutting recipes with 1.21.1 ID aliases
+where needed. Four additional 26.3 outputs from ordinary stone are excluded
+from the Saw's cycle. Vanilla stonecutters retain their complete recipe list.
+The source recipe order is checked for the original pack set. Extra datapacks
+can change that order in Java. Missing Create decorative outputs, the original
+filter control, automation and cutting particles remain open.
 
 A downward Deployer on a vertical Mechanical Bearing plants ordinary saplings
 from its hand and refills one at a time from a single mounted chest. The plain
@@ -192,6 +200,11 @@ controller motion. The current implementation is exercised by Rust unit tests.
   checks same-cell replanting, stock and the cut tree across a restart.
 - `tools/saw_processing_checks.py` compares 24 ticks for three stationary Saw
   inputs and checks ejection and resumption after a process restart.
+- `tools/saw_recipe_checks.py` compares 29 cycles and 1,254 per-Saw tick
+  observations for alloy, planks, stone and saved filters, including a restart.
+- `tools/portable_farm_checks.py` uses the same field and wood-cutting scenes in
+  the two clients. It checks the crop or log left at the first swept cell and
+  the exact item delivered to the stationary chest.
 - `tools/loot_dialect_checks.py` checks ordinary drops after converting the
   pinned Create loot condition format to the Horizon runtime's format.
 - `tools/actor_reference_checks.py` runs the original Java Create and Catnip

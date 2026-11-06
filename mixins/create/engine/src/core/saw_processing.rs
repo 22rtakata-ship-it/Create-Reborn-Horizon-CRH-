@@ -100,6 +100,73 @@ impl CuttingCycle {
     }
 }
 
+/// The pinned 1.21.1 loader inserts recipe IDs in ResourceLocation order
+/// into its 8,192-bucket HashMap before building the recipe manager's ordered
+/// map. RecipeFinder reads those values, so a lexical name sort changes
+/// the output selected by a freshly placed Saw. Other pack sets can differ.
+pub fn source_recipe_order(id: &str) -> (u32, &str, &str) {
+    fn java_hash(value: &str) -> u32 {
+        value.encode_utf16().fold(0u32, |hash, unit| {
+            hash.wrapping_mul(31).wrapping_add(u32::from(unit))
+        })
+    }
+    let (namespace, path) = id.split_once(':').unwrap_or(("minecraft", id));
+    let hash = java_hash(namespace)
+        .wrapping_mul(31)
+        .wrapping_add(java_hash(path));
+    ((hash ^ (hash >> 16)) & 8191, path, namespace)
+}
+
+pub fn automated_recipe(id: &str) -> bool {
+    !id.ends_with("_manual_only")
+}
+
+/// The native station's matching ingredient and result still come from
+/// Horizon. Only the eleven renamed built-in IDs need the 1.21.1 sort key.
+/// The four new outputs for ordinary stone were absent from that version.
+pub fn stonecutting_source_id(id: &str) -> Option<&str> {
+    Some(match id {
+        "minecraft:cobblestone_from_stone_stonecutting"
+        | "minecraft:cobblestone_slab_from_stone_stonecutting"
+        | "minecraft:cobblestone_stairs_from_stone_stonecutting"
+        | "minecraft:cobblestone_wall_from_stone_stonecutting" => return None,
+        "minecraft:end_stone_brick_slab_from_end_stone_bricks_stonecutting" => {
+            "minecraft:end_stone_brick_slab_from_end_stone_brick_stonecutting"
+        }
+        "minecraft:end_stone_brick_stairs_from_end_stone_bricks_stonecutting" => {
+            "minecraft:end_stone_brick_stairs_from_end_stone_brick_stonecutting"
+        }
+        "minecraft:end_stone_brick_wall_from_end_stone_bricks_stonecutting" => {
+            "minecraft:end_stone_brick_wall_from_end_stone_brick_stonecutting"
+        }
+        "minecraft:mossy_stone_brick_slab_from_mossy_stone_bricks_stonecutting" => {
+            "minecraft:mossy_stone_brick_slab_from_mossy_stone_brick_stonecutting"
+        }
+        "minecraft:mossy_stone_brick_stairs_from_mossy_stone_bricks_stonecutting" => {
+            "minecraft:mossy_stone_brick_stairs_from_mossy_stone_brick_stonecutting"
+        }
+        "minecraft:mossy_stone_brick_wall_from_mossy_stone_bricks_stonecutting" => {
+            "minecraft:mossy_stone_brick_wall_from_mossy_stone_brick_stonecutting"
+        }
+        "minecraft:prismarine_brick_slab_from_prismarine_bricks_stonecutting" => {
+            "minecraft:prismarine_brick_slab_from_prismarine_stonecutting"
+        }
+        "minecraft:prismarine_brick_stairs_from_prismarine_bricks_stonecutting" => {
+            "minecraft:prismarine_brick_stairs_from_prismarine_stonecutting"
+        }
+        "minecraft:quartz_slab_from_quartz_block_stonecutting" => {
+            "minecraft:quartz_slab_from_stonecutting"
+        }
+        "minecraft:chiseled_stone_bricks_from_stone_stonecutting" => {
+            "minecraft:chiseled_stone_bricks_stone_from_stonecutting"
+        }
+        "minecraft:stone_brick_wall_from_stone_stonecutting" => {
+            "minecraft:stone_brick_walls_from_stone_stonecutting"
+        }
+        _ => id,
+    })
+}
+
 /// Unit vector toward the output edge from SawBlockEntity.getItemMovementVec.
 pub fn item_motion(axis_along_first: bool, rpm: f32) -> [i32; 3] {
     let sign = if rpm < 0.0 { -1 } else { 1 };
@@ -151,6 +218,56 @@ mod tests {
         let before = cycle;
         assert_eq!(cycle.tick(0.0, true), Action::Idle);
         assert_eq!(cycle, before);
+    }
+
+    #[test]
+    fn pinned_order_combines_runtime_and_shipped_bamboo_recipes() {
+        let mut recipes = [
+            "create:cutting/bamboo_planks",
+            "create:cutting/runtime_generated/compat/minecraft/bamboo_planks_to_bamboo_slab",
+            "create:cutting/runtime_generated/compat/minecraft/bamboo_planks_to_bamboo_fence_gate",
+            "create:cutting/runtime_generated/compat/minecraft/bamboo_planks_to_bamboo_sign",
+        ];
+        recipes.sort_by_key(|recipe| source_recipe_order(recipe));
+        assert!(recipes[0].ends_with("_sign"));
+        assert!(recipes[1].ends_with("_fence_gate"));
+        assert!(recipes[2].ends_with("/bamboo_planks"));
+        assert!(recipes[3].ends_with("_slab"));
+        assert!(!automated_recipe("other:result_manual_only"));
+        assert!(automated_recipe("other:manual_only/result"));
+    }
+
+    #[test]
+    fn pinned_stone_cycle_ignores_the_four_new_native_outputs() {
+        let mut ids: Vec<_> = [
+            "minecraft:chiseled_stone_bricks_from_stone_stonecutting",
+            "minecraft:cobblestone_from_stone_stonecutting",
+            "minecraft:cobblestone_slab_from_stone_stonecutting",
+            "minecraft:cobblestone_stairs_from_stone_stonecutting",
+            "minecraft:cobblestone_wall_from_stone_stonecutting",
+            "minecraft:stone_bricks_from_stone_stonecutting",
+            "minecraft:stone_brick_slab_from_stone_stonecutting",
+            "minecraft:stone_brick_stairs_from_stone_stonecutting",
+            "minecraft:stone_brick_wall_from_stone_stonecutting",
+            "minecraft:stone_slab_from_stone_stonecutting",
+            "minecraft:stone_stairs_from_stone_stonecutting",
+        ]
+        .into_iter()
+        .filter_map(stonecutting_source_id)
+        .collect();
+        ids.sort_by_key(|id| source_recipe_order(id));
+        assert_eq!(
+            ids,
+            [
+                "minecraft:chiseled_stone_bricks_stone_from_stonecutting",
+                "minecraft:stone_bricks_from_stone_stonecutting",
+                "minecraft:stone_stairs_from_stone_stonecutting",
+                "minecraft:stone_slab_from_stone_stonecutting",
+                "minecraft:stone_brick_slab_from_stone_stonecutting",
+                "minecraft:stone_brick_stairs_from_stone_stonecutting",
+                "minecraft:stone_brick_walls_from_stone_stonecutting",
+            ]
+        );
     }
 
     #[test]

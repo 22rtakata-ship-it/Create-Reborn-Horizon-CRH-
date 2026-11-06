@@ -35,8 +35,9 @@ RADIAL_CHASSIS = (920, 82, 152)
 ROTARY_CONTACT = (904, 81, 166)
 PORTABLE = (920, 82, 166)
 PORTABLE_LEVER = (919, 81, 166)
-PORTABLE_DOCK = (920, 83, 162)
-PORTABLE_OUTPUT = (920, 81, 162)
+PORTABLE_DOCK = (920, 84, 162)
+PORTABLE_OUTPUT = (920, 82, 162)
+PORTABLE_CROP = (923, 83, 165)
 STATIONARY_DEPLOYER = (908, 84, 172)
 DEPLOYER_LOCK = (908, 84, 173)
 DEPLOYER_TARGET = (908, 82, 172)
@@ -275,20 +276,23 @@ def portable_storage_station(batch):
     batch.put((x, y - 1, z), 'create:clutch[axis=y]')
     batch.put(PORTABLE_LEVER, 'minecraft:lever[face=wall,facing=west,powered=true]')
     batch.put((x, y - 2, z), 'create:creative_motor[facing=up]{ScrollValue:32}')
-    for dx in (0, 1):
+    for dx in (0, 1, 2):
         batch.put((x + dx, y + 1, z), 'minecraft:slime_block')
-    batch.put((x + 2, y + 1, z), f'{block}[facing=east]')
-    batch.put((x - 1, y + 1, z), 'minecraft:chest[facing=north]{Items:['
-              '{Slot:5b,id:"minecraft:wheat",count:3},'
-              '{Slot:26b,id:"minecraft:stick",count:2}]}')
+    batch.put((x + 2, y + 2, z), f'{block}[facing=east]')
+    batch.put((x + 3, y + 1, z), 'create:mechanical_harvester[facing=north]')
+    batch.put((x - 1, y + 1, z), 'minecraft:chest[facing=north]')
+    for (px, py, pz), age in [(PORTABLE_CROP, 7), ((x + 1, y + 1, z - 3), 3)]:
+        batch.put((px, py - 1, pz), 'minecraft:farmland[moisture=7]')
+        batch.put((px, py, pz), f'minecraft:wheat[age={age}]')
     batch.put(PORTABLE_DOCK, f'{block}[facing=south]')
-    batch.put((x, y, z - 4), 'minecraft:hopper[facing=down]')
+    batch.put((x, y + 1, z - 4), 'minecraft:hopper[facing=down]')
+    batch.put((x, y - 1, z - 4), 'minecraft:smooth_stone')
     batch.put(PORTABLE_OUTPUT, 'minecraft:chest[facing=north]')
     for dz in (5, 6):
-        batch.put((x, y, z - dz), 'minecraft:stone')
-    batch.put((x, y + 1, z - 5), 'minecraft:comparator[facing=south]')
-    batch.put((x, y + 1, z - 6), 'minecraft:redstone_wire')
-    sign(batch, (917, 81, 169), ['ITEM INTERFACE', 'Release clutch.', 'Watch it dock.', 'Check floor chest.'])
+        batch.put((x, y + 1, z - dz), 'minecraft:stone')
+    batch.put((x, y + 2, z - 5), 'minecraft:comparator[facing=south]')
+    batch.put((x, y + 2, z - 6), 'minecraft:redstone_wire')
+    sign(batch, (917, 81, 169), ['HARVEST & DOCK', 'Release clutch.', 'Watch it harvest.', 'Check dock chest.'])
 
 
 def stationary_deployer_station(batch):

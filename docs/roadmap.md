@@ -15,8 +15,8 @@ The 0.7 checkpoints cover Encased Chain Drive, generator timing, fan component
 handling and the built-in resources. [Gameplay report](reviews/0.7-report.md)
 · [Review route](reviews/0.7-test-world.md)
 
-The 0.8.0-alpha.7 checkpoint adds chassis and glue on mechanical pistons,
-stationary sapling planting, and item unloading through a portable interface.
+The 0.8.0-alpha.8 checkpoint adds upward Saw recipes and matches the first
+actor visit on a newly assembled Mechanical Bearing in the shared farm rig.
 [Contraption review route](reviews/0.8-contraption-world.md)
 
 ## Current priority
@@ -220,11 +220,15 @@ with the systems they depend on.
   Bearing, with a pinned JAR geometry oracle and separate live-client tests.
 - [x] One ordinary mounted chest on a vertical Mechanical Bearing, with crop
   and cutter loot, item components, restart and landing recovery.
-- [ ] Full entity contact, multiple mounted inventories, moving chest menus
-  and cross-chunk persistence.
+- [ ] Full entity contact, multiple mounted inventories and moving chest menus.
+- [ ] Cross-chunk capture and restoration. First validate a durable two-column
+  write with both columns loaded. Recovery must replay an interrupted write
+  before either column becomes visible, including across a region boundary.
 - [x] Harvester on supported crops, moving Saw and Drill with cutting stalls,
   and horizontal stationary Saw tree felling.
-- [ ] First active-cell timing and cutting order for newly assembled Saw rotors.
+- [x] First active-cell selection on a newly assembled Mechanical Bearing,
+  checked by wheat harvest and Saw output through a portable dock.
+- [ ] Full actor tick ordering and saved movement contexts across all drivers.
 - [x] Moving Plough tilling, snow clearing and protection of farmland crops.
 - [x] Downward Deployer planting from its own stock on a vertical Mechanical
   Bearing, with forty matching Java tick samples and restart coverage.
@@ -241,7 +245,9 @@ with the systems they depend on.
 - [ ] Original Glue outlines and particles, offhand placement and transfer on other drivers.
 - [x] Upward stationary Saw wood processing through native item collision,
   with saved progress and Java comparisons of the cutting and ejection cycle.
-- [ ] Remaining Saw recipes, automation, filter and cutting particles.
+- [x] Upward Saw's stock vanilla plank variants, stonecutting and Andesite
+  Alloy, including recipe rotation and the saved plain output filter.
+- [ ] Remaining Saw recipes, automation, the filter control and cutting particles.
 - [x] Portable Storage Interface unloading from one moving chest into a
   vanilla hopper, with redstone, comparator, item components and restart.
 - [ ] Portable Storage Interface input, generic item automation, fluid interfaces,

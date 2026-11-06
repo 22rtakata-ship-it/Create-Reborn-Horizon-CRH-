@@ -122,6 +122,23 @@ pub(super) fn remove(game: &mut Game<'_>, controller: Pos) {
 }
 
 pub(super) fn tick(game: &mut Game<'_>, previous: &Record, current: &Record) {
+    tick_with_start(game, previous, current, true);
+}
+
+pub(super) fn tick_after_bearing_assembly(
+    game: &mut Game<'_>,
+    previous: &Record,
+    current: &Record,
+) {
+    tick_with_start(game, previous, current, false);
+}
+
+fn tick_with_start(
+    game: &mut Game<'_>,
+    previous: &Record,
+    current: &Record,
+    sample_previous_pose: bool,
+) {
     if game.options.execution_role.is_client()
         || !current.blocks.iter().any(|(_, state)| {
             matches!(
@@ -204,17 +221,21 @@ pub(super) fn tick(game: &mut Game<'_>, previous: &Record, current: &Record) {
         let identity = |motion| motion;
         let actor = actors.entry(*local).or_insert_with(|| {
             let mut actor = Actor::default();
-            actor.tracker.sample(
-                Sample {
-                    position: world_point(origin_before, before, point),
-                    facing,
-                    stalled: false,
-                    disabled: false,
-                    allow_stationary_first_visit: false,
-                },
-                identity,
-                identity,
-            );
+            // A fresh Java bearing advances its angle before its newly
+            // spawned contraption samples a MovementContext with no position.
+            if sample_previous_pose {
+                actor.tracker.sample(
+                    Sample {
+                        position: world_point(origin_before, before, point),
+                        facing,
+                        stalled: false,
+                        disabled: false,
+                        allow_stationary_first_visit: false,
+                    },
+                    identity,
+                    identity,
+                );
+            }
             if tool != Tool::Harvester {
                 actor.cutter = Some(MovingCutter {
                     breaker: Breaker::default(),
