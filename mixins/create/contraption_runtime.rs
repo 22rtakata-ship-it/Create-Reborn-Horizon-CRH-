@@ -23,6 +23,7 @@ use create_engine::{
     placement::Direction,
 };
 use glam::DVec3;
+use horizon_client::collisions::LookupCollisions;
 use horizon_client_render::create_contraption_scene::{
     ACTIVE, ACTOR_VISUAL_KEY, ClockHand, KEY, MAX_BLOCKS, MAX_RECORDS, RECORDS, Record, StrokeKind,
     read,
@@ -35,6 +36,7 @@ use horizon_world::{
     },
     chunk::BlockState,
     level::flags,
+    loot::with_native_loot_place,
     nbt::Tag,
     registry::BlockStateId,
 };
@@ -710,6 +712,101 @@ fn rotate_state(state: &BlockState, turn: QuarterTurn) -> Option<BlockState> {
     Some(rotated)
 }
 
+fn replaceable_leaf(
+    game: &Game<'_>,
+    position: Pos,
+    before: BlockStateId,
+    after: BlockStateId,
+) -> bool {
+    let Some(leaf) = game.pack.assets.registry.state(before) else {
+        return false;
+    };
+    if !matches!(
+        leaf.name.as_str(),
+        "minecraft:oak_leaves"
+            | "minecraft:spruce_leaves"
+            | "minecraft:birch_leaves"
+            | "minecraft:jungle_leaves"
+            | "minecraft:acacia_leaves"
+            | "minecraft:dark_oak_leaves"
+            | "minecraft:mangrove_leaves"
+            | "minecraft:cherry_leaves"
+            | "minecraft:azalea_leaves"
+            | "minecraft:flowering_azalea_leaves"
+    ) || leaf
+        .properties
+        .get("waterlogged")
+        .is_none_or(|value| value != "false")
+        || game.res.behaviours().fluid(before).amount() != 0
+    {
+        return false;
+    }
+    let [x, y, z] = position;
+    let key = (x, y, z);
+    let [cx, cz] = column(position);
+    if !game.border.contains(f64::from(x), f64::from(z))
+        || game.world.block_names.contains_key(&key)
+        || game.world.block_lock(key).is_some()
+        || game.loot_block_entity(position, &leaf.name).is_some()
+        || game
+            .world
+            .block_entities
+            .chunk_attachments(cx, cz)
+            .iter()
+            .any(|(p, _)| *p == key)
+        || game
+            .world
+            .chunks
+            .get(&(cx, cz))
+            .and_then(|chunk| chunk.saved.as_ref())
+            .is_some_and(|saved| {
+                saved.rolled_loot.iter().any(|loot| loot.pos == key)
+                    || saved
+                        .block_entity_attachments
+                        .iter()
+                        .any(|(p, _)| *p == key)
+                    || saved.block_entity_sources.iter().any(|(p, _)| *p == key)
+            })
+    {
+        return false;
+    }
+    let mut lookup = LookupCollisions {
+        block: &|x, y, z| state(game, [x, y, z]),
+        binding: game.collision,
+    };
+    // Java refuses to replace a solid obstacle with an empty collision shape.
+    game.collision
+        .collision_shape(&mut lookup, after, position)
+        .is_ok_and(|shape| !shape.is_empty())
+}
+
+fn drop_replaced_leaf(game: &mut Game<'_>, position: Pos, old: BlockStateId) {
+    game.level_event_at(2001, position, old.0 as i32);
+    if !game.ui.rules.bool("block_drops") {
+        return;
+    }
+    let loot_place =
+        game.loot_place_at(position.map(|coordinate| f64::from(coordinate) + 0.5), None);
+    let drops = with_native_loot_place(loot_place, || {
+        world_items!(game).block_drops_exploded(
+            game.pack.assets.registry,
+            old,
+            None,
+            &[],
+            &mut game.world.random,
+            Some((&mut game.rand_sequences, game.level.seed)),
+            None,
+            false,
+        )
+    });
+    for stack in drops
+        .into_iter()
+        .filter(|stack| stack.count > 0 && stack.item.as_ref() != "minecraft:air")
+    {
+        game.pop_resource(position, stack);
+    }
+}
+
 fn land(game: &mut Game<'_>, controller: Pos, angle: f32) -> bool {
     let key = column(controller);
     let Ok(mut records) = entries(game, key) else {
@@ -731,18 +828,37 @@ fn land(game: &mut Game<'_>, controller: Pos, angle: f32) -> bool {
         record.anchor,
         rotation.snapped(),
         rotate_state,
-        |p, _| column(p) == key && resident(game, p) && game.res.facts().is_air(state(game, p)),
+        |p, _| column(p) == key && resident(game, p),
     ) else {
         return false;
     };
     let registry = game.pack.assets.registry;
+    let accepts_leaves = record.axis == Axis::Y.index()
+        && record.stroke.is_none()
+        && record.clock_hand.is_none()
+        && !record.return_home;
     let Some(edits) = plan
         .iter()
-        .map(|(p, block)| Some((*p, state(game, *p), registry.id(block)?)))
+        .map(|(p, block)| {
+            let before = state(game, *p);
+            let after = registry.id(block)?;
+            (game.res.facts().is_air(before)
+                || accepts_leaves && replaceable_leaf(game, *p, before, after))
+            .then_some((*p, before, after))
+        })
         .collect::<Option<Vec<_>>>()
     else {
         return false;
     };
+    if super::create_port_glue_transfer::blocked(
+        game,
+        key,
+        edits.iter().filter_map(|&(position, before, _)| {
+            (!game.res.facts().is_air(before)).then_some(position)
+        }),
+    ) {
+        return false;
+    }
     let turn = rotation.snapped();
     let Ok(glue) =
         super::create_port_glue_transfer::landing(game, key, &record, record.anchor, turn)
@@ -758,6 +874,13 @@ fn land(game: &mut Game<'_>, controller: Pos, angle: f32) -> bool {
     }
     actors::remove(game, controller);
     psi::remove(game, controller);
+    // No effects or loot rolls occur until all terrain and mounted data have
+    // landed. A parked or restarted failed landing can retry without drops.
+    for (position, before, _) in edits {
+        if !game.res.facts().is_air(before) {
+            drop_replaced_leaf(game, position, before);
+        }
+    }
     movement_sound(game, controller, false);
     true
 }
@@ -797,6 +920,13 @@ pub(super) fn tick(
     if (raw_rpm != previous_raw || rpm != previous_rpm)
         && controller.speed_changed(previous_rpm, rpm, actors::stalled(game, pos), None)
     {
+        // The entity gets its last visit at the published pose before the
+        // bearing's stop clears movement contexts and returns the inventories.
+        if raw_rpm == 0.0
+            && let Some(record) = current
+        {
+            actors::tick_bearing_deployer(game, record, record);
+        }
         actors::remove(game, pos);
     }
     if entity.nbt.remove(&REQUEST.into()).is_some() && controller.toggle() {

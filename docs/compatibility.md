@@ -1,9 +1,11 @@
 # Original Create identifiers and data
 
-The 0.8.0-alpha.15 development checkpoint adds ordinary Deployer filter
-selection on the same two faces as the original. Two moving Deployers can
-share one mounted chest and preserve their stock, filters and visit state
-across restarts. Capture and restoration currently share one chunk column.
+The 0.8.0-alpha.16 development checkpoint matches the original Deployer's
+final visit before the bearing stops. Vertical Mechanical Bearings can land
+in dry vanilla leaves, and blocked landings can still be retried after a
+restart. Two moving Deployers can share one mounted chest and preserve their
+stock, filters and visit state across restarts. Capture and restoration
+currently share one chunk column.
 [Contraption guide](contraptions.md)
 
 The sections marked 0.3–0.5 below retain the released historical boundaries.

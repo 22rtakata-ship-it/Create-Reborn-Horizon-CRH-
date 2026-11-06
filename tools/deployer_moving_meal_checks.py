@@ -253,10 +253,6 @@ def native_case(session, case, reference, split=None):
         batch.load((1156, 106, 60))
     offset = len(rows)
     observe(batch, ticks - offset)
-    if case == 'open_tree':
-        # A successful oak can grow leaves into the landing cells. Clear only
-        # that slice before comparing restored stock; the trunk stays intact.
-        batch.command('fill 1157 100 55 1161 100 56 minecraft:air replace minecraft:oak_leaves')
     observed = native_landed(batch, session, case + '-landing')
     rows += native_trace(observed[:-4], offset)
     landed = inspect_native_landing(session, observed[-4:])

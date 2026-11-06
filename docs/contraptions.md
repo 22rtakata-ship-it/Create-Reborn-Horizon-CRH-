@@ -15,7 +15,7 @@ rules while using Horizon's block, item and player APIs.
 
 The current native adapter limits each structure and its swept footprint to one
 loaded chunk column. This keeps the source, target and persistent record in the
-same chunk save. It refuses unsupported snapshots and occupied landing cells
+same chunk save. It refuses unsupported snapshots and most occupied landing cells
 instead of discarding blocks. Capture is limited to an allowlist of stateless
 blocks and idle tools. A vertical Mechanical Bearing can carry a Deployer.
 A vertical Mechanical Bearing, Gantry, Rope Pulley or Mechanical Piston can
@@ -130,9 +130,10 @@ drop at the tool. The server saves the inventory with the structure's chunk
 and restores it at its rotated or translated landing position, including
 after a restart or controller removal.
 
-An oak grown inside the landing footprint can leave the structure parked
-until the obstructing leaves are removed. This differs from the original
-Create landing path, which can replace those blocks.
+A vertical Mechanical Bearing can land through ordinary dry vanilla leaves
+when the incoming block has collision. The leaves use the usual block-break
+effect and bare-hand drops after the assembly lands. Logs, waterlogged
+leaves and other obstructions keep the structure parked.
 
 A Portable Storage Interface on a vertical Mechanical Bearing can dock that
 chest with a stationary interface and a vanilla hopper or dry vertical Chute
@@ -259,10 +260,10 @@ controller motion. The current implementation is exercised by Rust unit tests.
   wheat, a blocked oak, an open oak and a refused third Deployer.
 - `tools/deployer_filter_checks.py` checks ordinary item samples, the two
   shaft orientations, an untouched held stack and clearing the ghost.
-- A separate Chute-to-Deployer scene matches the Java dock and planting
-  observations across 125 ticks. After landing, eight saplings are planted
-  and eight remain. One sapling ends in the chest in Horizon and in the
-  hand in Java.
+- `tools/portable_farm_supply_checks.py` compares dock and planting observations
+  across 125 ticks and checks the final Deployer visit on shutdown. In both
+  clients, eight saplings are planted, seven remain in the mounted chest,
+  and one remains in the hand after landing.
 - `tools/deployer_grounded_farm_checks.py` grows an oak through vanilla
   worldgen, joins a low Saw to the rotor by ordinary Super Glue clicks and
   checks same-cell replanting, stock and the cut tree across a restart.

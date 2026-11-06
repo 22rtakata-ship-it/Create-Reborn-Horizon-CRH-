@@ -17,7 +17,8 @@ handling and the built-in resources. [Gameplay report](reviews/0.7-report.md)
 
 The 0.8 development builds include rotary and linear contraptions,
 Super Glue, Sticker, small moving farms, and two-way Chute transfer through
-an item dock. The current checkpoint adds ordinary Deployer filters.
+an item dock. The current checkpoint verifies farm shutdown and bearing
+landing through dry foliage against Java.
 [Contraption review route](reviews/0.8-contraption-world.md)
 
 ## Current priority
@@ -247,6 +248,10 @@ with the systems they depend on.
 - [x] Two filtered moving Deployers sharing one chest, with separate hand
   stock, bone meal use and restart at the next visited cell.
 - [x] Ordinary Deployer filter slot, with ghost selection and clearing.
+- [x] Chute-to-Deployer farm supply and shutdown, matching 125 Java ticks
+  and the final distribution across planted saplings, chest and hand.
+- [x] Vertical Mechanical Bearing landing through dry vanilla leaves,
+  including guarded retries and drop persistence in Horizon.
 - [ ] Deployer filter hover UI, advanced filters and powered overflow.
 - [x] Stationary downward Deployer planting with plain saplings, redstone
   lock, speed pause and cold-stroke resume.

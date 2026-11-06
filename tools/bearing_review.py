@@ -51,6 +51,22 @@ TWO_HANDS_LEVER = (904, 81, 231)
 TWO_HANDS_CHEST = (903, 83, 232)
 TWO_HANDS_WHEAT = (901, 81, 232)
 TWO_HANDS_PLANT = (905, 81, 230)
+LEAF_ROTOR = (919, 82, 231)
+LEAF_LEVER = (918, 81, 231)
+LEAF_RING = ((920, 83, 231), (919, 83, 232), (918, 83, 231), (919, 83, 230))
+
+
+def leaf_landing_station(batch):
+    batch.load(LEAF_ROTOR)
+    batch.command('fill 914 81 224 925 90 239 minecraft:air')
+    batch.command('fill 914 80 222 925 80 239 minecraft:smooth_stone')
+    batch.put(LEAF_ROTOR, 'create:mechanical_bearing[facing=up]')
+    batch.put((919, 81, 231), 'create:clutch[axis=y,powered=false]')
+    batch.put(LEAF_LEVER, 'minecraft:lever[face=wall,facing=west,powered=false]')
+    batch.put((919, 80, 231), 'create:creative_motor[facing=up]{ScrollValue:16}')
+    batch.put((919, 83, 231), 'minecraft:slime_block')
+    batch.put(LEAF_RING[0], 'minecraft:oak_planks')
+    stations.sign(batch, (919, 81, 235), ['LEAF LANDING', 'Stop the rotor.', 'The arm clears', 'one leaf block.'])
 
 
 def two_deployer_station(batch):
@@ -222,10 +238,13 @@ def prepare(session, options):
         farm_input_stations(batch)
     if options.two_deployers:
         two_deployer_station(batch)
+    if options.leaf_landing:
+        leaf_landing_station(batch)
     if any((options.plough, options.deployer, options.glue, options.upward_saw,
             options.chassis, options.materials, options.rotary_contact,
             options.portable_storage, options.stationary_deployer, options.linear_cargo,
-            options.adhesives, options.farm_inputs, options.two_deployers)):
+            options.adhesives, options.farm_inputs, options.two_deployers,
+            options.leaf_landing)):
         batch.command('tp @s 909.5 81 61.5')
     batch.tick(30 if options.farms else 12)
     batch.data(BEARING)
@@ -261,6 +280,16 @@ def review(session, options):
                 return data
             call('wait', 5)
         raise AssertionError((pos, running, data))
+
+    def switch_windmill(running):
+        interact(WINDMILL, 'south')
+        try:
+            return wait_running(WINDMILL, running)
+        except AssertionError:
+            # A control-socket tap can miss while the client is catching up
+            # after a teleport. Retry only after the server state stayed put.
+            interact(WINDMILL, 'south')
+            return wait_running(WINDMILL, running)
 
     def wait_block(pos, block):
         for _ in range(16):
@@ -303,13 +332,11 @@ def review(session, options):
             command('clear @s')
             call('select', 9)
             call('inventory')
-            interact(WINDMILL, 'south')
-            windmill_nbt = wait_running(WINDMILL, 1)
+            windmill_nbt = switch_windmill(1)
             assert number(windmill_nbt, 'LastGenerated') == 1, windmill_nbt
             shaft = snapshot((903, 84, 72) if options.sails else (904, 83, 72))
             assert number(shaft, 'Speed') == 1, shaft
-            interact(WINDMILL, 'south')
-            wait_running(WINDMILL, 0)
+            switch_windmill(0)
             if options.sails:
                 for pos, block in SAIL_PANEL:
                     state = call('block', *pos)
@@ -319,8 +346,7 @@ def review(session, options):
                 for x in range(902, 907):
                     state = call('block', x, 85, 71)
                     assert 'white_wool' in str(state), state
-            interact(WINDMILL, 'south')
-            wait_running(WINDMILL, 1)
+            switch_windmill(1)
 
         if options.farms:
             wait_loaded(call, [stations.PISTON, stations.STICKY_PISTON, stations.HARVESTER, stations.SAW])
@@ -528,6 +554,16 @@ def review(session, options):
             call('look-at', 903.5, 83.5, 231.5)
             call('wait', 12)
             extra.append(str(screenshot('two-moving-deployers.png')))
+        if options.leaf_landing:
+            command('tp @s 923.5 86 235.5')
+            wait_loaded(call, [LEAF_ROTOR, LEAF_LEVER])
+            wait_running(LEAF_ROTOR, 1)
+            for leaf in LEAF_RING:
+                command('setblock ' + xyz(leaf) + ' minecraft:oak_leaves[persistent=true]')
+                wait_block(leaf, 'minecraft:oak_leaves')
+            call('look-at', 919.5, 83.5, 231.5)
+            call('wait', 12)
+            extra.append(str(screenshot('leaf-landing.png')))
         call('key', 'f1', 'tap')
         command('gamemode creative')
         if options.glue:
@@ -578,6 +614,7 @@ def main():
     parser.add_argument('--adhesives', action='store_true')
     parser.add_argument('--farm-inputs', action='store_true')
     parser.add_argument('--two-deployers', action='store_true')
+    parser.add_argument('--leaf-landing', action='store_true')
     parser.add_argument('--upward-saw', action='store_true')
     parser.add_argument('--chassis', action='store_true')
     parser.add_argument('--materials', action='store_true')
