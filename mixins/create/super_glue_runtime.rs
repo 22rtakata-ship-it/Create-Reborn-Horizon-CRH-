@@ -2,16 +2,17 @@
 // Copyright (c) 2026 create-horizon contributors
 // SPDX-License-Identifier: MIT
 
-// SuperGlueSelectionHandler and SuperGlueSelectionPacket on Horizon's server.
+// SuperGlueSelectionHandler, SuperGlueSelectionPacket and SuperGlueHandler.
 
 use super::{
     Game,
     create_port_contraption::{Capture, column},
+    shield::OFFHAND_SLOT,
 };
 use create_engine::{
     contraption::{
         CaptureView, Cell,
-        glue::{Search, SelectionError, Volume, selection},
+        glue::{OffhandPlacement, Search, SelectionError, Volume, offhand_placement, selection},
     },
     kinetics::Pos,
     particles::{glue_edges, glue_face},
@@ -25,11 +26,13 @@ use horizon_client::{
     text::Text,
 };
 use horizon_core::{
-    geometry::{Aabb, Vec3},
+    geometry::{Aabb, Direction as Face, Vec3, traverse_blocks},
+    position::BlockPos,
     random::RandomSource,
 };
 use horizon_world::{
     attachments::{AttachmentCodec, AttachmentError, AttachmentType, Attachments},
+    level::PlaceContext,
     nbt::{Compound, Tag},
     player_inventory::EquipmentSlot,
 };
@@ -154,6 +157,59 @@ fn read_map(map: &Attachments, key: [i32; 2]) -> Result<Cow<'_, [Volume]>, Attac
 }
 
 struct GlueView<'g, 'a>(Capture<'g, 'a>);
+
+struct PlacementView<'g, 'a>(&'g Game<'a>);
+
+impl CaptureView for PlacementView<'_, '_> {
+    type Block = ();
+
+    fn inspect(&self, pos: Pos) -> Cell {
+        let Cell::Block(mut rules) = GlueView(Capture(self.0)).inspect(pos) else {
+            return Cell::Empty;
+        };
+        let game = self.0;
+        let block = game.native_block(pos);
+        let facing = game.native_block_property(pos, "facing");
+        let facing = facing
+            .as_deref()
+            .and_then(|name| Direction::ALL.into_iter().find(|face| face.name() == name));
+        match block.as_str() {
+            "create:mechanical_drill"
+            | "create:mechanical_saw"
+            | "create:mechanical_bearing"
+            | "create:portable_storage_interface"
+            | "create:mechanical_harvester"
+            | "create:mechanical_plough" => {
+                if let Some(facing) = facing {
+                    rules.unsupported_faces[facing as usize] = true;
+                    if matches!(
+                        block.as_str(),
+                        "create:mechanical_harvester" | "create:mechanical_plough"
+                    ) {
+                        rules.attached[facing.opposite() as usize] = true;
+                    }
+                }
+            }
+            "create:rope_pulley" => rules.unsupported_faces[Direction::Down as usize] = true,
+            "create:piston_extension_pole" | "create:mechanical_piston_head" => {
+                if let Some(facing) = facing {
+                    rules.unsupported_faces =
+                        Direction::ALL.map(|face| face.axis() != facing.axis());
+                }
+            }
+            _ => {}
+        }
+        Cell::Block(rules)
+    }
+
+    fn snapshot(&self, _: Pos) -> Option<()> {
+        Some(())
+    }
+
+    fn glued(&self, pos: Pos, face: Direction) -> bool {
+        glued(self.0, pos, face)
+    }
+}
 
 impl CaptureView for GlueView<'_, '_> {
     type Block = ();
@@ -297,6 +353,183 @@ fn send_edges(game: &mut Game<'_>, volume: Volume) {
 
 fn vector([x, y, z]: [f64; 3]) -> Vec3 {
     Vec3::new(x, y, z)
+}
+
+fn offhand_item<'g>(game: &'g Game<'_>) -> Option<&'g ItemStack> {
+    if game
+        .stack_in(game.selected)
+        .is_some_and(|stack| stack.item.as_ref() == "create:wrench")
+    {
+        return None;
+    }
+    game.stack_in(OFFHAND_SLOT)
+        .filter(|stack| stack.item.as_ref() == ITEM && stack.count != 0)
+}
+
+/// SuperGlueHandler clips the outline with just the placed block treated as air.
+fn placement_hit(game: &Game<'_>, placed: Pos) -> Option<(Pos, Direction)> {
+    let eye = game.eye_position()?;
+    let look = super::view_vector(game.yaw, game.pitch);
+    let reach = game.reach();
+    let start = vector(eye);
+    let end = start.add_vector(vector(look).scale(reach));
+    // The player reach attribute tops out at 64 blocks. Even a corner-to-
+    // corner ray within that range visits fewer than 256 voxels.
+    let hit = traverse_blocks(start, end, 256, |p| {
+        let pos = [p.x, p.y, p.z];
+        if pos == placed {
+            return None;
+        }
+        let state = game.world.block(p.x, p.y, p.z);
+        let facts = game.res.facts().get(state);
+        if game.res.facts().is_air(state)
+            || matches!(
+                facts.name.as_ref(),
+                "minecraft:water" | "minecraft:lava" | "minecraft:bubble_column"
+            )
+        {
+            return None;
+        }
+        game.clip_declared_outline(state, pos, eye, look, reach)
+    })
+    .ok()??;
+    Some((hit.pos, Direction::from_vector(hit.face)?))
+}
+
+fn uses_ordinary_placement(stack: &ItemStack) -> bool {
+    !matches!(
+        stack.item.as_ref(),
+        "create:vertical_gearbox"
+            | "create:large_water_wheel"
+            | "minecraft:lily_pad"
+            | "minecraft:frogspawn"
+    )
+}
+
+fn applies_to_placement(game: &Game<'_>, stack: &ItemStack) -> bool {
+    game.native_on("create") && offhand_item(game).is_some() && uses_ordinary_placement(stack)
+}
+
+fn wrong_placement_target(game: &Game<'_>, placed: Pos) -> bool {
+    offhand_placement(&PlacementView(game), placed, placement_hit(game, placed))
+        == OffhandPlacement::CancelPlacement
+}
+
+pub(super) fn cancel_prediction(game: &Game<'_>, stack: &ItemStack, placed: Pos) -> bool {
+    applies_to_placement(game, stack) && wrong_placement_target(game, placed)
+}
+
+/// A placement observer cannot cancel. Check the same ordinary BlockItem
+/// placement on Horizon's disposable level before the authoritative write.
+pub(super) fn cancels_placement(game: &mut Game<'_>, stack: &ItemStack) -> bool {
+    if game.remote.is_some()
+        || !applies_to_placement(game, stack)
+        || game
+            .items()
+            .get(&stack.item)
+            .is_none_or(|item| item.block.is_none())
+    {
+        return false;
+    }
+    let Some(hit) = game.pick() else { return false };
+    if !game.may_build() && !game.can_place_on_in_adventure(hit.pos) {
+        return false;
+    }
+    let Some(direction) = Direction::from_vector(hit.face) else {
+        return false;
+    };
+    let context = PlaceContext {
+        clicked_pos: BlockPos::new(hit.pos[0], hit.pos[1], hit.pos[2]),
+        face: match direction {
+            Direction::Down => Face::Down,
+            Direction::Up => Face::Up,
+            Direction::North => Face::North,
+            Direction::South => Face::South,
+            Direction::West => Face::West,
+            Direction::East => Face::East,
+        },
+        hit: vector(hit.point),
+        inside: false,
+        yaw: game.yaw,
+        pitch: game.pitch,
+        sneaking: game.keys.contains(&winit::keyboard::KeyCode::ShiftLeft),
+        item: stack.item.to_string(),
+        can_use_game_master_blocks: game.can_use_game_master_blocks(),
+    };
+    let Some(placed) = game.create_glue_preview_placement(&context) else {
+        return false;
+    };
+    wrong_placement_target(game, placed)
+}
+
+pub(super) fn placed(game: &mut Game<'_>, stack: &ItemStack, pos: Pos) {
+    if !game.native_on("create") || game.remote.is_some() || !uses_ordinary_placement(stack) {
+        return;
+    }
+    // Java replays existing glued faces when a player replaces a block in a volume.
+    if let Ok(volumes) = read(game, column(pos))
+        && !volumes.is_empty()
+    {
+        let replay = Direction::ALL.map(|direction| {
+            let delta = direction.vector();
+            let neighbor = std::array::from_fn(|axis| pos[axis] + delta[axis]);
+            volumes.iter().any(|volume| volume.glues(pos, direction))
+                && matches!(PlacementView(game).inspect(neighbor), Cell::Block(_))
+        });
+        for (direction, replay) in Direction::ALL.into_iter().zip(replay) {
+            if replay {
+                send_face(game, pos, direction.vector());
+            }
+        }
+    }
+
+    let Some(mut glue) = offhand_item(game).cloned() else {
+        return;
+    };
+    let Some((against, face)) = placement_hit(game, pos) else {
+        return;
+    };
+    let OffhandPlacement::Apply(volume) =
+        offhand_placement(&PlacementView(game), pos, Some((against, face)))
+    else {
+        return;
+    };
+    let key = column(against);
+    if column(pos) != key {
+        return;
+    }
+    let max = stack_max_damage(
+        &glue,
+        game.items().get(ITEM).map_or(0, |item| item.max_damage),
+    );
+    if !game.creative && glue.damage >= max {
+        return;
+    }
+    let Ok(volumes) = read(game, key) else { return };
+    let mut volumes = volumes.into_owned();
+    if volumes.len() == MAX_VOLUMES {
+        return;
+    }
+    volumes.push(volume);
+    let Ok(map) = game.native_attachments(Holder::Chunk(key)) else {
+        return;
+    };
+    if map.set(&VOLUMES, volumes).is_err() {
+        return;
+    }
+    if !game.creative {
+        glue.damage = glue.damage.saturating_add(game.wear(&glue, 1));
+        if glue.damage < max {
+            *game.stack_in_mut(OFFHAND_SLOT) = Some(glue);
+        } else {
+            *game.stack_in_mut(OFFHAND_SLOT) = None;
+            game.award_stat("broken", ITEM, 1);
+            // Create 6.0.10 consumes the offhand stack but names MAINHAND
+            // explicitly for the break event.
+            game.player_equipment_broke(EquipmentSlot::MainHand, &glue);
+        }
+    }
+    send_face(game, against, face.vector());
 }
 
 fn nearest_volume(game: &Game<'_>) -> Option<([i32; 2], usize, [f64; 3])> {

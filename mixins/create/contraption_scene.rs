@@ -15,6 +15,7 @@ pub type Pos = [i32; 3];
 pub const MAX_BLOCKS: usize = 64;
 pub const MAX_RECORDS: usize = 4;
 pub const KEY: &str = "moving_structures";
+pub const HARVESTER_KEY: &str = "harvester_visuals";
 
 #[derive(Clone, Debug)]
 pub struct Record {

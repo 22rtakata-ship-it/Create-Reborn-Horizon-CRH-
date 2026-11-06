@@ -419,6 +419,19 @@ mod tests {
             offhand_placement(&world, end, hit),
             OffhandPlacement::Apply(volume)
         );
+        let mut rules = BlockRules::default();
+        rules.unsupported_faces[Direction::East as usize] = true;
+        world.blocks.insert(start, Cell::Block(rules));
+        assert_eq!(
+            offhand_placement(&world, end, hit),
+            OffhandPlacement::Unchanged
+        );
+        rules.attached[Direction::East as usize] = true;
+        world.blocks.insert(start, Cell::Block(rules));
+        assert_eq!(
+            offhand_placement(&world, end, hit),
+            OffhandPlacement::Apply(volume)
+        );
         world.volumes.push(volume);
         assert_eq!(
             offhand_placement(&world, end, hit),

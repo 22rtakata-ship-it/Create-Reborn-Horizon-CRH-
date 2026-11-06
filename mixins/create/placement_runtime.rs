@@ -49,7 +49,10 @@ pub(super) fn state(
     answer: &mut Option<Option<BlockStateId>>,
 ) {
     let block = game.native_state_block(state).unwrap_or("");
-    if block == super::create_port_portable_storage::BLOCK {
+    if matches!(
+        block,
+        super::create_port_portable_storage::BLOCK | super::create_port_sticker::BLOCK
+    ) {
         let look = super::create_port::nearest(ctx.yaw, ctx.pitch);
         let facing = if ctx.sneaking { look } else { look.opposite() };
         *answer = Some(game.native_state_with_property(state, "facing", facing.name()));

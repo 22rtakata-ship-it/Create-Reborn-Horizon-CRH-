@@ -52,6 +52,7 @@
     "create:radial_chassis",
     "create:chute",
     "create:portable_storage_interface",
+    "create:sticker",
     "create:iron_sheet",
     "create:golden_sheet",
     "create:copper_sheet",

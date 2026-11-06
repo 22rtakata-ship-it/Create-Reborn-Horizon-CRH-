@@ -40,6 +40,7 @@
     "create:linear_chassis",
     "create:secondary_linear_chassis",
     "create:radial_chassis",
+    "create:sticker",
     "create:mechanical_drill",
     "create:mechanical_saw",
     "create:deployer",

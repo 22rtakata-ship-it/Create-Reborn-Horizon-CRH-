@@ -65,6 +65,7 @@
   "block.create.linear_chassis": "Linear Chassis",
   "block.create.secondary_linear_chassis": "Secondary Linear Chassis",
   "block.create.radial_chassis": "Radial Chassis",
+  "block.create.sticker": "Sticker",
   "block.create.mechanical_piston": "Mechanical Piston",
   "block.create.sticky_mechanical_piston": "Sticky Mechanical Piston",
   "block.create.mechanical_piston_head": "Mechanical Piston Head",

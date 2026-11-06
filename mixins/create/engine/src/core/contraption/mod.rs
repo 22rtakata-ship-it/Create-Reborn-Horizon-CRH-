@@ -19,6 +19,7 @@ pub mod portable_storage;
 
 pub mod pulley;
 pub mod rotary_contact;
+pub mod sticker;
 mod transform;
 pub mod windmill;
 

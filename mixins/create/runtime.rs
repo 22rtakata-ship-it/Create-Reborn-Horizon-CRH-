@@ -148,6 +148,10 @@ pub(super) fn owns(block: &str) -> bool {
 }
 
 pub(super) fn entity(block: &str, entity: &mut Option<(String, Compound)>) {
+    if block == super::create_port_sticker::BLOCK && entity.is_none() {
+        *entity = Some((block.into(), super::create_port_sticker::default_nbt()));
+        return;
+    }
     if block == super::create_port_chute::BLOCK && entity.is_none() {
         *entity = Some((block.into(), super::create_port_chute::default_nbt()));
         return;
@@ -1513,6 +1517,12 @@ pub(super) fn draw(
     entity: &ModBlockEntity,
     draw: &mut BlockEntityDraw,
 ) {
+    if block == super::create_port_sticker::BLOCK {
+        if let Some(state) = game.pack.assets.registry.state(state) {
+            super::create_port_sticker::draw(game, draw, state);
+        }
+        return;
+    }
     if block == super::create_port_chute::BLOCK {
         super::create_port_chute::draw(game, pos, entity, draw);
         return;

@@ -101,8 +101,17 @@ is refused before assembly.
 A volume that would be split or include a stationary block stops capture.
 The mounted volume shares the chunk save with the structure. The first corner
 emits a slime-ball burst on the clicked face. Confirming or removing the volume
-emits particles at half-block intervals along its edges. Selection outlines,
-offhand placement and transfer on other drivers remain open.
+emits particles at half-block intervals along its edges. Selection outlines
+and transfer on other drivers remain open.
+
+Hold Super Glue in your offhand while placing an ordinary block to glue it
+to the face you placed it against. A new connection uses one point of durability in
+survival. Replacing a block inside an existing glue volume uses none.
+A placement ray that hits a nonadjacent block cancels the placement. A ray
+that misses allows ordinary placement without glue.
+Offhand placement works within one loaded chunk column. Fluid-specific and
+Create alias placement paths, custom glue entity data, and the face burst
+for other players tracking the placement are still pending.
 
 ## Mounted chest
 
@@ -140,6 +149,11 @@ Mechanical Bearings, dry Gantry Carriages, dry Rope Pulleys and Mechanical
 Pistons. Sticky faces and ranges are restored after a quarter turn or a linear
 translation, including recovery after a restart and an obstructed landing.
 [Chassis rules and verification](chassis.md)
+
+The Sticker latches its head on each rising redstone edge. An extended
+Sticker joins its front block when the latter supports the attachment.
+The capture walk can find the same bond from either end.
+[Sticker rules and verification](sticker.md)
 
 ## Minecart contraptions
 
@@ -188,6 +202,11 @@ controller motion. The current implementation is exercised by Rust unit tests.
 - `tools/super_glue_reference_checks.py` observes the original selection,
   durability and removal. `tools/super_glue_native_checks.py --transfer` reads
   saved volumes before and after restart, removal and bearing landing.
+- `tools/super_glue_offhand_checks.py` and
+  `tools/super_glue_offhand_native_checks.py` check ordinary block placement,
+  survival durability, nonadjacent cancellation and a refused support face.
+- `tools/sticker_checks.py` compares rising and falling redstone edges,
+  placement next to a powered block and five bearing capture layouts.
 - `tools/contraption_collision_checks.py --player --piston --side` verifies
   player and dropped-item movement in a disposable Horizon world.
   `tools/contraption_contact_reference_checks.py` records the unobstructed

@@ -1033,6 +1033,32 @@
         "id": "create:speedometer"
       }
     },
+    "create/recipe/crafting/kinetics/sticker.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "C": {
+          "tag": "c:cobblestones"
+        },
+        "I": {
+          "item": "create:andesite_alloy"
+        },
+        "R": {
+          "tag": "c:dusts/redstone"
+        },
+        "S": {
+          "tag": "c:slimeballs"
+        }
+      },
+      "pattern": [
+        "ISI",
+        "CRC"
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:sticker"
+      }
+    },
     "create/recipe/crafting/kinetics/sticky_mechanical_piston.json": {
       "type": "minecraft:crafting_shaped",
       "category": "misc",
@@ -5682,6 +5708,7 @@
         "create:linear_chassis",
         "create:secondary_linear_chassis",
         "create:radial_chassis",
+        "create:sticker",
         "create:mechanical_drill",
         "create:mechanical_saw",
         "create:deployer",
@@ -6099,6 +6126,27 @@
         }
       ],
       "random_sequence": "create:blocks/chute"
+    },
+    "create/loot_table/blocks/sticker.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:sticker"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/sticker"
     },
     "create/loot_table/blocks/sail_frame.json": {
       "type": "minecraft:block",

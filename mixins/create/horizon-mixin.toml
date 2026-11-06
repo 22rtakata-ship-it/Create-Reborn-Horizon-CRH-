@@ -1,6 +1,6 @@
 [mod]
 id = "create"
-version = "0.8.0-alpha.11"
+version = "0.8.0-alpha.12"
 
 [compatibility]
 horizon_revision = "9c7f9b2215dfed497aba5522c44f38926628648d"
@@ -294,6 +294,23 @@ bindings = [
   { name = "pos", ty = "[i32; 3]", value = "pos" },
   { name = "face", ty = "[i32; 3]", value = "face" },
   { name = "claimed", ty = "&mut bool", value = "&mut *claimed" },
+]
+
+[[module]]
+id = "super-glue-placement-preview"
+file = "crates/horizon-client/src/game/remote.rs"
+name = "create_port_glue_placement_preview"
+source = "super_glue_placement_preview.rs"
+
+[[injection]]
+id = "super-glue-placement-prediction"
+target = "horizon_client::game::remote::Game<'_>::remote_can_place"
+kind = "RETURN"
+helper = "super_glue_prediction.rs"
+bindings = [
+  { name = "result", ty = "Option<DryPlace>", value = "$value" },
+  { name = "game", ty = "&crate::game::Game<'_>", value = "self" },
+  { name = "stack", ty = "&crate::items::ItemStack", value = "stack" },
 ]
 
 [[injection]]
@@ -1329,6 +1346,12 @@ name = "create_port_contraption"
 source = "contraption_runtime.rs"
 
 [[module]]
+id = "sticker-runtime"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_sticker"
+source = "sticker_runtime.rs"
+
+[[module]]
 id = "contraption-deployer-runtime"
 file = "crates/horizon-client/src/game.rs"
 name = "create_port_deployer"
@@ -1424,6 +1447,16 @@ helper = "contraption_sync_hook.rs"
 bindings = [
   { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
   { name = "data", ty = "&[u8]", value = "data" },
+]
+
+[[injection]]
+id = "contraption-client-column-replacement"
+target = "horizon_client_render::streaming::Streaming::replace_remote"
+kind = "HEAD"
+helper = "contraption_chunk_hook.rs"
+bindings = [
+  { name = "world", ty = "&crate::world::World", value = "&*world" },
+  { name = "chunk", ty = "&mut crate::chunk::Chunk", value = "&mut chunk" },
 ]
 
 [[injection]]

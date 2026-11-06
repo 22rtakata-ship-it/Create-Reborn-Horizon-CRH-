@@ -19,3 +19,11 @@ pub fn decoded<'a, T: 'static>(map: &'a Attachments, ty: &AttachmentType<T>) -> 
         Entry::Raw(_) => None,
     }
 }
+
+/// Preserve a client mirror entry without queuing it for synchronization.
+pub fn copy_entry(from: &Attachments, to: &mut Attachments, namespace: &str, name: &str) {
+    let key = (namespace.into(), name.into());
+    if let Some(value) = from.entries.get(&key) {
+        to.entries.insert(key, value.clone());
+    }
+}

@@ -35,6 +35,29 @@ PISTON_CHESTS = (
     ((919, 82, 185), True, 'minecraft:gold_ingot'),
 )
 DRY_CHEST = 'minecraft:chest[facing=south,type=single,waterlogged=false]'
+STICKER = (904, 83, 197)
+STICKER_POWER = (903, 83, 197)
+STICKER_CLUTCH = (905, 81, 197)
+OFFHAND_TARGET = (919, 83, 197)
+
+
+def adhesive_stations(batch):
+    batch.load(STICKER)
+    batch.command('fill 899 81 192 925 89 204 minecraft:air')
+    batch.command('fill 899 80 192 925 80 204 minecraft:smooth_stone')
+    batch.put((904, 80, 197), 'create:creative_motor[facing=up]{ScrollValue:16}')
+    batch.put((904, 81, 197), 'create:clutch[axis=y,powered=true]')
+    batch.put(STICKER_CLUTCH, 'minecraft:lever[face=wall,facing=east,powered=true]')
+    batch.put((904, 82, 197), 'create:mechanical_bearing[facing=up]')
+    batch.put(STICKER, 'create:sticker[facing=east,extended=false,powered=false]')
+    batch.put((905, 83, 197), 'minecraft:oak_planks')
+    batch.command('fill 902 81 197 902 83 197 minecraft:stone_bricks')
+    batch.put(STICKER_POWER, 'minecraft:lever[face=wall,facing=east,powered=false]')
+    stations.sign(batch, (903, 81, 200), ['STICKER', 'Left lever: pulse.', 'Right: run rotor.', 'Head holds state.'])
+    batch.put(OFFHAND_TARGET, 'minecraft:oak_planks')
+    batch.put((919, 82, 197), 'minecraft:oak_planks')
+    batch.put((917, 81, 200), DRY_CHEST + '{Items:[{Slot:0b,id:"create:super_glue",count:1},{Slot:1b,id:"minecraft:oak_planks",count:16}]}')
+    stations.sign(batch, (919, 81, 200), ['OFFHAND GLUE', 'Glue in offhand.', 'Build on the side.', 'Watch the face.'])
 
 
 def linear_cargo_stations(batch):
@@ -127,9 +150,11 @@ def prepare(session, options):
         stations.stationary_deployer_station(batch)
     if options.linear_cargo:
         linear_cargo_stations(batch)
+    if options.adhesives:
+        adhesive_stations(batch)
     if any((options.plough, options.deployer, options.glue, options.upward_saw,
             options.chassis, options.materials, options.rotary_contact,
-            options.portable_storage, options.stationary_deployer, options.linear_cargo)):
+            options.portable_storage, options.stationary_deployer, options.linear_cargo, options.adhesives)):
         batch.command('tp @s 909.5 81 61.5')
     batch.tick(30 if options.farms else 12)
     batch.data(BEARING)
@@ -394,6 +419,16 @@ def review(session, options):
             call('look-at', 919, 82, 182)
             call('wait', 12)
             extra.append(str(screenshot('piston-chest-cargo.png')))
+        if options.adhesives:
+            command('tp @s 908.5 85 201.5')
+            wait_loaded(call, [STICKER, STICKER_POWER, STICKER_CLUTCH, OFFHAND_TARGET])
+            assert call('block', *STICKER)['state'] == 'create:sticker[extended=false,facing=east,powered=false]'
+            assert 'powered=false' in call('block', *STICKER_POWER)['state']
+            assert 'powered=true' in call('block', *STICKER_CLUTCH)['state']
+            assert call('block', *OFFHAND_TARGET)['block'] == 'minecraft:oak_planks'
+            call('look-at', 904.5, 82.8, 197.5)
+            call('wait', 12)
+            extra.append(str(screenshot('sticker.png')))
         call('key', 'f1', 'tap')
         command('gamemode creative')
         if options.glue:
@@ -441,6 +476,7 @@ def main():
     parser.add_argument('--plough', action='store_true')
     parser.add_argument('--deployer', action='store_true')
     parser.add_argument('--glue', action='store_true')
+    parser.add_argument('--adhesives', action='store_true')
     parser.add_argument('--upward-saw', action='store_true')
     parser.add_argument('--chassis', action='store_true')
     parser.add_argument('--materials', action='store_true')

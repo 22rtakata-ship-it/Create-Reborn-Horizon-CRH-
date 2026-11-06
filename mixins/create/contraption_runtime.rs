@@ -6,6 +6,7 @@ use super::create_port_contraption_actors as actors;
 use super::create_port_contraption_storage as storage;
 use super::create_port_deployer as deployer;
 use super::create_port_portable_storage as psi;
+use super::create_port_sticker as sticker;
 use super::{
     Game, create_port_clockwork as clockwork, create_port_pulley as pulley,
     native_block_entity_draw::BlockEntityDraw, native_world_draw::NativeWorldDraw,
@@ -23,7 +24,8 @@ use create_engine::{
 };
 use glam::DVec3;
 use horizon_client_render::create_contraption_scene::{
-    ACTIVE, ClockHand, KEY, MAX_BLOCKS, MAX_RECORDS, RECORDS, Record, StrokeKind, read,
+    ACTIVE, ClockHand, HARVESTER_KEY, KEY, MAX_BLOCKS, MAX_RECORDS, RECORDS, Record, StrokeKind,
+    read,
 };
 use horizon_core::position::BlockPos;
 use horizon_world::{
@@ -252,6 +254,7 @@ fn supported(state: &BlockState) -> bool {
             .get("waterlogged")
             .is_some_and(|wet| wet == "false"),
         "create:mechanical_saw" => true,
+        sticker::BLOCK => sticker::decode(state).is_some(),
         name => {
             let Some(name) = name.strip_prefix("minecraft:") else {
                 return false;
@@ -339,6 +342,18 @@ impl CaptureView for Capture<'_, '_> {
                 ..BlockRules::default()
             });
         }
+        if let Some(sticker_state) = sticker::decode(block) {
+            let attached = sticker_state.attachment().filter(|&face| {
+                sticker::neighbor(p, face)
+                    .and_then(|target| game.pack.assets.registry.state(state(game, target)))
+                    .is_some_and(|target| sticker::target_supports(target, face.opposite()))
+            });
+            return Cell::Block(BlockRules {
+                attached: Direction::ALL.map(|face| attached == Some(face)),
+                unsupported_faces: Direction::ALL.map(|face| !sticker_state.supported_face(face)),
+                ..BlockRules::default()
+            });
+        }
         let rules = BlockRules {
             movable: !matches!(
                 block.name.as_str(),
@@ -357,7 +372,7 @@ impl CaptureView for Capture<'_, '_> {
     fn snapshot(&self, p: Pos) -> Option<BlockState> {
         let game = self.0;
         let state = game.pack.assets.registry.state(state(game, p))?;
-        if !supported(state) {
+        if !supported(state) || state.name == sticker::BLOCK {
             return None;
         }
         if let Some(entity) = game.world.block_entities.get(&(p[0], p[1], p[2])) {
@@ -408,6 +423,7 @@ pub(super) struct MountedCapture<'g, 'a> {
     allow_chest: bool,
     allow_actor_data: bool,
     allow_chassis: bool,
+    allow_sticker: bool,
     glue: &'g [create_engine::contraption::glue::Volume],
 }
 
@@ -421,6 +437,7 @@ impl<'g, 'a> MountedCapture<'g, 'a> {
             allow_chest: true,
             allow_actor_data: false,
             allow_chassis: true,
+            allow_sticker: false,
             glue,
         }
     }
@@ -489,6 +506,7 @@ impl CaptureView for MountedCapture<'_, '_> {
             || (self.allow_actor_data
                 && (deployer::can_capture(game, p, block) || psi::can_capture(game, p, block)))
             || (self.allow_chassis && chassis::can_capture(game, p, block))
+            || (self.allow_sticker && sticker::can_capture(game, p, block))
         {
             return Some(block.clone());
         }
@@ -504,6 +522,31 @@ impl CaptureView for MountedCapture<'_, '_> {
         p: Pos,
         forced: Option<Direction>,
     ) -> Result<Vec<Pos>, create_engine::contraption::CaptureError> {
+        if self.allow_sticker {
+            let game = self.base.0;
+            let registry = game.pack.assets.registry;
+            if let Some(sticker_state) = registry.state(state(game, p)).and_then(sticker::decode) {
+                let Some(face) = sticker_state.attachment() else {
+                    return Ok(Vec::new());
+                };
+                let target = sticker::neighbor(p, face)
+                    .ok_or(create_engine::contraption::CaptureError::CoordinateOverflow)?;
+                let side = face.opposite();
+                return match self.base.inspect(target) {
+                    Cell::Unloaded => {
+                        Err(create_engine::contraption::CaptureError::Unloaded(target))
+                    }
+                    Cell::Block(_)
+                        if registry
+                            .state(state(game, target))
+                            .is_some_and(|block| sticker::target_supports(block, side)) =>
+                    {
+                        Ok(vec![target])
+                    }
+                    _ => Ok(Vec::new()),
+                };
+            }
+        }
         if !self.allow_chassis {
             return Ok(Vec::new());
         }
@@ -538,6 +581,7 @@ fn assemble(
             allow_chest: allow_mounted_data,
             allow_actor_data: allow_mounted_data,
             allow_chassis: allow_mounted_data,
+            allow_sticker: !windmill,
             glue: &glue,
         };
         Assembly::capture(&capture, anchor, Some(controller), None, MAX_BLOCKS).ok()?
@@ -878,7 +922,7 @@ struct HarvesterBlades {
 
 const HARVESTER_BLADES: AttachmentType<HarvesterBlades> = AttachmentType {
     namespace: "create",
-    name: "harvester_visuals",
+    name: HARVESTER_KEY,
     default: HarvesterBlades::default,
     codec: None,
     copy_on_death: false,
@@ -968,6 +1012,10 @@ fn draw_actor(
     state: &BlockState,
     blades: Option<&HarvesterBlades>,
 ) {
+    if state.name == sticker::BLOCK {
+        sticker::draw(game, draw, state);
+        return;
+    }
     if state.name == deployer::BLOCK {
         deployer::draw_moving(game, draw, record, local, state);
         return;

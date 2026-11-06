@@ -256,7 +256,11 @@ with the systems they depend on.
   capture and bounds restored after a cold native restart.
 - [x] Super Glue first-corner face particles and confirmed or removed volume
   edge particles.
-- [ ] Original Glue outlines, offhand placement and transfer on other drivers.
+- [x] Offhand Super Glue for ordinary placements in one column.
+- [ ] Original Glue outlines, offhand particles for other players, and
+  transfer on other drivers.
+- [x] Sticker redstone latch and bearing capture through its extended head.
+- [ ] Sticker motion animation, bounce, wrench and computer interaction.
 - [x] Upward stationary Saw wood processing through native item collision,
   with saved progress and Java comparisons of the cutting and ejection cycle.
 - [x] Upward Saw's stock vanilla plank variants, stonecutting and Andesite

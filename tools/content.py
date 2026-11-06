@@ -12,6 +12,7 @@ from chassis_content import chassis
 from deployer_content import deployer
 from portable_storage_content import PSI, portable_storage
 from chute_content import CHUTE, chute
+from sticker_content import STICKER, sticker
 
 CONTENT = ROOT / "content"
 BLOCKS = ["creative_motor", "shaft", "cogwheel", "large_cogwheel", "mechanical_press", "depot"]
@@ -665,6 +666,7 @@ def foundation():
     chassis(write)
     portable_storage(write, model, axial_boxes)
     chute(write, model)
+    sticker(write, model)
     deployer(write, model)
     contraption_actors()
     basin_mixer()
@@ -726,6 +728,7 @@ def foundation():
     extra_blocks.update({'linear_chassis': 'Linear Chassis',
                          'secondary_linear_chassis': 'Secondary Linear Chassis',
                          'radial_chassis': 'Radial Chassis'})
+    extra_blocks[STICKER] = 'Sticker'
     extra_blocks.update({"mechanical_piston": "Mechanical Piston", "sticky_mechanical_piston": "Sticky Mechanical Piston",
                          "mechanical_piston_head": "Mechanical Piston Head", "piston_extension_pole": "Piston Extension Pole"})
     extra_blocks.update({"mechanical_harvester": "Mechanical Harvester",
@@ -781,6 +784,7 @@ def foundation():
             lang['block.create.deployer'] = 'Автономный активатор'
             lang['block.create.' + PSI] = 'Портативный интерфейс хранения'
             lang['block.create.' + CHUTE] = 'Жёлоб'
+            lang['block.create.' + STICKER] = 'Блок-липучка'
             lang.update({"block.create.mechanical_piston": "Механический поршень",
                          "block.create.sticky_mechanical_piston": "Липкий механический поршень",
                          "block.create.mechanical_piston_head": "Головка механического поршня",
@@ -813,7 +817,7 @@ def main():
     CONTENT.mkdir(exist_ok=True)
     (CONTENT / "horizon-mod.toml").write_text('''id = "create"
 name = "Create for Horizon"
-version = "0.8.0-alpha.11"
+version = "0.8.0-alpha.12"
 description = "Build rotating machines and small factories in Horizon. The original Create JAR is optional and supplies its models and textures."
 authors = ["create-horizon contributors"]
 api = "0.2"

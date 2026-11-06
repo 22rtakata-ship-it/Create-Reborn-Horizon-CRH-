@@ -8,6 +8,7 @@ from catalog import BLOCKS, ITEMS, INTERNAL_BLOCKS
 from sail_content import COLORED_SAILS, SAIL_ITEMS
 from portable_storage_content import PSI
 from chute_content import CHUTE
+from sticker_content import STICKER
 
 
 VANILLA_LOG_FAMILIES = ['acacia', 'birch', 'cherry', 'dark_oak', 'jungle', 'mangrove', 'oak', 'spruce']
@@ -341,6 +342,7 @@ def main():
         'create/loot_table/blocks/deployer.json',
         f'create/loot_table/blocks/{PSI}.json',
         f'create/loot_table/blocks/{CHUTE}.json',
+        f'create/loot_table/blocks/{STICKER}.json',
         *[f'create/loot_table/blocks/{name}.json' for name in SAIL_ITEMS + COLORED_SAILS],
     ]}
     result = {'reference': PINS['create_revision'], 'license': 'MIT recipe/data-map/loot data; original definitions of vanilla convention tags', 'recipes': recipes, 'tags': tags, 'data_maps':maps, 'loot_tables':loot}

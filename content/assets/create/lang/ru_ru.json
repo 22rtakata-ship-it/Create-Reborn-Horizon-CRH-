@@ -65,6 +65,7 @@
   "block.create.linear_chassis": "Линейное шасси",
   "block.create.secondary_linear_chassis": "Вторичное линейное шасси",
   "block.create.radial_chassis": "Радиальное шасси",
+  "block.create.sticker": "Блок-липучка",
   "block.create.mechanical_piston": "Механический поршень",
   "block.create.sticky_mechanical_piston": "Липкий механический поршень",
   "block.create.mechanical_piston_head": "Головка механического поршня",
