@@ -2,6 +2,8 @@
 
 Build small factories with gears, water wheels, belts and presses. Create for Horizon is an experimental Rust port of [Create](https://github.com/Creators-of-Create/Create), maintained by [Delete228](https://github.com/Delete228).
 
+![A spruce windmill and workshop beside a raised wheat field](docs/screenshots/mill-and-workshop.jpg)
+
 ## What you can build
 
 - Drive a machine with a hand crank, water wheel or Creative Motor. Route power through shafts, cogs, gearboxes, clutches and encased chain drives. Redstone controls the adjustable chain gearshift.
@@ -9,6 +11,12 @@ Build small factories with gears, water wheels, belts and presses. Create for Ho
 - Mix recipes in a Basin, heat it with a Blaze Burner or mine a block with a stationary Mechanical Drill. Engineer’s Goggles show speed and stress. Apply a copper ingot to stripped wood to make Copper Casing.
 
 The development builds also have bearings, pistons, Gantry Carriages and Rope Pulleys. Small moving farms can share one chest and use a portable dock to receive or unload items. [Feature roadmap](docs/roadmap.md)
+
+| Press workshop | Gantry harvester |
+| --- | --- |
+| ![A Mechanical Press over a belt in a timber workshop](docs/screenshots/press-workshop.jpg) | ![A Mechanical Harvester and its chest beside a raised wheat field](docs/screenshots/gantry-harvester.jpg) |
+
+These screenshots were captured in Horizon 26.3 with the mod's built-in models.
 
 ## Install
 
