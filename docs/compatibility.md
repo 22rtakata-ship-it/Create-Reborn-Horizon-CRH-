@@ -110,11 +110,13 @@ amount changes, and special filters remain open.
 
 Mechanical Crafters support manual front-slot loading and the original
 5×5 Crushing Wheel recipe in a same-facing array inside one chunk column.
-The finished stack drops at the front of the last Crafter. The phase,
-countdown and component-bearing grouped items can resume after a restart.
-The 21-Crafter test matches all 62 Java ticks. Linked input, covers, other
-recipes, inventory or Belt output, and parts of the craft animation are
-pending.
+The finished stack drops at the front of the last Crafter or enters a Depot.
+The phase, countdown and component-bearing grouped items can resume after
+a restart. The 21-Crafter test matches all 62 Java ticks. A redstone pulse
+can start a full 5×5 grid with four empty corners. A blocked Depot keeps
+the finished stack in the Crafter until it can be delivered. Linked input,
+covers, other recipes, ordinary inventory and Belt output, and parts of the
+craft animation are pending.
 
 The four sheet items retain `create:iron_sheet`, `create:golden_sheet` and
 `create:copper_sheet` and `create:brass_sheet`. Kinetic entities retain `Speed` as a float. Depot data

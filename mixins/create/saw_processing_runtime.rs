@@ -28,7 +28,8 @@ const INVENTORY: &str = "Inventory";
 /// transport adapters in this source share the host's ordinary ticker.
 pub(super) mod crafter {
     use super::{
-        BlockEntity, BlockEntityDraw, Compound, Game, ItemStack, ModBlockEntity, Pos, Tag, create,
+        BlockEntity, BlockEntityDraw, Compound, Game, ItemStack, ModBlockEntity, Pos, Tag,
+        Transported, belt, create,
     };
     use create_engine::{
         crafter::{self, Cycle, GroupedItems, Layout, Phase, Pointing, Tick},
@@ -182,34 +183,38 @@ pub(super) mod crafter {
         game: &Game<'_>,
         pos: Pos,
         ticking: Option<&ModBlockEntity>,
+        powered: bool,
     ) -> Option<Vec<(Pos, bool)>> {
         let chain = chain(game, pos)?;
         let mut plan = Vec::with_capacity(chain.len());
+        let mut nonempty = false;
         for at in chain {
             let member = if at == pos {
                 ticking.or_else(|| entity(game, at))
             } else {
                 entity(game, at)
             }?;
+            let has_item = member.items.first().is_some_and(Option::is_some);
+            nonempty |= has_item;
             if cycle(&member.nbt).phase != Phase::Idle
-                || member.items.first().is_none_or(Option::is_none)
+                || (!powered && !has_item)
                 || create::running_speed(game, &member.nbt) == 0.0
             {
                 return None;
             }
             let state = layout(game, at)?;
             if crafter::target(at, state, &mut |p| layout(game, p)).is_none() {
-                let [x, y, z] = state.target_position(at);
-                // This adapter has an open-air outlet. Adjacent machine output
-                // must honor capability backpressure when that path is enabled.
-                if !game.res.behaviours().is_air(game.world.block(x, y, z)) {
+                let destination @ [x, y, z] = state.target_position(at);
+                if game.native_block(destination) != "create:depot"
+                    && !game.res.behaviours().is_air(game.world.block(x, y, z))
+                {
                     return None;
                 }
             }
             let waits = !crafter::preceding(at, state, &mut |p| layout(game, p)).is_empty();
             plan.push((at, waits));
         }
-        Some(plan)
+        nonempty.then_some(plan)
     }
 
     fn begin(entity: &mut ModBlockEntity, waits: bool) {
@@ -220,8 +225,13 @@ pub(super) mod crafter {
         set_cycle(&mut entity.nbt, before.begin(waits));
     }
 
-    fn start(game: &mut Game<'_>, pos: Pos, mut ticking: Option<&mut ModBlockEntity>) -> bool {
-        let Some(plan) = start_plan(game, pos, ticking.as_deref()) else {
+    fn start(
+        game: &mut Game<'_>,
+        pos: Pos,
+        mut ticking: Option<&mut ModBlockEntity>,
+        powered: bool,
+    ) -> bool {
+        let Some(plan) = start_plan(game, pos, ticking.as_deref(), powered) else {
             return false;
         };
         for (at, waits) in plan {
@@ -351,7 +361,7 @@ pub(super) mod crafter {
                     }
                     game.native_block_entity_sync(pos);
                     crate::game::create_port_sounds::crafter_feed(game, pos);
-                    start(game, pos, None);
+                    start(game, pos, None, false);
                 }
             }
             (true, None) => {
@@ -423,7 +433,7 @@ pub(super) mod crafter {
         let Some(counter) = entity.data.first_mut() else {
             // SmartBlockEntity.initialize invokes lazyTick before tick's
             // initial post-decrement. This counter is not saved.
-            entity.data.push(RATE - 1);
+            entity.data.extend([RATE - 1, 1]);
             return true;
         };
         if *counter == 0 {
@@ -432,6 +442,45 @@ pub(super) mod crafter {
         } else {
             *counter -= 1;
             false
+        }
+    }
+
+    fn powered_edge(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity) -> bool {
+        let dimension = game.dim.id().to_owned();
+        let powered = game.native_neighbor_signal(&dimension, pos) > 0;
+        let previous = std::mem::replace(&mut entity.data[1], i32::from(powered));
+        powered && previous == 0
+    }
+
+    fn try_output(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity, layout: Layout) {
+        let destination = layout.target_position(pos);
+        if game.native_block(destination) != "create:depot" {
+            eject_chain(game, pos, Some(entity));
+            return;
+        }
+
+        let mut grouped = grid(&entity.nbt);
+        grouped.grid.retain(|_, stack| {
+            let Some(stack) = stack else { return false };
+            let item = Transported::new(
+                belt::core_stack(game, stack.clone()),
+                belt::angle(game, stack),
+            );
+            stack.count -=
+                belt::insert_depot_from_side(game, destination, &item, layout.target_direction());
+            stack.count != 0
+        });
+        set_grid(&mut entity.nbt, &grouped);
+        if grouped.grid.is_empty() {
+            eject_chain(game, pos, Some(entity));
+        } else {
+            set_cycle(
+                &mut entity.nbt,
+                Cycle {
+                    phase: Phase::Inserting,
+                    countdown: 0,
+                },
+            );
         }
     }
 
@@ -450,9 +499,16 @@ pub(super) mod crafter {
             && rpm != 0.0
             && entity.items.first().is_some_and(Option::is_some)
         {
-            start(game, pos, Some(entity));
+            start(game, pos, Some(entity), false);
+        }
+        if cycle(&entity.nbt).phase != Phase::Accepting && powered_edge(game, pos, entity) {
+            start(game, pos, Some(entity), true);
         }
         let mut state = cycle(&entity.nbt);
+        if state.phase == Phase::Inserting {
+            try_output(game, pos, entity, layout_here);
+            return cycle(&entity.nbt).phase != before.phase;
+        }
         let action = state.tick(rpm);
         if state != before {
             set_cycle(&mut entity.nbt, state);
@@ -523,7 +579,7 @@ pub(super) mod crafter {
                 crate::game::create_port_sounds::crafter_craft(game, pos);
                 return false;
             }
-            Tick::CraftComplete => eject_chain(game, pos, Some(entity)),
+            Tick::CraftComplete => try_output(game, pos, entity, layout_here),
         }
         true
     }

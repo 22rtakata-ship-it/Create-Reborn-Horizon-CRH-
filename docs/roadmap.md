@@ -215,8 +215,11 @@ with the systems they depend on.
 - [x] Mechanical Crafters with ordinary manual input, original directions,
   a full 5×5 Crushing Wheel recipe and cold continuation. Match the 21-block
   Create 6.0.10 phase trace.
-- [ ] Crafter covers, linked inputs, other recipes, automated output and full
-  presentation.
+- [x] Redstone start in a full 5×5 Crafter grid with four empty corners and
+  direct output to a Depot. Keep the finished stack when the Depot is blocked
+  and release it after an actual restart.
+- [ ] Crafter covers, linked inputs, other recipes, ordinary inventory and Belt
+  output, and full presentation.
 - [ ] Remaining Mechanical Saw, Deployer, Spout, Item Drain and Sand Paper
   behavior.
 - [ ] Sequenced Assembly, tools/components of incomplete items and random results.

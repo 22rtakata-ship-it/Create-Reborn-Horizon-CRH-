@@ -28,6 +28,9 @@ POINTS = [(X + col, Y + row, Z) for row in range(5) for col in range(5)
 SINK = (X + 2, Y, Z)
 LEAF = (X + 1, Y + 4, Z)
 MARK = 'crafter_probe'
+DEPOT = (SINK[0], SINK[1] - 1, SINK[2])
+SIGNAL = (LEAF[0], LEAF[1], LEAF[2] - 1)
+DENSE = [(X + col, Y + row, Z) for row in range(5) for col in range(5)]
 DROPS = ('@e[type=minecraft:item,x=1840,y=105,z=1027,dx=10,dy=11,dz=8]')
 
 
@@ -46,10 +49,10 @@ def held_stack(pos):
     return f'{item}[minecraft:custom_data={{{MARK}:37}}]' if pos == LEAF else item
 
 
-def setup(command):
+def setup(command, dense=False):
     command('fill ' + ROOM + ' minecraft:air')
     command('fill 1840 105 1027 1850 105 1035 minecraft:stone')
-    for pos in POINTS:
+    for pos in DENSE if dense else POINTS:
         command(f'setblock {xyz(pos)} create:mechanical_crafter[facing=south,pointing={pointing(pos)}]')
     command(f'setblock {xyz((X - 1, Y + 2, Z))} create:cogwheel[axis=z]')
     command(f'setblock {xyz((X - 1, Y + 2, Z - 1))} create:creative_motor[facing=south]{{ScrollValue:128}}')
@@ -159,9 +162,11 @@ def run(work):
         (work / 'transcript.json').write_text(json.dumps(host.trace, indent=2) + '\n')
 
 
-def native_setup(batch):
+def native_setup(batch, dense=False):
     batch.load((X + 2, Y + 2, Z + 4))
-    setup(batch.command)
+    setup(batch.command, dense)
+    if dense:
+        block_depot(batch.command)
     batch.tick(20)
     batch.command('tick freeze')
     for i, (x, y, z) in enumerate(POINTS, 1):
@@ -303,23 +308,134 @@ def ordinary_break(session):
     return dict(pointing=pointing_order, drops=[block, cargo])
 
 
+def block_depot(command):
+    command(f'setblock {xyz(DEPOT)} create:depot')
+    command(f'data merge block {xyz(DEPOT)} '
+            '{HeldItem:{Item:{id:"minecraft:diamond",count:1},Pos:0.5f,PrevPos:0.5f,Angle:180,InDirection:1}}')
+
+
+def dense_snapshot(crafter, depot):
+    return {
+        'phase': phase({'nbt': crafter}),
+        'output': items(crafter, 'Grid'),
+        'depot': items(depot, 'HeldItem') if 'HeldItem:' in depot else {},
+    }
+
+
+def verify_depot(trace, cleared):
+    assert trace[0] == dict(phase=['IDLE', 0], output={}, depot={'minecraft:diamond': 1}), trace[0]
+    blocked = dict(phase=['INSERTING', 0], output={'create:crushing_wheel': 2},
+                   depot={'minecraft:diamond': 1})
+    assert trace[-1] == blocked, trace[-1]
+    assert all(row['depot'] == blocked['depot'] for row in trace), trace
+    assert cleared[0] == blocked, cleared
+    assert cleared[1] == dict(phase=['IDLE', 0], output={}, depot={'create:crushing_wheel': 2}), cleared
+    assert all(row == cleared[1] for row in cleared[1:]), cleared
+
+
+def java_depot(work):
+    host = Original()
+    initial = host.call('state', {})
+    if initial.get('screen') == 'PauseScreen':
+        host.call('input', {'kind': 'escape'})
+        initial = host.call('state', {})
+    assert initial['ready'] and initial['data_version'] == 3955, initial
+    host.call('tick', {'frozen': True})
+    positions = [SINK, DEPOT]
+
+    def snapshots(ticks):
+        return [dense_snapshot(*(block['nbt'] for block in row['blocks']))
+                for row in host.call('observe_ticks', {'ticks': ticks, 'positions': positions})['samples']]
+
+    try:
+        host.command('gamemode creative')
+        host.command(f'tp @s {X + 2}.5 {Y + 2} {Z + 4}.5')
+        host.command('forceload add ' + FORCE)
+        host.snapshot([SINK], 25)
+        setup(host.command, dense=True)
+        block_depot(host.command)
+        host.snapshot(POINTS, 20)
+        for row in range(5):
+            stand = (X, Y + row - 2, Z + 3)
+            host.command(f'fill {xyz(stand)} {X + 4} {stand[1]} {stand[2]} minecraft:stone')
+            for pos in (p for p in POINTS if p[1] == Y + row):
+                click(host, pos, held_stack(pos))
+        trace = snapshots(3)
+        assert all(row['phase'] == ['IDLE', 0] for row in trace), trace
+        host.command(f'setblock {xyz(SIGNAL)} minecraft:redstone_block')
+        trace.extend(snapshots(85))
+        cold = dense_snapshot(*(host.call('block', {'pos': pos})['nbt'] for pos in positions))
+        host.command(f'data remove block {xyz(DEPOT)} HeldItem')
+        cleared = [cold, *snapshots(4)]
+        verify_depot(trace, cleared)
+        count = host.command(f'execute if entity {DROPS} run say crafter_loose_output')
+        assert not any('crafter_loose_output' in line for line in count['messages']), count
+        return dict(passed=True, create=PINS['create_revision'], trace=trace, cleared=cleared)
+    finally:
+        host.command(f'kill {DROPS}')
+        host.command('fill ' + ROOM + ' minecraft:air')
+        host.command('forceload remove ' + FORCE)
+        host.call('tick', {'frozen': initial['server']['frozen']})
+        (work / 'transcript.json').write_text(json.dumps(host.trace, indent=2) + '\n')
+
+
+def native_depot(session, reference):
+    batch = Batch()
+    native_setup(batch, dense=True)
+    for tick in range(88):
+        if tick == 3:
+            batch.put(SIGNAL, 'minecraft:redstone_block')
+        batch.tick()
+        batch.data(SINK)
+        batch.data(DEPOT)
+    values = iter(batch.run(session, 'dense-redstone'))
+    check_native_feed(values)
+    trace = [dense_snapshot(next(values), next(values)) for _ in range(88)]
+    assert next(values, None) is None
+    for tick, (observed, expected) in enumerate(zip(trace, reference['trace'], strict=True), 1):
+        assert observed == expected, (tick, observed, expected)
+
+    batch = Batch()
+    batch.load((X + 2, Y + 2, Z + 4))
+    batch.data(SINK)
+    batch.data(DEPOT)
+    batch.command(f'data remove block {xyz(DEPOT)} HeldItem')
+    for _ in range(4):
+        batch.tick()
+        batch.data(SINK)
+        batch.data(DEPOT)
+    batch.command(f'execute if entity {DROPS} run say crafter_loose_output', True)
+    values = iter(batch.run(session, 'clear-after-restart'))
+    cleared = [dense_snapshot(next(values), next(values)) for _ in range(5)]
+    assert cleared == reference['cleared'], (cleared, reference['cleared'])
+    assert 'crafter_loose_output' not in next(values)
+    assert next(values, None) is None
+    verify_depot(trace, cleared)
+    return dict(ticks=len(trace), cold=cleared[0], released=cleared[1])
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     for key in ('game', 'resources', 'ctl', 'reference'):
         parser.add_argument('--' + key, type=Path)
+    parser.add_argument('--depot', action='store_true')
     args = parser.parse_args()
     if args.game:
         if not all((args.resources, args.ctl, args.reference)):
             parser.error('Horizon runs require --game, --resources, --ctl and --reference')
         reference = json.loads(args.reference.read_text())
         assert reference['passed'] and reference['create'] == PINS['create_revision'], reference
-        assert reference['points'] == [list(pos) for pos in POINTS], reference['points']
+        if not args.depot:
+            assert reference['points'] == [list(pos) for pos in POINTS], reference['points']
         session = NativeCheckSession(args.game, args.resources, args.ctl, None,
                                      name='crafter-native', graphics=False, world='CrafterParity')
         work = session.scratch
         try:
-            report = dict(passed=True, create=PINS['create_revision'], **native(session, reference),
-                          restart=cold_checkpoint(session, reference), survival_break=ordinary_break(session))
+            if args.depot:
+                report = dict(passed=True, create=PINS['create_revision'], **native_depot(session, reference))
+            else:
+                report = dict(passed=True, create=PINS['create_revision'], **native(session, reference),
+                              restart=cold_checkpoint(session, reference), survival_break=ordinary_break(session))
         finally:
             session.control_temp.cleanup()
             for folder in (session.resources, work / '.horizon-cache', work / 'horizon-mods'):
@@ -327,7 +443,7 @@ if __name__ == '__main__':
                     shutil.rmtree(folder)
     else:
         work = Path(tempfile.mkdtemp(prefix='crafter-java-', dir=ROOT / '.local'))
-        report = run(work)
+        report = java_depot(work) if args.depot else run(work)
     output = work / 'result.json'
     output.write_text(json.dumps(report, indent=2) + '\n')
     print(output)
