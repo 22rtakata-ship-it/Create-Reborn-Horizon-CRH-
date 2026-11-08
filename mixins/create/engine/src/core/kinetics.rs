@@ -57,6 +57,8 @@ pub enum Kind {
     Millstone,
     /// MechanicalMixerBlock is a fixed-Y small cog without a shaft port.
     Mixer,
+    /// Horizontal small cog without an exposed shaft.
+    Crafter,
     Consumer {
         facing: Pos,
         impact: f32,
@@ -90,7 +92,7 @@ impl Node {
             Kind::Motor { facing, .. } => delta == facing,
             Kind::Consumer { facing, .. } => delta == facing,
             Kind::Millstone => delta == [0, -1, 0],
-            Kind::Mixer => false,
+            Kind::Mixer | Kind::Crafter => false,
             Kind::Belt { pulley: false, .. } => false,
             Kind::Gearbox => delta[self.axis.index()] == 0,
             _ => delta[self.axis.index()].abs() == 1,
@@ -123,13 +125,14 @@ impl Node {
             Kind::Press | Kind::CrushingWheel => 8.0,
             Kind::Millstone | Kind::Mixer | Kind::LinearActuator => 4.0,
             Kind::Consumer { impact, .. } => impact,
+            Kind::Crafter => 2.0,
             _ => 0.0,
         }
     }
     fn cog(self) -> Option<bool> {
         match self.kind {
             Kind::Cog { large } => Some(large),
-            Kind::Millstone | Kind::Mixer => Some(false),
+            Kind::Millstone | Kind::Mixer | Kind::Crafter => Some(false),
             _ => None,
         }
     }

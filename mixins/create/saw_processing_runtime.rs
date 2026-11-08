@@ -24,6 +24,610 @@ use horizon_world::nbt::{Compound, Tag};
 const SLOTS: usize = 32;
 const INVENTORY: &str = "Inventory";
 
+/// MechanicalCrafterBlockEntity and RecipeGridHandler. The kinetic and
+/// transport adapters in this source share the host's ordinary ticker.
+pub(super) mod crafter {
+    use super::{
+        BlockEntity, BlockEntityDraw, Compound, Game, ItemStack, ModBlockEntity, Pos, Tag, create,
+    };
+    use create_engine::{
+        crafter::{self, Cycle, GroupedItems, Layout, Phase, Pointing, Tick},
+        kinetics::Axis,
+        placement::Direction,
+    };
+    use horizon_core::random::RandomSource;
+    use horizon_items::item_nbt::{item_from_nbt, item_to_nbt};
+
+    pub(in crate::game) const BLOCK: &str = "create:mechanical_crafter";
+    const INVENTORY: &str = "Inventory";
+    const GROUPED: &str = "GroupedItems";
+    const PHASE: &str = "Phase";
+    const COUNTDOWN: &str = "CountDown";
+
+    fn layout(game: &Game<'_>, pos: Pos) -> Option<Layout> {
+        if game.native_block(pos) != BLOCK {
+            return None;
+        }
+        let name = game.native_block_property(pos, "facing")?;
+        let facing = Direction::ALL
+            .into_iter()
+            .find(|side| side.axis() != Axis::Y && side.name() == name)?;
+        let pointing = Pointing::from_name(&game.native_block_property(pos, "pointing")?)?;
+        Some(Layout { facing, pointing })
+    }
+
+    fn entity<'a>(game: &'a Game<'_>, [x, y, z]: Pos) -> Option<&'a ModBlockEntity> {
+        match game.world.block_entities.get(&(x, y, z)) {
+            Some(BlockEntity::Mod(entity))
+                if entity.id == BLOCK && create::inventory_supported(entity) =>
+            {
+                Some(entity)
+            }
+            _ => None,
+        }
+    }
+
+    fn cycle(nbt: &Compound) -> Cycle {
+        let phase = match nbt.get(&PHASE.into()) {
+            Some(Tag::String(name)) => name
+                .to_string()
+                .ok()
+                .and_then(|value| Phase::from_name(&value))
+                .unwrap_or_default(),
+            _ => Phase::default(),
+        };
+        Cycle {
+            phase,
+            countdown: create::integer(nbt, COUNTDOWN),
+        }
+    }
+
+    fn set_cycle(nbt: &mut Compound, value: Cycle) {
+        nbt.insert(PHASE.into(), Tag::String(value.phase.name().into()));
+        nbt.insert(COUNTDOWN.into(), Tag::Int(value.countdown));
+    }
+
+    fn grid(nbt: &Compound) -> GroupedItems<ItemStack> {
+        let Some(Tag::List(rows)) = nbt.get(&GROUPED.into()).and_then(|tag| tag.get("Grid")) else {
+            return GroupedItems::default();
+        };
+        GroupedItems {
+            grid: rows
+                .iter()
+                .filter_map(|row| {
+                    let (Tag::Int(x), Tag::Int(y)) = (row.get("x")?, row.get("y")?) else {
+                        return None;
+                    };
+                    Some(((*x, *y), row.get("item").and_then(item_from_nbt)))
+                })
+                .collect(),
+        }
+    }
+
+    fn set_grid(nbt: &mut Compound, grouped: &GroupedItems<ItemStack>) {
+        let cells = grouped
+            .grid
+            .iter()
+            .map(|(&(x, y), stack)| {
+                Tag::Compound(Compound::from([
+                    ("x".into(), Tag::Int(x)),
+                    ("y".into(), Tag::Int(y)),
+                    (
+                        "item".into(),
+                        stack
+                            .as_ref()
+                            .map_or_else(|| Tag::Compound(Compound::new()), item_to_nbt),
+                    ),
+                ]))
+            })
+            .collect();
+        nbt.insert(
+            GROUPED.into(),
+            Tag::Compound(Compound::from([("Grid".into(), Tag::List(cells))])),
+        );
+    }
+
+    fn inventory(item: Option<&ItemStack>) -> Tag {
+        let mut items = Vec::new();
+        if let Some(Tag::Compound(mut row)) = item.map(item_to_nbt) {
+            row.insert("Slot".into(), Tag::Int(0));
+            items.push(Tag::Compound(row));
+        }
+        Tag::Compound(Compound::from([
+            ("Size".into(), Tag::Int(1)),
+            ("Items".into(), Tag::List(items)),
+        ]))
+    }
+
+    fn save_inventory(entity: &mut ModBlockEntity) {
+        let saved = inventory(entity.items.first().and_then(Option::as_ref));
+        entity.nbt.insert(INVENTORY.into(), saved);
+    }
+
+    pub(in crate::game) fn default_nbt() -> Compound {
+        let mut fields = Compound::from([
+            (INVENTORY.into(), inventory(None)),
+            ("Cover".into(), Tag::Byte(0)),
+            (
+                "ConnectedInput".into(),
+                Tag::Compound(Compound::from([
+                    ("Controller".into(), Tag::Byte(1)),
+                    (
+                        "Data".into(),
+                        Tag::List(vec![Tag::Compound(
+                            ["X", "Y", "Z"]
+                                .into_iter()
+                                .map(|axis| (axis.into(), Tag::Int(0)))
+                                .collect(),
+                        )]),
+                    ),
+                ])),
+            ),
+        ]);
+        set_cycle(&mut fields, Cycle::default());
+        set_grid(&mut fields, &GroupedItems::default());
+        fields
+    }
+
+    fn chain(game: &Game<'_>, pos: Pos) -> Option<Vec<Pos>> {
+        let chain = crafter::chain(pos, |at| layout(game, at)).ok()?;
+        let column = |[x, _, z]: Pos| (x.div_euclid(16), z.div_euclid(16));
+        chain
+            .iter()
+            .all(|&at| column(at) == column(pos))
+            .then_some(chain)
+    }
+
+    fn start_plan(
+        game: &Game<'_>,
+        pos: Pos,
+        ticking: Option<&ModBlockEntity>,
+    ) -> Option<Vec<(Pos, bool)>> {
+        let chain = chain(game, pos)?;
+        let mut plan = Vec::with_capacity(chain.len());
+        for at in chain {
+            let member = if at == pos {
+                ticking.or_else(|| entity(game, at))
+            } else {
+                entity(game, at)
+            }?;
+            if cycle(&member.nbt).phase != Phase::Idle
+                || member.items.first().is_none_or(Option::is_none)
+                || create::running_speed(game, &member.nbt) == 0.0
+            {
+                return None;
+            }
+            let state = layout(game, at)?;
+            if crafter::target(at, state, &mut |p| layout(game, p)).is_none() {
+                let [x, y, z] = state.target_position(at);
+                // This adapter has an open-air outlet. Adjacent machine output
+                // must honor capability backpressure when that path is enabled.
+                if !game.res.behaviours().is_air(game.world.block(x, y, z)) {
+                    return None;
+                }
+            }
+            let waits = !crafter::preceding(at, state, &mut |p| layout(game, p)).is_empty();
+            plan.push((at, waits));
+        }
+        Some(plan)
+    }
+
+    fn begin(entity: &mut ModBlockEntity, waits: bool) {
+        let item = entity.items.first_mut().and_then(Option::take);
+        save_inventory(entity);
+        set_grid(&mut entity.nbt, &GroupedItems::single(item));
+        let before = cycle(&entity.nbt);
+        set_cycle(&mut entity.nbt, before.begin(waits));
+    }
+
+    fn start(game: &mut Game<'_>, pos: Pos, mut ticking: Option<&mut ModBlockEntity>) -> bool {
+        let Some(plan) = start_plan(game, pos, ticking.as_deref()) else {
+            return false;
+        };
+        for (at, waits) in plan {
+            if at == pos
+                && let Some(entity) = ticking.as_deref_mut()
+            {
+                begin(entity, waits);
+            } else {
+                game.native_with_mod_block_entity(at, |entity| begin(entity, waits));
+                game.native_block_entity_sync(at);
+            }
+        }
+        true
+    }
+
+    fn drop_position(pos: Pos, facing: Direction) -> [f64; 3] {
+        let normal = facing.vector();
+        std::array::from_fn(|axis| f64::from(pos[axis]) + 0.5 + 0.75 * f64::from(normal[axis]))
+    }
+
+    fn eject(entity: &mut ModBlockEntity) -> Vec<ItemStack> {
+        let mut stacks = grid(&entity.nbt)
+            .grid
+            .into_values()
+            .flatten()
+            .collect::<Vec<_>>();
+        stacks.extend(entity.items.iter_mut().filter_map(Option::take));
+        let countdown = cycle(&entity.nbt).countdown;
+        set_cycle(
+            &mut entity.nbt,
+            Cycle {
+                phase: Phase::Idle,
+                countdown,
+            },
+        );
+        set_grid(&mut entity.nbt, &GroupedItems::default());
+        save_inventory(entity);
+        stacks
+    }
+
+    fn eject_chain(game: &mut Game<'_>, pos: Pos, mut ticking: Option<&mut ModBlockEntity>) {
+        for at in chain(game, pos).unwrap_or_else(|| vec![pos]) {
+            let Some(state) = layout(game, at) else {
+                continue;
+            };
+            let stacks = if at == pos
+                && let Some(entity) = ticking.as_deref_mut()
+            {
+                eject(entity)
+            } else {
+                let Some(stacks) = game.native_with_mod_block_entity(at, eject) else {
+                    continue;
+                };
+                game.native_block_entity_sync(at);
+                stacks
+            };
+            let spawn = drop_position(at, state.facing);
+            for stack in stacks {
+                let speed = &mut game.world.random;
+                let velocity = [
+                    speed.next_double() * 0.2 - 0.1,
+                    0.2,
+                    speed.next_double() * 0.2 - 0.1,
+                ];
+                game.spawn_item(stack, spawn, velocity, 10);
+            }
+        }
+    }
+
+    pub(in crate::game) fn removed(game: &mut Game<'_>, pos: Pos) {
+        if entity(game, pos).is_some() {
+            eject_chain(game, pos, None);
+        }
+    }
+
+    pub(in crate::game) fn predicts_use(game: &Game<'_>, pos: Pos, face: Pos) -> bool {
+        game.native_on("create")
+            && layout(game, pos).is_some_and(|state| state.facing.vector() == face)
+    }
+
+    pub(in crate::game) fn right_click(game: &mut Game<'_>, pos: Pos, face: Pos) -> bool {
+        if !predicts_use(game, pos, face) {
+            return false;
+        }
+        let Some(member) = entity(game, pos) else {
+            return false;
+        };
+        let Some(state) = layout(game, pos) else {
+            return false;
+        };
+        let phase = cycle(&member.nbt).phase;
+        if game
+            .held()
+            .is_some_and(|stack| stack.item.as_ref() == "create:wrench")
+        {
+            if game.keys.contains(&winit::keyboard::KeyCode::ShiftLeft) {
+                return false;
+            }
+            // A live group keeps its topology until its cargo is recovered.
+            if phase == Phase::Idle {
+                game.native_set_block_property(pos, "pointing", state.pointing.next().name());
+            }
+            return true;
+        }
+        if phase != Phase::Idle {
+            eject_chain(game, pos, None);
+            return true;
+        }
+        let occupied = member.items.first().is_some_and(Option::is_some);
+        match (occupied, game.held().cloned()) {
+            (false, Some(mut stack)) => {
+                stack.count = 1;
+                if game
+                    .native_with_mod_block_entity(pos, |entity| {
+                        entity.items.resize(1, None);
+                        entity.items[0] = Some(stack);
+                        save_inventory(entity);
+                    })
+                    .is_some()
+                {
+                    let held = game.held_mut();
+                    if let Some(stack) = held {
+                        stack.count -= 1;
+                        if stack.count == 0 {
+                            *held = None;
+                        }
+                    }
+                    game.native_block_entity_sync(pos);
+                    crate::game::create_port_sounds::crafter_feed(game, pos);
+                    start(game, pos, None);
+                }
+            }
+            (true, None) => {
+                if let Some(Some(stack)) = game.native_with_mod_block_entity(pos, |entity| {
+                    let item = entity.items.first_mut().and_then(Option::take);
+                    save_inventory(entity);
+                    item
+                }) {
+                    let uuid = game.native_acting_id();
+                    if let Some(rest) = game.native_give_stack(uuid, stack)
+                        && let Some(player) = game.native_player()
+                    {
+                        game.spawn_item(
+                            rest,
+                            [player.x, player.y + 1.0, player.z],
+                            [0.0, 0.2, 0.0],
+                            10,
+                        );
+                    }
+                    game.native_block_entity_sync(pos);
+                }
+            }
+            (false, None) => return false,
+            (true, Some(_)) => {}
+        }
+        true
+    }
+
+    fn recipe(game: &Game<'_>, grouped: &GroupedItems<ItemStack>) -> Option<ItemStack> {
+        let grid = grouped.recipe_grid()?;
+        for candidate in game.native_recipes_of_type("create:mechanical_crafting") {
+            let data = &candidate.json;
+            // Only the first recipe is wired until crafting remainders and
+            // other recipe types have their native behavior.
+            if data["result"]["id"] != "create:crushing_wheel" {
+                continue;
+            }
+            let Some(rows) = data["pattern"]
+                .as_array()
+                .filter(|rows| rows.len() == grid.height)
+            else {
+                continue;
+            };
+            let fits = rows.iter().enumerate().all(|(y, row)| {
+                row.as_str()
+                    .filter(|row| row.len() == grid.width)
+                    .is_some_and(|row| {
+                        row.chars().enumerate().all(|(x, symbol)| {
+                            let item = grid.get(x, y);
+                            if symbol == ' ' {
+                                return item.is_none();
+                            }
+                            let Some(item) = item else { return false };
+                            create::ingredient(&data["key"][symbol.to_string()])
+                                .and_then(|value| game.native_recipe_ingredient(&value))
+                                .is_some_and(|ingredient| ingredient.test(item))
+                        })
+                    })
+            });
+            if fits {
+                return game.native_recipe_result(&data["result"]);
+            }
+        }
+        None
+    }
+
+    fn lazy_turn(entity: &mut ModBlockEntity) -> bool {
+        const RATE: i32 = 20;
+        let Some(counter) = entity.data.first_mut() else {
+            // SmartBlockEntity.initialize invokes lazyTick before tick's
+            // initial post-decrement. This counter is not saved.
+            entity.data.push(RATE - 1);
+            return true;
+        };
+        if *counter == 0 {
+            *counter = RATE;
+            true
+        } else {
+            *counter -= 1;
+            false
+        }
+    }
+
+    pub(in crate::game) fn tick(
+        game: &mut Game<'_>,
+        pos: Pos,
+        entity: &mut ModBlockEntity,
+        rpm: f32,
+    ) -> bool {
+        let Some(layout_here) = layout(game, pos) else {
+            return false;
+        };
+        let before = cycle(&entity.nbt);
+        if lazy_turn(entity)
+            && before.phase == Phase::Idle
+            && rpm != 0.0
+            && entity.items.first().is_some_and(Option::is_some)
+        {
+            start(game, pos, Some(entity));
+        }
+        let mut state = cycle(&entity.nbt);
+        let action = state.tick(rpm);
+        if state != before {
+            set_cycle(&mut entity.nbt, state);
+        }
+        match action {
+            Tick::None => return state.phase != before.phase,
+            Tick::AssemblyComplete => {
+                let grouped = grid(&entity.nbt);
+                if crafter::target(pos, layout_here, &mut |p| layout(game, p)).is_some() {
+                    set_cycle(&mut entity.nbt, Cycle::exporting(grouped.only_empty()));
+                } else if let Some(output) = recipe(game, &grouped) {
+                    set_grid(&mut entity.nbt, &GroupedItems::single(Some(output)));
+                    set_cycle(&mut entity.nbt, Cycle::crafting());
+                } else {
+                    eject_chain(game, pos, Some(entity));
+                }
+            }
+            Tick::ExportComplete => {
+                let Some(at) = crafter::target(pos, layout_here, &mut |p| layout(game, p)) else {
+                    eject_chain(game, pos, Some(entity));
+                    return true;
+                };
+                let mut source = grid(&entity.nbt);
+                let empty = source.only_empty();
+                let Some(receiver) = self::entity(game, at) else {
+                    eject_chain(game, pos, Some(entity));
+                    return true;
+                };
+                let mut next = grid(&receiver.nbt);
+                if cycle(&receiver.nbt).phase != Phase::Accepting
+                    || !source.merge_onto(&mut next, layout_here.pointing)
+                {
+                    eject_chain(game, pos, Some(entity));
+                    return true;
+                }
+                set_grid(&mut entity.nbt, &source);
+                set_cycle(
+                    &mut entity.nbt,
+                    Cycle {
+                        phase: Phase::Waiting,
+                        countdown: 0,
+                    },
+                );
+                let receiver_layout = layout(game, at).expect("targeting crafter has a layout");
+                let ready = crafter::preceding(at, receiver_layout, &mut |p| layout(game, p))
+                    .into_iter()
+                    .all(|previous| {
+                        previous == pos
+                            || self::entity(game, previous)
+                                .is_some_and(|e| cycle(&e.nbt).phase == Phase::Waiting)
+                    });
+                game.native_with_mod_block_entity(at, |receiver| {
+                    set_grid(&mut receiver.nbt, &next);
+                    if ready {
+                        set_cycle(&mut receiver.nbt, Cycle::assembling());
+                    }
+                });
+                game.native_block_entity_sync(at);
+                if !empty {
+                    crate::game::create_port_sounds::crafter_click(
+                        game,
+                        pos,
+                        next.grid.len() as f32 / 16.0 + 0.5,
+                    );
+                }
+            }
+            Tick::CraftMiddle => {
+                crate::game::create_port_sounds::crafter_craft(game, pos);
+                return false;
+            }
+            Tick::CraftComplete => eject_chain(game, pos, Some(entity)),
+        }
+        true
+    }
+
+    pub(in crate::game) fn draw(
+        game: &Game<'_>,
+        pos: Pos,
+        entity: &ModBlockEntity,
+        draw: &mut BlockEntityDraw,
+    ) {
+        let Some(state) = layout(game, pos) else {
+            return;
+        };
+        let axis = state.facing.axis();
+        draw.push();
+        create::orient(draw, axis);
+        let time = draw.game_time as f64 + f64::from(draw.partial);
+        let angle = create_engine::visual::angle(
+            time,
+            create::number(&entity.nbt, "Speed"),
+            create_engine::visual::rotation_offset(pos, axis, false),
+        );
+        draw.rotate_about([0.0, 1.0, 0.0], angle, [0.5; 3]);
+        game.native_draw_model(draw, "create:block/cogwheel_shaftless", 0xFFFFFF);
+        draw.pop();
+
+        draw.push();
+        create::face_south(draw, state.facing);
+        draw.rotate_about([0.0, 1.0, 0.0], 90.0, [0.5; 3]);
+        let angle = match state.pointing {
+            Pointing::Up => 0.0,
+            Pointing::Left => 270.0,
+            Pointing::Down => 180.0,
+            Pointing::Right => 90.0,
+        };
+        draw.rotate_about([1.0, 0.0, 0.0], angle, [0.5; 3]);
+        let connected = crafter::target(pos, state, &mut |p| layout(game, p)).is_some();
+        let base = "create:block/mechanical_crafter/";
+        if connected {
+            game.native_draw_model(draw, &format!("{base}belt"), 0xFFFFFF);
+            game.native_draw_model(draw, &format!("{base}belt_animated"), 0xFFFFFF);
+        } else {
+            game.native_draw_model(draw, &format!("{base}arrow"), 0xFFFFFF);
+        }
+        draw.pop();
+
+        let running = cycle(&entity.nbt);
+        let grouped = if running.phase == Phase::Idle {
+            GroupedItems::single(entity.items.first().cloned().flatten())
+        } else {
+            grid(&entity.nbt)
+        };
+        if !matches!(
+            running.phase,
+            Phase::Idle | Phase::Crafting | Phase::Inserting
+        ) {
+            draw.push();
+            create::face_south(draw, state.facing);
+            draw.rotate_about([0.0, 1.0, 0.0], 90.0, [0.5; 3]);
+            game.native_draw_model(draw, &format!("{base}lid"), 0xFFFFFF);
+            draw.pop();
+        }
+        if running.phase == Phase::Crafting && running.countdown >= 1000 {
+            return;
+        }
+        let advance = if running.phase == Phase::Exporting {
+            let progress = ((1000 - running.countdown) as f32
+                + crafter::countdown_speed(create::running_speed(game, &entity.nbt)) as f32
+                    * draw.partial)
+                / 1000.0;
+            0.75 * progress.clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
+        let local = state.pointing.direction(Direction::South).vector();
+        draw.push();
+        create::face_south(draw, state.facing);
+        draw.translate([
+            0.5 + local[0] as f32 * advance,
+            0.5 + local[1] as f32 * advance,
+            1.08,
+        ]);
+        draw.scale([0.5; 3]);
+        for ((x, y), stack) in grouped.grid {
+            let Some(stack) = stack else { continue };
+            draw.push();
+            draw.translate([
+                x as f32 * 0.5,
+                y as f32 * 0.5,
+                (x as f32 + y as f32 * 3.0) / 1024.0,
+            ]);
+            game.native_draw_item(
+                draw,
+                &stack,
+                horizon_assets::item_model::DisplayContext::Fixed,
+                None,
+                0,
+            );
+            draw.pop();
+        }
+        draw.pop();
+    }
+}
+
 pub(super) mod crushing {
     use super::{
         BlockEntity, Compound, Game, INVENTORY, ItemStack, ModBlockEntity, Pos, SLOTS, Tag,

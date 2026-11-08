@@ -34,6 +34,9 @@ pub mod milling;
 #[path = "core/crushing.rs"]
 pub mod crushing;
 
+#[path = "core/crafter.rs"]
+pub mod crafter;
+
 #[path = "core/fan.rs"]
 pub mod fan;
 

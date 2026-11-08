@@ -63,3 +63,17 @@ pub(super) fn manual_application(game: &mut Game<'_>, pos: [i32; 3]) {
 pub(super) fn land(game: &mut Game<'_>, pos: [i32; 3]) {
     event(game, pos, "create:depot_plop", 0.25, 1.25);
 }
+
+pub(super) fn crafter_feed(game: &mut Game<'_>, pos: [i32; 3]) {
+    event(game, pos, "minecraft:entity.item_frame.add_item", 0.25, 0.5);
+}
+
+pub(super) fn crafter_click(game: &mut Game<'_>, pos: [i32; 3], pitch: f32) {
+    event(game, pos, "minecraft:block.netherite_block.hit", 0.25, pitch);
+    event(game, pos, "minecraft:block.wooden_trapdoor.open", 0.125, pitch);
+}
+
+pub(super) fn crafter_craft(game: &mut Game<'_>, pos: [i32; 3]) {
+    crafter_click(game, pos, 2.0);
+    event(game, pos, "minecraft:entity.item.break", 0.125, 0.75);
+}

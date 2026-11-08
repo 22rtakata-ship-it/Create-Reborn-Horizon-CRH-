@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Game-side adapter. The engine crate contains the portable algorithms.
 use super::{
-    Game, create_port_saw_processing::crushing as crusher,
+    Game, create_port_saw_processing::{crafter, crushing as crusher},
     native_block_entity_draw::BlockEntityDraw,
 };
 use crate::{
@@ -115,6 +115,7 @@ pub(super) fn owns(block: &str) -> bool {
             | "create:shaft"
             | FLYWHEEL
             | crusher::WHEEL
+            | crafter::BLOCK
             | "create:cogwheel"
             | "create:large_cogwheel"
             | super::create_port_contraption::BLOCK
@@ -154,6 +155,10 @@ pub(super) fn owns(block: &str) -> bool {
 }
 
 pub(super) fn entity(block: &str, entity: &mut Option<(String, Compound)>) {
+    if block == crafter::BLOCK && entity.is_none() {
+        *entity = Some((block.into(), crafter::default_nbt()));
+        return;
+    }
     if block == crusher::CONTROLLER && entity.is_none() {
         *entity = Some((block.into(), crusher::default_nbt()));
         return;
@@ -411,6 +416,7 @@ pub(super) fn inventory_supported(entity: &ModBlockEntity) -> bool {
         "create:basin" => &[("InputItems", 9), ("OutputItems", 9)],
         "create:millstone" => &[("InputInventory", 1), ("OutputInventory", 9)],
         crusher::CONTROLLER => &[("Inventory", 32)],
+        crafter::BLOCK => &[("Inventory", 1)],
         _ => return true,
     };
     inventories.iter().all(|&(key, count)| {
@@ -432,6 +438,7 @@ pub(super) fn predicts_use(game: &Game<'_>, pos: [i32; 3], face: [i32; 3]) -> bo
             || crate::game::create_port_chute::predicts_use(game, pos)
             || super::create_port_chute::funnel::predicts_use(game, pos, face)
             || crate::game::create_port_interactions::reacts(game, pos)
+            || crafter::predicts_use(game, pos, face)
             || depot_reacts(game, pos, face))
 }
 
@@ -456,7 +463,8 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3], ca
         *canceled = true;
         return;
     }
-    if super::create_port_saw_filter::right_click(game, pos)
+    if crafter::right_click(game, pos, face)
+        || super::create_port_saw_filter::right_click(game, pos)
         || super::create_port_chute::funnel::right_click(game, pos, face)
         || super::create_port_contraption::right_click(game, pos)
         || super::create_port_piston::right_click(game, pos, face)
@@ -732,6 +740,7 @@ pub(super) fn node(game: &Game<'_>, pos: [i32; 3]) -> Option<Node> {
         },
         super::create_port_drill::SAW => Kind::LinearActuator,
         "create:millstone" => Kind::Millstone,
+        crafter::BLOCK => Kind::Crafter,
         "create:mechanical_mixer" => Kind::Mixer,
         "create:encased_fan" | "create:mechanical_drill" => Kind::Consumer {
             facing: direction.map(|v| -v),
@@ -1266,6 +1275,9 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
     if block == "create:millstone" {
         sync |= crate::game::create_port_millstone::tick(game, pos, entity, running_rpm);
     }
+    if block == crafter::BLOCK {
+        sync |= crafter::tick(game, pos, entity, running_rpm);
+    }
     if block == "create:mechanical_mixer" {
         crate::game::create_port_mixer::on_speed_changed(entity, old_rpm, rpm);
         crate::game::create_port_mixer::on_speed_changed(entity, old_running_rpm, running_rpm);
@@ -1473,7 +1485,7 @@ pub(super) fn container(block: &str, container: &mut Option<ModContainer>) {
     if matches!(block, super::create_port_drill::SAW | crusher::CONTROLLER) && container.is_none() {
         *container = Some(super::create_port_saw_processing::container());
     }
-    if block == super::create_port_deployer::BLOCK && container.is_none() {
+    if matches!(block, super::create_port_deployer::BLOCK | crafter::BLOCK) && container.is_none() {
         *container = Some(ModContainer {
             slots: 1,
             faces: std::array::from_fn(|_| Vec::new()),
@@ -1554,7 +1566,7 @@ fn trace_depot(pos: [i32; 3], stack: Option<&ItemStack>) {
     });
 }
 
-fn orient(draw: &mut BlockEntityDraw, axis: Axis) {
+pub(super) fn orient(draw: &mut BlockEntityDraw, axis: Axis) {
     match axis {
         Axis::X => draw.rotate_about([0.0, 0.0, 1.0], -90.0, [0.5; 3]),
         Axis::Z => draw.rotate_about([1.0, 0.0, 0.0], 90.0, [0.5; 3]),
@@ -1570,6 +1582,10 @@ pub(super) fn draw(
     entity: &ModBlockEntity,
     draw: &mut BlockEntityDraw,
 ) {
+    if block == crafter::BLOCK {
+        crafter::draw(game, pos, entity, draw);
+        return;
+    }
     if block == super::create_port_sticker::BLOCK {
         if let Some(state) = game.pack.assets.registry.state(state) {
             super::create_port_sticker::draw_station(game, pos, draw, state);

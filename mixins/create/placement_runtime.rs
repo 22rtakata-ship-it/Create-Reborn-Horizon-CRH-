@@ -49,6 +49,25 @@ pub(super) fn state(
     answer: &mut Option<Option<BlockStateId>>,
 ) {
     let block = game.native_state_block(state).unwrap_or("");
+    if block == super::create_port_saw_processing::crafter::BLOCK {
+        use create_engine::crafter::Pointing;
+        let face = direction(ctx.face);
+        let facing = horizontal(ctx.yaw).opposite();
+        let [dx, dy, dz] = face.vector();
+        let support = game.registry.state(game.world.block(ctx.pos.x - dx, ctx.pos.y - dy, ctx.pos.z - dz));
+        let other = support.filter(|support| !ctx.sneaking && support.name == block)
+            .and_then(|support| support.properties.get("facing"))
+            .and_then(|name| Direction::ALL.into_iter().find(|side| side.name() == name));
+        let facing = other.unwrap_or(facing);
+        let pointing = if other.is_some() || facing != face {
+            Pointing::from_clicked_face(face, facing)
+        } else {
+            Pointing::Up
+        };
+        *answer = Some(game.native_state_with_property(state, "facing", facing.name())
+            .and_then(|state| game.native_state_with_property(state, "pointing", pointing.name())));
+        return;
+    }
     if block == super::create_port_saw_processing::crushing::WHEEL {
         use super::create_port_saw_processing::crushing::{CONTROLLER, WHEEL};
         let pos = [ctx.pos.x, ctx.pos.y, ctx.pos.z];
@@ -465,6 +484,7 @@ pub(super) fn destroy(game: &mut Game<'_>, pos: [i32; 3], canceled: &mut bool) {
         return;
     }
     if !*canceled {
+        super::create_port_saw_processing::crafter::removed(game, pos);
         super::create_port_pulley::break_line(game, pos);
         super::create_port_piston::break_static_line(game, pos);
     }

@@ -212,8 +212,13 @@ with the systems they depend on.
   a blocked buffer, partial transfer and component retention after a restart.
 - [ ] Crushing Wheels for free-falling items, entities and other directions.
   Expand the recipe catalog, output destinations and presentation.
-- [ ] Remaining Mechanical Saw, Deployer, Spout, Item Drain, Mechanical Crafter
-  and Sand Paper behavior.
+- [x] Mechanical Crafters with ordinary manual input, original directions,
+  a full 5×5 Crushing Wheel recipe and cold continuation. Match the 21-block
+  Create 6.0.10 phase trace.
+- [ ] Crafter covers, linked inputs, other recipes, automated output and full
+  presentation.
+- [ ] Remaining Mechanical Saw, Deployer, Spout, Item Drain and Sand Paper
+  behavior.
 - [ ] Sequenced Assembly, tools/components of incomplete items and random results.
 - [ ] Smart Observer, Stockpile Switch, Packager, packages and factory logistics.
 

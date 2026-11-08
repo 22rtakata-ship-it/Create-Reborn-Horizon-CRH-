@@ -16,6 +16,7 @@ fn schema(id: &str) -> Option<(usize, Inventories)> {
         "create:depot" => (9, &[("OutputBuffer", 1, 8)]),
         "create:basin" => (18, &[("InputItems", 0, 9), ("OutputItems", 9, 9)]),
         "create:millstone" => (10, &[("InputInventory", 0, 1), ("OutputInventory", 1, 9)]),
+        "create:mechanical_crafter" => (1, &[("Inventory", 0, 1)]),
         "create:crushing_wheel_controller" => (32, &[("Inventory", 0, 32)]),
         _ => return None,
     })
