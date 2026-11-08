@@ -14,6 +14,12 @@ impl Facts {fn get(&self,_:BlockStateId)->&Fact{&self.0}}
 struct Info{max_stack:u32}
 struct GameLevel<'a>{world:&'a World,facts:&'a Facts,items:&'a HashMap<Arc<str>,Info>}
 mod game {pub mod create_port {use crate::{ModBlockEntity,Tag};@@SUPPORTED@@}}
+mod item_drain {
+    pub const BLOCK: &str = "create:item_drain";
+    pub fn comparator(_: &crate::ModBlockEntity) -> i32 {
+        unreachable!("Drain comparator is checked by the live paired fixture");
+    }
+}
 @@RESTORE@@
 @@MAXIMUM@@
 fn component_maximum(stack:&ItemStack)->Option<u32>{stack_maximum_override(stack)}

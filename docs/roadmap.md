@@ -379,7 +379,9 @@ with the systems they depend on.
   blocked exit, resumed cargo and original resource rendering.
 - [x] Item Drain with a held water bucket in Survival and Creative. Match a
   refused pour and empty-hand cargo recovery, including item components.
-- [ ] Other Drain containers, comparator and pipes. Fluid Tanks, Hose
+- [x] Item Drain comparator directly adjacent or behind a solid conductor.
+  Match signal strength and timing after a conveyor or hand pour.
+- [ ] Other Drain containers and pipes. Fluid Tanks, Hose
   Pulley, Spout, displays and fluid levels.
 - [ ] Trains: tracks, signals, stations, assembly, controls, schedules and persistence.
 - [ ] Logistics networks, Redstone Links, Display Links and Display Boards.

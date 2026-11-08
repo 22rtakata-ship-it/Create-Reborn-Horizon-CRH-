@@ -132,6 +132,16 @@ pub(super) mod item_drain {
         })
     }
 
+    pub(in crate::game) fn comparator(entity: &ModBlockEntity) -> i32 {
+        if entity.id != BLOCK {
+            return 0;
+        }
+        read_tank(entity).map_or(0, |tank| {
+            // ComparatorUtil's floor of 14 times the fill fraction, plus one for fluid.
+            14 * tank.amount / CAPACITY + i32::from(tank.amount > 0)
+        })
+    }
+
     fn save_tank(entity: &mut ModBlockEntity, tank: &Tank, exchanged: bool) {
         let Some(Tag::List(segments)) = entity.nbt.get_mut(&"Tanks".into()) else {
             return;
@@ -219,6 +229,7 @@ pub(super) mod item_drain {
                     }
                 }
                 game.native_block_entity_sync(pos);
+                game.native_update_output_neighbors(game.dim.id(), pos);
             }
         } else {
             let cargo = game

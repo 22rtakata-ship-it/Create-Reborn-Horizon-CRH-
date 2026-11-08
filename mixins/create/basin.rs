@@ -6,7 +6,8 @@
 // Unknown tanks, filters and spouts remain unsupported; never discard them.
 use super::create_port_block_entity_revision::EntityRevision as _;
 use super::{
-    Game, GameLevel, create_port_fluid_codec as fluids, native_block_entity_draw::BlockEntityDraw,
+    Game, GameLevel, create_port_basin_recipes::item_drain, create_port_fluid_codec as fluids,
+    native_block_entity_draw::BlockEntityDraw,
 };
 use crate::{
     containers::{BlockEntity, ModBlockEntity, ModContainer, ModRevision},
@@ -266,7 +267,7 @@ pub(super) fn has_analog(
     state: horizon_world::registry::BlockStateId,
     output: &mut bool,
 ) {
-    if game.facts.get(state).name.as_ref() == ID {
+    if matches!(game.facts.get(state).name.as_ref(), ID | item_drain::BLOCK) {
         *output = true;
     }
 }
@@ -276,13 +277,18 @@ pub(super) fn analog(
     state: horizon_world::registry::BlockStateId,
     output: &mut i32,
 ) {
-    if game.facts.get(state).name.as_ref() != ID {
+    let block = game.facts.get(state).name.as_ref();
+    if !matches!(block, ID | item_drain::BLOCK) {
         return;
     }
     *output = 0;
     let Some(BlockEntity::Mod(e)) = game.world.block_entities.get(&(pos.x, pos.y, pos.z)) else {
         return;
     };
+    if block == item_drain::BLOCK {
+        *output = item_drain::comparator(e);
+        return;
+    }
     // Unsupported native-created inventories may not have canonical slots yet.
     // Keep their payload opaque and fail closed before any comparator indexing.
     if !crate::game::create_port::inventory_supported(e) {

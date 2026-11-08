@@ -137,8 +137,10 @@ tick traces and survive a restart. Right-click with a water bucket to pour
 directly into the tank. Survival returns an empty bucket, Creative keeps the
 full bucket, and a refused pour keeps the bucket and its components. An empty
 hand retrieves an item waiting on the Drain. These four interactions were
-checked in both clients. Other hand-held containers, comparator output and
-pipe connections are pending. The original JAR supplies the body model.
+checked in both clients. A comparator reads the tank's fill level, including
+through one solid conductor. Java and Horizon match the two-tick delay
+after a conveyor or hand pour. Other hand-held containers and pipe
+connections are pending. The original JAR supplies the body model.
 The bucket's highlight and its overlap with the stream still differ slightly.
 
 The four sheet items retain `create:iron_sheet`, `create:golden_sheet` and
