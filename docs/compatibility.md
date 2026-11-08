@@ -120,6 +120,11 @@ clears. The filter and cargo survive a restart. Hold use over the filter when
 the Chute feeds an inventory to choose Up to or Exactly. The board uses the
 sample item's stack limit. Special filters remain open.
 
+Ordinary dry Chutes connect diagonally in four directions. A complete empty
+line can be pasted from a source schematic with a horizontal rotation or
+mirror. Loaded Chutes, airflow and partial diagonal routes need their own
+import policy.
+
 Horizontal Mechanical Belts can feed dry Chutes and receive their downward
 output, even when the receiving Belt is stopped. An incomplete Belt or a
 Chute that rejects the item holds the cargo upstream.

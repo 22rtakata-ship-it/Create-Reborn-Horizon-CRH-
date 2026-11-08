@@ -251,6 +251,8 @@ with the systems they depend on.
   [Paired fixture](../tools/crafter_standard_checks.py)
 - [x] Empty unlinked Mechanical Crafters in source schematics. Rotation and
   mirror cases match Java, with active or occupied entities rejected atomically.
+- [x] Empty dry Chute lines in source schematics, with horizontal rotation and
+  mirroring. Incomplete outlets and live cargo are refused before placement.
 - [x] Crafter ingredient merge and finished-item turn captured in both clients.
   The export and crafting particle events are implemented.
 - [x] Downward Crafter output to a horizontal Belt, including a stopped Belt,

@@ -96,6 +96,25 @@ impl Resolver for Registry {
                 );
                 be = Some(schema);
             }
+            "create:chute" => {
+                defaults.extend([
+                    ("facing", "down"),
+                    ("shape", "normal"),
+                    ("waterlogged", "false"),
+                ]);
+                let mut schema = BlockEntitySchema::new("create:chute");
+                schema.discarded_fields.extend(
+                    [
+                        "Item",
+                        "ItemPosition",
+                        "Pull",
+                        "Push",
+                        "BottomAirFlowDistance",
+                    ]
+                    .map(str::to_owned),
+                );
+                be = Some(schema);
+            }
             "minecraft:piston" => {
                 defaults.insert("extended", "false");
             }
@@ -114,6 +133,7 @@ impl Resolver for Registry {
                 "pointing" => ["up", "left", "down", "right"].contains(&value.as_str()),
                 "slope" => value == "horizontal",
                 "part" => ["start", "middle", "pulley", "end"].contains(&value.as_str()),
+                "shape" => ["normal", "window", "intersection", "encased"].contains(&value.as_str()),
                 _ => ["false", "true"].contains(&value.as_str()),
             };
             if !valid {
@@ -668,6 +688,78 @@ fn belt_fixture() -> Schematic {
             .collect(),
         entities: Vec::new(),
     }
+}
+
+#[test]
+fn dry_chute_transform_keeps_the_outlet_and_refuses_cargo_or_missing_receivers() {
+    let chute = |facing, shape| {
+        state(
+            "create:chute",
+            &[
+                ("facing", facing),
+                ("shape", shape),
+                ("waterlogged", "false"),
+            ],
+        )
+    };
+    let source = Schematic {
+        data_version: SOURCE_DATA_VERSION,
+        size: [3, 3, 1],
+        palettes: vec![vec![
+            chute("down", "intersection"),
+            chute("east", "normal"),
+            chute("east", "intersection"),
+        ]],
+        blocks: (0..3)
+            .map(|index| Block {
+                relative_pos: [index as i32, index as i32, 0],
+                state_index: index,
+                block_entity: Some(Compound::from([
+                    ("id".into(), Tag::String("create:chute".into())),
+                    ("Item".into(), Tag::Compound(Compound::new())),
+                ])),
+            })
+            .collect(),
+        entities: Vec::new(),
+    };
+    let options = Options {
+        mirror: Mirror::FrontBack,
+        quarter_turns: 1,
+        ..Options::default()
+    };
+    let plan = preflight(&source, &Registry, &options).unwrap();
+    assert_eq!(plan.blocks[1].relative_pos, [0, 1, -1]);
+    assert_eq!(plan.blocks[1].state.properties["facing"], "north");
+    assert!(
+        plan.blocks[1]
+            .block_entity
+            .as_ref()
+            .unwrap()
+            .data
+            .is_empty()
+    );
+    let mut disconnected = source.clone();
+    disconnected.blocks.remove(0);
+    let errors = preflight(&disconnected, &Registry, &options).unwrap_err();
+    assert!(
+        errors
+            .iter()
+            .any(|error| error.message.contains("downhill Chute"))
+    );
+    let mut loaded = source;
+    loaded.blocks[1].block_entity.as_mut().unwrap().insert(
+        "Item".into(),
+        Tag::Compound(Compound::from([(
+            "id".into(),
+            Tag::String("minecraft:stick".into()),
+        )])),
+    );
+    let errors = preflight(&loaded, &Registry, &options).unwrap_err();
+    assert!(
+        errors
+            .iter()
+            .any(|error| error.message.contains("empty Chute"))
+    );
 }
 
 #[test]

@@ -312,6 +312,18 @@ impl Resolver for Registry<'_, '_> {
                         .map(str::to_owned),
                     );
                 }
+                super::create_port_chute::BLOCK => {
+                    schema.discarded_fields.extend(
+                        [
+                            "Item",
+                            "ItemPosition",
+                            "Pull",
+                            "Push",
+                            "BottomAirFlowDistance",
+                        ]
+                        .map(str::to_owned),
+                    );
+                }
                 "create:mechanical_drill" => {
                     schema
                         .discarded_fields
@@ -652,6 +664,14 @@ fn destination(game: &Game<'_>, plan: &Plan, origin: [i32; 3]) -> Result<Vec<Wri
                 "message":"cannot replace an occupied or active Deployer"}));
             continue;
         }
+        if old != state
+            && block.state.name == super::create_port_chute::BLOCK
+            && super::create_port_chute::is_chute(&game.native_block(pos))
+        {
+            issues.push(json!({"path":"destination","pos":pos,
+                "message":"cannot replace an existing Chute with a schematic Chute"}));
+            continue;
+        }
         let nbt = block.block_entity.as_ref().map(|be| {
             let mut data = match be.id.as_str() {
                 super::create_port_saw_processing::crafter::BLOCK => {
@@ -666,6 +686,7 @@ fn destination(game: &Game<'_>, plan: &Plan, origin: [i32; 3]) -> Result<Vec<Wri
                     ]);
                     data
                 }
+                super::create_port_chute::BLOCK => super::create_port_chute::default_nbt(),
                 _ => WorldCompound::new(),
             };
             data.extend(world_compound(&be.data));

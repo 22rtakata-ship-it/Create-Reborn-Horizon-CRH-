@@ -500,6 +500,22 @@ fn resolve(resolver: &impl Resolver, state: &BlockState) -> Result<BlockSchema, 
     if state.name == "create:belt" && horizontal_belt_step(state).is_none() {
         return Err("only explicit dry uncased horizontal Belt states are supported".into());
     }
+    if state.name == "create:chute" {
+        let property = |key| state.properties.get(key).map(String::as_str);
+        if property("waterlogged") != Some("false")
+            || !matches!(
+                property("facing"),
+                Some("down" | "north" | "south" | "east" | "west")
+            )
+            || !matches!(
+                property("shape"),
+                Some("normal" | "window" | "intersection" | "encased")
+            )
+            || (property("facing") != Some("down") && property("shape") == Some("window"))
+        {
+            return Err("a Chute requires explicit dry facing and a supported shape".into());
+        }
+    }
     if state.name == "create:deployer"
         && ["facing", "axis_along_first"]
             .iter()
@@ -587,6 +603,7 @@ fn transform_state(
             &["facing", "slope", "part", "casing", "waterlogged"],
             Some("facing"),
         ),
+        "create:chute" => (&["facing", "shape", "waterlogged"], Some("facing")),
         "create:depot" => (&["waterlogged"], None),
         "minecraft:air"
         | "minecraft:cave_air"
@@ -806,6 +823,50 @@ fn validate_deployer_source(raw: &Compound) -> Result<(), String> {
         (None, None, None) | (Some(_), Some(Tag::Int(1..=64)), Some(Tag::Byte(0 | 1))) => Ok(()),
         _ => Err("invalid Deployer FilterAmount or UpTo safe data".into()),
     }
+}
+
+fn validate_chute_source(raw: &Compound) -> Result<(), String> {
+    let empty = raw
+        .get("Item")
+        .is_none_or(|tag| matches!(tag, Tag::Compound(values) if values.is_empty()));
+    let still = ["Pull", "Push", "BottomAirFlowDistance"]
+        .into_iter()
+        .all(|key| {
+            raw.get(key)
+                .is_none_or(|tag| matches!(tag, Tag::Float(bits) if f32::from_bits(*bits) == 0.0))
+        });
+    let position = raw.get("ItemPosition").is_none_or(
+        |tag| matches!(tag, Tag::Float(bits) if (0.0..=1.0).contains(&f32::from_bits(*bits))),
+    );
+    if !empty || !still || !position {
+        return Err("only empty Chute data without airflow is supported".into());
+    }
+    Ok(())
+}
+
+fn unsupported_chute_outlets(blocks: &[(bool, PlannedBlock)]) -> Vec<[i32; 3]> {
+    let chutes: BTreeSet<_> = blocks
+        .iter()
+        .filter(|(_, block)| block.state.name == "create:chute")
+        .map(|(_, block)| block.relative_pos)
+        .collect();
+    blocks
+        .iter()
+        .filter(|(_, block)| block.state.name == "create:chute")
+        .filter_map(|(_, block)| {
+            let [x, y, z] = block.relative_pos;
+            // The state faces uphill and the outlet is one block down and
+            // opposite that facing. The schematic owns that receiver.
+            let outlet = match block.state.properties.get("facing")?.as_str() {
+                "north" => [x, y - 1, z + 1],
+                "south" => [x, y - 1, z - 1],
+                "east" => [x - 1, y - 1, z],
+                "west" => [x + 1, y - 1, z],
+                _ => return None,
+            };
+            (!chutes.contains(&outlet)).then_some(block.relative_pos)
+        })
+        .collect()
 }
 
 /// The horizontal direction of a supported, explicit source Belt state.
@@ -1127,6 +1188,12 @@ pub fn preflight(
                 fail(format!("{path}.nbt"), Some(pos), message);
                 continue;
             }
+            if prepared.state.name == "create:chute"
+                && let Err(message) = validate_chute_source(raw)
+            {
+                fail(format!("{path}.nbt"), Some(pos), message);
+                continue;
+            }
             if raw.get("id").and_then(Tag::as_str) != Some(be_schema.id.as_str()) {
                 fail(
                     format!("{path}.nbt.id"),
@@ -1226,6 +1293,13 @@ pub fn preflight(
             "blocks".into(),
             Some(pos),
             "Belt segments must form a complete horizontal chain from start to end".into(),
+        );
+    }
+    for pos in unsupported_chute_outlets(&blocks) {
+        fail(
+            "blocks".into(),
+            Some(pos),
+            "a diagonal Chute requires its downhill Chute in the schematic".into(),
         );
     }
     if !issues.is_empty() {

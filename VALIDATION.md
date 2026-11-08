@@ -222,6 +222,10 @@ developer source build. The three changes are applied in a separate checkout.
   The blocked middle Chute holds the same seven marked ingots after a
   full restart in each client. The [shape oracle](tools/chute_shape_oracle.py)
   checks all 40 outline and collision variants against original Java shapes.
+- [Chute schematics](tools/schematic_chute_checks.py) match 144 authoritative
+  state and empty block-entity observations using the same `.nbt` bytes
+  in 12 rotations and mirrors. Disconnected and loaded templates are rejected
+  before any destination block is changed.
 - [Straight Pump lines](tools/fluid_pump_native_checks.py) match 115 ticks in
   each of six [Java cases](tools/fluid_pump_java_checks.py), including both
   fluids, both RPM signs and both placement orders. The fixture also checks
