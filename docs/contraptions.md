@@ -11,7 +11,7 @@ rules while using Horizon's block, item and player APIs.
 | Drive | Mechanical and Windmill Bearings, both hands of the Clockwork Bearing, and the regular and sticky Mechanical Piston advance their own poses. Rope Pulleys share the linear actuator, while Gantry Carriages follow a loaded rail. |
 | Ownership | The structure belongs to the chunk, independently of the driver. It is saved with the removal of the original blocks. Removing a driver leaves a recoverable record if a block obstructs the landing. |
 | Presentation | The client receives geometry at capture and tracks it with small pose updates during motion. The rendered pose interpolates across packet arrival and local frame boundaries. Collision uses the authoritative pose. Original resources remain an optional local import. |
-| Contact and actors | Horizon's normal collision paths handle moving geometry. A rider on a flat platform can follow horizontal rotation or translation and be lifted. Moving harvesters, saws and drills use the original crop or block rules and Horizon loot. |
+| Contact and actors | Horizon's normal collision paths handle moving geometry. Riders follow horizontal and translating platforms, and a rising blade can lift a rider on a bearing rotating around X or Z. Moving harvesters, saws and drills use the original crop or block rules and Horizon loot. |
 
 The current native adapter keeps each structure's source blocks, landing cells
 and persistent record in one loaded chunk column so they share a chunk save.
@@ -55,20 +55,19 @@ with each click applied before the next packet. Named, locked and double
 chests are outside the supported capture rules.
 
 Collision uses exact boxes at quarter turns, narrow strips for oblique rotation
-and the registered shapes of piston parts and tools. Grounded player transfer
-uses the real top height of full blocks and the supported dry slabs. Horizontal translating shapes resolve
-player overlap using the minimum-separation axes from Java's
-`ContinuousOBBCollider`, then use Horizon's terrain collision resolver. The
-wall fixture checks sideways separation in both directions. A vertical
-Mechanical Bearing also separates the local player from the sides of moving
-full cubes. The adapter uses the current pose, Create's contracted player body,
-the original six separating axes and the ordinary terrain resolver. Existing
-flat-platform support and linear actuator paths retain their own rules.
-The upright resolver matches the pinned JAR for separation, surface and time
-of impact. The native adapter applies the lateral overlap response. Arbitrary
-tilt, complete contact timing for partial shapes, moving block bounce, exact client sub-tick
-pose timing, mounted mobs and downward lock behavior remain open. Sable
-integration remains a separate milestone.
+and the registered shapes of piston parts and tools. Grounded transfer uses the
+top height of full blocks and supported dry slabs. Translating platforms and
+bearing side contact resolve overlap before clipping against ordinary terrain.
+An X- or Z-axis bearing uses the vertical pass of Java's
+`ContinuousOBBCollider`. It clips separation and horizontal contact-point
+motion independently. The local client applies these corrections at the player
+tick and includes them in the camera and body interpolation.
+
+The solver matches the pinned JAR for separation, surface contact and time of
+impact on all three axes. Live player trajectories still differ at some bearing
+angles. Compound rotation, exact sub-tick timing, moving block bounce and
+sliding, and full mob contact remain open. Sable integration remains a separate
+milestone.
 
 The Harvester handles wheat, carrots, potatoes, beetroot, Nether Wart, cocoa,
 sweet berries, sugar cane and supported leaves or growing plants. Its moving

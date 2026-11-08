@@ -8,6 +8,19 @@ changes from [Horizon #11098](https://github.com/horizon-rust/horizon/pull/11098
 [Horizon #11068](https://github.com/horizon-rust/horizon/pull/11068). This is a
 developer source build. The three changes are applied in a separate checkout.
 
+- [Moving riders](tools/contraption_rider_checks.py) record the camera on a
+  rotating platform with the player standing and walking. The largest short
+  frame steps in the verification run were 0.032 and 0.062 blocks respectively.
+  The same rising blade lifts the player by about two blocks in Java and
+  Horizon. The largest sampled position difference at a shared angle was 0.318
+  blocks across 51 observations. The previous Horizon build dropped through
+  that blade to the floor.
+- The [rotary contact oracle](tools/rotary_contact_oracle.py) matches separation,
+  impact fraction and surface contact for 51,840 Java cases across X, Y and Z.
+  The [native rider checks](tools/contraption_collision_checks.py) also cover
+  horizontal and vertical piston transfer, side pushes into a wall, freezing,
+  piston poles and dropped items. The separate piston, Rope Pulley and Gantry
+  fixtures still pass their Java comparisons and native restarts.
 - [Flywheel connections](tools/flywheel_checks.py) transmit 32 RPM along each of
   the three axes and settle to zero after disconnecting. The powered state
   survives a Horizon restart. Ordinary placement matches neighbor preference

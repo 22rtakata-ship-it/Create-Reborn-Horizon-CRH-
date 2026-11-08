@@ -1584,6 +1584,8 @@ fn trace_pose(game: &Game<'_>, draw: &NativeWorldDraw, record: &Record, anchor: 
             "partial": draw.partial, "angle": angle, "origin": anchor,
             "previous_angle": record.previous_angle, "current_angle": record.angle,
             "stroke": record.stroke.map(|stroke| [stroke.previous, stroke.offset]),
+            "camera": draw.camera, "camera_partial": game.clock.camera_fraction(),
+            "player": game.player.as_ref().map(|player| player.position.components()),
             "rpm": record.rpm, "stalled": record.stalled,
         }));
     }

@@ -1490,6 +1490,15 @@ bindings = [
 ]
 
 [[injection]]
+id = "contraption-contact-tick"
+target = "horizon_client::game::remote::Game<'_>::tick_remote_level"
+kind = "HEAD"
+helper = "contraption_contact_tick.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+]
+
+[[injection]]
 id = "sticker-client-state"
 target = "horizon_client::game::remote::Game<'_>::sync_block_entity"
 kind = "HEAD"

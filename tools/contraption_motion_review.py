@@ -1,0 +1,178 @@
+#!/usr/bin/env python3
+# Copyright (c) 2026 create-horizon contributors
+# SPDX-License-Identifier: MIT
+"""Prepare a private review world for riding rotary and translating structures."""
+
+import argparse
+import json
+from pathlib import Path
+import shlex
+
+from chain_drive_checks import xyz
+from contraption_review_stations import (
+    GANTRY, PISTON, PULLEY, STICKY_PISTON, glue_station, linear_stations, piston, sign,
+)
+from native_check_session import NativeCheckSession, wait_loaded
+
+HORIZONTAL = (904, 82, 58)
+VERTICAL = (919, 84, 58)
+CLUTCHES = (
+    (HORIZONTAL, (903, 81, 58), 'west', (904, 83, 58), 'minecraft:slime_block'),
+    (VERTICAL, (918, 84, 59), 'south', (920, 84, 58), 'minecraft:slime_block'),
+)
+
+
+class Plaza:
+    def __init__(self, call):
+        self.call = call
+
+    def command(self, text):
+        reply = self.call('command', text)
+        chat = ' '.join(reply.get('chat', []))
+        assert not any(error in chat.lower() for error in (
+            'unknown block', 'invalid value', 'position is not loaded', 'not a block entity',
+            'unknown or incomplete command',
+        )), reply
+        return chat
+
+    def put(self, position, state):
+        self.command(f'setblock {xyz(position)} {state}')
+
+    def load(self, position):
+        x, y, z = position
+        self.command(f'tp @s {x + .5} {y + 2} {z + .5}')
+        wait_loaded(self.call, [position])
+
+
+def build_rotors(plaza):
+    plaza.put(HORIZONTAL, 'create:mechanical_bearing[facing=up]')
+    plaza.put((904, 81, 58), 'create:clutch[axis=y,powered=true]')
+    plaza.put(CLUTCHES[0][1], 'minecraft:lever[face=wall,facing=west,powered=true]')
+    plaza.put((904, 80, 58), 'create:creative_motor[facing=up]{ScrollValue:8}')
+    plaza.command('fill 901 83 55 907 83 61 minecraft:slime_block')
+    plaza.command('fill 901 83 55 901 83 61 minecraft:yellow_wool')
+    plaza.command('fill 907 83 55 907 83 61 minecraft:blue_wool')
+    sign(plaza, (901, 81, 63), ['HORIZONTAL ROTOR', 'Lever under deck.', 'Board at rest.', 'Walk while turning.'])
+    plaza.put(VERTICAL, 'create:mechanical_bearing[facing=east]')
+    plaza.put((918, 84, 58), 'create:clutch[axis=x,powered=true]')
+    plaza.put(CLUTCHES[1][1], 'minecraft:lever[face=wall,facing=south,powered=true]')
+    plaza.put((917, 84, 58), 'create:creative_motor[facing=east]{ScrollValue:-8}')
+    plaza.command('fill 920 84 56 921 84 60 minecraft:slime_block')
+    plaza.command('fill 920 84 60 921 84 60 minecraft:oak_planks')
+    sign(plaza, (918, 81, 63), ['VERTICAL ROTOR', 'Lever on clutch.', 'Try the oak tip.', 'Catch floor below.'])
+
+
+def check_rotors(plaza):
+    for pivot, lever, facing, payload, block in CLUTCHES:
+        plaza.put(lever, f'minecraft:lever[face=wall,facing={facing},powered=false]')
+        plaza.call('wait', 10)
+        assert 'Running: 1b' in plaza.command(f'data get block {xyz(pivot)}'), pivot
+        assert plaza.call('block', *payload)['block'] == 'minecraft:air', payload
+        plaza.put(lever, f'minecraft:lever[face=wall,facing={facing},powered=true]')
+        plaza.call('wait', 8)
+        assert plaza.call('block', *payload)['block'] == block, payload
+
+
+def prepare(session):
+    with session:
+        plaza = Plaza(session.call)
+        plaza.command('gamemode creative')
+        plaza.command('gamerule minecraft:do_mob_spawning false')
+        plaza.command('gamerule minecraft:do_weather_cycle false')
+        plaza.command('time set noon')
+        for z in (58, 70, 82, 94, 106, 118, 132, 139):
+            plaza.load((911, 81, z))
+            plaza.command(f'fill 896 81 {z-7} 927 94 {z+7} minecraft:air')
+            plaza.command(f'fill 896 80 {z-7} 927 80 {z+7} minecraft:smooth_stone')
+        build_rotors(plaza)
+        piston(plaza, PISTON, False)
+        piston(plaza, STICKY_PISTON, True)
+        plaza.command('fill 905 80 68 905 80 78 minecraft:yellow_concrete')
+        sign(plaza, (914, 81, 68), ['PISTON', 'Lever reverses.', 'Pushes the block.', 'Watch the poles.'])
+        sign(plaza, (914, 81, 75), ['STICKY PISTON', 'Lever reverses.', 'Pulls the block.', 'Compare both.'])
+        linear_stations(plaza)
+        sign(plaza, (919, 81, 106), ['GANTRY', 'Right: rail stop.', 'Left: reverse.', 'Glue both planks.'])
+        glue_station(plaza)
+        plaza.command('give @s create:super_glue')
+        plaza.command('give @s create:wrench')
+        plaza.command('give @s create:goggles')
+
+        plaza.command('tp @s 911.5 83 62.5')
+        wait_loaded(session.call, [HORIZONTAL, VERTICAL, PISTON, STICKY_PISTON])
+        check_rotors(plaza)
+        session.call('look-at', 908, 83, 58)
+        for pos, block in ((PISTON, 'create:mechanical_piston'),
+                           (STICKY_PISTON, 'create:sticky_mechanical_piston')):
+            assert session.call('block', *pos)['block'] == block, pos
+        session.call('save')
+        capture(plaza, (911.5, 92, 71.5), (911.5, 83, 58.5), session.scratch / 'rotors.png')
+
+        session.restart()
+        plaza = Plaza(session.call)
+        plaza.load((911, 81, 103))
+        wait_loaded(session.call, [PULLEY, GANTRY])
+        assert session.call('block', *PULLEY)['block'] == 'create:rope_pulley'
+        assert session.call('block', *GANTRY)['block'] == 'create:gantry_carriage'
+        capture(plaza, (911.5, 90, 109.5), (912, 83, 103), session.scratch / 'linear.png')
+        plaza.command('tp @s 911.5 81 64.5')
+        session.call('look-at', 907, 84, 58)
+        session.call('save')
+
+
+def capture(plaza, camera, target, output):
+    plaza.command('gamemode spectator')
+    plaza.command('tp @s ' + xyz(camera))
+    plaza.call('look-at', *target)
+    plaza.call('key', 'f1', 'tap')
+    plaza.call('wait', 5)
+    plaza.call('screenshot', output)
+    plaza.call('key', 'f1', 'tap')
+    plaza.command('gamemode creative')
+
+
+def launch_files(session):
+    play = session.scratch / 'Play.command'
+    play.write_text(
+        '#!/bin/bash\nset -euo pipefail\ncd "$(dirname "$0")"\n'
+        'export HORIZON_HOME="$PWD/home" HORIZON_LAUNCHER_HOME="$PWD/launcher"\n'
+        'export XDG_CONFIG_HOME="$PWD/config" XDG_DATA_HOME="$PWD/data"\n'
+        'export HORIZON_LAUNCHER_NO_SELF_UPDATE=1\n'
+        f'exec {shlex.quote(str(session.game))} --resources "$PWD/resources" '
+        f'--world {session.world} --creative --name BearingReview --render-distance 4 "$@"\n'
+    )
+    play.chmod(0o755)
+    (session.scratch / 'REVIEW.md').write_text(
+        '# Moving structures\n\n'
+        'Open Play.command. Creative flight is useful to reach the decks. '
+        'Turn flight off before checking whether a deck carries you.\n\n'
+        '| Station | Coordinates | What to try |\n'
+        '| --- | --- | --- |\n'
+        '| Horizontal rotor | 904 82 58 | Stand on the deck and have it turn. Walk across the colour bands. |\n'
+        '| Vertical rotor | 919 84 58 | Stand on the rising oak tip near 921 85 60. '
+        'Watch it lift you, then step off onto the floor. |\n'
+        '| Mechanical pistons | 919 83 68 and 919 83 75 | Reverse the two gearshifts. '
+        'Check the pole and which piston retrieves the wood. |\n'
+        '| Rope pulley and gantry | 904 85 103 and 918 83 103 | Release each stop lever, '
+        'then reverse the drive. |\n'
+        '| Super Glue | 904 82 136 | Glue the two wooden blocks, then release the clutch. '
+        'The extra block should rotate with the bearing. |\n'
+    )
+    print(json.dumps({'play': str(play), 'world': session.world, 'restart_verified': True}))
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    for name in ('game', 'resources', 'ctl'):
+        parser.add_argument('--' + name, type=Path, required=True)
+    parser.add_argument('--jar', type=Path)
+    args = parser.parse_args()
+    session = NativeCheckSession(args.game, args.resources, args.ctl, args.jar,
+                                 name='motion-review', world='CreateMotionReview',
+                                 size=(1280, 720), username='BearingReview')
+    print(session.scratch, flush=True)
+    prepare(session)
+    launch_files(session)
+
+
+if __name__ == '__main__':
+    main()

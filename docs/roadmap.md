@@ -350,6 +350,8 @@ with the systems they depend on.
 - [ ] Native Cart Assembler rails, cart coupling, mounted payload and renderer.
 - [x] Dropped-item collision, grounded rotary and linear rider transfer, and
   collision of narrow piston poles in Horizon.
+- [x] Local player lift on a rising bearing blade and tick-aligned rider
+  interpolation. Live Java and Horizon checks cover a rising and receding blade.
 - [x] Grounded bottom-slab rider keeps its rotation radius in Horizon. Live
   Java and Horizon traces preserve feet height. Position sampled at matched
   bearing angles still differs by up to 0.154 blocks.

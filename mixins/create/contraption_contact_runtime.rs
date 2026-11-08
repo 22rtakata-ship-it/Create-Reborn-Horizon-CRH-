@@ -1,15 +1,19 @@
 // Copyright (c) 2026 create-horizon contributors
 // SPDX-License-Identifier: MIT
 
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 
 use super::{Game, create_port_contraption::mirror_sync};
-use create_engine::contraption::{
-    contact::{
-        ContactBox, linear_face_separation, linear_overlap_response, linear_top_motion,
-        rotary_top_motion,
+use create_engine::{
+    contraption::{
+        Rotation,
+        contact::{
+            ContactBox, linear_face_separation, linear_overlap_response, linear_top_motion,
+            rotary_top_motion,
+        },
+        rotary_contact::{RotaryContact, rotary_contact},
     },
-    rotary_contact::upright_rotary_contact,
+    kinetics::Axis,
 };
 use horizon_client::collisions::{EntityCollisions, LookupCollisions, SceneCollisions};
 use horizon_client_render::create_contraption_scene::{
@@ -30,6 +34,39 @@ struct ContactClip {
 
 thread_local! {
     static CONTACT_CLIP: Cell<Option<ContactClip>> = const { Cell::new(None) };
+    static PENDING: RefCell<Vec<Transition>> = const { RefCell::new(Vec::new()) };
+    static INTERPOLATION: Cell<Option<Interpolation>> = const { Cell::new(None) };
+}
+
+#[derive(Clone, Copy)]
+struct Interpolation {
+    tick: u64,
+    before: Vec3,
+    carried: Vec3,
+}
+
+struct Transition {
+    tick: u64,
+    player: Vec3,
+    column: (i32, i32),
+    previous: Vec<Record>,
+    current: Vec<Record>,
+}
+
+enum Contact {
+    Carry([f64; 3], Option<Pos>),
+    Push([f64; 3], Option<Pos>),
+    Tilted {
+        response: RotaryContact,
+        previous: Rotation,
+        current: Rotation,
+        controller: Pos,
+    },
+}
+
+pub(super) fn reset() {
+    PENDING.with(|queue| queue.borrow_mut().clear());
+    INTERPOLATION.set(None);
 }
 
 fn local_contact_player<'a>(
@@ -78,8 +115,71 @@ fn entity_collisions(game: &Game<'_>, excluded_controller: Option<Pos>) -> Vec<A
 pub(super) fn sync(game: &mut Game<'_>, data: &[u8]) {
     let previous = previous_records(game, data);
     mirror_sync(game, data);
-    if let Some((column, previous)) = previous {
-        carry(game, column, &previous);
+    if let Some((column, previous)) = previous
+        && let Some(player) = local_contact_player(game)
+        && let Some(current) = game
+            .world
+            .chunks
+            .get(&column)
+            .and_then(|chunk| read(chunk).ok())
+    {
+        PENDING.with(|queue| {
+            queue.borrow_mut().push(Transition {
+                tick: game.ticks,
+                player: player.position,
+                column,
+                previous,
+                current: current.into_owned(),
+            });
+        });
+    }
+}
+
+pub(super) fn begin_tick(game: &mut Game<'_>) {
+    let pending = PENDING.take();
+    let Some(before) = local_contact_player(game).map(|player| player.position) else {
+        return;
+    };
+    for transition in pending {
+        // A teleport, unload or disassembly can invalidate a buffered update.
+        if transition.tick != game.ticks || transition.player != before {
+            continue;
+        }
+        let Some(resident) = game
+            .world
+            .chunks
+            .get(&transition.column)
+            .and_then(|chunk| read(chunk).ok())
+        else {
+            continue;
+        };
+        let current = transition
+            .current
+            .iter()
+            .filter(|record| resident.iter().any(|latest| latest.same_geometry(record)));
+        let current = current.cloned().collect::<Vec<_>>();
+        carry(game, &transition.previous, &current);
+    }
+    if let Some(player) = local_contact_player(game)
+        && before != player.position
+    {
+        INTERPOLATION.set(Some(Interpolation {
+            tick: game.ticks + 1,
+            before,
+            carried: player.position,
+        }));
+    }
+}
+
+pub(super) fn finish_tick(game: &mut Game<'_>) {
+    if let Some(sample) = INTERPOLATION.take()
+        && sample.tick == game.ticks
+        && sample.carried == game.previous_position
+        && local_contact_player(game).is_some()
+    {
+        // The normal player tick captured the post-contact position. Start
+        // the camera/body interpolation before the carrier displacement too.
+        game.previous_position = sample.before;
     }
 }
 
@@ -103,30 +203,23 @@ fn previous_records(game: &Game<'_>, data: &[u8]) -> Option<((i32, i32), Vec<Rec
     Some((column, records))
 }
 
-fn carry(game: &mut Game<'_>, column: (i32, i32), previous: &[Record]) {
+fn carry(game: &mut Game<'_>, previous: &[Record], current: &[Record]) {
     let max_step = game
         .player
         .as_mut()
         .and_then(|player| player.attribute("minecraft:step_height").ok())
         .map_or(0.6, |step| step as f32);
     let Some(player) = &game.player else { return };
-    let Some(current) = game
-        .world
-        .chunks
-        .get(&column)
-        .and_then(|chunk| read(chunk).ok())
-    else {
-        return;
-    };
     let bounds = player.bounds();
     let feet = bounds.bottom_center().components();
     let size = bounds.size();
-    let mut body = ContactBox {
+    let body = ContactBox {
         min: bounds.min_position().components(),
         max: bounds.max_position().components(),
     };
+    let mut linear_body = body;
     if size.y > 1.0 {
-        body.max[1] -= 2.0 / 16.0;
+        linear_body.max[1] -= 2.0 / 16.0;
     }
     // Preserve the existing priority of platform transfer and linear contact
     // when a nearby rotor also has a side overlap in this column.
@@ -172,25 +265,52 @@ fn carry(game: &mut Game<'_>, column: (i32, i32), previous: &[Record]) {
                 {
                     // Create resolves this rotor's shape before moving the
                     // contact point through the ordinary world colliders.
-                    return Some((motion, false, Some(record.controller)));
+                    return Some(Contact::Carry(motion, Some(record.controller)));
                 }
                 if side.is_some() || !upright_side_payload(record) {
                     return None;
                 }
-                let response = upright_rotary_contact(
+                let response = rotary_contact(
+                    Axis::Y,
                     record.anchor,
                     record.angle,
                     body,
                     player.velocity.components(),
-                    full_blocks,
+                    full_blocks.map(|block| {
+                        let min = block.map(f64::from);
+                        ContactBox {
+                            min,
+                            max: min.map(|value| value + 1.0),
+                        }
+                    }),
                     max_step,
                 );
                 // Keep the existing path for support, lift and step-up. This
                 // pass supplies only hard separation of the side of the body.
                 if response.separation[1] == 0.0 && response.separation != [0.0; 3] {
-                    side = Some((response.separation, true, Some(record.controller)));
+                    side = Some(Contact::Push(response.separation, Some(record.controller)));
                 }
                 None
+            }
+            (None, None)
+                if before.angle == record.previous_angle && before.angle != record.angle =>
+            {
+                let axis = [Axis::X, Axis::Y, Axis::Z][record.axis];
+                let response = rotary_contact(
+                    axis,
+                    record.anchor,
+                    record.angle,
+                    body,
+                    player.velocity.components(),
+                    payload_colliders(game, record, [0.0; 3]),
+                    max_step,
+                );
+                (response.surface || response.separation != [0.0; 3]).then_some(Contact::Tilted {
+                    response,
+                    previous: Rotation::new(record.anchor, axis, before.angle)?,
+                    current: Rotation::new(record.anchor, axis, record.angle)?,
+                    controller: record.controller,
+                })
             }
             (Some(previous), Some(current))
                 if previous.offset == current.previous && previous.offset != current.offset =>
@@ -206,38 +326,44 @@ fn carry(game: &mut Game<'_>, column: (i32, i32), previous: &[Record]) {
                         half_extents,
                     )
                 {
-                    return Some((motion, false, None));
+                    return Some(Contact::Carry(motion, None));
                 }
                 if record.axis == 1 {
                     linear_face_separation(
                         previous_origin,
                         current_origin,
                         full_blocks,
-                        body.min,
-                        body.max,
+                        linear_body.min,
+                        linear_body.max,
                     )
-                    .map(|motion| (motion, true, None))
+                    .map(|motion| Contact::Push(motion, None))
                 } else {
-                    let shapes = linear_colliders(game, record, current_origin);
+                    let shapes = payload_colliders(game, record, current_origin);
                     // Horizon's ordinary collision path establishes ground
                     // contact. A touching top needs no hard separation.
-                    if !shapes.iter().any(|&shape| body.penetrates(shape)) {
+                    if !shapes.iter().any(|&shape| linear_body.penetrates(shape)) {
                         return None;
                     }
-                    linear_overlap_response(body, &shapes, max_step)
-                        .map(|motion| (motion, true, None))
+                    linear_overlap_response(linear_body, &shapes, max_step)
+                        .map(|motion| Contact::Push(motion, None))
                 }
             }
             _ => None,
         }
     });
-    let Some((movement, separate, excluded)) = contact.or(side) else {
+    let Some(contact) = contact.or(side) else {
         return;
     };
-    let movement = Vec3::new(movement[0], movement[1], movement[2]);
-    if movement.length_squared() < 1.0e-14 {
-        return;
-    }
+    let (motion, separate, excluded) = match contact {
+        Contact::Carry(motion, excluded) => (motion, false, excluded),
+        Contact::Push(motion, excluded) => (motion, true, excluded),
+        Contact::Tilted {
+            response,
+            controller,
+            ..
+        } => (response.separation, true, Some(controller)),
+    };
+    let movement = Vec3::new(motion[0], motion[1], motion[2]);
 
     let entities = entity_collisions(game, excluded);
     let from = player.position;
@@ -265,19 +391,48 @@ fn carry(game: &mut Game<'_>, column: (i32, i32), previous: &[Record]) {
     };
     // Clip platform transfer against normal terrain and entity shapes while
     // retaining the rider's ground flag and own velocity.
-    let Ok(allowed) = world.resolve_with_context(bounds, movement, 0.0, false, context) else {
+    let Ok(mut allowed) = world.resolve_with_context(bounds, movement, 0.0, false, context) else {
         return;
     };
-    if allowed.length_squared() == 0.0 {
-        return;
+    if let Contact::Tilted {
+        response,
+        previous,
+        current,
+        ..
+    } = contact
+        && response.surface
+    {
+        let corrected = from.add_vector(allowed);
+        let next = current.to_world(previous.to_local(corrected.components()));
+        // Java applies only the horizontal contact-point transfer. Vertical
+        // motion comes from the separation and the in-tick impact response.
+        let transfer = Vec3::new(next[0] - corrected.x, 0.0, next[2] - corrected.z);
+        let Ok(clipped) =
+            world.resolve_with_context(bounds.move_by(allowed), transfer, 0.0, false, context)
+        else {
+            return;
+        };
+        allowed = allowed.add_vector(clipped);
     }
     if let Some(player) = &mut game.player {
         let to = from.add_vector(allowed);
-        player.history.add(MovementRecord {
-            from,
-            to,
-            original: Some(movement),
-        });
+        if to != from {
+            player.history.add(MovementRecord {
+                from,
+                to,
+                original: Some(movement),
+            });
+        }
+        if let Contact::Tilted { response, .. } = contact {
+            player.velocity.y *= response.impact_fraction;
+            if movement.y * player.velocity.y < 0.0 {
+                player.velocity.y = 0.0;
+            }
+            if response.surface {
+                player.fall_distance = 0.0;
+                player.ground.on_ground = true;
+            }
+        }
         if separate {
             let response = movement.components();
             let mut velocity = player.velocity.components();
@@ -292,7 +447,7 @@ fn carry(game: &mut Game<'_>, column: (i32, i32), previous: &[Record]) {
     }
 }
 
-fn linear_colliders(game: &Game<'_>, record: &Record, origin: [f64; 3]) -> Vec<ContactBox> {
+fn payload_colliders(game: &Game<'_>, record: &Record, origin: [f64; 3]) -> Vec<ContactBox> {
     let mut lookup = LookupCollisions {
         block: &|_, _, _| game.world.air,
         binding: game.collision,

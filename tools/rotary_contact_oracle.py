@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Copyright (c) 2026 create-horizon contributors
 # SPDX-License-Identifier: MIT
-"""Compare upright Rust contact with ContinuousOBBCollider in the pinned JAR."""
+"""Compare all single-axis rotary contact with ContinuousOBBCollider in the pinned JAR."""
 import itertools
 import json
 import os
@@ -15,22 +15,29 @@ from reference_java import CREATE_SHA256, digest
 
 
 RUST = r'''
-use create_engine::contraption::{contact::ContactBox, rotary_contact::upright_rotary_contact};
+use create_engine::{
+    contraption::{contact::ContactBox, rotary_contact::rotary_contact},
+    kinetics::Axis,
+};
 use std::io::{self, BufRead};
 
 fn main() {
-    let shapes = [[0, 0, 0], [1, 0, 0], [1, 1, -1]];
+    let shapes = [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, -1.0]].map(|min| ContactBox {
+        min,
+        max: min.map(|value| value + 1.0),
+    });
     for row in io::stdin().lock().lines() {
         let row = row.expect("fixture input");
         let inputs = row.split_whitespace()
             .map(|value| value.parse::<f64>().expect("fixture coordinate"))
             .collect::<Vec<_>>();
-        let [angle, x, y, z, vx, vy, vz] = inputs[..] else { panic!("expected seven inputs") };
+        let [axis, angle, x, y, z, vx, vy, vz] = inputs[..] else { panic!("expected eight inputs") };
         let body = ContactBox {
             min: [x - 0.3, y, z - 0.3],
-            max: [x + 0.3, y + 1.675, z + 0.3],
+            max: [x + 0.3, y + 1.8, z + 0.3],
         };
-        let result = upright_rotary_contact([0; 3], angle as f32, body, [vx, vy, vz], shapes, 0.6);
+        let axis = [Axis::X, Axis::Y, Axis::Z][axis as usize];
+        let result = rotary_contact(axis, [0; 3], angle as f32, body, [vx, vy, vz], shapes, 0.6);
         let [x, y, z] = result.separation;
         println!("contact {x} {y} {z} {} {}", result.impact_fraction, u8::from(result.surface));
     }
@@ -59,7 +66,8 @@ def main():
     binary = work / 'probe'
     subprocess.run([rustc, '--edition=2024', probe, '--extern', f'create_engine={library}',
                     '-o', binary], check=True)
-    cases = [(*sample[:4], *sample[4]) for sample in itertools.product(
+    cases = [(*sample[:5], *sample[5]) for sample in itertools.product(
+        (0, 1, 2),
         (-137.5, -90, -43.2, -9.6, 0, 4.8, 19.2, 43.2, 90, 195.5),
         (-0.36, 0.04, 0.27, 0.5, 0.78, 1.09, 1.42, 1.85, 2.21),
         (-0.77, -0.35, 0, 0.4, 0.62, 1.0, 1.24, 1.8),
