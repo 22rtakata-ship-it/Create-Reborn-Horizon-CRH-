@@ -2,15 +2,15 @@
 // Copyright (c) 2026 create-horizon contributors
 // SPDX-License-Identifier: MIT
 // Create 6.0.10 SchematicPlacePacket/SchematicPrinter/BlockHelper adapter.
-// Bounded clockwise rotations and source safe-NBT for supported blocks.
+// Bounded horizontal transforms and source safe-NBT for supported blocks.
 use super::Game;
 use crate::{
     containers::BlockEntity,
     mod_api::{NativeCommand, NativeServerPlayer},
 };
 use create_schematics::{
-    BlockEntitySchema, BlockSchema, BlockState, Compound, Limits, Options, Plan, Resolver, Tag,
-    TagKind,
+    BlockEntitySchema, BlockSchema, BlockState, Compound, Limits, Mirror, Options, Plan, Resolver,
+    Tag, TagKind,
 };
 use horizon_world::{
     nbt::{Compound as WorldCompound, Tag as WorldTag},
@@ -31,6 +31,10 @@ pub(super) fn register(game: &Game<'_>, commands: &mut Vec<NativeCommand>) {
         ));
         commands.push(NativeCommand::op(
             "create schematic paste <filename:word> <x:integer> <y:integer> <z:integer> <quarter_turns:integer>",
+            2,
+        ));
+        commands.push(NativeCommand::op(
+            "create schematic paste <filename:word> <x:integer> <y:integer> <z:integer> <quarter_turns:integer> <mirror:word>",
             2,
         ));
     }
@@ -584,9 +588,18 @@ pub(super) fn command(
         );
         return;
     }
-    let (mode, filename, origin, quarter_turns) = match words.as_slice() {
-        ["create", "schematic", "inspect", name] => ("inspect", *name, None, 0),
-        ["create", "schematic", "paste", name, x, y, z, turns @ ..] => {
+    let (mode, filename, origin, options) = match words.as_slice() {
+        ["create", "schematic", "inspect", name] => ("inspect", *name, None, Options::default()),
+        [
+            "create",
+            "schematic",
+            "paste",
+            name,
+            x,
+            y,
+            z,
+            transform @ ..,
+        ] => {
             let parsed = [x.parse::<i32>(), y.parse::<i32>(), z.parse::<i32>()];
             let [Ok(x), Ok(y), Ok(z)] = parsed else {
                 reply(
@@ -595,9 +608,9 @@ pub(super) fn command(
                 );
                 return;
             };
-            let quarter_turns = match turns {
+            let quarter_turns = match transform {
                 [] => Some(0),
-                [turns] => turns.parse::<u8>().ok().filter(|turns| *turns <= 3),
+                [turns] | [turns, _] => turns.parse::<u8>().ok().filter(|turns| *turns <= 3),
                 _ => None,
             };
             let Some(quarter_turns) = quarter_turns else {
@@ -607,13 +620,34 @@ pub(super) fn command(
                 );
                 return;
             };
-            ("paste", *name, Some([x, y, z]), quarter_turns)
+            let mirror = match transform.get(1).copied() {
+                None | Some("none") => Mirror::None,
+                Some("left_right") => Mirror::LeftRight,
+                Some("front_back") => Mirror::FrontBack,
+                Some(_) => {
+                    reply(
+                        game,
+                        failure("paste mirror must be none, left_right or front_back"),
+                    );
+                    return;
+                }
+            };
+            (
+                "paste",
+                *name,
+                Some([x, y, z]),
+                Options {
+                    quarter_turns,
+                    mirror,
+                    ..Options::default()
+                },
+            )
         }
         _ => {
             reply(
                 game,
                 failure(
-                    "usage: create schematic inspect FILE.nbt | create schematic paste FILE.nbt X Y Z [quarter_turns]",
+                    "usage: create schematic inspect FILE.nbt | create schematic paste FILE.nbt X Y Z [quarter_turns [mirror]]",
                 ),
             );
             return;
@@ -657,14 +691,7 @@ pub(super) fn command(
             raw.entry("ScrollValue".into()).or_insert(Tag::Int(0));
         }
     }
-    let plan = match create_schematics::preflight(
-        &schematic,
-        &Registry { game },
-        &Options {
-            quarter_turns,
-            ..Options::default()
-        },
-    ) {
+    let plan = match create_schematics::preflight(&schematic, &Registry { game }, &options) {
         Ok(plan) => plan,
         Err(issues) => {
             reply(
@@ -675,8 +702,11 @@ pub(super) fn command(
         }
     };
     let mut report = json!({"ok":true,"mode":mode,"issues":[],"notes":plan.notes.iter().map(|n|json!({"pos":n.relative_pos,"field":n.field,"message":n.message})).collect::<Vec<_>>(),"blocks":plan.blocks.len(),"skipped_air":plan.skipped_air,"size":plan.size,"data_version":schematic.data_version});
-    if quarter_turns != 0 {
-        report["quarter_turns"] = json!(quarter_turns);
+    if options.quarter_turns != 0 {
+        report["quarter_turns"] = json!(options.quarter_turns);
+    }
+    if options.mirror != Mirror::None {
+        report["mirror"] = json!(options.mirror.name());
     }
     if let Some(origin) = origin {
         let writes = match destination(game, &plan, origin) {

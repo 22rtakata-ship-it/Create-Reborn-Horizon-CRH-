@@ -417,11 +417,29 @@ impl BlockEntitySchema {
         }
     }
 }
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Mirror {
+    #[default]
+    None,
+    LeftRight,
+    FrontBack,
+}
+
+impl Mirror {
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::LeftRight => "left_right",
+            Self::FrontBack => "front_back",
+        }
+    }
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct Options {
     pub include_air: bool,
     pub quarter_turns: u8,
-    pub mirror: bool,
+    pub mirror: Mirror,
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Issue {
@@ -503,10 +521,15 @@ fn resolve(resolver: &impl Resolver, state: &BlockState) -> Result<BlockSchema, 
     Ok(schema)
 }
 
-// StructureTemplate.transform with the default zero pivot used by
-// SchematicItem.getSettings. Rotated offsets may be negative.
-fn rotate_position([x, y, z]: [i32; 3], quarter_turns: u8) -> [i32; 3] {
-    match quarter_turns {
+// StructureTemplate.transform reflects first, then rotates around the zero
+// pivot used by SchematicItem.getSettings. Offsets may be negative.
+fn transform_position([x, y, z]: [i32; 3], options: &Options) -> [i32; 3] {
+    let (x, z) = match options.mirror {
+        Mirror::None => (x, z),
+        Mirror::LeftRight => (x, -z),
+        Mirror::FrontBack => (-x, z),
+    };
+    match options.quarter_turns {
         1 => [-z, y, x],
         2 => [-x, y, -z],
         3 => [z, y, -x],
@@ -514,11 +537,16 @@ fn rotate_position([x, y, z]: [i32; 3], quarter_turns: u8) -> [i32; 3] {
     }
 }
 
-fn rotate_state(
+fn transform_state(
     requested: &BlockState,
     mut state: BlockState,
-    quarter_turns: u8,
+    options: &Options,
 ) -> Result<BlockState, String> {
+    let operation = if options.quarter_turns == 0 {
+        "mirroring"
+    } else {
+        "rotation"
+    };
     let (properties, orientation): (&[&str], Option<&str>) = match state.name.as_str() {
         "create:shaft" => (&["axis", "waterlogged"], Some("axis")),
         "create:flywheel" => (&["axis"], Some("axis")),
@@ -542,7 +570,7 @@ fn rotate_state(
             (&["axis"], Some("axis"))
         }
         name if name.starts_with("minecraft:") && name.ends_with("_planks") => (&[], None),
-        name => return Err(format!("rotation is unsupported for {name}")),
+        name => return Err(format!("{operation} is unsupported for {name}")),
     };
     if let Some(key) = state
         .properties
@@ -550,25 +578,26 @@ fn rotate_state(
         .find(|key| !properties.contains(&key.as_str()))
     {
         return Err(format!(
-            "rotation does not support {} property {key}",
+            "{operation} does not support {} property {key}",
             state.name
         ));
     }
     if let Some(key) = orientation {
-        // A Java export supplies these properties. Do not rotate a default
+        // A Java export supplies these properties. Do not transform a default
         // that may differ between the two games.
         let before = requested.properties.get(key).ok_or_else(|| {
             format!(
-                "rotation requires the explicit {key} property for {}",
+                "{operation} requires the explicit {key} property for {}",
                 state.name
             )
         })?;
         let after = if key == "axis" {
-            match (before.as_str(), quarter_turns % 2) {
+            // Reflection changes the direction, but not the unoriented axis.
+            match (before.as_str(), options.quarter_turns % 2) {
                 ("x", 1) => "z",
                 ("z", 1) => "x",
                 ("x" | "y" | "z", _) => before,
-                _ => return Err(format!("invalid rotation axis {before}")),
+                _ => return Err(format!("invalid {operation} axis {before}")),
             }
         } else {
             let directions = ["north", "east", "south", "west"];
@@ -576,11 +605,16 @@ fn rotate_state(
                 .iter()
                 .position(|facing| *facing == before.as_str())
             {
-                directions[(i + usize::from(quarter_turns)) % directions.len()]
+                let mirrored = match (options.mirror, before.as_str()) {
+                    (Mirror::LeftRight, "north" | "south")
+                    | (Mirror::FrontBack, "east" | "west") => 2,
+                    _ => 0,
+                };
+                directions[(i + mirrored + usize::from(options.quarter_turns)) % directions.len()]
             } else if matches!(before.as_str(), "up" | "down") {
                 before
             } else {
-                return Err(format!("invalid rotation facing {before}"));
+                return Err(format!("invalid {operation} facing {before}"));
             }
         };
         state.properties.insert(key.into(), after.into());
@@ -621,13 +655,14 @@ pub fn preflight(
             "exactly one palette is supported; random palette choice is not implemented".into(),
         );
     }
-    if options.quarter_turns > 3 || options.mirror {
+    if options.quarter_turns > 3 {
         fail(
             "transform".into(),
             None,
-            "expected 0 to 3 clockwise quarter turns without mirroring".into(),
+            "expected 0 to 3 clockwise quarter turns".into(),
         );
     }
+    let transformed = options.quarter_turns != 0 || options.mirror != Mirror::None;
     let limits = Limits::default();
     let volume = schematic.size.iter().try_fold(1u64, |v, s| {
         if *s <= 0 || *s > limits.max_side {
@@ -670,11 +705,11 @@ pub fn preflight(
     for (p, palette) in schematic.palettes.iter().enumerate() {
         for (i, state) in palette.iter().enumerate() {
             let schema = resolve(resolver, state).and_then(|schema| {
-                if options.quarter_turns == 0 {
+                if !transformed {
                     return Ok(schema);
                 }
-                let rotated = rotate_state(state, schema.state, options.quarter_turns)?;
-                resolve(resolver, &rotated)
+                let placed = transform_state(state, schema.state, options)?;
+                resolve(resolver, &placed)
             });
             match schema {
                 Ok(schema) if p == 0 => resolved.push(Some(schema)),
@@ -715,7 +750,7 @@ pub fn preflight(
             );
             continue;
         }
-        let pos = rotate_position(input_pos, options.quarter_turns);
+        let pos = transform_position(input_pos, options);
         if !positions.insert(pos) {
             fail(
                 format!("{path}.pos"),
@@ -842,7 +877,7 @@ pub fn preflight(
             if let Err(message) = resolver.validate_safe_nbt(&prepared.state, &safe) {
                 fail(format!("{path}.nbt"), Some(pos), message);
             }
-            if options.quarter_turns != 0
+            if transformed
                 && safe.keys().any(|key| {
                     prepared.state.name != "create:creative_motor" || key != "ScrollValue"
                 })
@@ -850,7 +885,7 @@ pub fn preflight(
                 fail(
                     format!("{path}.nbt"),
                     Some(pos),
-                    "rotation is unsupported for this block-entity data".into(),
+                    "rotation or mirroring is unsupported for this block-entity data".into(),
                 );
             }
             planned_be = Some(PlannedBlockEntity {

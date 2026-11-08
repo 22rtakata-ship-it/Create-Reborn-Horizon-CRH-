@@ -176,6 +176,78 @@ fn clockwise_rotations_use_the_zero_pivot_and_preserve_safe_motor_settings() {
 }
 
 #[test]
+fn mirrors_precede_rotation_and_preserve_the_motor_setting() {
+    let mut schematic = fixture();
+    schematic.blocks[1].relative_pos = [1, 0, 1];
+    for (mirror, shaft_positions, facings) in [
+        (
+            Mirror::LeftRight,
+            [[1, 0, -1], [1, 0, 1], [-1, 0, 1], [-1, 0, -1]],
+            ["east", "south", "west", "north"],
+        ),
+        (
+            Mirror::FrontBack,
+            [[-1, 0, 1], [-1, 0, -1], [1, 0, -1], [1, 0, 1]],
+            ["west", "north", "east", "south"],
+        ),
+    ] {
+        for quarter_turns in 0..=3 {
+            let placed = preflight(
+                &schematic,
+                &Registry,
+                &Options {
+                    mirror,
+                    quarter_turns,
+                    ..Options::default()
+                },
+            )
+            .unwrap();
+            let motor = placed
+                .blocks
+                .iter()
+                .find(|block| block.relative_pos == [0; 3])
+                .unwrap();
+            assert_eq!(
+                motor.state.properties["facing"],
+                facings[quarter_turns as usize]
+            );
+            assert_eq!(
+                motor.block_entity.as_ref().unwrap().data,
+                Compound::from([("ScrollValue".into(), Tag::Int(128))])
+            );
+            let shaft = placed
+                .blocks
+                .iter()
+                .find(|block| block.state.name == "create:shaft")
+                .unwrap();
+            assert_eq!(shaft.relative_pos, shaft_positions[quarter_turns as usize]);
+            assert_eq!(
+                shaft.state.properties["axis"],
+                if quarter_turns % 2 == 0 { "x" } else { "z" }
+            );
+        }
+    }
+    schematic.palettes[0][0]
+        .properties
+        .insert("facing".into(), "north".into());
+    let placed = preflight(
+        &schematic,
+        &Registry,
+        &Options {
+            mirror: Mirror::LeftRight,
+            ..Options::default()
+        },
+    )
+    .unwrap();
+    let motor = placed
+        .blocks
+        .iter()
+        .find(|block| block.relative_pos == [0; 3])
+        .unwrap();
+    assert_eq!(motor.state.properties["facing"], "south");
+}
+
+#[test]
 fn rotated_preflight_rejects_unsupported_blocks_missing_axes_and_invalid_positions() {
     let mut schematic = fixture();
     let options = Options {
@@ -188,6 +260,19 @@ fn rotated_preflight_rejects_unsupported_blocks_missing_axes_and_invalid_positio
         preflight(&schematic, &Registry, &options).unwrap_err()[0]
             .message
             .contains("rotation is unsupported for minecraft:torch")
+    );
+    assert!(
+        preflight(
+            &schematic,
+            &Registry,
+            &Options {
+                mirror: Mirror::LeftRight,
+                ..Options::default()
+            }
+        )
+        .unwrap_err()[0]
+            .message
+            .contains("mirroring is unsupported for minecraft:torch")
     );
     schematic.palettes[0].pop();
     schematic.palettes[0][1].properties.remove("axis");
@@ -365,17 +450,6 @@ fn version_entities_transforms_and_random_palettes_fail_explicitly() {
             &Registry,
             &Options {
                 quarter_turns: 4,
-                ..Options::default()
-            }
-        )
-        .is_err()
-    );
-    assert!(
-        preflight(
-            &s,
-            &Registry,
-            &Options {
-                mirror: true,
                 ..Options::default()
             }
         )

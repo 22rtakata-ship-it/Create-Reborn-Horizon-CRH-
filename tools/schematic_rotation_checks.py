@@ -35,9 +35,9 @@ BLOCKS = [
 ]
 
 
-def fixture(directory, unsupported=False):
+def fixture(directory, unsupported=False, *, blocks=BLOCKS, size=(4, 3, 2), prefix='rotated'):
     palette, entries = [], []
-    for index, (pos, name, properties, data) in enumerate(BLOCKS):
+    for index, (pos, name, properties, data) in enumerate(blocks):
         palette.append({'Name': (8, name), 'Properties': (10, {
             key: (8, value) for key, value in properties.items()})})
         entry = {'pos': (9, (3, pos)), 'state': (3, index)}
@@ -46,9 +46,9 @@ def fixture(directory, unsupported=False):
         entries.append(entry)
     if unsupported:
         palette.append({'Name': (8, 'minecraft:lever')})
-    filename = directory / ('rotated-unsupported.nbt' if unsupported else 'rotated-press.nbt')
+    filename = directory / (prefix + ('-unsupported.nbt' if unsupported else '-press.nbt'))
     _write(filename, {
-        'DataVersion': (3, 3955), 'size': (9, (3, [4, 3, 2])),
+        'DataVersion': (3, 3955), 'size': (9, (3, size)),
         'palette': (9, (10, palette)), 'blocks': (9, (10, entries)), 'entities': (9, (10, [])),
     })
     return filename
