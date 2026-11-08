@@ -152,6 +152,7 @@ pub(super) fn owns(block: &str) -> bool {
             | "create:basin"
             | "create:mechanical_mixer"
             | super::create_port_basin::pump::PUMP
+            | super::create_port_basin::pump::VALVE
             | "create:blaze_burner"
             | "create:belt"
     ) || super::create_port_interactions::encased_cog_size(block).is_some()
@@ -242,6 +243,8 @@ pub(super) fn entity(block: &str, entity: &mut Option<(String, Compound)>) {
             nbt.insert("Signal".into(), Tag::Int(0));
         } else if block == super::create_port_drill::SAW {
             nbt = super::create_port_saw_processing::default_nbt();
+        } else if block == super::create_port_basin::pump::VALVE {
+            nbt = super::create_port_basin::pump::valve_nbt();
         }
         *entity = Some((id.to_owned(), nbt));
     }
@@ -713,6 +716,7 @@ pub(super) fn node(game: &Game<'_>, pos: [i32; 3]) -> Option<Node> {
         || super::create_port_piston::is_piston(&block)
         || block == super::create_port_gantry::CARRIAGE
         || block == super::create_port_deployer::BLOCK
+        || block == super::create_port_basin::pump::VALVE
         || (block == super::create_port_drill::SAW && axis == Axis::Y)
     {
         let first = game
@@ -809,7 +813,7 @@ pub(super) fn node(game: &Game<'_>, pos: [i32; 3]) -> Option<Node> {
                 impact: 4.0,
             }
         }
-        "create:speedometer" | "create:stressometer" => Kind::Shaft,
+        "create:speedometer" | "create:stressometer" | super::create_port_basin::pump::VALVE => Kind::Shaft,
         "create:water_wheel" | "create:large_water_wheel" => Kind::WaterWheel {
             rpm: match game.world.block_entities.get(&(pos[0], pos[1], pos[2])) {
                 Some(BlockEntity::Mod(e)) => create_engine::waterwheel::rpm(
@@ -1315,6 +1319,8 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
     let running_rpm = running_speed(game, &entity.nbt);
     if block == super::create_port_basin::pump::PUMP {
         sync |= super::create_port_basin::pump::tick(game, pos, entity, running_rpm);
+    } else if block == super::create_port_basin::pump::VALVE {
+        sync |= super::create_port_basin::pump::tick_valve(game, pos, entity, running_rpm);
     }
     if block == super::create_port_contraption::BLOCK {
         let theoretical = super::create_port_kinetic_runtime::theoretical(entity);
@@ -1667,7 +1673,7 @@ pub(super) fn draw(
     entity: &ModBlockEntity,
     draw: &mut BlockEntityDraw,
 ) {
-    if matches!(block, super::create_port_basin::pump::PUMP | super::create_port_basin::pump::PIPE) {
+    if matches!(block, super::create_port_basin::pump::PUMP | super::create_port_basin::pump::PIPE | super::create_port_basin::pump::VALVE) {
         super::create_port_basin::pump::draw(game, pos, entity, draw);
         return;
     }

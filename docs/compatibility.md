@@ -217,6 +217,14 @@ After the line fills, a pump at 32 RPM moves 16 mB per tick. A full tank or one
 containing another fluid blocks the transfer. The supported lines resume after
 a restart. The original JAR supplies the pipe connections and tank collars.
 
+A supported line can include one `create:fluid_valve`. Drive its perpendicular
+shaft with positive RPM to open it or negative RPM to close it. At zero RPM
+the pointer stays where it is, and the valve keeps its last fully open or
+closed state. A closed valve still carries pressure and stops fluid transfer.
+The save uses `enabled` and Create's `Pointer` compound. The original JAR
+supplies the block and pointer models. Subtick pointer interpolation and Wrench
+reorientation are pending.
+
 Bends, branches, waterlogged pipes, open ends, multiple pumps on one line and
 connections to other fluid machines are pending.
 

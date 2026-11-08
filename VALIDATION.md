@@ -231,6 +231,12 @@ developer source build. The three changes are applied in a separate checkout.
   fluids, both RPM signs and both placement orders. The fixture also checks
   backpressure, actual Wrench reversal, cold restart and motor removal. The
   original-resource run checks rendered connections and tank collars.
+- [Inline Fluid Valve](tools/fluid_valve_native_checks.py) matches the
+  [Java reference](tools/fluid_valve_java_checks.py) at 32 RPM. The pointer
+  opens in ten ticks, the first transfer follows 18 ticks later, and an
+  uninterrupted close moves 160 mB before stopping. Both clients retain a
+  partially closed valve through a cold restart. The built-in pointer renders
+  without a JAR, and the original model renders with a supplied JAR.
 
 The [offscreen engineering run](tools/engineering_checks.py) used ordinary
 crank clicks on all six facings and measured the rendered base and handle

@@ -52,6 +52,8 @@ The following MIT code informed or was adapted into the Rust engine:
   `FluidTransportBehaviour`, `PipeConnection`, `FluidNetwork` and
   `PipeAttachmentModel` inform straight pressure routing, flow progress,
   transfer quantities, connection saves and pipe attachment selection.
+- `content/fluids/pipes/valve/FluidValveBlock[Entity]` and `FluidValveRenderer`
+  inform port orientation, the kinetic pointer and the closed-flow gate.
 - `content/fluids/tank/FluidTankBlock[Entity]`, `FluidTankRenderer` and
   `foundation/fluid/FluidHelper` inform singleton storage, bucket exchange,
   Wrench windows, comparator output and fluid rendering.

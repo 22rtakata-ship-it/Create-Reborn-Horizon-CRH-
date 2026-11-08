@@ -2,7 +2,7 @@
 
 from itertools import product
 
-PIPE, PUMP = 'fluid_pipe', 'mechanical_pump'
+PIPE, PUMP, VALVE = 'fluid_pipe', 'mechanical_pump', 'fluid_valve'
 FACES = ('down', 'up', 'north', 'south', 'west', 'east')
 AXES = dict(down=1, up=1, north=2, south=2, west=0, east=0)
 
@@ -42,6 +42,32 @@ def fluid_pipes(write, model, axial_boxes):
         'default_state': {'facing': 'down', 'waterlogged': 'false'},
         'shapes': pump_shape, 'collision_shapes': pump_shape,
     })
+    shape_values, body_variants = {}, {}
+    rotations = {0: {'x': 90, 'y': 90}, 1: {}, 2: {'x': 90}}
+    for face, first in product(FACES, (False, True)):
+        perpendicular = [axis for axis in range(3) if axis != AXES[face]]
+        pipe_axis = perpendicular[first]
+        key = f'{face},{str(first).lower()}'
+        shape_values[key] = axial_boxes(('east', 'up', 'south')[pipe_axis], [(3, 0, 16), (2, 2, 14)])
+        body_variants[f'facing={face},axis_along_first={str(first).lower()}'] = {
+            'model': f'create:block/{VALVE}/fallback_body', **rotations[pipe_axis],
+        }
+    valve_shape = {'properties': ['facing', 'axis_along_first'], 'values': shape_values}
+    write(f'data/create/horizon/block/{VALVE}.json', {
+        'template': 'minecraft:glass', 'item': True,
+        'properties': {**physical, 'map_color': 15},
+        'state_properties': {'facing': {'type': 'enum', 'values': FACES},
+                             **{p: {'type': 'boolean'} for p in ('axis_along_first', 'enabled', 'waterlogged')}},
+        'default_state': dict(facing='down', axis_along_first='false', enabled='false', waterlogged='false'),
+        'shapes': valve_shape, 'collision_shapes': valve_shape,
+    })
+    model(f'{VALVE}/fallback_body', [([5, 0, 5], [11, 16, 11]), ([3, 4, 3], [13, 12, 13])],
+          'minecraft:block/copper_block')
+    model(f'{VALVE}/pointer', [([6, 12, 3], [10, 14, 12]), ([7, 11, 7], [9, 12, 9])],
+          'minecraft:block/iron_block')
+    model(f'{VALVE}/fallback_item', [([5, 0, 5], [11, 16, 11]), ([3, 4, 3], [13, 12, 13]),
+                                     ([6, 12, 3], [10, 14, 12])], 'minecraft:block/copper_block')
+    write(f'assets/create/blockstates/{VALVE}.json', {'variants': body_variants})
     model(f'{PIPE}/fallback_core', [core], 'minecraft:block/copper_block')
     for face, box in tube.items():
         model(f'{PIPE}/fallback_{face}', [box], 'minecraft:block/copper_block')
@@ -68,7 +94,7 @@ def fluid_pipes(write, model, axial_boxes):
     }})
     model(f'{PUMP}/fallback_item', [([5, 0, 5], [11, 16, 11]), ([2, 7, 2], [14, 9, 14])],
           'minecraft:block/copper_block')
-    for name in (PIPE, PUMP):
+    for name in (PIPE, PUMP, VALVE):
         write(f'assets/create/models/item/{name}.json', {'parent': f'create:block/{name}/fallback_item'})
         write(f'assets/create/items/{name}.json', {
             'model': {'type': 'minecraft:model', 'model': f'create:item/{name}'},

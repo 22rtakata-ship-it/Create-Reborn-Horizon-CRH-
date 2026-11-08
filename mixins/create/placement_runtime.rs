@@ -49,7 +49,7 @@ pub(super) fn state(
     answer: &mut Option<Option<BlockStateId>>,
 ) {
     let block = game.native_state_block(state).unwrap_or("");
-    if matches!(block, super::create_port_basin::pump::PIPE | super::create_port_basin::pump::PUMP) {
+    if matches!(block, super::create_port_basin::pump::PIPE | super::create_port_basin::pump::PUMP | super::create_port_basin::pump::VALVE) {
         *answer = Some(super::create_port_basin::pump::placement(game, state, ctx, block));
         return;
     }
@@ -570,7 +570,7 @@ fn state_axis(state: &horizon_world::chunk::BlockState) -> Axis {
         .into_iter()
         .find(|d| d.name() == prop("facing"))
         .unwrap_or(Direction::Up);
-    if state.name.ends_with("ometer") {
+    if state.name.ends_with("ometer") || state.name == super::create_port_basin::pump::VALVE {
         return placement::gauge_axis(facing, prop("axis_along_first") == "true");
     }
     if state.name == "create:belt" {
@@ -674,6 +674,7 @@ fn state_shaft_port(state: &horizon_world::chunk::BlockState, face: Direction) -
         | "create:mechanical_press"
         | "create:speedometer"
         | "create:stressometer"
+        | super::create_port_basin::pump::VALVE
         | "create:water_wheel"
         | "create:large_water_wheel" => state_axis(state) == face.axis(),
         super::create_port_pulley::BLOCK => state_axis(state) == face.axis(),

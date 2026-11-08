@@ -11,7 +11,7 @@ from crushing_content import WHEEL as CRUSHER
 from crafter_content import CRAFTER
 from item_drain_content import BLOCK as ITEM_DRAIN
 from fluid_tank_content import BLOCK as FLUID_TANK
-from fluid_pipe_content import PIPE, PUMP
+from fluid_pipe_content import PIPE, PUMP, VALVE
 from sail_content import COLORED_SAILS, SAIL_ITEMS
 from portable_storage_content import PSI
 from chute_content import CHUTE
@@ -395,6 +395,7 @@ def main():
         f'create/loot_table/blocks/{FLUID_TANK}.json',
         f'create/loot_table/blocks/{PIPE}.json',
         f'create/loot_table/blocks/{PUMP}.json',
+        f'create/loot_table/blocks/{VALVE}.json',
         f'create/loot_table/blocks/{STICKER}.json',
         *[f'create/loot_table/blocks/{name}.json' for name in ENCASED_COGS],
         'create/loot_table/blocks/zinc_block.json',

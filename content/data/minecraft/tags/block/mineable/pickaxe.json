@@ -35,6 +35,7 @@
     "create:stressometer",
     "create:fluid_pipe",
     "create:mechanical_pump",
+    "create:fluid_valve",
     "create:fluid_tank",
     "create:item_drain",
     "create:mechanical_piston",

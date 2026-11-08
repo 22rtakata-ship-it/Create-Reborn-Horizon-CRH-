@@ -42,6 +42,7 @@
     "create:fluid_tank",
     "create:fluid_pipe",
     "create:mechanical_pump",
+    "create:fluid_valve",
     "create:mechanical_piston",
     "create:sticky_mechanical_piston",
     "create:piston_extension_pole",

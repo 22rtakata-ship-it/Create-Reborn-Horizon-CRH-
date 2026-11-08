@@ -533,6 +533,22 @@
         "id": "create:fluid_tank"
       }
     },
+    "create/recipe/crafting/kinetics/fluid_valve.json": {
+      "type": "minecraft:crafting_shapeless",
+      "category": "misc",
+      "ingredients": [
+        {
+          "tag": "c:plates/iron"
+        },
+        {
+          "item": "create:fluid_pipe"
+        }
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:fluid_valve"
+      }
+    },
     "create/recipe/crafting/kinetics/flywheel.json": {
       "type": "minecraft:crafting_shaped",
       "category": "misc",
@@ -8194,6 +8210,7 @@
         "create:stressometer",
         "create:fluid_pipe",
         "create:mechanical_pump",
+        "create:fluid_valve",
         "create:fluid_tank",
         "create:item_drain",
         "create:mechanical_piston",
@@ -8878,6 +8895,27 @@
         }
       ],
       "random_sequence": "create:blocks/mechanical_pump"
+    },
+    "create/loot_table/blocks/fluid_valve.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:fluid_valve"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/fluid_valve"
     },
     "create/loot_table/blocks/sticker.json": {
       "type": "minecraft:block",

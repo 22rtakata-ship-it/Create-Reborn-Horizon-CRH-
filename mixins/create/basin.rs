@@ -1538,6 +1538,7 @@ pub(super) mod pump {
 
     pub(in crate::game) const PUMP: &str = "create:mechanical_pump";
     pub(in crate::game) const PIPE: &str = "create:fluid_pipe";
+    pub(in crate::game) const VALVE: &str = "create:fluid_valve";
 
     struct Line {
         pump: Pos,
@@ -1545,12 +1546,14 @@ pub(super) mod pump {
         source: Pos,
         target: Pos,
         devices: Vec<Pos>,
+        valve: Option<(Pos, bool)>,
     }
 
     #[derive(Default)]
     struct TickState {
         owner: Option<ModRevision>,
         line: Option<(Pos, Direction, Pos, Pos)>,
+        valve: Option<(Pos, bool)>,
         pressure: f32,
         phase: u8,
         source_ticks: u8,
@@ -1599,6 +1602,21 @@ pub(super) mod pump {
         (sides.next()? == first.opposite() && sides.next().is_none()).then_some(first.axis())
     }
 
+    fn enabled(state: &BlockState) -> bool {
+        state
+            .properties
+            .get("enabled")
+            .is_some_and(|value| value == "true")
+    }
+
+    fn valve_axis(state: &BlockState, shaft: bool) -> Option<create_engine::kinetics::Axis> {
+        let first = state.properties.get("axis_along_first")? == "true";
+        Some(create_engine::placement::gauge_axis(
+            front(state)?,
+            first == shaft,
+        ))
+    }
+
     fn state<'a>(game: &'a Game<'_>, pos: Pos) -> Option<&'a BlockState> {
         let [x, y, z] = pos;
         if !game.world.loaded(x, z) {
@@ -1614,6 +1632,7 @@ pub(super) mod pump {
         match state.name.as_str() {
             PIPE => axis(state),
             PUMP => front(state).map(Direction::axis),
+            VALVE => valve_axis(state, false),
             _ => None,
         }
     }
@@ -1652,21 +1671,30 @@ pub(super) mod pump {
         }
         let scan = |side| {
             let mut devices = Vec::new();
+            let mut valve = None;
             for distance in 1..=flow::MAX_PIPES_PER_SIDE + 1 {
                 let at = relative(pump, side, distance);
                 let state = state(game, at)?;
                 if state.name == tank::BLOCK && tank::endpoint(game, at) {
-                    return Some((at, devices));
+                    return Some((at, devices, valve));
                 }
-                if state.name != PIPE || device_axis(state) != Some(direction.axis()) {
+                if !matches!(state.name.as_str(), PIPE | VALVE)
+                    || device_axis(state) != Some(direction.axis())
+                {
+                    return None;
+                }
+                if state.name == VALVE && valve.replace((at, enabled(state))).is_some() {
                     return None;
                 }
                 devices.push(at);
             }
             None
         };
-        let (source, mut behind) = scan(direction.opposite())?;
-        let (target, ahead) = scan(direction)?;
+        let (source, mut behind, inlet_valve) = scan(direction.opposite())?;
+        let (target, ahead, outlet_valve) = scan(direction)?;
+        if inlet_valve.is_some() && outlet_valve.is_some() {
+            return None;
+        }
         behind.reverse();
         behind.push(pump);
         behind.extend(ahead);
@@ -1676,6 +1704,7 @@ pub(super) mod pump {
             source,
             target,
             devices: behind,
+            valve: inlet_valve.or(outlet_valve),
         })
     }
 
@@ -1689,7 +1718,8 @@ pub(super) mod pump {
                 index.tick = Some(now);
                 if now % 20 == 0 {
                     index.live.retain(|p, _| {
-                        state(game, *p).is_some_and(|s| matches!(s.name.as_str(), PIPE | PUMP))
+                        state(game, *p)
+                            .is_some_and(|s| matches!(s.name.as_str(), PIPE | PUMP | VALVE))
                     });
                 }
             }
@@ -1830,6 +1860,103 @@ pub(super) mod pump {
         Tag::Float(n.to_bits())
     }
 
+    #[derive(Clone, Copy, Default, PartialEq)]
+    struct Pointer {
+        value: f32,
+        target: f32,
+        speed: f32,
+    }
+
+    impl Pointer {
+        fn read(nbt: &Compound) -> Option<Self> {
+            let Some(tag) = nbt.get(&"Pointer".into()) else {
+                return Some(Self::default());
+            };
+            let Tag::Compound(fields) = tag else {
+                return None;
+            };
+            let number = |key: &str| match fields.get(&key.into()) {
+                Some(Tag::Float(bits)) => Some(f32::from_bits(*bits)),
+                _ => None,
+            };
+            let value = number("Value")?;
+            let target = number("Target")?;
+            let speed = number("Speed")?;
+            ((0.0..=1.0).contains(&value)
+                && matches!(target, 0.0 | 1.0)
+                && (0.0..=1.0).contains(&speed))
+            .then_some(Self {
+                value,
+                target,
+                speed,
+            })
+        }
+
+        fn tick(&mut self, rpm: f32) {
+            self.target = if rpm > 0.0 { 1.0 } else { 0.0 };
+            self.speed = (rpm.abs() / 16.0 / 20.0).clamp(0.0, 1.0);
+            if self.value < self.target {
+                self.value = (self.value + self.speed).min(self.target);
+            } else if self.value > self.target {
+                self.value = (self.value - self.speed).max(self.target);
+            }
+        }
+
+        fn save(self, nbt: &mut Compound) {
+            if nbt.get(&"Pointer".into()).is_none() {
+                nbt.insert("Pointer".into(), Tag::Compound(Compound::new()));
+            }
+            if let Some(Tag::Compound(fields)) = nbt.get_mut(&"Pointer".into()) {
+                fields.insert("Value".into(), tag_number(self.value));
+                fields.insert("Target".into(), tag_number(self.target));
+                fields.insert("Speed".into(), tag_number(self.speed));
+            }
+        }
+    }
+
+    pub(in crate::game) fn valve_nbt() -> Compound {
+        let mut nbt = Compound::new();
+        Pointer::default().save(&mut nbt);
+        nbt
+    }
+
+    pub(in crate::game) fn tick_valve(
+        game: &mut Game<'_>,
+        pos: Pos,
+        entity: &mut ModBlockEntity,
+        rpm: f32,
+    ) -> bool {
+        let mut changed = tick(game, pos, entity, rpm);
+        let Some(mut pointer) = Pointer::read(&entity.nbt) else {
+            return changed;
+        };
+        let previous = pointer;
+        pointer.tick(rpm);
+        if pointer != previous || entity.nbt.get(&"Pointer".into()).is_none() {
+            pointer.save(&mut entity.nbt);
+            changed = true;
+        }
+        let value = match pointer.value {
+            0.0 => Some("false"),
+            1.0 => Some("true"),
+            _ => None,
+        };
+        if let Some(value) = value {
+            changed |= game.native_set_block_property(pos, "enabled", value);
+        }
+        if trace_enabled() {
+            log::info!(
+                "Create fluid valve: {}",
+                serde_json::json!({
+                    "time": game.world.game_time, "pos": pos, "rpm": rpm,
+                    "enabled": state(game, pos).is_some_and(enabled),
+                    "pointer": [pointer.value, pointer.target, pointer.speed],
+                })
+            );
+        }
+        changed
+    }
+
     fn save_face(
         entity: &mut ModBlockEntity,
         side: Direction,
@@ -1911,7 +2038,7 @@ pub(super) mod pump {
         else {
             return None;
         };
-        matches!(entity.id.as_str(), PIPE | PUMP)
+        matches!(entity.id.as_str(), PIPE | PUMP | VALVE)
             .then(|| faces(entity, front))
             .flatten()
     }
@@ -1924,6 +2051,7 @@ pub(super) mod pump {
         pressure: f32,
         source_flow: bool,
     ) -> (u8, bool) {
+        let valve = line.and_then(|line| line.valve);
         let line = line.map(|line| (line.pump, line.front, line.source, line.target));
         NETWORKS.with(|cache| {
             let mut cache = cache.borrow_mut();
@@ -1936,11 +2064,13 @@ pub(super) mod pump {
                 .owner
                 .is_none_or(|old| !old.is_same_create_entity(owner))
                 || state.line != line
+                || state.valve != valve
                 || state.pressure != pressure
             {
                 *state = TickState {
                     owner: Some(owner),
                     line,
+                    valve,
                     pressure,
                     phase: 2,
                     source_ticks: 0,
@@ -1966,7 +2096,7 @@ pub(super) mod pump {
         entity: &mut ModBlockEntity,
         rpm: f32,
     ) -> bool {
-        if !matches!(entity.id.as_str(), PIPE | PUMP) {
+        if !matches!(entity.id.as_str(), PIPE | PUMP | VALVE) {
             return false;
         }
         let Some(origin) = state(game, pos) else {
@@ -1997,7 +2127,8 @@ pub(super) mod pump {
             }
         };
         let is_source = line.devices.first() == Some(&pos);
-        let input = if pressure == 0.0 {
+        let valve_closed_here = line.valve == Some((pos, false));
+        let input = if pressure == 0.0 || valve_closed_here {
             None
         } else if is_source {
             tank::sample(game, line.source)
@@ -2023,13 +2154,16 @@ pub(super) mod pump {
         }
         if ready
             && let Some(fluid) = input
+            && line.valve.is_none_or(|(at, open)| {
+                open && state(game, at).is_some_and(|s| s.name == VALVE && dry(s))
+            })
             && before.complete(fluid)
             && line.devices.iter().skip(1).all(|&device| {
                 state(game, device).is_some_and(|s| {
                     if device == line.pump {
                         front_of_pump(s) == Some(line.front)
                     } else {
-                        s.name == PIPE && device_axis(s) == Some(axis)
+                        matches!(s.name.as_str(), PIPE | VALVE) && device_axis(s) == Some(axis)
                     }
                 }) && other_faces(game, device, front).is_some_and(|pair| pair.complete(fluid))
             })
@@ -2134,6 +2268,47 @@ pub(super) mod pump {
             return None;
         }
         let look = crate::game::create_port::nearest(ctx.yaw, ctx.pitch);
+        if block == VALVE {
+            use create_engine::kinetics::Axis;
+            let facing = if ctx.sneaking { look } else { look.opposite() };
+            let ports = crate::game::create_port_placement::level_ports(game, pos);
+            let has_shaft = |side: Direction| ports[side as usize];
+            let has_pipe = |side: Direction| {
+                let at = relative(pos, side, 1);
+                game.registry
+                    .state(game.world.block(at[0], at[1], at[2]))
+                    .is_some_and(|s| s.name == tank::BLOCK || device_axis(s) == Some(side.axis()))
+            };
+            let first = match facing.axis() {
+                axis @ (Axis::X | Axis::Z) => {
+                    let perpendicular = if axis == Axis::X {
+                        Direction::South
+                    } else {
+                        Direction::East
+                    };
+                    let vertical_shaft = has_shaft(Direction::Up) || has_shaft(Direction::Down);
+                    let horizontal_pipe =
+                        has_pipe(perpendicular) || has_pipe(perpendicular.opposite());
+                    (axis == Axis::X) == (vertical_shaft || horizontal_pipe)
+                }
+                Axis::Y => {
+                    let prefer = |s: Direction| has_shaft(s) || has_pipe(s.clockwise(Axis::Y));
+                    let x = prefer(Direction::East) || prefer(Direction::West);
+                    let z = prefer(Direction::North) || prefer(Direction::South);
+                    if x != z {
+                        x
+                    } else {
+                        crate::game::create_port_placement::horizontal(ctx.yaw).axis() == Axis::X
+                    }
+                }
+            };
+            let state = game.native_state_with_property(state, "facing", facing.name())?;
+            return game.native_state_with_property(
+                state,
+                "axis_along_first",
+                if first { "true" } else { "false" },
+            );
+        }
         let joined: Vec<_> = Direction::ALL
             .into_iter()
             .filter(|&side| {
@@ -2211,6 +2386,46 @@ pub(super) mod pump {
             game.native_draw_model(draw, "create:block/mechanical_pump/cog", 0xFFFFFF);
             draw.pop();
         }
+        if block.name == VALVE {
+            let (Some(facing), Some(shaft)) = (front(block), valve_axis(block, true)) else {
+                return;
+            };
+            let angle = create_engine::visual::angle(
+                draw.game_time as f64 + f64::from(draw.partial),
+                crate::game::create_port::number(&entity.nbt, "Speed"),
+                create_engine::visual::rotation_offset(pos, shaft, false),
+            );
+            draw.push();
+            crate::game::create_port::orient(draw, shaft);
+            draw.rotate_about([0.0, 1.0, 0.0], angle, [0.5; 3]);
+            game.native_draw_model(draw, "create:block/shaft", 0xFFFFFF);
+            draw.pop();
+            let angle = Pointer::read(&entity.nbt).unwrap_or_default().value * -90.0;
+            let offset = if axis.index() == 1 || shaft.index() == 0 {
+                90.0
+            } else {
+                0.0
+            };
+            let yaw = match facing {
+                Direction::North => 180.0,
+                Direction::East => 270.0,
+                Direction::West => 90.0,
+                _ => 0.0,
+            };
+            let pitch = match facing {
+                Direction::Up => 0.0,
+                Direction::Down => 180.0,
+                _ => 90.0,
+            };
+            draw.push();
+            draw.rotate_about([0.0, 1.0, 0.0], yaw, [0.5; 3]);
+            draw.rotate_about([1.0, 0.0, 0.0], pitch, [0.5; 3]);
+            draw.rotate_about([0.0, 1.0, 0.0], offset + angle, [0.5; 3]);
+            if game.native_draw_model(draw, "create:block/fluid_valve/pointer", 0xFFFFFF) {
+                trace_attachment(pos, "create:block/fluid_valve/pointer");
+            }
+            draw.pop();
+        }
         if !crate::game::create_port::original_assets() {
             return;
         }
@@ -2221,9 +2436,13 @@ pub(super) mod pump {
             .filter(|side| side.axis() == axis)
         {
             let neighbor = state(game, relative(pos, side, 1));
-            let models: &[create_assets::PipeAttachment] = if neighbor
-                .is_some_and(|state| state.name == tank::BLOCK)
-            {
+            let models: &[create_assets::PipeAttachment] = if block.name == VALVE {
+                if neighbor.is_some_and(|state| state.name == tank::BLOCK) {
+                    &[Drain]
+                } else {
+                    &[]
+                }
+            } else if neighbor.is_some_and(|state| state.name == tank::BLOCK) {
                 &[RimConnector, Drain]
             } else if block.name == PUMP {
                 &[]
