@@ -478,7 +478,7 @@ pub(super) fn commit_linear_capture(
     let Ok(ranges) = chassis::capture(game, origin, &record.blocks) else {
         return false;
     };
-    let Ok(chest) = storage::capture(game, origin, &record.blocks) else {
+    let Ok(chest) = storage::capture(game, origin, &record.blocks, false) else {
         return false;
     };
     let Ok(update) = glue::capture(game, key, &record, origin) else {
@@ -599,9 +599,9 @@ fn assemble(
     if records.len() == MAX_RECORDS || records.iter().any(|r| r.controller == controller) {
         return None;
     }
+    let allow_mounted_data = !windmill && facing.axis() == Axis::Y;
     let shape = {
         let glue = super::create_port_super_glue::read(game, key).ok()?;
-        let allow_mounted_data = !windmill && facing.axis() == Axis::Y;
         let capture = MountedCapture {
             base: Capture(game),
             allow_chest: allow_mounted_data,
@@ -666,7 +666,7 @@ fn assemble(
     else {
         return None;
     };
-    let chest = storage::capture(game, anchor, shape.blocks()).ok()?;
+    let chest = storage::capture(game, anchor, shape.blocks(), allow_mounted_data).ok()?;
     let deployer = deployer::capture(game, anchor, shape.blocks()).ok()?;
     let chassis = chassis::capture(game, anchor, shape.blocks()).ok()?;
     let record = Record {

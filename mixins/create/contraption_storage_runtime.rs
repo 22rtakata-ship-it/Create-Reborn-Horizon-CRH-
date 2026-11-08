@@ -24,13 +24,14 @@ use std::collections::BTreeMap;
 const BLOCK: &str = "minecraft:chest";
 const BARREL: &str = "minecraft:barrel";
 const SIZE: usize = 27;
+const MAX_BANKS: usize = 2;
 const SLOT_LIMIT: u32 = 64;
 const MAX_STORAGE_BYTES: usize = 1024 * 1024;
 
 #[derive(Clone, Debug)]
 pub(super) struct Chest {
     // Horizon uses BlockEntity::Chest for both of these 27-slot containers.
-    local: Pos,
+    locals: Vec<Pos>,
     slots: Vec<Option<ItemStack>>,
 }
 
@@ -40,7 +41,16 @@ type Edit = (Pos, BlockStateId, BlockStateId);
 #[derive(Clone, Copy)]
 pub(super) struct Mount {
     controller: Pos,
-    local: Pos,
+    locals: [Option<Pos>; MAX_BANKS],
+}
+
+impl Chest {
+    fn matches_mount(&self, mount: Mount) -> bool {
+        self.locals
+            .iter()
+            .copied()
+            .eq(mount.locals.into_iter().flatten())
+    }
 }
 
 // Kept in the same saved chunk as the pose. Unlike the scene attachment,
@@ -158,38 +168,72 @@ fn plain_source(tag: &Tag, block: &str) -> bool {
 
 fn local_storage(
     blocks: &[(Pos, BlockState)],
-) -> Result<Option<(Pos, &BlockState)>, AttachmentError> {
-    let mut result = None;
+    allow_pair: bool,
+) -> Result<Vec<(Pos, &BlockState)>, AttachmentError> {
+    let mut result = Vec::new();
+    let limit = if allow_pair { MAX_BANKS } else { 1 };
     for (position, block) in blocks
         .iter()
         .filter(|(_, block)| matches!(block.name.as_str(), BLOCK | BARREL))
     {
         if !mounted_state(block)
             || !valid_local(*position)
-            || result.replace((*position, block)).is_some()
+            || result.len() == limit
+            || result.iter().any(|&(local, _)| local == *position)
         {
             return Err(AttachmentError::Decode);
         }
+        result.push((*position, block));
     }
+    // MountedStorageManager copies a default Java HashMap's iteration order.
+    // Distinct buckets are independent of Java's assembly traversal. Colliding
+    // banks depend on insertion order, which is outside the admitted layouts.
+    if let [(first, _), (second, _)] = result.as_slice()
+        && storage_bucket(*first) == storage_bucket(*second)
+    {
+        return Err(AttachmentError::Decode);
+    }
+    result.sort_by_key(|&(local, _)| storage_bucket(local));
     Ok(result)
+}
+
+fn storage_bucket([x, y, z]: Pos) -> u32 {
+    // Vec3i.hashCode and HashMap.hash. Valid local coordinates are bounded.
+    let hash = (x + 31 * (y + 31 * z)) as u32;
+    (hash ^ (hash >> 16)) & 15
 }
 
 fn valid_local(pos: Pos) -> bool {
     pos.iter().all(|component| component.unsigned_abs() <= 15)
 }
 
+fn supports_pair(record: &Record) -> bool {
+    record.axis == Axis::Y.index()
+        && record.stroke.is_none()
+        && record.clock_hand.is_none()
+        && !record.return_home
+}
+
 pub(super) fn mounted_chest(record: &Record) -> Option<Mount> {
-    let (local, state) = local_storage(&record.blocks).ok()??;
+    if record.clock_hand.is_some() || record.return_home {
+        return None;
+    }
+    let banks = local_storage(&record.blocks, supports_pair(record)).ok()?;
+    let (_, state) = banks.first()?;
     let supported = match record.stroke_kind() {
         Some(StrokeKind::Gantry | StrokeKind::RopePulley | StrokeKind::Piston) => true,
         None => record.axis == Axis::Y.index() || state.name == BARREL,
     };
-    if !supported || record.clock_hand.is_some() || record.return_home {
+    if !supported {
         return None;
+    }
+    let mut locals = [None; MAX_BANKS];
+    for (slot, (local, _)) in locals.iter_mut().zip(banks) {
+        *slot = Some(local);
     }
     Some(Mount {
         controller: record.controller,
-        local,
+        locals,
     })
 }
 
@@ -197,32 +241,39 @@ pub(super) fn capture(
     game: &Game<'_>,
     anchor: Pos,
     blocks: &[(Pos, BlockState)],
+    allow_pair: bool,
 ) -> Result<Option<Chest>, AttachmentError> {
-    let Some((local, expected)) = local_storage(blocks)? else {
+    let banks = local_storage(blocks, allow_pair)?;
+    if banks.is_empty() {
         return Ok(None);
-    };
-    let position = place(anchor, local).ok_or(AttachmentError::Encode)?;
-    let state = game
-        .pack
-        .assets
-        .registry
-        .state(contraption::state(game, position))
-        .ok_or(AttachmentError::Encode)?;
-    if state != expected || !can_capture(game, position, state) {
-        return Err(AttachmentError::Encode);
     }
-    let Some(BlockEntity::Chest(slots)) =
-        game.world
-            .block_entities
-            .get(&(position[0], position[1], position[2]))
-    else {
-        return Err(AttachmentError::Encode);
+    let mut chest = Chest {
+        locals: Vec::with_capacity(banks.len()),
+        slots: Vec::with_capacity(banks.len() * SIZE),
     };
-    checked_slots(slots)?;
-    Ok(Some(Chest {
-        local,
-        slots: slots.clone(),
-    }))
+    for (local, expected) in banks {
+        let position = place(anchor, local).ok_or(AttachmentError::Encode)?;
+        let state = game
+            .pack
+            .assets
+            .registry
+            .state(contraption::state(game, position))
+            .ok_or(AttachmentError::Encode)?;
+        if state != expected || !can_capture(game, position, state) {
+            return Err(AttachmentError::Encode);
+        }
+        let Some(BlockEntity::Chest(slots)) =
+            game.world
+                .block_entities
+                .get(&(position[0], position[1], position[2]))
+        else {
+            return Err(AttachmentError::Encode);
+        };
+        checked_slots(slots)?;
+        chest.locals.push(local);
+        chest.slots.extend_from_slice(slots);
+    }
+    Ok(Some(chest))
 }
 
 pub(super) fn commit_capture(
@@ -254,37 +305,47 @@ pub(super) fn commit_landing(
     origin: Pos,
     turn: QuarterTurn,
 ) -> bool {
-    let (local, state) = match local_storage(&record.blocks) {
-        Ok(Some(storage)) => storage,
-        Ok(None) => return contraption::commit(game, key, records, edits),
+    let banks = match local_storage(&record.blocks, supports_pair(record)) {
+        Ok(banks) if banks.is_empty() => return contraption::commit(game, key, records, edits),
+        Ok(banks) => banks,
         Err(_) => return false,
     };
     let Ok((mut store, before)) = private_map(game, key) else {
         return false;
     };
-    let Some(chest) = store
-        .remove(&record.controller)
-        .filter(|chest| chest.local == local)
-    else {
+    let Some(chest) = store.remove(&record.controller).filter(|chest| {
+        chest.slots.len() == banks.len() * SIZE
+            && chest
+                .locals
+                .iter()
+                .copied()
+                .eq(banks.iter().map(|&(local, _)| local))
+    }) else {
         return false;
     };
-    let Some(position) = turn.place(origin, chest.local) else {
-        return false;
-    };
-    let target = (position[0], position[1], position[2]);
-    if contraption::column(position) != key
-        || game.world.block_entities.contains_key(&target)
-        || !edits.iter().any(|(p, _, after)| {
-            *p == position
-                && game
-                    .pack
-                    .assets
-                    .registry
-                    .state(*after)
-                    .is_some_and(|target| target.name == state.name && mounted_state(target))
-        })
-        || write_store(game, key, store).is_err()
-    {
+    let mut destinations = Vec::with_capacity(banks.len());
+    for ((local, state), slots) in banks.into_iter().zip(chest.slots.chunks_exact(SIZE)) {
+        let Some(position) = turn.place(origin, local) else {
+            return false;
+        };
+        let target = (position[0], position[1], position[2]);
+        if contraption::column(position) != key
+            || game.world.block_entities.contains_key(&target)
+            || !edits.iter().any(|(p, _, after)| {
+                *p == position
+                    && game
+                        .pack
+                        .assets
+                        .registry
+                        .state(*after)
+                        .is_some_and(|target| target.name == state.name && mounted_state(target))
+            })
+        {
+            return false;
+        }
+        destinations.push((position, target, slots.to_vec()));
+    }
+    if write_store(game, key, store).is_err() {
         return false;
     }
     if !commit(game, key, records, edits, before) {
@@ -292,10 +353,12 @@ pub(super) fn commit_landing(
     }
     // The world edit creates a vanilla container; install its validated
     // contents before the server can save, tick hoppers, or accept a click.
-    game.world
-        .block_entities
-        .insert(target, BlockEntity::Chest(chest.slots));
-    game.native_block_entity_sync(position);
+    for (position, target, slots) in destinations {
+        game.world
+            .block_entities
+            .insert(target, BlockEntity::Chest(slots));
+        game.native_block_entity_sync(position);
+    }
     true
 }
 
@@ -413,7 +476,7 @@ fn withdraw(
         .ok()??;
     let chest = store
         .get_mut(&mount.controller)
-        .filter(|chest| chest.local == mount.local)?;
+        .filter(|chest| chest.matches_mount(mount))?;
     let item = extract(game, &mut chest.slots)?;
     let before = game.attachment_map_quiet(holder).ok()?.clone();
     write_store(game, key, store).ok()?;
@@ -468,7 +531,7 @@ pub(super) fn insert_from_chute(
     };
     let Some(chest) = store
         .get_mut(&mount.controller)
-        .filter(|chest| chest.local == mount.local)
+        .filter(|chest| chest.matches_mount(mount))
     else {
         return 0;
     };
@@ -478,7 +541,11 @@ pub(super) fn insert_from_chute(
         return 0;
     }
     if simulate {
-        if checked_slots(&chest.slots).is_err() {
+        if chest
+            .slots
+            .chunks_exact(SIZE)
+            .any(|slots| checked_slots(slots).is_err())
+        {
             return 0;
         }
     } else if write_store(game, key, store).is_err() {
@@ -526,7 +593,7 @@ pub(super) fn deposit(game: &mut Game<'_>, mount: Mount, source: Pos, drops: &mu
     };
     let Some(chest) = store
         .get_mut(&mount.controller)
-        .filter(|chest| chest.local == mount.local)
+        .filter(|chest| chest.matches_mount(mount))
     else {
         return;
     };
@@ -585,21 +652,35 @@ fn insert<'a>(
 }
 
 fn encode(store: &Store) -> Result<Compound, AttachmentError> {
-    if store.len() > MAX_RECORDS || store.values().any(|chest| !valid_local(chest.local)) {
+    if store.len() > MAX_RECORDS {
         return Err(AttachmentError::Encode);
     }
-    let entries = store
-        .iter()
-        .map(|(controller, chest)| {
-            Ok(Tag::compound([
+    let mut entries = Vec::new();
+    let mut version = 1;
+    for (controller, chest) in store {
+        if chest.locals.is_empty()
+            || chest.locals.len() > MAX_BANKS
+            || chest.slots.len() != chest.locals.len() * SIZE
+            || chest.locals.iter().any(|&pos| !valid_local(pos))
+        {
+            return Err(AttachmentError::Encode);
+        }
+        if let [first, second] = chest.locals.as_slice() {
+            if first == second {
+                return Err(AttachmentError::Encode);
+            }
+            version = 2;
+        }
+        for (local, slots) in chest.locals.iter().zip(chest.slots.chunks_exact(SIZE)) {
+            entries.push(Tag::compound([
                 ("Controller", Tag::IntArray(controller.to_vec())),
-                ("Pos", Tag::IntArray(chest.local.to_vec())),
-                ("Items", checked_slots(&chest.slots)?),
-            ]))
-        })
-        .collect::<Result<Vec<_>, AttachmentError>>()?;
+                ("Pos", Tag::IntArray(local.to_vec())),
+                ("Items", checked_slots(slots)?),
+            ]));
+        }
+    }
     Ok(Compound::from([
-        ("Version".into(), Tag::Int(1)),
+        ("Version".into(), Tag::Int(version)),
         ("Chests".into(), Tag::List(entries)),
     ]))
 }
@@ -624,10 +705,12 @@ fn decode(saved: &Compound) -> Result<Store, AttachmentError> {
     let Some(Tag::List(entries)) = saved.get(&"Chests".into()) else {
         return Err(invalid);
     };
-    if saved.len() != 2
-        || saved.get(&"Version".into()) != Some(&Tag::Int(1))
-        || entries.len() > MAX_RECORDS
-    {
+    let max_banks = match saved.get(&"Version".into()) {
+        Some(Tag::Int(1)) => 1,
+        Some(Tag::Int(2)) => MAX_BANKS,
+        _ => return Err(invalid),
+    };
+    if saved.len() != 2 || entries.len() > MAX_RECORDS * max_banks {
         return Err(invalid);
     }
     let position = |entry: &Tag, key: &str| match entry.get(key) {
@@ -647,12 +730,21 @@ fn decode(saved: &Compound) -> Result<Store, AttachmentError> {
             max_bytes: MAX_STORAGE_BYTES,
             ..Limits::default()
         };
-        if !valid_local(local)
-            || write_network(items, limits).is_err()
-            || store.insert(controller, Chest { local, slots }).is_some()
-        {
+        if !valid_local(local) || write_network(items, limits).is_err() {
             return Err(invalid);
         }
+        let chest = store.entry(controller).or_insert_with(|| Chest {
+            locals: Vec::new(),
+            slots: Vec::new(),
+        });
+        if chest.locals.len() == max_banks || chest.locals.contains(&local) {
+            return Err(invalid);
+        }
+        chest.locals.push(local);
+        chest.slots.extend(slots);
+    }
+    if store.len() > MAX_RECORDS {
+        return Err(invalid);
     }
     Ok(store)
 }
@@ -755,16 +847,25 @@ mod tests {
         let records = Store::from([(
             [1, 70, 2],
             Chest {
-                local: [1, 0, 0],
+                locals: vec![[1, 0, 0]],
                 slots: slots.clone(),
             },
         )]);
-        assert_eq!(
-            decode(&encode(&records).unwrap()).unwrap()[&[1, 70, 2]].slots,
-            slots
-        );
+        let legacy = Compound::from([
+            ("Version".into(), Tag::Int(1)),
+            (
+                "Chests".into(),
+                Tag::List(vec![Tag::compound([
+                    ("Controller", Tag::IntArray(vec![1, 70, 2])),
+                    ("Pos", Tag::IntArray(vec![1, 0, 0])),
+                    ("Items", encode_items(&slots)),
+                ])]),
+            ),
+        ]);
+        assert_eq!(encode(&records).unwrap(), legacy);
+        assert_eq!(decode(&legacy).unwrap()[&[1, 70, 2]].slots, slots);
         let mut outside = records.clone();
-        outside.get_mut(&[1, 70, 2]).unwrap().local = [0, 16, 0];
+        outside.get_mut(&[1, 70, 2]).unwrap().locals[0] = [0, 16, 0];
         assert!(encode(&outside).is_err());
         let mut attachment = Attachments::default();
         attachment.set(&STORAGE, records).unwrap();
@@ -785,5 +886,51 @@ mod tests {
         };
         slot.insert("Slot".into(), Tag::Byte(27));
         assert!(decode_slots(&Tag::List(entries)).is_none());
+    }
+
+    #[test]
+    fn paired_banks_keep_source_order_and_distinguish_actor_and_chute_insertion() {
+        let south = [0, 0, 1];
+        let east = [1, 0, 0];
+        let west = [-1, 0, 0];
+        assert_eq!(storage_bucket(south), storage_bucket(east));
+        assert!(storage_bucket(west) < storage_bucket(south));
+
+        let controller = [1, 70, 2];
+        let diamond = "minecraft:diamond";
+        let mut slots = vec![None; 2 * SIZE];
+        slots[SIZE] = Some(ItemStack::new(diamond, 62));
+        let source = Store::from([(
+            controller,
+            Chest {
+                locals: vec![west, south],
+                slots: slots.clone(),
+            },
+        )]);
+        let encoded = encode(&source).unwrap();
+        assert_eq!(encoded.get(&"Version".into()), Some(&Tag::Int(2)));
+        let restored = decode(&encoded).unwrap().remove(&controller).unwrap();
+        assert_eq!(restored.locals, [west, south]);
+        assert_eq!(restored.slots, slots);
+
+        let input = ItemStack::new(diamond, 4);
+        let mut actor = restored.slots.clone();
+        assert_eq!(insert(&mut actor, &input, 64), 4);
+        assert_eq!(actor[0].as_ref().unwrap().count, 4);
+        assert_eq!(actor[SIZE].as_ref().unwrap().count, 62);
+        let mut chute = restored.slots;
+        assert_eq!(insert_stacked(&mut chute, &input, 64), 4);
+        assert_eq!(chute[0].as_ref().unwrap().count, 2);
+        assert_eq!(chute[SIZE].as_ref().unwrap().count, 64);
+
+        let mut legacy = encoded.clone();
+        legacy.insert("Version".into(), Tag::Int(1));
+        assert!(decode(&legacy).is_err());
+        let mut duplicate = encoded;
+        let Tag::List(entries) = duplicate.get_mut(&"Chests".into()).unwrap() else {
+            unreachable!();
+        };
+        entries[1] = entries[0].clone();
+        assert!(decode(&duplicate).is_err());
     }
 }
