@@ -375,7 +375,9 @@ with the systems they depend on.
 - [ ] Pipes/pumps/valves, connectivity and flow direction.
 - [x] Item Drain from a bare Belt to a Depot. Water bucket, full tank,
   blocked exit, resumed cargo and original resource rendering.
-- [ ] Item Drain hand exchange, comparator and pipes. Fluid Tanks, Hose
+- [x] Item Drain with a held water bucket in Survival and Creative. Match a
+  refused pour and empty-hand cargo recovery, including item components.
+- [ ] Other Drain containers, comparator and pipes. Fluid Tanks, Hose
   Pulley, Spout, displays and fluid levels.
 - [ ] Trains: tracks, signals, stations, assembly, controls, schedules and persistence.
 - [ ] Logistics networks, Redstone Links, Display Links and Display Boards.

@@ -132,7 +132,13 @@ An Item Drain accepts a water bucket from a bare horizontal Belt, stores
 1000 mB of water and hands the empty bucket to a neighboring Depot. With an
 incompatible or full tank, it waits at the pour position. With a blocked
 Depot, it holds the bucket at the exit. The three flows match the pinned Java
-tick traces and survive a restart. This path does not connect to fluid pipes.
+tick traces and survive a restart. Right-click with a water bucket to pour
+directly into the tank. Survival returns an empty bucket, Creative keeps the
+full bucket, and a refused pour keeps the bucket and its components. An empty
+hand retrieves an item waiting on the Drain. These four interactions were
+checked in both clients. Other hand-held containers, comparator output and
+pipe connections are pending. The original JAR supplies the body model.
+The bucket's highlight and its overlap with the stream still differ slightly.
 
 The four sheet items retain `create:iron_sheet`, `create:golden_sheet` and
 `create:copper_sheet` and `create:brass_sheet`. Kinetic entities retain `Speed` as a float. Depot data

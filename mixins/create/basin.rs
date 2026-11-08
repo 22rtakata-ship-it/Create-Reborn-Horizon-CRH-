@@ -777,7 +777,7 @@ pub(super) fn reacts(game: &Game<'_>, pos: Pos) -> bool {
                 )
         })
 }
-fn give_container(game: &mut Game<'_>, pos: Pos, stack: ItemStack) {
+pub(super) fn give_container(game: &mut Game<'_>, pos: Pos, stack: ItemStack) {
     let player = game.native_acting_id();
     if let Some(rest) = game.native_give_stack(player, stack) {
         if let Some(eye) = game.eye_position() {

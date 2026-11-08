@@ -441,6 +441,7 @@ pub(super) fn predicts_use(game: &Game<'_>, pos: [i32; 3], face: [i32; 3]) -> bo
     !inventory_blocked(game, pos)
         && (crate::game::create_port_burner::reacts(game, pos)
             || crate::game::create_port_basin::reacts(game, pos)
+            || item_drain::predicts_use(game, pos)
             || crate::game::create_port_millstone::reacts(game, pos)
             || crate::game::create_port_chute::predicts_use(game, pos)
             || super::create_port_chute::funnel::predicts_use(game, pos, face)
@@ -493,7 +494,7 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3], ca
         game.swing_arm();
         return;
     }
-    if crate::game::create_port_basin::right_click(game, pos) {
+    if crate::game::create_port_basin::right_click(game, pos) || item_drain::right_click(game, pos) {
         *canceled = true;
         game.swing_arm();
         return;
