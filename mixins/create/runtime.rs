@@ -158,6 +158,14 @@ pub(super) fn entity(block: &str, entity: &mut Option<(String, Compound)>) {
         *entity = Some((block.into(), super::create_port_chute::default_nbt()));
         return;
     }
+    if block == super::create_port_chute::funnel::BLOCK && entity.is_none() {
+        let funnel = super::create_port_chute::funnel::ENTITY;
+        *entity = Some((
+            funnel.into(),
+            super::create_port_chute::funnel::default_nbt(),
+        ));
+        return;
+    }
     if block == super::create_port_portable_storage::BLOCK && entity.is_none() {
         *entity = Some((block.into(), Compound::new()));
         return;
@@ -200,6 +208,7 @@ pub(super) fn ticks(block: &str, ticks: &mut bool) {
     if (owns(block) && block != "create:mechanical_harvester")
         || block == super::create_port_portable_storage::BLOCK
         || block == super::create_port_chute::BLOCK
+        || block == super::create_port_chute::funnel::BLOCK
     {
         *ticks = true;
     }
@@ -299,6 +308,9 @@ pub(super) fn nearest(yaw: f32, pitch: f32) -> Direction {
 }
 
 pub(super) fn placed(game: &mut Game<'_>, stack: &ItemStack, pos: [i32; 3]) {
+    if game.native_on("create") && stack.item.as_ref() == super::create_port_chute::funnel::BLOCK {
+        super::create_port_chute::funnel::refresh_power(game, pos);
+    }
     let Some((clicked, face)) = PLACEMENT_HIT.take() else {
         return;
     };
@@ -399,6 +411,7 @@ pub(super) fn predicts_use(game: &Game<'_>, pos: [i32; 3], face: [i32; 3]) -> bo
             || crate::game::create_port_basin::reacts(game, pos)
             || crate::game::create_port_millstone::reacts(game, pos)
             || crate::game::create_port_chute::predicts_use(game, pos)
+            || super::create_port_chute::funnel::predicts_use(game, pos, face)
             || crate::game::create_port_interactions::reacts(game, pos)
             || depot_reacts(game, pos, face))
 }
@@ -425,6 +438,7 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3], ca
         return;
     }
     if super::create_port_saw_filter::right_click(game, pos)
+        || super::create_port_chute::funnel::right_click(game, pos, face)
         || super::create_port_contraption::right_click(game, pos)
         || super::create_port_piston::right_click(game, pos, face)
         || super::create_port_pulley::right_click(game, pos)
@@ -1034,6 +1048,10 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
     let block = game.native_block(pos);
     if block == super::create_port_chute::BLOCK {
         super::create_port_chute::tick(game, pos, entity);
+        return;
+    }
+    if block == super::create_port_chute::funnel::BLOCK {
+        super::create_port_chute::funnel::tick(game, pos, entity);
         return;
     }
     if block == super::create_port_portable_storage::BLOCK {

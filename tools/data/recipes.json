@@ -1332,6 +1332,26 @@
         "id": "create:wrench"
       }
     },
+    "create/recipe/crafting/logistics/andesite_funnel.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "A": {
+          "item": "create:andesite_alloy"
+        },
+        "K": {
+          "item": "minecraft:dried_kelp"
+        }
+      },
+      "pattern": [
+        "A",
+        "K"
+      ],
+      "result": {
+        "count": 2,
+        "id": "create:andesite_funnel"
+      }
+    },
     "create/recipe/crafting/materials/andesite_alloy.json": {
       "type": "minecraft:crafting_shaped",
       "category": "misc",
@@ -6085,6 +6105,7 @@
         "create:brass_casing",
         "create:copper_casing",
         "create:flywheel",
+        "create:andesite_funnel",
         "create:zinc_ore",
         "create:deepslate_zinc_ore",
         "create:raw_zinc_block",
@@ -6551,6 +6572,27 @@
         }
       ],
       "random_sequence": "create:blocks/chute"
+    },
+    "create/loot_table/blocks/andesite_funnel.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:andesite_funnel"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/andesite_funnel"
     },
     "create/loot_table/blocks/sticker.json": {
       "type": "minecraft:block",

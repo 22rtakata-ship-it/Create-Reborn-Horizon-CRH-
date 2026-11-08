@@ -187,6 +187,10 @@ with the systems they depend on.
 - [x] Bounded bare-belt foundation: connector, original shapes, RPM transmission,
   items, output Depots/hoppers and persistence through an actual restart.
 - [ ] Funnels/tunnels/chutes, filters, brass/andesite rules and batch transfer.
+- [x] Dry vertical Andesite Funnel with an ordinary inventory. Verify the
+  original stack order, Wrench, extraction cooldown and redstone.
+- [ ] Funnel dropped-item intake, horizontal and wet placement, Belt Funnels,
+  filters, Brass Funnels and their full presentation.
 - [x] Ordinary physical item intake into the Basin and Millstone: original scenes,
   partial transfer, components and an actual restart.
 - [x] Bounded Press/Basin: separate compacting pool, square crafting recipes,

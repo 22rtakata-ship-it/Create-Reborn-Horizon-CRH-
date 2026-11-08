@@ -116,6 +116,12 @@ developer source build. The three changes are applied in a separate checkout.
   Industrial Iron is reusable. After a Horizon restart, opening the outlet
   transfers the marked stack intact. Java and Horizon used the same
   survival inputs, and Horizon ran with its built-in resources.
+- [Dry vertical Andesite Funnels](tools/funnel_checks.py) match ordinary
+  placement on a chest, Wrench toggling, manual insertion into the upward
+  opening and extraction in both directions. The existing stack is filled
+  before an empty slot, components survive, and an obstructing item keeps
+  the next one from leaving the downward opening. Redstone pauses
+  extraction and clears its cooldown.
 - [Zinc ore](tools/zinc_checks.py) appears in nine new ordinary Overworld
   columns in each client. The mining checks match the stone and iron tool
   requirements and Silk Touch results. Fortune drops remain in the source

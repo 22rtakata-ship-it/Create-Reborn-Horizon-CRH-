@@ -445,3 +445,277 @@ pub(super) fn draw(game: &Game<'_>, pos: Pos, entity: &ModBlockEntity, draw: &mu
     );
     draw.pop();
 }
+
+pub(in crate::game) mod funnel {
+    use crate::game::{Game, GameLevel, create_port_belt::world_direction};
+    use crate::{containers::ModBlockEntity, items::ItemStack};
+    use create_engine::{kinetics::Pos, placement::Direction};
+    use horizon_core::{geometry::Vec3, position::BlockPos};
+    use horizon_world::{
+        fluid::FluidKind,
+        level::{PlaceContext, PlaceOutcome, PlacementContext, flags},
+        nbt::{Compound, Tag},
+        registry::BlockStateId,
+    };
+
+    pub(in crate::game) const BLOCK: &str = "create:andesite_funnel";
+    pub(in crate::game) const ENTITY: &str = "create:funnel";
+    // CLogistics.defaultExtractionTimer in Create 6.0.10.
+    const EXTRACTION_COOLDOWN: i32 = 8;
+
+    pub(in crate::game) fn default_nbt() -> Compound {
+        Compound::from([
+            ("TransferCooldown".into(), Tag::Int(0)),
+            ("Filter".into(), Tag::Compound(Compound::new())),
+            ("FilterAmount".into(), Tag::Int(64)),
+            ("UpTo".into(), Tag::Byte(1)),
+        ])
+    }
+
+    fn property(game: &Game<'_>, pos: Pos, name: &str) -> bool {
+        game.native_block_property(pos, name).as_deref() == Some("true")
+    }
+
+    fn direction(game: &Game<'_>, pos: Pos) -> Option<Direction> {
+        let name = game.native_block_property(pos, "facing")?;
+        Direction::ALL.into_iter().find(|d| d.name() == name)
+    }
+
+    pub(in crate::game) fn placement(
+        game: &GameLevel<'_>,
+        state: BlockStateId,
+        context: &PlacementContext,
+        face: Direction,
+    ) -> Option<BlockStateId> {
+        let facing = if context.replace_clicked {
+            crate::game::create_port::nearest(context.yaw, context.pitch).opposite()
+        } else {
+            face
+        };
+        let at = context.pos;
+        let existing = game.world.block(at.x, at.y, at.z);
+        // This release implements the dry vertical forms. A horizontal
+        // placement may also resolve to a separate Belt Funnel in Java.
+        if !matches!(facing, Direction::Up | Direction::Down)
+            || game.behaviours.fluid_kind(existing) != FluidKind::Empty
+        {
+            return None;
+        }
+        let [dx, dy, dz] = facing.vector();
+        let behind = game.world.block(at.x - dx, at.y - dy, at.z - dz);
+        if game.native_state_block(behind) == Some(BLOCK) {
+            return None;
+        }
+        let state = game.native_state_with_property(state, "facing", facing.name())?;
+        game.native_state_with_property(
+            state,
+            "extracting",
+            if context.sneaking { "false" } else { "true" },
+        )
+    }
+
+    pub(in crate::game) fn refresh_power(game: &mut Game<'_>, pos: Pos) -> bool {
+        let powered = game.native_neighbor_signal(game.dim.id(), pos) != 0;
+        if powered != property(game, pos, "powered") {
+            game.native_set_block_property_with(
+                pos,
+                "powered",
+                if powered { "true" } else { "false" },
+                flags::UPDATE_CLIENTS,
+            );
+        }
+        powered
+    }
+
+    pub(in crate::game) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity) {
+        if entity.id != ENTITY || property(game, pos, "waterlogged") {
+            return;
+        }
+        let cooldown = crate::game::create_port::integer(&entity.nbt, "TransferCooldown");
+        let next = if refresh_power(game, pos) {
+            0
+        } else if cooldown > 0 {
+            cooldown - 1
+        } else if property(game, pos, "extracting") && extract(game, pos) {
+            EXTRACTION_COOLDOWN
+        } else {
+            0
+        };
+        if next != cooldown {
+            entity.nbt.insert("TransferCooldown".into(), Tag::Int(next));
+        }
+    }
+
+    fn extract(game: &mut Game<'_>, pos: Pos) -> bool {
+        let Some(facing @ (Direction::Up | Direction::Down)) = direction(game, pos) else {
+            return false;
+        };
+        let dim = game.dim.id();
+        let source = [pos[0], pos[1] - facing.vector()[1], pos[2]];
+        let side = world_direction(facing);
+        let Some(slot) = game
+            .native_container_slots(dim, source, side)
+            .and_then(|slots| slots.into_iter().find(|slot| slot.can_take))
+        else {
+            return false;
+        };
+        let up = facing == Direction::Up;
+        let origin = pos.map(f64::from);
+        let mut scan_min = origin;
+        if !up {
+            scan_min[1] -= 1.0;
+        }
+        if !game
+            .native_item_entities(dim, scan_min, origin.map(|v| v + 1.0))
+            .is_empty()
+        {
+            return false;
+        }
+        let Some(stack) = game.native_extract_item(dim, source, side, slot.slot, 1) else {
+            return false;
+        };
+        let mut spawn = origin.map(|v| v + 0.5);
+        spawn[1] = if up {
+            spawn[1] + f64::from(0.15_f32)
+        } else {
+            origin[1]
+        };
+        game.spawn_item(stack, spawn, [0.0, if up { 0.25 } else { 0.0 }, 0.0], 10);
+        let at = origin.map(|v| v + 0.5);
+        game.native_play_sound_in_place(
+            "minecraft:entity.item_frame.rotate_item",
+            at,
+            4,
+            0.125,
+            1.5,
+        );
+        game.native_play_sound_in_place("minecraft:block.wool.break", at, 4, 0.0425, 0.75);
+        true
+    }
+
+    fn collecting(game: &Game<'_>, pos: Pos, face: Pos, stack: &ItemStack) -> bool {
+        face == [0, 1, 0]
+            && direction(game, pos) == Some(Direction::Up)
+            && !property(game, pos, "powered")
+            && !property(game, pos, "extracting")
+            && stack.item.as_ref() != "create:mechanical_arm"
+    }
+
+    enum Use {
+        Attach,
+        Wrench,
+        Collect,
+    }
+
+    fn action(game: &Game<'_>, pos: Pos, face: Pos, stack: &ItemStack) -> Option<Use> {
+        if !game.native_on("create") || game.spectator() || game.native_sneaking() {
+            return None;
+        }
+        let block = game.native_block(pos);
+        if stack.item.as_ref() == BLOCK {
+            return (matches!(face, [0, -1, 0] | [0, 1, 0])
+                && matches!(
+                    block.as_str(),
+                    "minecraft:chest" | "minecraft:trapped_chest" | "minecraft:barrel"
+                ))
+            .then_some(Use::Attach);
+        }
+        if block != BLOCK || property(game, pos, "waterlogged") {
+            return None;
+        }
+        if game.may_build() && crate::game::create_port_chassis::wrench(game, stack) {
+            return Some(Use::Wrench);
+        }
+        collecting(game, pos, face, stack).then_some(Use::Collect)
+    }
+
+    pub(in crate::game) fn predicts_use(game: &Game<'_>, pos: Pos, face: Pos) -> bool {
+        game.held()
+            .is_some_and(|stack| action(game, pos, face, stack).is_some())
+    }
+
+    pub(in crate::game) fn right_click(game: &mut Game<'_>, pos: Pos, face: Pos) -> bool {
+        let Some(stack) = game.held().cloned() else {
+            return false;
+        };
+        match action(game, pos, face, &stack) {
+            None => return false,
+            Some(Use::Attach) => attach(game, pos, face, &stack),
+            Some(Use::Wrench) => {
+                let extracting = property(game, pos, "extracting");
+                game.native_set_block_property(
+                    pos,
+                    "extracting",
+                    if extracting { "false" } else { "true" },
+                );
+            }
+            Some(Use::Collect) => {
+                let inserted = game
+                    .chute_insert((pos[0], pos[1] - 1, pos[2]), &stack, false)
+                    .unwrap_or(0);
+                if inserted > 0 {
+                    let count = stack.count - inserted;
+                    *game.held_mut() = (count > 0).then_some(ItemStack { count, ..stack });
+                }
+            }
+        }
+        true
+    }
+
+    fn attach(game: &mut Game<'_>, pos: Pos, face: Pos, stack: &ItemStack) {
+        // FunnelItem bypasses the clicked container's own menu before running
+        // BlockItem.place. Keep its ordinary validation and placed-item effects.
+        if !game.may_build() && !game.can_place_on_in_adventure(pos) {
+            game.use_failed = true;
+            return;
+        }
+        let ctx = PlaceContext {
+            clicked_pos: BlockPos::new(pos[0], pos[1], pos[2]),
+            face: world_direction(if face[1] > 0 {
+                Direction::Up
+            } else {
+                Direction::Down
+            }),
+            hit: Vec3::new(
+                f64::from(pos[0]) + 0.5,
+                f64::from(pos[1]) + if face[1] > 0 { 1.0 } else { 0.0 },
+                f64::from(pos[2]) + 0.5,
+            ),
+            inside: false,
+            yaw: game.yaw,
+            pitch: game.pitch,
+            sneaking: false,
+            item: stack.item.to_string(),
+            can_use_game_master_blocks: game.can_use_game_master_blocks(),
+        };
+        if game.block_place_canceled(stack, &ctx) {
+            game.use_failed = true;
+            game.guest_inventory_resend = true;
+            return;
+        }
+        let outcome = game.with_level(|b, level, ticks| b.place_block(level, ticks, &ctx));
+        if let PlaceOutcome::Placed { pos, state } = outcome {
+            let target = [pos.x, pos.y, pos.z];
+            let state = game
+                .apply_item_block_state(target, state, stack)
+                .unwrap_or(state);
+            if !game.world.block_entities.stateful_entity(state.0)
+                && let Some(entity) = game.new_block_entity_for_state(state)
+            {
+                game.world
+                    .block_entities
+                    .insert((pos.x, pos.y, pos.z), entity);
+            }
+            game.apply_placed_item(target, stack, ctx.can_use_game_master_blocks);
+            game.award_stat("used", &stack.item, 1);
+            game.trigger_block("minecraft:placed_block", target, stack);
+            game.native_place_block(stack, target, state);
+            game.consume_held();
+        } else {
+            game.use_failed = true;
+        }
+        if let Err(error) = game.process_level_events() {
+            log::warn!("Create Funnel placement: {error}");
+        }
+    }
+}

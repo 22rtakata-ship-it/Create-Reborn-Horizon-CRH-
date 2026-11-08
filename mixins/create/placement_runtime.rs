@@ -49,6 +49,15 @@ pub(super) fn state(
     answer: &mut Option<Option<BlockStateId>>,
 ) {
     let block = game.native_state_block(state).unwrap_or("");
+    if block == super::create_port_chute::funnel::BLOCK {
+        *answer = Some(super::create_port_chute::funnel::placement(
+            game,
+            state,
+            ctx,
+            direction(ctx.face),
+        ));
+        return;
+    }
     if matches!(
         block,
         super::create_port_portable_storage::BLOCK | super::create_port_sticker::BLOCK
