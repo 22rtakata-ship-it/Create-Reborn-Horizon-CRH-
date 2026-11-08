@@ -10,7 +10,9 @@ Build small factories with gears, water wheels, belts and presses. Create for Ho
 - Move items on basic belts and depots. Press sheets, mill ingredients and use fans to wash, smoke, haunt or blast items.
 - Mix recipes in a Basin, heat it with a Blaze Burner or mine a block with a stationary Mechanical Drill. Engineer’s Goggles show speed and stress. Apply a copper ingot to stripped wood to make Copper Casing.
 
-The development builds also have bearings, pistons, Gantry Carriages and Rope Pulleys. Small moving farms can share one chest and use a portable dock to receive or unload items. [Feature roadmap](docs/roadmap.md)
+Development builds add Mechanical Crafters, standalone Fluid Tanks and straight
+pump lines. Bearings, pistons, Gantry Carriages and Rope Pulleys can move small
+farms with a shared chest and a portable dock. [Feature roadmap](docs/roadmap.md)
 
 | Press workshop | Gantry harvester |
 | --- | --- |
@@ -24,7 +26,7 @@ These screenshots were captured in Horizon 26.3 with the mod's built-in models.
 2. Open **Mods → Add from GitHub** and enter `https://github.com/Delete228/create-horizon`.
 3. Build the native mod, then start the instance.
 
-**0.7.0-alpha.2** is available in the [Horizon mod registry](https://playhorizon.dev/mods/create). The 0.8 development builds add the Adjustable Chain Gearshift, Copper Casing and early contraptions. The launcher builds the mod against the Horizon and Horizon Mixins revisions in the bundle. [Installation guide](docs/installation.md)
+**0.7.0-alpha.2** is available in the [Horizon mod registry](https://playhorizon.dev/mods/create). The launcher builds the mod against the Horizon and Horizon Mixins revisions in the bundle. [Installation guide](docs/installation.md)
 
 ## Original models and textures
 
