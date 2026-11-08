@@ -241,6 +241,9 @@ developer source build. The three changes are applied in a separate checkout.
   uninterrupted close moves 160 mB before stopping. Both clients retain a
   partially closed valve through a cold restart. The built-in pointer renders
   without a JAR, and the original model renders with a supplied JAR.
+- The five Fluid Tank, Fluid Pipe, Mechanical Pump and Fluid Valve recipes
+  match the pinned Java ingredients, patterns and results. All five crafted
+  through the ordinary Horizon Survival crafting menu.
 
 The [offscreen engineering run](tools/engineering_checks.py) used ordinary
 crank clicks on all six facings and measured the rendered base and handle

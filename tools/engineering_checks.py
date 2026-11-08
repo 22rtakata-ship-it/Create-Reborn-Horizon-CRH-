@@ -153,7 +153,15 @@ def run(call,graphics,log,scratch):
     print('Engineering: blocked placement preserves items, floor retry works, structural break returns one wheel and clears all parts',flush=True)
 
     if graphics:
-        foundation_checks.crafting(call,X+8,clear,['kinetics/vertical_gearbox','kinetics/vertical_gearbox_from_conversion','kinetics/gearbox_from_conversion','kinetics/goggles','kinetics/speedometer','kinetics/stressometer_from_conversion','kinetics/water_wheel','kinetics/large_water_wheel','kinetics/propeller','kinetics/millstone','kinetics/encased_fan','kinetics/mechanical_drill','appliances/dough'])
+        foundation_checks.crafting(call, X + 8, clear, [
+            'kinetics/vertical_gearbox', 'kinetics/vertical_gearbox_from_conversion',
+            'kinetics/gearbox_from_conversion', 'kinetics/goggles', 'kinetics/speedometer',
+            'kinetics/stressometer_from_conversion', 'kinetics/water_wheel', 'kinetics/large_water_wheel',
+            'kinetics/propeller', 'kinetics/millstone', 'kinetics/encased_fan',
+            'kinetics/mechanical_drill', 'appliances/dough',
+            'kinetics/fluid_tank', 'kinetics/fluid_pipe', 'kinetics/fluid_pipe_vertical',
+            'kinetics/mechanical_pump', 'kinetics/fluid_valve',
+        ])
     return fixture
 
 def poses(log,pos):return [json.loads(s.split('Create pose: ',1)[1]) for s in log.read_text().splitlines() if 'Create pose: ' in s and json.loads(s.split('Create pose: ',1)[1])['pos']==pos]
