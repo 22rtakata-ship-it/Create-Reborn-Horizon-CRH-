@@ -1,104 +1,12 @@
 {
+  "loader": "neoforge:obj",
+  "flip_v": true,
+  "model": "create:models/block/water_wheel/wheel.obj",
   "textures": {
-    "all": "create:block/fallback/water_wheel",
-    "particle": "create:block/fallback/water_wheel"
-  },
-  "elements": [
-    {
-      "from": [
-        1,
-        6,
-        5
-      ],
-      "to": [
-        15,
-        10,
-        11
-      ],
-      "faces": {
-        "down": {
-          "texture": "#all"
-        },
-        "up": {
-          "texture": "#all"
-        },
-        "north": {
-          "texture": "#all"
-        },
-        "south": {
-          "texture": "#all"
-        },
-        "west": {
-          "texture": "#all"
-        },
-        "east": {
-          "texture": "#all"
-        }
-      }
-    },
-    {
-      "from": [
-        5,
-        6,
-        1
-      ],
-      "to": [
-        11,
-        10,
-        15
-      ],
-      "faces": {
-        "down": {
-          "texture": "#all"
-        },
-        "up": {
-          "texture": "#all"
-        },
-        "north": {
-          "texture": "#all"
-        },
-        "south": {
-          "texture": "#all"
-        },
-        "west": {
-          "texture": "#all"
-        },
-        "east": {
-          "texture": "#all"
-        }
-      }
-    },
-    {
-      "from": [
-        5,
-        0,
-        5
-      ],
-      "to": [
-        11,
-        16,
-        11
-      ],
-      "faces": {
-        "down": {
-          "texture": "#all"
-        },
-        "up": {
-          "texture": "#all"
-        },
-        "north": {
-          "texture": "#all"
-        },
-        "south": {
-          "texture": "#all"
-        },
-        "west": {
-          "texture": "#all"
-        },
-        "east": {
-          "texture": "#all"
-        }
-      }
-    }
-  ]
+    "beam": "create:block/fallback/wheel_spruce_beam",
+    "plank": "create:block/fallback/wheel_spruce_plank",
+    "end": "create:block/fallback/wheel_spruce_end",
+    "iron": "create:block/fallback/wheel_iron",
+    "particle": "#plank"
+  }
 }

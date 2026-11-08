@@ -1,7 +1,7 @@
 {
   "textures": {
-    "all": "create:block/fallback/deployer",
-    "particle": "create:block/fallback/deployer"
+    "all": "create:block/fallback/deployer_hand",
+    "particle": "create:block/fallback/deployer_hand"
   },
   "elements": [
     {

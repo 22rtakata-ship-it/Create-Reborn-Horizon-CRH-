@@ -1,7 +1,8 @@
 {
   "textures": {
-    "all": "create:block/fallback/sticker",
-    "particle": "create:block/fallback/sticker"
+    "all": "create:block/fallback/sticker_slide",
+    "particle": "create:block/fallback/sticker_slide",
+    "up": "create:block/fallback/sticker_pad"
   },
   "elements": [
     {
@@ -20,7 +21,13 @@
           "texture": "#all"
         },
         "up": {
-          "texture": "#all"
+          "texture": "#up",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "north": {
           "texture": "#all"

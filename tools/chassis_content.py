@@ -40,18 +40,19 @@ def chassis(write):
             'default_state': {'axis': 'y', **{key: 'false' for key in keys}},
         })
         multipart = []
+        path = f'chassis_fallback/{name}_y'
+        end = f'minecraft:block/{wood}_planks'
+        side = f'minecraft:block/stripped_{wood}_log'
+        write(f'assets/create/models/block/{path}.json', {
+            'parent': 'minecraft:block/cube',
+            'textures': {'particle': side, **{
+                face: end if face in FACES['y'] else side
+                for pair in FACES.values() for face in pair
+            }},
+        })
+        turns = {'x': {'x': 90, 'y': 90}, 'y': {}, 'z': {'x': 90}}
         for axis, (negative, positive) in FACES.items():
-            path = f'chassis_fallback/{name}_{axis}'
-            end = f'minecraft:block/{wood}_planks'
-            side = f'minecraft:block/stripped_{wood}_log'
-            write(f'assets/create/models/block/{path}.json', {
-                'parent': 'minecraft:block/cube',
-                'textures': {'particle': side, **{
-                    face: end if face in (negative, positive) else side
-                    for pair in FACES.values() for face in pair
-                }},
-            })
-            multipart.append({'when': {'axis': axis}, 'apply': {'model': f'create:block/{path}'}})
+            multipart.append({'when': {'axis': axis}, 'apply': {'model': f'create:block/{path}', **turns[axis]}})
             faces = RADIAL[axis] if radial else {negative: 'bottom', positive: 'top'}
             for face, key in faces.items():
                 multipart.append({

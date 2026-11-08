@@ -1,7 +1,10 @@
 {
   "textures": {
-    "all": "create:block/fallback/piston",
-    "particle": "create:block/fallback/piston"
+    "all": "create:block/fallback/piston_case",
+    "particle": "create:block/fallback/piston_case",
+    "back": "create:block/fallback/piston_back",
+    "inner": "create:block/fallback/piston_back",
+    "head": "create:block/fallback/piston_head"
   },
   "elements": [
     {
@@ -17,10 +20,22 @@
       ],
       "faces": {
         "down": {
-          "texture": "#all"
+          "texture": "#back",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "up": {
-          "texture": "#all"
+          "texture": "#inner",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "north": {
           "texture": "#all"
@@ -38,33 +53,33 @@
     },
     {
       "from": [
-        0,
+        1,
         12,
-        0
+        1
       ],
       "to": [
+        15,
         16,
-        16,
-        16
+        15
       ],
       "faces": {
         "down": {
-          "texture": "#all"
+          "texture": "#head"
         },
         "up": {
-          "texture": "#all"
+          "texture": "#head"
         },
         "north": {
-          "texture": "#all"
+          "texture": "#head"
         },
         "south": {
-          "texture": "#all"
+          "texture": "#head"
         },
         "west": {
-          "texture": "#all"
+          "texture": "#head"
         },
         "east": {
-          "texture": "#all"
+          "texture": "#head"
         }
       }
     }

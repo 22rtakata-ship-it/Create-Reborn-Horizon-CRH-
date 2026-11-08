@@ -1,7 +1,9 @@
 {
+  "render_type": "minecraft:cutout",
   "textures": {
     "all": "create:block/fallback/burner_case",
-    "particle": "create:block/fallback/burner_case"
+    "flame": "create:block/fallback/burner_fire",
+    "particle": "#all"
   },
   "elements": [
     {
@@ -161,6 +163,90 @@
         },
         "east": {
           "texture": "#all"
+        }
+      }
+    },
+    {
+      "from": [
+        8,
+        2,
+        1
+      ],
+      "to": [
+        8,
+        14,
+        15
+      ],
+      "rotation": {
+        "origin": [
+          8,
+          8,
+          8
+        ],
+        "axis": "y",
+        "angle": -45
+      },
+      "shade": false,
+      "faces": {
+        "east": {
+          "texture": "#flame",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#flame",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        }
+      }
+    },
+    {
+      "from": [
+        8,
+        2,
+        1
+      ],
+      "to": [
+        8,
+        14,
+        15
+      ],
+      "rotation": {
+        "origin": [
+          8,
+          8,
+          8
+        ],
+        "axis": "y",
+        "angle": 45
+      },
+      "shade": false,
+      "faces": {
+        "east": {
+          "texture": "#flame",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#flame",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         }
       }
     }

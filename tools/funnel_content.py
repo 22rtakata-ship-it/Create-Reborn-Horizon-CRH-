@@ -1,5 +1,7 @@
 """Authored fallback geometry for ordinary Funnels."""
 
+from fallback_textures import material
+
 BLOCK = 'andesite_funnel'
 BRASS = 'brass_funnel'
 FACES = ('down', 'up', 'north', 'south', 'west', 'east')
@@ -45,7 +47,17 @@ def funnel(write, model, block=BLOCK):
     })
     for kind, geometry in [('horizontal', NORTH), ('vertical', UP)]:
         for powered, texture in [('off', off), ('on', on)]:
-            model(f'{model_dir}/{kind}_{powered}', [(box[:3], box[3:]) for box in geometry], texture)
+            boxes = [(box[:3], box[3:]) for box in geometry]
+            parts = None
+            if brass and kind == 'vertical':
+                # An upwards funnel's click target sits at y=2 on every side.
+                # The downwards model is the same shell rotated 180 degrees.
+                boxes += [([5, 0, .98], [11, 4, 1], 'filter'),
+                          ([5, 0, 15], [11, 4, 15.02], 'filter'),
+                          ([.98, 0, 5], [1, 4, 11], 'filter'),
+                          ([15, 0, 5], [15.02, 4, 11], 'filter')]
+                parts = {'filter': material('brass_funnel_filter')}
+            model(f'{model_dir}/{kind}_{powered}', boxes, texture, parts=parts)
     variants = {}
     for face in FACES:
         orientation = ({'y': Y_ROTATION[face]} if face in Y_ROTATION else {'x': 180} if face == 'down' else {})
@@ -55,5 +67,7 @@ def funnel(write, model, block=BLOCK):
                 'model': f'create:block/{model_dir}/{kind}_{suffix}', **orientation,
             }
     write(f'assets/create/blockstates/{block}.json', {'variants': variants})
-    write(f'assets/create/models/item/{block}.json', {'parent': f'create:block/{model_dir}/horizontal_off'})
+    write(f'assets/create/models/item/{block}.json', {
+        'parent': f'create:block/{model_dir}/' + ('vertical_off' if brass else 'horizontal_off'),
+    })
     write(f'assets/create/items/{block}.json', {'model': {'type': 'minecraft:model', 'model': f'create:item/{block}'}})

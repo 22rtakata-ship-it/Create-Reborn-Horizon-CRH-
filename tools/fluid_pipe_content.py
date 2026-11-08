@@ -1,6 +1,7 @@
 """State and vanilla-textured fallback for ordinary fluid pipes and pumps."""
 
 from itertools import product
+from fallback_textures import material
 
 PIPE, PUMP, VALVE = 'fluid_pipe', 'mechanical_pump', 'fluid_valve'
 FACES = ('down', 'up', 'north', 'south', 'west', 'east')
@@ -66,7 +67,8 @@ def fluid_pipes(write, model, axial_boxes):
     model(f'{VALVE}/pointer', [([6, 12, 3], [10, 14, 12]), ([7, 11, 7], [9, 12, 9])],
           'minecraft:block/iron_block')
     model(f'{VALVE}/fallback_item', [([5, 0, 5], [11, 16, 11]), ([3, 4, 3], [13, 12, 13]),
-                                     ([6, 12, 3], [10, 14, 12])], 'minecraft:block/copper_block')
+                                     ([6, 12, 3], [10, 14, 12], 'handle')], 'minecraft:block/copper_block',
+          parts={'handle': material('valve_handle')})
     write(f'assets/create/blockstates/{VALVE}.json', {'variants': body_variants})
     model(f'{PIPE}/fallback_core', [core], 'minecraft:block/copper_block')
     for face, box in tube.items():

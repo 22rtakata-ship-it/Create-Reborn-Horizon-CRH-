@@ -1,7 +1,8 @@
 {
   "textures": {
     "all": "create:block/fallback/speedometer",
-    "particle": "create:block/fallback/speedometer"
+    "particle": "create:block/fallback/speedometer",
+    "east": "create:block/fallback/speedometer"
   },
   "elements": [
     {
@@ -62,7 +63,7 @@
           ]
         },
         "east": {
-          "texture": "#all",
+          "texture": "#east",
           "uv": [
             0,
             0,

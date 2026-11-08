@@ -1,7 +1,8 @@
 {
   "textures": {
-    "all": "create:block/fallback/plough",
-    "particle": "create:block/fallback/plough"
+    "all": "create:block/fallback/andesite_casing",
+    "particle": "create:block/fallback/andesite_casing",
+    "steel": "create:block/fallback/plough"
   },
   "elements": [
     {
@@ -38,13 +39,13 @@
     },
     {
       "from": [
-        0,
-        2,
-        1
+        1,
+        4,
+        10
       ],
       "to": [
-        16,
-        5,
+        15,
+        7,
         13
       ],
       "faces": {
@@ -65,6 +66,134 @@
         },
         "east": {
           "texture": "#all"
+        }
+      }
+    },
+    {
+      "from": [
+        1,
+        4,
+        1
+      ],
+      "to": [
+        3,
+        7,
+        11
+      ],
+      "faces": {
+        "down": {
+          "texture": "#steel"
+        },
+        "up": {
+          "texture": "#steel"
+        },
+        "north": {
+          "texture": "#steel"
+        },
+        "south": {
+          "texture": "#steel"
+        },
+        "west": {
+          "texture": "#steel"
+        },
+        "east": {
+          "texture": "#steel"
+        }
+      }
+    },
+    {
+      "from": [
+        13,
+        4,
+        1
+      ],
+      "to": [
+        15,
+        7,
+        11
+      ],
+      "faces": {
+        "down": {
+          "texture": "#steel"
+        },
+        "up": {
+          "texture": "#steel"
+        },
+        "north": {
+          "texture": "#steel"
+        },
+        "south": {
+          "texture": "#steel"
+        },
+        "west": {
+          "texture": "#steel"
+        },
+        "east": {
+          "texture": "#steel"
+        }
+      }
+    },
+    {
+      "from": [
+        3,
+        4,
+        0
+      ],
+      "to": [
+        13,
+        5,
+        11
+      ],
+      "faces": {
+        "down": {
+          "texture": "#steel"
+        },
+        "up": {
+          "texture": "#steel"
+        },
+        "north": {
+          "texture": "#steel"
+        },
+        "south": {
+          "texture": "#steel"
+        },
+        "west": {
+          "texture": "#steel"
+        },
+        "east": {
+          "texture": "#steel"
+        }
+      }
+    },
+    {
+      "from": [
+        3,
+        3,
+        0
+      ],
+      "to": [
+        13,
+        4,
+        2
+      ],
+      "faces": {
+        "down": {
+          "texture": "#steel"
+        },
+        "up": {
+          "texture": "#steel"
+        },
+        "north": {
+          "texture": "#steel"
+        },
+        "south": {
+          "texture": "#steel"
+        },
+        "west": {
+          "texture": "#steel"
+        },
+        "east": {
+          "texture": "#steel"
         }
       }
     }

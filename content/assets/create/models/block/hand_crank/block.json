@@ -1,19 +1,19 @@
 {
   "textures": {
-    "all": "create:block/fallback/hand_crank",
-    "particle": "create:block/fallback/hand_crank"
+    "all": "create:block/fallback/steel_axle",
+    "particle": "create:block/fallback/steel_axle"
   },
   "elements": [
     {
       "from": [
+        6,
         0,
-        0,
-        0
+        6
       ],
       "to": [
-        16,
-        16,
-        16
+        10,
+        5,
+        10
       ],
       "faces": {
         "down": {

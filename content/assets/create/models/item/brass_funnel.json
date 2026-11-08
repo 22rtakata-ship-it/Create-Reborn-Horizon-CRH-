@@ -1,3 +1,17 @@
 {
-  "parent": "create:block/brass_funnel/horizontal_off"
+  "parent": "create:block/brass_funnel/vertical_off",
+  "display": {
+    "gui": {
+      "rotation": [
+        30,
+        225,
+        0
+      ],
+      "scale": [
+        0.625,
+        0.625,
+        0.625
+      ]
+    }
+  }
 }

@@ -1,8 +1,10 @@
+<img src="docs/screenshots/create-icon.png" align="right" width="96" alt="Create for Horizon cogwheel">
+
 # Create for Horizon
 
 Build small factories with gears, water wheels, belts and presses. Create for Horizon is an experimental Rust port of [Create](https://github.com/Creators-of-Create/Create), maintained by [Delete228](https://github.com/Delete228).
 
-![A spruce windmill and workshop beside a raised wheat field](docs/screenshots/mill-and-workshop.jpg)
+![A Precision Mechanism workshop with a long belt and a row of Deployers](docs/screenshots/precision-workshop.jpg)
 
 ## What you can build
 
@@ -10,27 +12,32 @@ Build small factories with gears, water wheels, belts and presses. Create for Ho
 - Move items on basic belts and depots. Press sheets, mill ingredients and use fans to wash, smoke, haunt or blast items.
 - Mix recipes in a Basin, heat it with a Blaze Burner or mine a block with a stationary Mechanical Drill. Engineer’s Goggles show speed and stress. Apply a copper ingot to stripped wood to make Copper Casing.
 
-Development builds add Mechanical Crafters, standalone Fluid Tanks and straight
-pump lines with Fluid Valves. Bearings, pistons, Gantry Carriages and Rope Pulleys can move small
-farms with a shared chest and a portable dock. [Feature roadmap](docs/roadmap.md)
+Use Mechanical Crafters for linked recipes or put Deployers over a belt for
+sequenced assembly. Bearings, pistons, Gantry Carriages and Rope Pulleys can
+move small farms with mounted chests and portable storage interfaces.
+[Feature roadmap](docs/roadmap.md)
 
-| Press workshop | Gantry harvester |
+| Precision Mechanism assembly | Bearing-mounted tree farm |
 | --- | --- |
-| ![A Mechanical Press over a belt in a timber workshop](docs/screenshots/press-workshop.jpg) | ![A Mechanical Harvester and its chest beside a raised wheat field](docs/screenshots/gantry-harvester.jpg) |
+| ![Deployers work on a gold sheet and the belt delivers a Precision Mechanism to the depot](docs/screenshots/precision-mechanism.gif) | ![A Mechanical Saw swings on a bearing and cuts an oak beside its mounted chest](docs/screenshots/tree-farm.gif) |
 
-These screenshots were captured in Horizon 26.3 with the mod's built-in models.
+Captured in Horizon 26.3 with the built-in models and textures.
+[Assembly close-up](docs/screenshots/precision-assembly.jpg) · [Tree farm](docs/screenshots/tree-farm.jpg) · [Windmill and workshop](docs/screenshots/mill-and-workshop.jpg)
 
 ## Install
 
-1. Create a Minecraft 26.3 instance in Horizon Launcher.
-2. Open **Mods → Add from GitHub** and enter `https://github.com/Delete228/create-horizon`.
+1. Create a Horizon instance for Minecraft 26.3.
+2. Open **Mods → Add from GitHub** and enter `https://github.com/Delete228/create-horizon/tree/main`.
 3. Build the native mod, then start the instance.
 
-**0.7.0-alpha.2** is available in the [Horizon mod registry](https://playhorizon.dev/mods/create). The launcher builds the mod against the Horizon and Horizon Mixins revisions in the bundle. [Installation guide](docs/installation.md)
+The **0.9.0** source build pins official Horizon commit `4e5296d`. Nightly
+`fdc87ae` predates the stateful block-entity and state-dependent light changes.
+The Horizon registry has its own published version.
+[Installation guide](docs/installation.md) · [Registry listing](https://playhorizon.dev/mods/create)
 
 ## Original models and textures
 
-The mod includes simple models with its own pixel textures. **For Create's original models and textures, you need the original Create 6.0.10 JAR for Minecraft 1.21.1 (NeoForge).** Put one copy in the instance's `horizon-mods/create-resources/` folder and restart Horizon. The mod reads the resources locally. [Download the supported JAR](https://modrinth.com/mod/create/version/UjX6dr61) · [Resource setup](docs/assets.md)
+The mod includes its own models and pixel textures. **For Create's original models and textures, you need the original Create 6.0.10 JAR for Minecraft 1.21.1 (NeoForge).** Put one copy in the instance's `horizon-mods/create-resources/` folder and restart Horizon. The mod reads the resources locally. [Download the supported JAR](https://modrinth.com/mod/create/version/UjX6dr61) · [Resource setup](docs/assets.md)
 
 ## Development
 

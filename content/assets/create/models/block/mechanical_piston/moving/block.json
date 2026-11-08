@@ -1,7 +1,9 @@
 {
   "textures": {
-    "all": "create:block/fallback/piston",
-    "particle": "create:block/fallback/piston"
+    "all": "create:block/fallback/piston_case",
+    "particle": "create:block/fallback/piston_case",
+    "back": "create:block/fallback/piston_back",
+    "inner": "create:block/fallback/piston_back"
   },
   "elements": [
     {
@@ -17,10 +19,22 @@
       ],
       "faces": {
         "down": {
-          "texture": "#all"
+          "texture": "#back",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "up": {
-          "texture": "#all"
+          "texture": "#inner",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "north": {
           "texture": "#all"

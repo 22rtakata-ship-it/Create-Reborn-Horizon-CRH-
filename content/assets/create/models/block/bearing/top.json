@@ -1,7 +1,9 @@
 {
   "textures": {
     "all": "create:block/fallback/bearing",
-    "particle": "create:block/fallback/bearing"
+    "particle": "create:block/fallback/bearing",
+    "cap": "create:block/fallback/bearing_cap",
+    "up": "create:block/fallback/bearing_cap"
   },
   "elements": [
     {
@@ -20,7 +22,13 @@
           "texture": "#all"
         },
         "up": {
-          "texture": "#all"
+          "texture": "#up",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "north": {
           "texture": "#all"

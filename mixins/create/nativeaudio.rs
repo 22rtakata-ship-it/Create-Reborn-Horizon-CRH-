@@ -4,9 +4,8 @@
 // Client-only source SoundScapes and AirCurrentSound through SoundEngine.
 use super::Game;
 use create_engine::audio::{self as rules, FanSound, Group, Key, Sound, SoundScapes};
-use horizon_client_render::sound_engine::{
-    Attenuation, InstanceId, SoundEngine, SoundInstance, Sounds, Ticking,
-};
+use horizon_client::random_source;
+use horizon_client_render::sound_engine::{Attenuation, InstanceId, SoundInstance, Sounds, Ticking};
 use horizon_core::random::RandomSource;
 use horizon_world::nbt::{Compound, Tag};
 use std::{cell::RefCell, collections::BTreeMap};
@@ -107,7 +106,7 @@ fn instance(sound: &Sound) -> SoundInstance {
         8,
         sound.volume,
         sound.pitch,
-        SoundEngine::unseeded(),
+        random_source::create(),
         true,
         0,
         Attenuation::Linear,
@@ -290,7 +289,7 @@ pub(super) fn enable_fan(game: &mut Game<'_>, rpm: f32, velocity: [f64; 3]) {
                 4,
                 0.01,
                 cache.fan.pitch,
-                SoundEngine::unseeded(),
+                random_source::create(),
                 true,
                 0,
                 Attenuation::Linear,

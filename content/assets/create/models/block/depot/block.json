@@ -1,7 +1,8 @@
 {
   "textures": {
     "all": "create:block/fallback/depot_rim",
-    "particle": "create:block/fallback/depot_rim"
+    "particle": "create:block/fallback/depot_rim",
+    "up": "create:block/fallback/depot_top"
   },
   "elements": [
     {
@@ -20,7 +21,13 @@
           "texture": "#all"
         },
         "up": {
-          "texture": "#all"
+          "texture": "#up",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "north": {
           "texture": "#all"
@@ -52,7 +59,13 @@
           "texture": "#all"
         },
         "up": {
-          "texture": "#all"
+          "texture": "#up",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "north": {
           "texture": "#all"

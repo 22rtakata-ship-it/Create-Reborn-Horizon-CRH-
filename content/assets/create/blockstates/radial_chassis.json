@@ -5,7 +5,9 @@
         "axis": "x"
       },
       "apply": {
-        "model": "create:block/chassis_fallback/radial_chassis_x"
+        "model": "create:block/chassis_fallback/radial_chassis_y",
+        "x": 90,
+        "y": 90
       }
     },
     {
@@ -93,7 +95,8 @@
         "axis": "z"
       },
       "apply": {
-        "model": "create:block/chassis_fallback/radial_chassis_z"
+        "model": "create:block/chassis_fallback/radial_chassis_y",
+        "x": 90
       }
     },
     {

@@ -1,7 +1,8 @@
 {
   "textures": {
     "all": "create:block/fallback/valve",
-    "particle": "create:block/fallback/valve"
+    "particle": "create:block/fallback/valve",
+    "handle": "create:block/fallback/valve_handle"
   },
   "elements": [
     {
@@ -81,22 +82,22 @@
       ],
       "faces": {
         "down": {
-          "texture": "#all"
+          "texture": "#handle"
         },
         "up": {
-          "texture": "#all"
+          "texture": "#handle"
         },
         "north": {
-          "texture": "#all"
+          "texture": "#handle"
         },
         "south": {
-          "texture": "#all"
+          "texture": "#handle"
         },
         "west": {
-          "texture": "#all"
+          "texture": "#handle"
         },
         "east": {
-          "texture": "#all"
+          "texture": "#handle"
         }
       }
     }

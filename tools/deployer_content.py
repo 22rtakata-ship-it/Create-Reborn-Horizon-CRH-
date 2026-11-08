@@ -1,5 +1,7 @@
 """Built-in Deployer shell and source voxel shapes for the moving farm tool."""
 
+from fallback_textures import material
+
 
 def deployer(write, model):
     rotations = {'down': {'x': 270}, 'up': {'x': 90}, 'north': {'y': 180},
@@ -27,15 +29,27 @@ def deployer(write, model):
         'shapes': {'property': 'facing', 'values': outline},
         'collision_shapes': {'property': 'facing', 'values': collision},
     })
-    model('deployer/fallback', [([0, 0, 0], [16, 16, 12])], 'minecraft:block/andesite')
+    body = [([0, 0, 0], [16, 16, 12])]
+    filter_material = {'filter': material('deployer_filter')}
+    model('deployer/fallback', body + [
+        ([5, -.02, 3], [11, 0, 9], 'filter'), ([5, 16, 3], [11, 16.02, 9], 'filter'),
+    ], material('deployer'), parts=filter_material)
+    model('deployer/fallback_side_filter', body + [
+        ([-.02, 5, 3], [0, 11, 9], 'filter'), ([16, 5, 3], [16.02, 11, 9], 'filter'),
+    ], material('deployer'), parts=filter_material)
     model('deployer/pole', [([6, 6, 1], [10, 10, 14])], 'minecraft:block/iron_block')
     for hand in ('pointing', 'holding'):
         model(f'deployer/hand_{hand}', [([5, 5, 12], [11, 11, 16])], 'minecraft:block/raw_gold_block')
     model('deployer/hand_punching', [([4, 4, 11], [12, 12, 16])], 'minecraft:block/raw_gold_block')
-    model('deployer/item_fallback', [([0, 0, 0], [16, 16, 12]), ([5, 5, 12], [11, 11, 16])],
-          'minecraft:block/andesite')
+    model('deployer/item_fallback', body + [
+        ([5, 16, 3], [11, 16.02, 9], 'filter'), ([5, 5, 12], [11, 11, 16], 'hand'),
+    ], material('deployer'), parts={**filter_material, 'hand': material('deployer_hand')})
     write('assets/create/blockstates/deployer.json', {'variants': {
-        f'axis_along_first={first},facing={face}': {'model': 'create:block/deployer/fallback', **rotation}
+        f'axis_along_first={first},facing={face}': {
+            'model': 'create:block/deployer/fallback' + (
+                '_side_filter' if (first == 'true') == (axes[face] == 0) else ''
+            ), **rotation,
+        }
         for face, rotation in rotations.items() for first in ('false', 'true')
     }})
     write('assets/create/models/item/deployer.json', {'parent': 'create:block/deployer/item_fallback'})

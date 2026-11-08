@@ -859,7 +859,9 @@ fn generated_distribution_passes_the_native_content_allowlist() {
         ])
     );
     for name in [
-        "assets/create/textures/block/fallback/creative_motor.png",
+        "assets/create/textures/block/fallback/motor_output.png",
+        "assets/create/models/block/large_water_wheel/block.obj",
+        "assets/create/models/block/large_water_wheel/wheel.mtl",
         "assets/create/textures/item/fallback/wrench.png",
         "data/create/horizon/block/gantry_shaft.json",
         "data/create/horizon/block/rope_pulley.json",

@@ -1,7 +1,8 @@
 {
   "textures": {
-    "all": "create:block/fallback/chain_drive",
-    "particle": "create:block/fallback/chain_drive"
+    "chain": "create:block/fallback/chain_drive",
+    "axle": "create:block/fallback/chain_end",
+    "particle": "#chain"
   },
   "elements": [
     {
@@ -17,22 +18,24 @@
       ],
       "faces": {
         "down": {
-          "texture": "#all"
+          "texture": "#axle",
+          "rotation": 270
         },
         "up": {
-          "texture": "#all"
+          "texture": "#axle",
+          "rotation": 90
         },
         "north": {
-          "texture": "#all"
+          "texture": "#chain"
         },
         "south": {
-          "texture": "#all"
+          "texture": "#chain"
         },
         "west": {
-          "texture": "#all"
+          "texture": "#chain"
         },
         "east": {
-          "texture": "#all"
+          "texture": "#chain"
         }
       }
     }

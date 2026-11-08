@@ -66,8 +66,3 @@ def encased_cogs(write, model):
         write(f'assets/create/items/{name}.json', {
             'model': {'type': 'minecraft:model', 'model': f'create:item/{name}'},
         })
-
-    model('large_cogwheel_shaftless', [
-        ([-1, 6, -1], [17, 10, 17]), ([-4, 5, 5], [20, 11, 11]),
-        ([5, 5, -4], [11, 11, 20]),
-    ], 'minecraft:block/oak_planks')

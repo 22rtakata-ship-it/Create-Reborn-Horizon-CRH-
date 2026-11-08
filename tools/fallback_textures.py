@@ -19,7 +19,6 @@ FAMILIES = {
     'clockwork_bearing': 'clockwork',
     'clutch': 'clutch',
     'copper_casing': 'copper_casing',
-    'creative_motor': 'creative_motor',
     'crushing_wheel': 'crusher_wheel',
     'deepslate_zinc_ore': 'deepslate_zinc_ore',
     'deployer': 'deployer',
@@ -30,7 +29,7 @@ FAMILIES = {
     'fluid_valve': 'valve',
     'flywheel': 'flywheel',
     'funnel': 'andesite_funnel',
-    'gantry_carriage': 'gantry',
+    'gantry_carriage': 'gantry_carriage',
     'gantry_shaft': 'gantry',
     'gearbox': 'gearbox',
     'gearshift': 'gearshift',
@@ -47,9 +46,9 @@ FAMILIES = {
     'shaft': 'steel_axle',
     'shaft_half': 'steel_axle',
     'smart_chute': 'smart_chute',
-    'speedometer': 'speedometer',
+    'speedometer': 'andesite_casing',
     'sticker': 'sticker',
-    'stressometer': 'stressometer',
+    'stressometer': 'andesite_casing',
     'weathered_iron_block': 'weathered_iron',
     'windmill_bearing': 'windmill',
     'zinc_block': 'zinc_block',
@@ -57,23 +56,21 @@ FAMILIES = {
 }
 
 PART_MATERIALS = {
-    'adjustable_chain_gearshift/false': 'clutch',
-    'adjustable_chain_gearshift/true': 'gearshift',
     'bearing/top': 'bearing',
     'bearing/top_wooden': 'windmill',
     'deployer/pole': 'steel_axle',
     'encased_fan/block': 'fan_case',
     'encased_fan/propeller': 'fan_blade',
-    'fluid_valve/pointer': 'gauge_needle',
+    'fluid_valve/pointer': 'valve_handle',
     'gauge/dial': 'gauge_needle',
     'gauge/speedometer/head': 'speedometer',
     'gauge/stressometer/head': 'stressometer',
-    'hand_crank/handle': 'oak_paddles',
+    'hand_crank/handle': 'hand_crank',
     'mechanical_crafter/arrow': 'brass_cog',
     'mechanical_crafter/belt': 'belt_rubber',
     'mechanical_crafter/belt_animated': 'belt_rubber',
     'mechanical_drill/block': 'drill_case',
-    'mechanical_drill/head': 'cutting_steel',
+    'mechanical_drill/head': 'drill_steel',
     'mechanical_mixer/block': 'mixer_case',
     'mechanical_mixer/head': 'cutting_steel',
     'mechanical_mixer/pole': 'steel_axle',
@@ -87,20 +84,37 @@ PART_MATERIALS = {
     'sail/sail_frame_fallback': 'chassis',
     'smart_chute/block_powered': 'smart_chute_powered',
     'sticker/block_powered': 'sticker_powered',
+    'sticker/head': 'sticker_slide',
+    'chute/block_window': 'chute_frame',
 }
+
+
+FACE_MATERIALS = {
+    'depot/block': {'up': 'depot_top'},
+    'gearbox/block': {'up': 'gearbox_cap', 'down': 'gearbox_cap'},
+    'mechanical_press/block': {'up': 'press_plate', 'down': 'press_plate'},
+    'encased_fan/block': {face: 'andesite_casing' for face in ('north', 'south', 'west', 'east')},
+    'mechanical_drill/block': {face: 'andesite_casing' for face in ('north', 'south', 'west', 'east')},
+    'gauge/speedometer/head': {'east': 'speedometer'},
+    'gauge/stressometer/head': {'east': 'stressometer'},
+    'speedometer/item': {'north': 'speedometer', 'east': 'speedometer'},
+    'stressometer/item': {'north': 'stressometer', 'east': 'stressometer'},
+    'bearing/top': {'up': 'bearing_cap'},
+    'bearing/top_wooden': {'up': 'windmill_cap'},
+    'sticker/head': {'up': 'sticker_pad'},
+}
+
+
+def material(name, category='block'):
+    return f'create:{category}/fallback/{name}'
 
 
 def block_material(name, slot, texture):
     family, _, part = name.partition('/')
-    if texture == 'minecraft:block/fire_0':
-        return None  # Use Minecraft's existing animated effect.
     if texture == 'minecraft:block/glass':
         return 'tank_glass'
     if name in PART_MATERIALS:
         return PART_MATERIALS[name]
-    if family in ('water_wheel', 'large_water_wheel'):
-        wood = texture.removeprefix('minecraft:block/').removesuffix('_planks')
-        return f'{wood}_paddles' if '_material_' in part else 'water_wheel'
     if family == 'sail':
         return part.removesuffix('_sail_fallback') + '_canvas'
     if family.startswith(('cut_', 'polished_cut_', 'small_')) or family == 'layered_andesite':
@@ -127,14 +141,22 @@ def block_material(name, slot, texture):
         return 'burner_case'
     if family == 'chassis_fallback':
         if part.startswith('sticky_'):
-            return 'sticker'
-        return 'chassis_end' if texture.endswith('_log') else 'chassis'
+            return 'sticky_piston'
+        if slot in ('up', 'down'):
+            return 'chassis_end'
+        if part.startswith('radial_'):
+            return 'chassis_radial'
+        if part.startswith('secondary_'):
+            return 'chassis_secondary'
+        return 'chassis_linear'
+    if family == 'deployer' and part.startswith('hand_'):
+        return 'deployer_hand'
     if family == 'item_drain':
         return 'drain' if slot == 'grate' else 'pipe_copper'
     if family == 'mechanical_crafter':
         return {'frame': 'brass_casing', 'slot': 'chassis'}.get(slot, 'crafter')
     if family == 'mechanical_pump' and slot == 'outlet':
-        return 'steel_axle'
+        return 'pump_rim'
     if family == 'mechanical_piston':
         return 'sticky_piston' if part.startswith('sticky/') else 'piston'
     if family == 'mechanical_saw':
@@ -147,7 +169,7 @@ def block_material(name, slot, texture):
 
 
 def retarget(path, model):
-    """Preserve geometry and aliases. Only replace concrete texture IDs."""
+    """Assign fallback materials and align the machine face UVs."""
     prefix = 'assets/create/models/'
     if not path.startswith(prefix):
         return
@@ -157,13 +179,39 @@ def retarget(path, model):
         if not texture.startswith('minecraft:'):
             continue
         if category == 'item':
-            material = name
+            tile = name
         elif category == 'entity':
-            material = 'sail_canvas' if name == 'logistics_hat' else 'belt_rubber'
+            tile = 'sail_canvas' if name == 'logistics_hat' else 'belt_rubber'
         else:
-            material = block_material(name, slot, texture)
-        if material is not None:
-            model['textures'][slot] = f'create:{texture_category}/fallback/{material}'
+            tile = block_material(name, slot, texture)
+        if tile is not None:
+            model['textures'][slot] = material(tile, texture_category)
+    if category == 'block' and (faces := FACE_MATERIALS.get(name)):
+        textures = model['textures']
+        textures.update({face: material(tile) for face, tile in faces.items()})
+        for element in model['elements']:
+            for face in element['faces'].keys() & faces.keys():
+                element['faces'][face] = {'texture': f'#{face}', 'uv': [0, 0, 16, 16]}
+    if category == 'block' and name in ('mechanical_saw/horizontal', 'mechanical_saw/vertical'):
+        model['textures']['casing'] = material('andesite_casing')
+        slot = 'south' if name.endswith('/horizontal') else 'up'
+        for face, surface in model['elements'][0]['faces'].items():
+            surface['texture'] = '#all' if face == slot else '#casing'
+    if category == 'block' and name == 'chute/block_window':
+        model['render_type'] = 'minecraft:cutout'
+    if category == 'block' and name.startswith('mechanical_piston/') and '/block' in name and 'elements' in model:
+        body = model['elements'][0]
+        for face, slot in (('down', 'back'), ('up', 'inner')):
+            body['faces'][face] = {'texture': '#' + slot, 'uv': [0, 0, 16, 16]}
+    for element in model.get('elements', []):
+        for face in element['faces'].values():
+            if face['texture'] in ('#filter', '#window'):
+                face['uv'] = [0, 0, 16, 16]
+    if name == 'fluid_tank/block_single_window':
+        for element in model['elements']:
+            for face in element['faces'].values():
+                if face['texture'] == '#glass':
+                    face['uv'] = [0, 0, 16, 16]
 
 
 def texture_path(texture_id):

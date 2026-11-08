@@ -1,7 +1,9 @@
 {
   "textures": {
     "all": "create:block/fallback/sticker",
-    "particle": "create:block/fallback/sticker"
+    "particle": "create:block/fallback/sticker",
+    "slide": "create:block/fallback/sticker_slide",
+    "pad": "create:block/fallback/sticker_pad"
   },
   "elements": [
     {
@@ -49,22 +51,54 @@
       ],
       "faces": {
         "down": {
-          "texture": "#all"
+          "texture": "#slide"
         },
         "up": {
-          "texture": "#all"
+          "texture": "#slide"
         },
         "north": {
-          "texture": "#all"
+          "texture": "#slide"
         },
         "south": {
-          "texture": "#all"
+          "texture": "#slide"
         },
         "west": {
-          "texture": "#all"
+          "texture": "#slide"
         },
         "east": {
-          "texture": "#all"
+          "texture": "#slide"
+        }
+      }
+    },
+    {
+      "from": [
+        2,
+        13,
+        2
+      ],
+      "to": [
+        14,
+        14,
+        14
+      ],
+      "faces": {
+        "down": {
+          "texture": "#pad"
+        },
+        "up": {
+          "texture": "#pad"
+        },
+        "north": {
+          "texture": "#pad"
+        },
+        "south": {
+          "texture": "#pad"
+        },
+        "west": {
+          "texture": "#pad"
+        },
+        "east": {
+          "texture": "#pad"
         }
       }
     }

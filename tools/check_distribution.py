@@ -21,7 +21,7 @@ def main():
     assert re.search(r'^version = "' + re.escape(manifest["version"]) + r'"$', source, re.M)
     content = ROOT / "content"
     expected = {p.relative_to(content).as_posix(): p.read_text()
-                for p in sorted(content.rglob("*")) if p.is_file() and p.suffix in {".json", ".toml"}
+                for p in sorted(content.rglob("*")) if p.is_file() and p.suffix in {".json", ".toml", ".obj", ".mtl"}
                 and "target" not in p.relative_to(content).parts}
     actual = json.loads((NATIVE / "data/content.json").read_text())
     assert actual == expected, "Bundled public content is stale: run tools/content.py"
@@ -30,10 +30,24 @@ def main():
     required.update(model_prefix + name + ".json" for name in EXTRA_MODELS)
     missing_models = required - actual.keys()
     assert not missing_models, "Missing built-in models: " + ", ".join(sorted(missing_models))
+    for block in BLOCKS:
+        item = json.loads(actual[model_prefix + f'item/{block}.json'])
+        rotation = item['display']['gui']['rotation']
+        assert rotation[0] % 90 and rotation[1] % 90, (block, rotation)
     textures = set()
     for name, text in actual.items():
         if name.startswith(model_prefix) and name.endswith(".json"):
-            for texture in json.loads(text).get("textures", {}).values():
+            model = json.loads(text)
+            if model.get("loader") == "neoforge:obj":
+                namespace, relative = model["model"].split(":", 1)
+                mesh = f"assets/{namespace}/{relative}"
+                assert mesh.startswith(model_prefix) and mesh in actual, name
+                material_libraries = [line.removeprefix("mtllib ") for line in actual[mesh].splitlines()
+                                      if line.startswith("mtllib ")]
+                assert material_libraries and all(
+                    f"{mesh.rsplit('/', 1)[0]}/{library}" in actual for library in material_libraries
+                ), mesh
+            for texture in model.get("textures", {}).values():
                 if texture.startswith(("create:block/fallback/", "create:item/fallback/")):
                     textures.add(texture_path(texture).as_posix())
                 else:

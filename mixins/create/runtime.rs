@@ -1603,6 +1603,10 @@ pub(super) fn container(block: &str, container: &mut Option<ModContainer>) {
 pub(super) fn models(models: &mut Vec<String>) {
     crate::game::create_port_mixer::models(models);
     crate::game::create_port_belt::models(models);
+    models.extend([
+        "create:block/blaze_burner/fallback_fire".to_owned(),
+        "create:block/blaze_burner/fallback_soul_fire".to_owned(),
+    ]);
     for part in create_assets::WHEEL_PARTS {
         for wood in create_assets::WOODS {
             models.push(format!("create:block/{part}_material_{wood}"));

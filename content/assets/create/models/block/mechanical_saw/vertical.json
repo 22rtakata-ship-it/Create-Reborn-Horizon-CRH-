@@ -1,7 +1,8 @@
 {
   "textures": {
     "all": "create:block/fallback/saw",
-    "particle": "create:block/fallback/saw"
+    "particle": "create:block/fallback/saw",
+    "casing": "create:block/fallback/andesite_casing"
   },
   "elements": [
     {
@@ -17,54 +18,22 @@
       ],
       "faces": {
         "down": {
-          "texture": "#all"
+          "texture": "#casing"
         },
         "up": {
           "texture": "#all"
         },
         "north": {
-          "texture": "#all"
+          "texture": "#casing"
         },
         "south": {
-          "texture": "#all"
+          "texture": "#casing"
         },
         "west": {
-          "texture": "#all"
+          "texture": "#casing"
         },
         "east": {
-          "texture": "#all"
-        }
-      }
-    },
-    {
-      "from": [
-        3,
-        12,
-        7
-      ],
-      "to": [
-        13,
-        16,
-        9
-      ],
-      "faces": {
-        "down": {
-          "texture": "#all"
-        },
-        "up": {
-          "texture": "#all"
-        },
-        "north": {
-          "texture": "#all"
-        },
-        "south": {
-          "texture": "#all"
-        },
-        "west": {
-          "texture": "#all"
-        },
-        "east": {
-          "texture": "#all"
+          "texture": "#casing"
         }
       }
     }

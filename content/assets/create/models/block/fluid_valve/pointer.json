@@ -1,7 +1,7 @@
 {
   "textures": {
-    "all": "create:block/fallback/gauge_needle",
-    "particle": "create:block/fallback/gauge_needle"
+    "all": "create:block/fallback/valve_handle",
+    "particle": "create:block/fallback/valve_handle"
   },
   "elements": [
     {

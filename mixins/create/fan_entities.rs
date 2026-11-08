@@ -543,7 +543,7 @@ fn convert_horse(game: &mut Game<'_>, id: u32, at: [f64; 3]) {
         return;
     }
     if let Some(armor) = armor {
-        game.spawn_item(armor, at, crate::game::dispenser::new_item_motion(), 10);
+        game.spawn_item_own(armor, at, 10);
     }
     game.native_remove_mob(&dim, id);
     // Later fans in this tick must be able to discover the new skeleton horse.

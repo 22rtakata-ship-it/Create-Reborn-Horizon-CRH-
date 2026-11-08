@@ -39,12 +39,44 @@
     {
       "from": [
         0,
-        3,
-        8
+        4,
+        10
+      ],
+      "to": [
+        2,
+        9,
+        13
+      ],
+      "faces": {
+        "down": {
+          "texture": "#all"
+        },
+        "up": {
+          "texture": "#all"
+        },
+        "north": {
+          "texture": "#all"
+        },
+        "south": {
+          "texture": "#all"
+        },
+        "west": {
+          "texture": "#all"
+        },
+        "east": {
+          "texture": "#all"
+        }
+      }
+    },
+    {
+      "from": [
+        14,
+        4,
+        10
       ],
       "to": [
         16,
-        5,
+        9,
         13
       ],
       "faces": {

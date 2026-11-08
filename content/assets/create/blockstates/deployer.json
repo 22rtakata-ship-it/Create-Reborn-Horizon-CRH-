@@ -1,7 +1,7 @@
 {
   "variants": {
     "axis_along_first=false,facing=down": {
-      "model": "create:block/deployer/fallback",
+      "model": "create:block/deployer/fallback_side_filter",
       "x": 270
     },
     "axis_along_first=true,facing=down": {
@@ -9,7 +9,7 @@
       "x": 270
     },
     "axis_along_first=false,facing=up": {
-      "model": "create:block/deployer/fallback",
+      "model": "create:block/deployer/fallback_side_filter",
       "x": 90
     },
     "axis_along_first=true,facing=up": {
@@ -17,7 +17,7 @@
       "x": 90
     },
     "axis_along_first=false,facing=north": {
-      "model": "create:block/deployer/fallback",
+      "model": "create:block/deployer/fallback_side_filter",
       "y": 180
     },
     "axis_along_first=true,facing=north": {
@@ -25,7 +25,7 @@
       "y": 180
     },
     "axis_along_first=false,facing=south": {
-      "model": "create:block/deployer/fallback"
+      "model": "create:block/deployer/fallback_side_filter"
     },
     "axis_along_first=true,facing=south": {
       "model": "create:block/deployer/fallback"
@@ -35,7 +35,7 @@
       "y": 90
     },
     "axis_along_first=true,facing=west": {
-      "model": "create:block/deployer/fallback",
+      "model": "create:block/deployer/fallback_side_filter",
       "y": 90
     },
     "axis_along_first=false,facing=east": {
@@ -43,7 +43,7 @@
       "y": 270
     },
     "axis_along_first=true,facing=east": {
-      "model": "create:block/deployer/fallback",
+      "model": "create:block/deployer/fallback_side_filter",
       "y": 270
     }
   }

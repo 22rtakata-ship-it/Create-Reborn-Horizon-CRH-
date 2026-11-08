@@ -1,5 +1,7 @@
 """Original Sticker state schema with built-in vanilla-textured models."""
 
+from fallback_textures import material
+
 STICKER = 'sticker'
 
 
@@ -22,7 +24,8 @@ def sticker(write, model):
     model(f'{STICKER}/block', base, 'minecraft:block/piston_side')
     model(f'{STICKER}/block_powered', base, 'minecraft:block/redstone_block')
     model(f'{STICKER}/head', head, 'minecraft:block/slime_block')
-    model(f'{STICKER}/item', base + head, 'minecraft:block/piston_side')
+    model(f'{STICKER}/item', base + [(*head[0], 'slide'), ([2, 13, 2], [14, 14, 14], 'pad')],
+          material('sticker'), parts={'slide': material('sticker_slide'), 'pad': material('sticker_pad')})
     write(f'assets/create/blockstates/{STICKER}.json', {'variants': {
         f'extended={extended},facing={face},powered={powered}': {
             'model': f'create:block/{STICKER}/block' + ('_powered' if powered == 'true' else ''),

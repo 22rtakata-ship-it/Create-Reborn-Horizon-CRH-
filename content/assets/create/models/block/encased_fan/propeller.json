@@ -1,19 +1,20 @@
 {
   "textures": {
     "all": "create:block/fallback/fan_blade",
-    "particle": "create:block/fallback/fan_blade"
+    "particle": "create:block/fallback/fan_blade",
+    "hub": "create:block/fallback/steel_axle"
   },
   "elements": [
     {
       "from": [
         3,
-        6,
-        7
+        6.5,
+        2
       ],
       "to": [
         13,
-        10,
-        9
+        9.5,
+        4
       ],
       "faces": {
         "down": {
@@ -38,14 +39,14 @@
     },
     {
       "from": [
-        6,
+        6.5,
         3,
-        7
+        2
       ],
       "to": [
-        10,
+        9.5,
         13,
-        9
+        4
       ],
       "faces": {
         "down": {
@@ -72,31 +73,31 @@
       "from": [
         6,
         6,
+        1
+      ],
+      "to": [
+        10,
+        10,
         5
       ],
-      "to": [
-        10,
-        10,
-        11
-      ],
       "faces": {
         "down": {
-          "texture": "#all"
+          "texture": "#hub"
         },
         "up": {
-          "texture": "#all"
+          "texture": "#hub"
         },
         "north": {
-          "texture": "#all"
+          "texture": "#hub"
         },
         "south": {
-          "texture": "#all"
+          "texture": "#hub"
         },
         "west": {
-          "texture": "#all"
+          "texture": "#hub"
         },
         "east": {
-          "texture": "#all"
+          "texture": "#hub"
         }
       }
     }

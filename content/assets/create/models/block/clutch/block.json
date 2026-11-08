@@ -1,7 +1,8 @@
 {
   "textures": {
     "all": "create:block/fallback/clutch",
-    "particle": "create:block/fallback/clutch"
+    "cap": "create:block/fallback/gearbox_cap",
+    "particle": "#all"
   },
   "elements": [
     {
@@ -17,10 +18,10 @@
       ],
       "faces": {
         "down": {
-          "texture": "#all"
+          "texture": "#cap"
         },
         "up": {
-          "texture": "#all"
+          "texture": "#cap"
         },
         "north": {
           "texture": "#all"

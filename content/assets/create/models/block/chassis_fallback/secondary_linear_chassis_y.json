@@ -1,12 +1,12 @@
 {
   "parent": "minecraft:block/cube",
   "textures": {
-    "particle": "create:block/fallback/chassis_end",
-    "west": "create:block/fallback/chassis_end",
-    "east": "create:block/fallback/chassis_end",
-    "down": "create:block/fallback/chassis",
-    "up": "create:block/fallback/chassis",
-    "north": "create:block/fallback/chassis_end",
-    "south": "create:block/fallback/chassis_end"
+    "particle": "create:block/fallback/chassis_secondary",
+    "west": "create:block/fallback/chassis_secondary",
+    "east": "create:block/fallback/chassis_secondary",
+    "down": "create:block/fallback/chassis_end",
+    "up": "create:block/fallback/chassis_end",
+    "north": "create:block/fallback/chassis_secondary",
+    "south": "create:block/fallback/chassis_secondary"
   }
 }

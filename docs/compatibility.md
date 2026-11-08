@@ -1,5 +1,9 @@
 # Original Create identifiers and data
 
+Version 0.9.0 pins unmodified upstream Horizon, includes independent built-in
+artwork, and retains local import of the original Create resources.
+[Horizon and Nightly checks](official-horizon.md)
+
 The 0.8.0-alpha.16 development checkpoint matches the original Deployer's
 final visit before the bearing stops. Vertical Mechanical Bearings can land
 in dry vanilla leaves, and blocked landings can still be retried after a

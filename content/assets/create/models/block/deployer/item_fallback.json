@@ -1,7 +1,9 @@
 {
   "textures": {
     "all": "create:block/fallback/deployer",
-    "particle": "create:block/fallback/deployer"
+    "particle": "create:block/fallback/deployer",
+    "filter": "create:block/fallback/deployer_filter",
+    "hand": "create:block/fallback/deployer_hand"
   },
   "elements": [
     {
@@ -39,6 +41,74 @@
     {
       "from": [
         5,
+        16,
+        3
+      ],
+      "to": [
+        11,
+        16.02,
+        9
+      ],
+      "faces": {
+        "down": {
+          "texture": "#filter",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#filter",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "north": {
+          "texture": "#filter",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#filter",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#filter",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#filter",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        }
+      }
+    },
+    {
+      "from": [
+        5,
         5,
         12
       ],
@@ -49,22 +119,22 @@
       ],
       "faces": {
         "down": {
-          "texture": "#all"
+          "texture": "#hand"
         },
         "up": {
-          "texture": "#all"
+          "texture": "#hand"
         },
         "north": {
-          "texture": "#all"
+          "texture": "#hand"
         },
         "south": {
-          "texture": "#all"
+          "texture": "#hand"
         },
         "west": {
-          "texture": "#all"
+          "texture": "#hand"
         },
         "east": {
-          "texture": "#all"
+          "texture": "#hand"
         }
       }
     }

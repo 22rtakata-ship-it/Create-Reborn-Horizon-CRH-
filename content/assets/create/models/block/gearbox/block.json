@@ -1,7 +1,9 @@
 {
   "textures": {
     "all": "create:block/fallback/gearbox",
-    "particle": "create:block/fallback/gearbox"
+    "particle": "create:block/fallback/gearbox",
+    "up": "create:block/fallback/gearbox_cap",
+    "down": "create:block/fallback/gearbox_cap"
   },
   "elements": [
     {
@@ -17,10 +19,22 @@
       ],
       "faces": {
         "down": {
-          "texture": "#all"
+          "texture": "#down",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "up": {
-          "texture": "#all"
+          "texture": "#up",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "north": {
           "texture": "#all"

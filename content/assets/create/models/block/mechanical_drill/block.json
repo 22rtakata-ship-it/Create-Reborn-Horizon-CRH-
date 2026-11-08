@@ -1,7 +1,11 @@
 {
   "textures": {
     "all": "create:block/fallback/drill_case",
-    "particle": "create:block/fallback/drill_case"
+    "particle": "create:block/fallback/drill_case",
+    "north": "create:block/fallback/andesite_casing",
+    "south": "create:block/fallback/andesite_casing",
+    "west": "create:block/fallback/andesite_casing",
+    "east": "create:block/fallback/andesite_casing"
   },
   "elements": [
     {
@@ -23,16 +27,40 @@
           "texture": "#all"
         },
         "north": {
-          "texture": "#all"
+          "texture": "#north",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "south": {
-          "texture": "#all"
+          "texture": "#south",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "west": {
-          "texture": "#all"
+          "texture": "#west",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "east": {
-          "texture": "#all"
+          "texture": "#east",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         }
       }
     },
@@ -55,16 +83,40 @@
           "texture": "#all"
         },
         "north": {
-          "texture": "#all"
+          "texture": "#north",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "south": {
-          "texture": "#all"
+          "texture": "#south",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "west": {
-          "texture": "#all"
+          "texture": "#west",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "east": {
-          "texture": "#all"
+          "texture": "#east",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         }
       }
     }

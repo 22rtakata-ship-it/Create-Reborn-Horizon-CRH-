@@ -1,11 +1,18 @@
 # Official Horizon compatibility
 
-The `official-horizon-compat` branch moves the current Create development build
-off its private engine changes. It targets Horizon's Minecraft 26.3 runtime.
-The comparison baseline for this migration is official `main` at `41f822b65`.
-The mod's published release and registry update use separate build pins.
+Create 0.9.0 builds on the unmodified official Horizon commit `4e5296d`
+with Minecraft 26.3 resources. It was built with the pinned Horizon Mixins
+tool. The native client loaded both resource sets, restored a lit Blaze
+Burner after restart, and matched the Java reference across 460 ticks of
+Precision Mechanism assembly, including a restart after operation seven.
+[Pinned source](https://github.com/horizon-rust/horizon/commit/4e5296d1800b3f89f2ae48dfd99d431801df4d46)
 
-## Engine changes under review
+The official Nightly tagged `nightly-source/2026-11-08-fdc87ae` precedes
+#11098, #11116 and #11068. Applying the full mod to that source fails at
+`native_stateful_block_entity`. All three changes are in the 0.9.0 pin.
+[Nightly source](https://github.com/horizon-rust/horizon/tree/nightly-source/2026-11-08-fdc87ae)
+
+## Merged engine changes
 
 | Area | Horizon pull requests |
 | --- | --- |
@@ -39,5 +46,5 @@ not change the native mod interface. [Horizon #11143](https://github.com/horizon
    and `mixins/create/horizon-mixin.toml`. Build the package, check its pins and
    install it through the unmodified Launcher before updating the registry.
 
-An engine checkout with the proposed patches is useful for development. Launcher
-compatibility requires a separate clean install against the official Nightly.
+Launcher and registry compatibility require a clean installation against the
+official Nightly after it picks up these changes.

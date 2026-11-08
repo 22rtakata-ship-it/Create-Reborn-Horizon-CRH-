@@ -462,7 +462,21 @@ pub(super) fn draw(
             NativeModelShade::Off,
         );
     }
-    if let Some(flame) = frame.flame {
+    if !super::create_port::original_assets() && heat >= Heat::Fading {
+        part(
+            game,
+            draw,
+            if heat == Heat::Seething {
+                "create:block/blaze_burner/fallback_soul_fire"
+            } else {
+                "create:block/blaze_burner/fallback_fire"
+            },
+            frame.head_y * 0.5,
+            Some(time * 0.045),
+            false,
+            NativeModelShade::Off,
+        );
+    } else if let Some(flame) = frame.flame {
         game.native_draw_terrain_model(
             draw,
             "create:block/blaze_burner/flame",
@@ -470,7 +484,7 @@ pub(super) fn draw(
                 material: NativeModelMaterial::Model,
                 // The source OBJ flame likewise has shade=false/OFF.
                 shade: NativeModelShade::Off,
-                uv_shift: super::create_port::original_assets().then(|| NativeModelUvShift {
+                uv_shift: Some(NativeModelUvShift {
                     source_sprite: "create:block/blaze_burner_flame",
                     target_sprite: if flame.superheated {
                         "create:block/blaze_burner_flame_superheated_scroll"

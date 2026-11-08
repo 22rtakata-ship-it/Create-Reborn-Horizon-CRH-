@@ -1,7 +1,8 @@
 {
   "textures": {
     "all": "create:block/fallback/deployer",
-    "particle": "create:block/fallback/deployer"
+    "particle": "create:block/fallback/deployer",
+    "filter": "create:block/fallback/deployer_filter"
   },
   "elements": [
     {
@@ -33,6 +34,142 @@
         },
         "east": {
           "texture": "#all"
+        }
+      }
+    },
+    {
+      "from": [
+        5,
+        -0.02,
+        3
+      ],
+      "to": [
+        11,
+        0,
+        9
+      ],
+      "faces": {
+        "down": {
+          "texture": "#filter",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#filter",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "north": {
+          "texture": "#filter",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#filter",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#filter",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#filter",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        }
+      }
+    },
+    {
+      "from": [
+        5,
+        16,
+        3
+      ],
+      "to": [
+        11,
+        16.02,
+        9
+      ],
+      "faces": {
+        "down": {
+          "texture": "#filter",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#filter",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "north": {
+          "texture": "#filter",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#filter",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#filter",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#filter",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         }
       }
     }

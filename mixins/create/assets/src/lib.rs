@@ -46,8 +46,8 @@ pub const BELT_DYES: &[&str] = &[
     "red",
     "black",
 ];
-/// Standalone blade overlays used with imported assets. Built-in models
-/// already include simple blade geometry and need no overlay.
+/// Standalone blade overlays. The imported originals replace the built-in
+/// overlays at these names.
 pub const MOVING_BLADES: &[(&str, &str)] = &[
     (
         "mechanical_harvester/moving_blade",

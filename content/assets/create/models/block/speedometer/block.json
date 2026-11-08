@@ -1,7 +1,7 @@
 {
   "textures": {
-    "all": "create:block/fallback/speedometer",
-    "particle": "create:block/fallback/speedometer"
+    "all": "create:block/fallback/andesite_casing",
+    "particle": "create:block/fallback/andesite_casing"
   },
   "elements": [
     {

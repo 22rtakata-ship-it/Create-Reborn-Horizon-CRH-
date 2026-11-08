@@ -9,7 +9,8 @@ use super::create_port_basin_recipes::Recipe;
 use super::{Game, create_port_basin as basin, native_block_entity_draw::BlockEntityDraw};
 use crate::containers::{BlockEntity, ModBlockEntity, ModRevision};
 use create_engine::{basin as rules, kinetics::Axis, transport::SessionCache};
-use horizon_client_render::sound_engine::{SoundEngine, SoundInstance, Sounds};
+use horizon_client::random_source;
+use horizon_client_render::sound_engine::{SoundInstance, Sounds};
 use horizon_core::random::RandomSource;
 use horizon_world::nbt::Tag;
 use std::{
@@ -406,7 +407,7 @@ pub(super) fn client_tick(game: &mut Game<'_>) {
                 0
             };
             let sound =
-                SoundInstance::at("create:mixing", 4, 0.75, 1.0, SoundEngine::unseeded(), at);
+                SoundInstance::at("create:mixing", 4, 0.75, 1.0, random_source::create(), at);
             if delay > 0 {
                 let id = game.audio.engine.add(sound, false);
                 game.audio.engine.play_delayed(id, delay);

@@ -1,9 +1,9 @@
 [mod]
 id = "create"
-version = "0.8.0-alpha.16"
+version = "0.9.0"
 
 [compatibility]
-horizon_revision = "9c7f9b2215dfed497aba5522c44f38926628648d"
+horizon_revision = "4e5296d1800b3f89f2ae48dfd99d431801df4d46"
 
 [[crate]]
 id = "engine"
@@ -186,7 +186,7 @@ bindings = [
 
 [[injection]]
 id = "local-assets"
-target = "horizon_client::game::load_resources"
+target = "horizon_client::game::resource_load::load_resources"
 kind = "HEAD"
 helper = "assets_startup.rs"
 bindings = [{ name = "root", ty = "&mut std::path::PathBuf", value = "&mut root" }]

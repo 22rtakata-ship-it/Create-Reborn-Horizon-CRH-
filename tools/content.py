@@ -5,7 +5,8 @@ Models reference independent fallback art. The original artwork stays in the loc
 """
 import json
 import zipfile
-from fallback_textures import retarget
+from fallback_textures import material, retarget
+from fallback_shapes import cogs, flywheel_art, motor, wheels
 from common import ROOT, NATIVE
 from catalog import HIDDEN_CREATIVE_ITEMS, IRON_PALETTE, PALETTE_BLOCKS, STONE_PALETTES, ZINC_BLOCKS
 from pulley_content import rope_pulley
@@ -38,25 +39,33 @@ STONE_APPEARANCE = {
 
 def write(path, value):
     retarget(path, value)
+    if path.startswith("assets/create/models/item/") and value.get("parent", "").startswith("create:block/"):
+        value.setdefault("display", {}).setdefault("gui", {
+            "rotation": [30, 225, 0], "scale": [.625, .625, .625],
+        })
     target = CONTENT / path
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(json.dumps(value, indent=2, ensure_ascii=False) + "\n")
 
 
-def model(name, boxes, texture="minecraft:block/iron_block", *, rotation=None):
+def box_element(start, end, material_slot="all"):
     sides = ("down", "up", "north", "south", "west", "east")
+    face = {"texture": "#" + material_slot}
+    # Generated UVs can sample neighbouring atlas sprites beyond a block.
+    if any(value < 0 or value > 16 for value in [*start, *end]):
+        face["uv"] = [0, 0, 16, 16]
+    return {"from": start, "to": end, "faces": {side: dict(face) for side in sides}}
+
+
+def model(name, boxes, texture="minecraft:block/iron_block", *, rotation=None, parts=None):
     elements = []
-    for start, end in boxes:
-        face = {"texture": "#all"}
-        # Generated UVs can sample neighbouring atlas sprites beyond a block.
-        if any(value < 0 or value > 16 for value in [*start, *end]):
-            face["uv"] = [0, 0, 16, 16]
-        element = {"from": start, "to": end, "faces": dict.fromkeys(sides, face)}
+    for start, end, *slots in boxes:
+        element = box_element(start, end, slots[0] if slots else "all")
         if rotation is not None:
             element["rotation"] = rotation
         elements.append(element)
     write("assets/create/models/block/" + name + ".json", {
-        "textures": {"all": texture, "particle": texture},
+        "textures": {"all": texture, "particle": texture, **(parts or {})},
         "elements": elements,
     })
 
@@ -112,13 +121,27 @@ def processors():
                                ([5, 5, 2], [11, 16, 5]), ([5, 5, 11], [11, 16, 14])], "minecraft:block/andesite")
     model("millstone/inner", [([5, 5, 5], [11, 12, 11]), ([6, 12, 7], [10, 15, 9])], "minecraft:block/smooth_stone")
     # The source static fan model faces up before blockstate rotations.
-    model("encased_fan/block", [([0, 0, 0], [16, 3, 16]),
-                                 ([0, 3, 0], [3, 16, 16]), ([13, 3, 0], [16, 16, 16]),
-                                 ([3, 3, 0], [13, 16, 3]), ([3, 3, 13], [13, 16, 16])], "minecraft:block/stripped_spruce_log")
     # The native renderer faces the moving partial along the rear shaft.
-    model("encased_fan/propeller", [([3, 6, 7], [13, 10, 9]), ([6, 3, 7], [10, 13, 9]), ([6, 6, 5], [10, 10, 11])])
-    model("mechanical_drill/block", [([0, 0, 0], [16, 10, 16]), ([2, 10, 2], [14, 12, 14])], "minecraft:block/andesite")
-    model("mechanical_drill/head", [([4, 12, 4], [12, 13, 12]), ([5, 13, 5], [11, 14, 11]), ([7, 14, 7], [9, 16, 9])])
+    fan_case = [([0, 0, 0], [16, 3, 16]), ([0, 3, 0], [3, 16, 16]), ([13, 3, 0], [16, 16, 16]),
+                ([3, 3, 0], [13, 16, 3]), ([3, 3, 13], [13, 16, 16])]
+    model("encased_fan/block", fan_case, "minecraft:block/stripped_spruce_log")
+    fan_rotor = [([3, 6.5, 2], [13, 9.5, 4]), ([6.5, 3, 2], [9.5, 13, 4]),
+                 ([6, 6, 1], [10, 10, 5], "hub")]
+    model("encased_fan/propeller", fan_rotor, parts={"hub": material("steel_axle")})
+    fan_item_rotor = [([a[0], 16-b[2], a[1]], [b[0], 16-a[2], b[1]], slot[0] if slot else "rotor")
+                      for a, b, *slot in fan_rotor]
+    model("encased_fan/item", fan_case + fan_item_rotor, material("andesite_casing"),
+          parts={"hub": material("steel_axle"), "rotor": material("fan_blade")})
+    drill_body = [([0, 0, 0], [16, 10, 16]), ([2, 10, 2], [14, 12, 14])]
+    model("mechanical_drill/block", drill_body, "minecraft:block/andesite")
+    # The moving renderer and the contraption actor both orient a +Z partial.
+    drill_head = [([3, 3, 11], [13, 13, 13]), ([4, 4, 13], [12, 12, 15]),
+                  ([5, 5, 15], [11, 11, 17]), ([6, 6, 17], [10, 10, 19]),
+                  ([7, 7, 19], [9, 9, 20])]
+    model("mechanical_drill/head", drill_head)
+    drill_item_head = [([a[0], a[2], 16-b[1]], [b[0], b[2], 16-a[1]], "head") for a, b in drill_head]
+    model("mechanical_drill/item", drill_body + drill_item_head, material("andesite_casing"),
+          parts={"head": material("drill_steel")})
     for block in ["millstone", "encased_fan", "mechanical_drill"]:
         variants = {"": {"model": "create:block/" + block + "/block"}}
         if block != "millstone":
@@ -129,7 +152,8 @@ def processors():
             if block == "mechanical_drill":
                 variants = {key + ",waterlogged=" + wet: value for key, value in variants.items() for wet in ["false", "true"]}
         write("assets/create/blockstates/" + block + ".json", {"variants": variants})
-        write("assets/create/models/item/" + block + ".json", {"parent": "create:block/" + block + "/block"})
+        item = "block" if block == "millstone" else "item"
+        write("assets/create/models/item/" + block + ".json", {"parent": f"create:block/{block}/{item}"})
         write("assets/create/items/" + block + ".json", {"model": {"type": "minecraft:model", "model": "create:item/" + block}})
         write("data/create/loot_table/blocks/" + block + ".json", {"type": "minecraft:block", "pools": [{"rolls": 1, "entries": [{"type": "minecraft:item", "name": "create:" + block}]}]})
 
@@ -140,8 +164,9 @@ def bearings():
         "east": {"x": 90, "y": 90}, "south": {"x": 90, "y": 180},
         "west": {"x": 90, "y": 270},
     }
-    model("bearing/top", [([1, 13, 1], [15, 16, 15])], "minecraft:block/smooth_stone")
-    model("bearing/top_wooden", [([1, 13, 1], [15, 16, 15])], "minecraft:block/oak_planks")
+    for name, side, cap in (("top", "bearing", "bearing_cap"), ("top_wooden", "windmill", "windmill_cap")):
+        model(f"bearing/{name}", [([1, 13, 1], [15, 16, 15])], material(side),
+              parts={"cap": material(cap)})
     for name in ("mechanical_bearing", "windmill_bearing", "clockwork_bearing"):
         write(f"data/create/horizon/block/{name}.json", {
             "template": "minecraft:glass", "item": True,
@@ -156,7 +181,12 @@ def bearings():
             "variants": {f"facing={face}": {"model": f"create:block/{name}", **rotation}
                          for face, rotation in rotations.items()},
         })
-        write(f"assets/create/models/item/{name}.json", {"parent": f"create:block/{name}"})
+        if name != "clockwork_bearing":
+            side, cap = ("bearing", "bearing_cap") if name == "mechanical_bearing" else ("windmill", "windmill_cap")
+            model(f"{name}/item", [([0, 0, 0], [16, 13, 16]), ([1, 13, 1], [15, 16, 15], "cap")],
+                  material(side), parts={"cap": material(cap)})
+        item = name if name == "clockwork_bearing" else f"{name}/item"
+        write(f"assets/create/models/item/{name}.json", {"parent": f"create:block/{item}"})
         write(f"assets/create/items/{name}.json", {
             "model": {"type": "minecraft:model", "model": f"create:item/{name}"},
         })
@@ -164,7 +194,6 @@ def bearings():
 
 def pistons():
     # MIT MechanicalPistonBlock, MechanicalPistonGenerator and AllShapes.
-    # Built-in models below are simplified geometry using vanilla textures.
     rotations = {
         "down": {"x": 180}, "up": {}, "north": {"x": 90},
         "south": {"x": 90, "y": 180}, "west": {"x": 90, "y": 270},
@@ -189,13 +218,16 @@ def pistons():
     body = [([0, 0, 0], [16, 12, 16])]
     pole = [([6, 0, 6], [10, 16, 10])]
     head = [([6, 0, 6], [10, 12, 10]), ([0, 12, 0], [16, 16, 16])]
-    for folder, boxes, texture in [
-        ("normal", body + head[1:], "minecraft:block/stripped_spruce_log"),
-        ("sticky", body + head[1:], "minecraft:block/mossy_cobblestone"),
-        ("moving", body, "minecraft:block/stripped_spruce_log"),
-        ("extended", body + [([6, 12, 6], [10, 16, 10])], "minecraft:block/stripped_spruce_log"),
-    ]:
-        model(f"{path}/{folder}/block", boxes, texture)
+    for folder in ("normal", "sticky", "moving", "extended"):
+        boxes = body
+        parts = {"back": material("piston_back"), "inner": material("piston_back")}
+        if folder in ("normal", "sticky"):
+            boxes = body + [([1, 12, 1], [15, 16, 15], "head")]
+            parts["head"] = material("piston_head" if folder == "normal" else "piston_sticky_head")
+        elif folder == "extended":
+            boxes = body + [([6, 12, 6], [10, 16, 10], "head")]
+            parts["head"] = material("piston")
+        model(f"{path}/{folder}/block", boxes, material("piston_case"), parts=parts)
         write(f"assets/create/models/block/{path}/{folder}/block_rotated.json",
               {"parent": f"create:block/{path}/{folder}/block"})
     model(f"{path}/normal/head", head, "minecraft:block/stripped_spruce_log")
@@ -293,9 +325,22 @@ def contraption_actors():
                 "model": f"create:block/{appearance}", **({"y": yaw} if yaw else {}),
             } for side, yaw in horizontal.items() for wet in ("false", "true")},
         })
-    model(f"{harvester}/block", [([0, 2, 13], [16, 14, 16]), ([0, 3, 8], [16, 5, 13])])
-    model(f"{harvester}/blade", [([0, 3, 8], [16, 5, 13])])
-    model(plough, [([0, 2, 13], [16, 14, 16]), ([0, 2, 1], [16, 5, 13])], "minecraft:block/anvil")
+    harvester_body = [([0, 2, 13], [16, 14, 16]), ([0, 4, 10], [2, 9, 13]), ([14, 4, 10], [16, 9, 13])]
+    model(f"{harvester}/block", harvester_body)
+    # The reel spins around X at y=6,z=9 in the renderer's +Z frame.
+    reel = [([0, 5, 8], [16, 7, 10]), ([1, 3, 8], [15, 9, 10]), ([1, 5, 6], [15, 7, 12])]
+    reel += [([x, 2, 8], [x+1, 10, 10]) for x in range(1, 15, 3)]
+    model(f"{harvester}/blade", reel, material("harvester_reel"))
+    write(f"assets/create/models/block/{harvester}/moving_blade.json",
+          {"parent": f"create:block/{harvester}/blade"})
+    model(f"{harvester}/item", harvester_body + [
+        ([16-b[0], a[1], 16-b[2]], [16-a[0], b[1], 16-a[2]], "reel") for a, b in reel
+    ], material("harvester"), parts={"reel": material("harvester_reel")})
+    plough_mount = [([0, 2, 13], [16, 14, 16]), ([1, 4, 10], [15, 7, 13])]
+    plough_blade = [([1, 4, 1], [3, 7, 11], "steel"), ([13, 4, 1], [15, 7, 11], "steel"),
+                   ([3, 4, 0], [13, 5, 11], "steel"), ([3, 3, 0], [13, 4, 2], "steel")]
+    model(plough, plough_mount + plough_blade, material("andesite_casing"),
+          parts={"steel": material("plough")})
     write(f"assets/create/models/item/{plough}.json", {"parent": f"create:block/{plough}"})
     write(f"assets/create/items/{plough}.json", {
         "model": {"type": "minecraft:model", "model": f"create:item/{plough}"},
@@ -326,18 +371,33 @@ def contraption_actors():
                     entry["y"] = yaw
                 saw_variants[f"axis_along_first={first},facing={side},flipped={flipped}"] = entry
     write(f"assets/create/blockstates/{saw}.json", {"variants": saw_variants})
-    blade = {
-        "horizontal": [([7, 3, 12], [9, 13, 16])],
-        "vertical": [([3, 12, 7], [13, 16, 9])],
-    }
+    # The transparent tooth silhouette is drawn edge-on in the slot. The
+    # vertical world partial uses the same local +Z basis as the horizontal one.
+    blade = box_element([7.75, 1, 6], [8.25, 15, 20], "disc")
+    blade["faces"] = {face: {"texture": "#disc", "uv": [0, 0, 16, 16]}
+                      for face in ("east", "west")}
     for orientation, base in [("horizontal", [([0, 0, 0], [16, 16, 12])]),
                               ("vertical", [([0, 0, 0], [16, 12, 16])])]:
-        model(f"{saw}/{orientation}", base + blade[orientation], "minecraft:block/andesite")
+        model(f"{saw}/{orientation}", base, "minecraft:block/andesite")
+        write(f"assets/create/models/block/{saw}/moving_{orientation}_idle.json", {
+            "render_type": "minecraft:cutout",
+            "textures": {"disc": material("saw_disc"), "particle": "#disc"}, "elements": [blade],
+        })
         for motion in ("active", "inactive", "reversed"):
-            model(f"{saw}/blade_{orientation}_{motion}", blade[orientation])
-
-    for name, appearance in [(harvester, "block"), (saw, "vertical")]:
-        write(f"assets/create/models/block/{name}/item.json", {"parent": f"create:block/{name}/{appearance}"})
+            write(f"assets/create/models/block/{saw}/blade_{orientation}_{motion}.json",
+                  {"parent": f"create:block/{saw}/moving_{orientation}_idle"})
+        for suffix in ("", "_reverse"):
+            write(f"assets/create/models/block/{saw}/moving_{orientation}{suffix}.json",
+                  {"parent": f"create:block/{saw}/moving_{orientation}_idle"})
+    item_blade = box_element([2, 9, 7.75], [14, 18, 8.25], "disc")
+    item_blade["faces"] = {face: {"texture": "#disc", "uv": [0, 0, 16, 16]}
+                           for face in ("north", "south")}
+    write(f"assets/create/models/block/{saw}/item.json", {
+        "render_type": "minecraft:cutout",
+        "textures": {"all": material("saw"), "particle": "#all", "disc": material("saw_disc")},
+        "elements": [box_element([0, 0, 0], [16, 12, 16]), item_blade],
+    })
+    for name in (harvester, saw):
         write(f"assets/create/models/item/{name}.json", {"parent": f"create:block/{name}/item"})
         write(f"assets/create/items/{name}.json", {
             "model": {"type": "minecraft:model", "model": f"create:item/{name}"},
@@ -386,8 +446,6 @@ def basin_mixer():
                                      ([4, 10, 0], [12, 16, 4]), ([4, 10, 12], [12, 16, 16])], 'minecraft:block/andesite')
     model('mechanical_mixer/pole', [([7, 2, 7], [9, 15, 9])])
     model('mechanical_mixer/head', [([4, 0, 7], [12, 2, 9]), ([7, 0, 4], [9, 2, 12]), ([7, 2, 7], [9, 8, 9])])
-    model('cogwheel_shaftless', [([2, 6, 2], [14, 10, 14]), ([0, 5, 6], [16, 11, 10]),
-                                ([6, 5, 0], [10, 11, 16])], 'minecraft:block/oak_planks')
     write('assets/create/blockstates/basin.json', {'variants': {
         'facing=down': {'model': 'create:block/basin/block'},
         **{'facing=' + face: {'model': 'create:block/basin/block_directional', **({'y': angle} if angle else {})}
@@ -432,15 +490,39 @@ def burners():
     cage += [([x, 2, z], [x+2, 14, z+2]) for x in [1, 13] for z in [1, 13]]
     model('blaze_burner/block', cage)
     model('blaze_burner/block_with_blaze', cage + [([5, 5, 5], [11, 11, 11])])
-    for state in ['fire', 'soul_fire']:
-        model('blaze_burner/block_with_' + state, cage)
     for part in ['inert', 'idle', 'active', 'super', 'super_active']:
         model('blaze_burner/blaze/' + part, [([5, 5, 5], [11, 11, 11])], 'minecraft:block/gold_block')
     for part in ['rods_small', 'rods_large', 'superheated_rods_small', 'superheated_rods_large']:
         model('blaze_burner/' + part, [([3, 0, 3], [5, 8, 5]), ([11, 0, 11], [13, 8, 13])], 'minecraft:block/gold_block')
     for part in ['goggles', 'goggles_small']:
         model('blaze_burner/' + part, [([4, 0, 3], [7, 3, 4]), ([9, 0, 3], [12, 3, 4])], 'minecraft:block/gold_block')
-    model('blaze_burner/flame', [([7.99, 0, 0], [8.01, 16, 16])], 'minecraft:block/fire_0')
+    def flame_elements(bottom, top, inset):
+        return [{
+            'from': [8, bottom, inset], 'to': [8, top, 16 - inset],
+            'rotation': {'origin': [8, 8, 8], 'axis': 'y', 'angle': angle},
+            'shade': False,
+            'faces': {face: {'texture': '#flame', 'uv': [0, 0, 16, 16]} for face in ('east', 'west')},
+        } for angle in (-45, 45)]
+
+    # The original JAR replaces this original-style resource ID. The built-in
+    # head carries its own crossed flame layer even without a Basin above it.
+    write('assets/create/models/block/blaze_burner/flame.json', {
+        'render_type': 'minecraft:cutout',
+        'textures': {'flame': material('burner_fire'), 'particle': '#flame'},
+        'elements': flame_elements(10, 16, 2),
+    })
+    for color in ('fire', 'soul_fire'):
+        write(f'assets/create/models/block/blaze_burner/fallback_{color}.json', {
+            'render_type': 'minecraft:cutout',
+            'textures': {'flame': material('burner_' + color), 'particle': '#flame'},
+            'elements': flame_elements(3, 13, 1),
+        })
+        write(f'assets/create/models/block/blaze_burner/block_with_{color}.json', {
+            'render_type': 'minecraft:cutout',
+            'textures': {'all': material('burner_case'), 'flame': material('burner_' + color),
+                         'particle': '#all'},
+            'elements': [box_element(a, b) for a, b in cage] + flame_elements(2, 14, 1),
+        })
     for hat in ['train_hat', 'logistics_hat']:
         write('assets/create/models/entity/' + hat + '.json', {
             'parent': 'minecraft:block/block', 'textures': {'all': 'minecraft:block/black_wool'},
@@ -579,46 +661,62 @@ def chain_drives():
                 key = f'axis={axis},axis_along_first={str(first).lower()},part={part}'
                 variants[key] = {'model': 'create:block/encased_chain_drive/' + suffix,
                                  **({'x': x} if x else {}), **({'y': y} if y else {})}
-    for suffix in ['single', 'middle_vertical', 'end_vertical', 'middle_horizontal', 'end_horizontal']:
-        model('encased_chain_drive/' + suffix, [([0, 0, 0], [16, 16, 16])], 'minecraft:block/andesite')
+    def casing(name, suffix, indicator=None):
+        axle_faces, angles = {
+            'single': (('north', 'south'), (0, 0)),
+            'middle_vertical': (('up', 'down'), (270, 90)),
+            'end_vertical': (('up', 'down'), (90, 270)),
+            'middle_horizontal': (('east', 'west'), (0, 180)),
+            'end_horizontal': (('east', 'west'), (0, 180)),
+        }[suffix]
+        chain_angles = {
+            'single': {'east': 90, 'west': 270},
+            'middle_horizontal': {'north': 90, 'south': 270, 'up': 90, 'down': 90},
+            'end_horizontal': {'north': 90, 'south': 270, 'up': 90, 'down': 270},
+        }.get(suffix, {})
+        texture = 'gearbox_cap' if suffix == 'single' else 'chain_end' if suffix.startswith('end') else 'chain_middle'
+        element = box_element([0, 0, 0], [16, 16, 16], 'chain')
+        for face, rotation in chain_angles.items():
+            element['faces'][face]['rotation'] = rotation
+        for face, rotation in zip(axle_faces, angles):
+            element['faces'][face] = {'texture': '#axle', 'rotation': rotation}
+        textures = {'chain': material('chain_drive'), 'axle': material(texture), 'particle': '#chain'}
+        if indicator:
+            # A narrow redstone indicator lies on the chain faces. At joins
+            # the linked band underneath keeps the same direction and phase.
+            textures['indicator'] = material(indicator)
+            for face in element['faces'].keys() - set(axle_faces):
+                element['faces'][face]['texture'] = '#indicator'
+        write(f'assets/create/models/block/{name}.json', {'textures': textures, 'elements': [element]})
+
+    suffixes = ('single', 'middle_vertical', 'end_vertical', 'middle_horizontal', 'end_horizontal')
+    for suffix in suffixes:
+        casing('encased_chain_drive/' + suffix, suffix)
     write('assets/create/blockstates/encased_chain_drive.json', {'variants': variants})
     write('assets/create/models/item/encased_chain_drive.json', {'parent': 'create:block/encased_chain_drive/single'})
     adjustable_variants = {}
-    for powered, texture in [('false', 'red_terracotta'), ('true', 'redstone_block')]:
-        name = f'{adjustable}/{powered}'
-        model(name, [([0, 0, 0], [16, 16, 16])], f'minecraft:block/{texture}')
+    for powered, texture in [('false', 'chain_indicator'), ('true', 'chain_indicator_powered')]:
+        for suffix in suffixes:
+            casing(f'{adjustable}/{powered}/{suffix}', suffix, texture)
         for key, variant in variants.items():
+            suffix = variant['model'].rsplit('/', 1)[1]
+            name = f'{adjustable}/{powered}/{suffix}'
             adjustable_variants[f'{key},powered={powered}'] = {**variant, 'model': f'create:block/{name}'}
     write(f'assets/create/blockstates/{adjustable}.json', {'variants': adjustable_variants})
-    write(f'assets/create/models/item/{adjustable}.json', {'parent': f'create:block/{adjustable}/false'})
+    write(f'assets/create/models/item/{adjustable}.json', {'parent': f'create:block/{adjustable}/false/single'})
 
 
 def fallback_instruments_and_wheels():
     for gauge in ['speedometer', 'stressometer']:
         model(f'gauge/{gauge}/head', [([15.8, 3, 3], [16.5, 13, 13])],
               'minecraft:block/smooth_stone')
-    model('gauge/dial', [([16.5, 5.25, 5.25], [17, 10.5, 6.25])],
+    model('gauge/dial', [([16.5, 7.5, 7.5], [17, 8.5, 12.5])],
           'minecraft:block/red_concrete')
 
-    small = [([1, 6, 5], [15, 10, 11]), ([5, 6, 1], [11, 10, 15]),
-             ([5, 0, 5], [11, 16, 11])]
-    large = [([-16, 6, 4], [32, 10, 12]), ([4, 6, -16], [12, 10, 32]),
-             ([5, 0, 5], [11, 16, 11])]
-    model('water_wheel/wheel', small, 'minecraft:block/spruce_planks')
-    model('large_water_wheel/block', large, 'minecraft:block/spruce_planks')
-    write('assets/create/models/block/large_water_wheel/block_extension.json',
-          {'parent': 'create:block/large_water_wheel/block'})
+    wheels(CONTENT, write)
     write('assets/create/models/block/water_wheel/block.json',
-          {'textures': {'particle': 'minecraft:block/spruce_planks'}, 'elements': []})
+          {'textures': {'particle': material('wheel_spruce_plank')}, 'elements': []})
     write('assets/create/models/item/water_wheel.json', {'parent': 'create:block/water_wheel/wheel'})
-    write('assets/create/models/item/large_water_wheel.json', {'parent': 'create:block/water_wheel/wheel'})
-    woods = ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak', 'mangrove', 'cherry',
-             'bamboo', 'crimson', 'warped', 'pale_oak']
-    for part in ['water_wheel/wheel', 'large_water_wheel/block', 'large_water_wheel/block_extension']:
-        for wood in woods:
-            texture = f'minecraft:block/{wood}_planks'
-            write(f'assets/create/models/block/{part}_material_{wood}.json',
-                  {'parent': f'create:block/{part}', 'textures': {'all': texture, 'particle': texture}})
 
 
 def flywheel():
@@ -633,17 +731,8 @@ def flywheel():
         "state_properties": {"axis": {"type": "enum", "values": ["x", "y", "z"]}},
         "default_state": {"axis": "y"}, "shapes": shapes, "collision_shapes": shapes,
     })
-    # Authored fallback rim and spokes. The runtime draws the shaft separately.
-    wheel = [
-        ([-3, 5, -12], [19, 11, -8]), ([-3, 5, 24], [19, 11, 28]),
-        ([-12, 5, -3], [-8, 11, 19]), ([24, 5, -3], [28, 11, 19]),
-        ([-8, 5, -8], [-2, 11, -2]), ([18, 5, -8], [24, 11, -2]),
-        ([-8, 5, 18], [-2, 11, 24]), ([18, 5, 18], [24, 11, 24]),
-        ([-8, 6, 6], [24, 10, 10]), ([6, 6, -8], [10, 10, 6]), ([6, 6, 10], [10, 10, 24]),
-    ]
+    flywheel_art(write)
     texture = "minecraft:block/gold_block"
-    model("flywheel/block", wheel, texture)
-    model("flywheel/item", wheel + [([5, 0, 5], [11, 16, 11])], texture)
     model("flywheel/particle", [], texture)
     write("assets/create/blockstates/flywheel.json", {
         "variants": {"": {"model": "create:block/flywheel/particle"}},
@@ -773,9 +862,40 @@ def foundation():
         texture = "minecraft:block/stripped_spruce_log" if "casing" in block else "minecraft:block/iron_block"
         if block == "copper_casing":
             texture = "minecraft:block/copper_block"
-        model(block + "/block", [([0, 0, 0], [16, 16, 16])], texture)
-        write("assets/create/blockstates/" + block + ".json", {"variants": {"": {"model": "create:block/" + block + "/block"}}})
-        write("assets/create/models/item/" + block + ".json", {"parent": "create:block/" + block + "/block"})
+        if block not in GENERATORS and block not in ("hand_crank", "clutch", "gearshift"):
+            model(block + "/block", [([0, 0, 0], [16, 16, 16])], texture)
+        base_model = "create:block/" + block + "/block"
+        item_model = base_model
+        if block in INSTRUMENTS:
+            model(block + "/item", [([0, 0, 0], [16, 16, 16])], texture)
+            item_model = "create:block/" + block + "/item"
+        variants = {"": {"model": base_model}}
+        if block == "hand_crank":
+            spindle = [([6, 0, 6], [10, 5, 10])]
+            handle = [([0, 6, 10], [10, 10, 13]), ([0, 7, 4], [3, 9, 11], "grip"),
+                      ([0, 6.5, 3], [3, 9.5, 8], "grip"), ([5, 5, 9], [11, 11, 13])]
+            model("hand_crank/block", spindle, material("steel_axle"))
+            model("hand_crank/handle", handle, material("andesite_casing"), parts={"grip": material("hand_crank")})
+            hand_item = [([a[0], 16-b[2], a[1]], [b[0], 16-a[2], b[1]], *slot) for a, b, *slot in handle]
+            model("hand_crank/item", [([6, 0, 6], [10, 5, 10], "shaft")] + hand_item,
+                  material("andesite_casing"), parts={"grip": material("hand_crank"), "shaft": material("steel_axle")})
+            item_model = "create:block/hand_crank/item"
+        if block in ("clutch", "gearshift"):
+            variants = {}
+            for powered, model_name, tile in (("false", "block", block), ("true", "powered", f"{block}_powered")):
+                element = box_element([0, 0, 0], [16, 16, 16])
+                for face in ("up", "down"):
+                    element["faces"][face]["texture"] = "#cap"
+                write(f"assets/create/models/block/{block}/{model_name}.json", {
+                    "textures": {"all": material(tile), "cap": material("gearbox_cap"), "particle": "#all"},
+                    "elements": [element],
+                })
+                for axis, turn in (("x", {"x": 90, "y": 90}), ("y", {}), ("z", {"x": 90, "y": 180})):
+                    variants[f"axis={axis},powered={powered}"] = {
+                        "model": f"create:block/{block}/{model_name}", **turn,
+                    }
+        write("assets/create/blockstates/" + block + ".json", {"variants": variants})
+        write("assets/create/models/item/" + block + ".json", {"parent": item_model})
         write("assets/create/items/" + block + ".json", {"model": {"type": "minecraft:model", "model": "create:item/" + block}})
         drop = "shaft" if "encased_shaft" in block else block
         write("data/create/loot_table/blocks/" + block + ".json", {"type": "minecraft:block", "pools": [{"rolls": 1, "entries": [{"type": "minecraft:item", "name": "create:" + drop}]}]})
@@ -814,7 +934,6 @@ def foundation():
             write('assets/create/items/goggles.json',{'model':{'type':'minecraft:select','property':'minecraft:display_context','cases':[{'when':'head','model':{'type':'minecraft:model','model':'create:block/goggles'}}],'fallback':{'type':'minecraft:model','model':'create:item/goggles'}}})
     vertical={'type':'minecraft:block_state_property','block':'create:gearbox','properties':{'axis':'y'}}
     write('data/create/loot_table/blocks/gearbox.json',{'type':'minecraft:block','pools':[{'rolls':1,'entries':[{'type':'minecraft:alternatives','children':[{'type':'minecraft:item','name':'create:gearbox','conditions':[vertical]},{'type':'minecraft:item','name':'create:vertical_gearbox'}]}]}]})
-    model("hand_crank/handle", [([6, 5, 6], [10, 10, 16])], "minecraft:block/oak_planks")
     model('goggles',[([4,6,3],[7,9,4]),([9,6,3],[12,9,4])],'minecraft:block/gold_block')
     processors()
     bearings()
@@ -1095,7 +1214,7 @@ def main():
     CONTENT.mkdir(exist_ok=True)
     (CONTENT / "horizon-mod.toml").write_text('''id = "create"
 name = "Create for Horizon"
-version = "0.8.0-alpha.16"
+version = "0.9.0"
 description = "Build rotating machines and small factories in Horizon. The original Create JAR is optional and supplies its models and textures."
 authors = ["create-horizon contributors"]
 api = "0.2"
@@ -1154,15 +1273,14 @@ capabilities = ["registries"]
     shaft = [([6, 0, 6], [10, 16, 10])]
     model("shaft", shaft)
     model("shaft_half", [([6, 6, 8], [10, 10, 16])])
-    for name, low, high in [("cogwheel", 2, 14), ("large_cogwheel", -1, 17)]:
-        boxes = shaft + [([low, 6, low], [high, 10, high])]
-        for x, z in [(0, 6), (6, 0), (12, 6), (6, 12)]:
-            boxes.append(([x, 5, z], [x + 4, 11, z + 4]))
-        model(name, boxes, "minecraft:block/oak_planks")
-    model("creative_motor/block", [([1, 0, 1], [15, 14, 15])], "minecraft:block/copper_block")
-    model("creative_motor/block_vertical", [([1, 0, 1], [15, 14, 15])], "minecraft:block/copper_block")
+    cogs(write)
+    motor(write)
     model("mechanical_press/block", [([0, 8, 0], [16, 16, 16])])
     model("mechanical_press/head", [([6, -12, 6], [10, 9, 10]), ([2, -14, 2], [14, -10, 14])])
+    model("mechanical_press/item", [([0, 8, 0], [16, 16, 16]), ([6, 4, 6], [10, 8, 10], "shaft"),
+                                    ([3, 2, 3], [13, 4, 13], "ram")], material("press_case"),
+          parts={"shaft": material("steel_axle"), "ram": material("cutting_steel")})
+    write("assets/create/models/item/mechanical_press.json", {"parent": "create:block/mechanical_press/item"})
     model("depot/block", [([1, 0, 1], [15, 12, 15]), ([0, 12, 0], [16, 13, 16])], "minecraft:block/smooth_stone")
     (CONTENT / "data/create/horizon/menu/depot.json").unlink(missing_ok=True)
     for name in SHEETS:
@@ -1191,7 +1309,7 @@ capabilities = ["registries"]
     # therefore contains the complete public content, with no player-side Python.
     files = {path.relative_to(CONTENT).as_posix(): path.read_text()
              for path in sorted(CONTENT.rglob("*"))
-             if path.is_file() and path.suffix in {".json", ".toml"}
+             if path.is_file() and path.suffix in {".json", ".toml", ".obj", ".mtl"}
              and "target" not in path.relative_to(CONTENT).parts}
     bundled = NATIVE / "data/content.json"
     bundled.parent.mkdir(parents=True, exist_ok=True)

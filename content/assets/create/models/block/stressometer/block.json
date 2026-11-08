@@ -1,7 +1,7 @@
 {
   "textures": {
-    "all": "create:block/fallback/stressometer",
-    "particle": "create:block/fallback/stressometer"
+    "all": "create:block/fallback/andesite_casing",
+    "particle": "create:block/fallback/andesite_casing"
   },
   "elements": [
     {

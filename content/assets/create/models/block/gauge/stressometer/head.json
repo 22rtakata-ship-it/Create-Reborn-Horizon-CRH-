@@ -1,7 +1,8 @@
 {
   "textures": {
     "all": "create:block/fallback/stressometer",
-    "particle": "create:block/fallback/stressometer"
+    "particle": "create:block/fallback/stressometer",
+    "east": "create:block/fallback/stressometer"
   },
   "elements": [
     {
@@ -62,7 +63,7 @@
           ]
         },
         "east": {
-          "texture": "#all",
+          "texture": "#east",
           "uv": [
             0,
             0,

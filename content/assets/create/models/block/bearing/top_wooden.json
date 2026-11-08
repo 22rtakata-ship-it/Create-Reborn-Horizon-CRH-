@@ -1,7 +1,9 @@
 {
   "textures": {
     "all": "create:block/fallback/windmill",
-    "particle": "create:block/fallback/windmill"
+    "particle": "create:block/fallback/windmill",
+    "cap": "create:block/fallback/windmill_cap",
+    "up": "create:block/fallback/windmill_cap"
   },
   "elements": [
     {
@@ -20,7 +22,13 @@
           "texture": "#all"
         },
         "up": {
-          "texture": "#all"
+          "texture": "#up",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "north": {
           "texture": "#all"

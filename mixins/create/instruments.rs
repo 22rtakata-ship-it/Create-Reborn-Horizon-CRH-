@@ -51,10 +51,15 @@ pub(super) fn draw(
         draw.push();
         draw.rotate_about([0.0, 1.0, 0.0], yaw, [0.5; 3]);
         game.native_draw_model(draw, model, 0xFFFFFF);
-        let p = 5.75 / 16.0;
-        draw.translate([0.0, p, p]);
-        draw.rotate_about([1.0, 0.0, 0.0], -90.0 * value, [0.0; 3]);
-        draw.translate([0.0, -p, -p]);
+        let original = super::create_port::original_assets();
+        let pivot = if original { 5.75 / 16.0 } else { 0.5 };
+        // The built-in face puts its graduations on an arc around the center.
+        let angle = if original { -90.0 * value } else { 12.0 - 184.0 * value };
+        draw.rotate_about(
+            [1.0, 0.0, 0.0],
+            angle,
+            [0.0, pivot, pivot],
+        );
         game.native_draw_model(draw, "create:block/gauge/dial", 0xFFFFFF);
         draw.pop();
     }

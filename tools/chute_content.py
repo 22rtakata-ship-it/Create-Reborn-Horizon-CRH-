@@ -1,6 +1,7 @@
 """Canonical Chute states with built-in vanilla-textured models."""
 
 from belt_shapes import clip, transform
+from fallback_textures import material
 
 CHUTE = 'chute'
 ANGLES = {'south': 0, 'west': 90, 'north': 180, 'east': 270}
@@ -38,10 +39,20 @@ def chute(write, model):
         'collision_shapes': {'properties': properties, 'values': collision},
     })
     texture = 'minecraft:block/iron_block'
-    model('chute/block', normal, texture)
+    def rim(inset, low, high):
+        end = 16 - inset
+        inner = inset + 2
+        return [([inset, low, inset], [end, high, inner]),
+                ([inset, low, 16 - inner], [end, high, end]),
+                ([inset, low, inner], [inner, high, 16 - inner]),
+                ([16 - inner, low, inner], [end, high, 16 - inner])]
+
+    model('chute/block', rim(1, 8, 16) + rim(2, 0, 8), texture)
     model('chute/block_intersection', boxed, 'minecraft:block/polished_andesite')
-    model('chute/block_window', [([1, 14, 1], [15, 16, 15]), ([2, 0, 2], [14, 2, 14]),
-                                 ([2, 2, 2], [4, 14, 14]), ([12, 2, 2], [14, 14, 14])], texture)
+    model('chute/block_window', rim(1, 14, 16) + rim(2, 0, 2) + [
+        ([2, 2, 2], [4, 14, 14]), ([12, 2, 2], [14, 14, 14]),
+        ([3, 2, 1.98], [13, 14, 2], 'window'), ([3, 2, 14], [13, 14, 14.02], 'window'),
+    ], texture, parts={'window': material('chute_window')})
     model('chute/block_diagonal', [(box[:3], box[3:]) for box in slope], texture)
     model('chute/block_diagonal_intersection', [(box[:3], box[3:]) for box in join], texture)
     variants = {

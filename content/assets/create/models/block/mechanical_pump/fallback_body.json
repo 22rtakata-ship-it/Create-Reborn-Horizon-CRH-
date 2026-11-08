@@ -1,7 +1,7 @@
 {
   "textures": {
     "body": "create:block/fallback/pump",
-    "outlet": "create:block/fallback/steel_axle",
+    "outlet": "create:block/fallback/pump_rim",
     "particle": "#body"
   },
   "elements": [
