@@ -40,7 +40,7 @@ ITEMS.append('super_glue')
 SANDPAPERS = ['sand_paper', 'red_sand_paper']
 ITEMS += ['rose_quartz', 'polished_rose_quartz', 'electron_tube', 'brass_hand'] + SANDPAPERS
 ITEMS.extend(['raw_zinc', 'crafter_slot_cover', 'incomplete_precision_mechanism',
-              'precision_mechanism', 'crushed_raw_gold'])
+              'precision_mechanism', 'crushed_raw_gold', 'crushed_raw_iron', 'experience_nugget'])
 HIDDEN_CREATIVE_ITEMS = {'incomplete_precision_mechanism', *ENCASED_COGS}
 PARTS = ['shaft', 'shaft_half', 'cogwheel', 'large_cogwheel', 'creative_motor/block', 'creative_motor/block_vertical', 'mechanical_press/block', 'mechanical_press/head', 'depot/block', 'hand_crank/handle', 'hand_crank/block', 'gauge/dial', 'gauge/speedometer/head', 'gauge/stressometer/head', 'goggles', 'water_wheel/wheel', 'large_water_wheel/block', 'large_water_wheel/block_extension', 'millstone/block', 'millstone/inner', 'encased_fan/block', 'encased_fan/propeller', 'mechanical_drill/block', 'mechanical_drill/head']
 PARTS += ['belt_pulley', 'belt/particle'] + ['belt/' + part for part in
@@ -62,7 +62,7 @@ PARTS += ['mechanical_harvester/blade'] + [
     for orientation in ('horizontal', 'vertical')
     for state in ('active', 'inactive', 'reversed')
 ]
-PARTS += ['deployer/pole', 'deployer/hand_pointing', 'deployer/hand_holding']
+PARTS += ['deployer/pole', 'deployer/hand_pointing', 'deployer/hand_holding', 'deployer/hand_punching']
 PARTS += [f'{PSI}/{part}' for part in ('block_middle', 'block_middle_powered', 'block_top')]
 PARTS += [f'{STICKER}/head']
 PARTS += ['blaze_burner/' + part for part in

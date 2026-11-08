@@ -279,7 +279,7 @@ fn capture(
             previous: initial as f32,
             waiting: false,
         }),
-        blocks,
+        blocks: blocks.into(),
     };
     if collides_at(game, &record, step(pos, movement), movement.vector(), |p| {
         edits.iter().any(|&(from, _, _)| p == from)

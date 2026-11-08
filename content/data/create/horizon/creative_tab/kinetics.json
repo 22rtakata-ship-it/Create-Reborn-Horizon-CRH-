@@ -97,6 +97,8 @@
     "create:raw_zinc",
     "create:crafter_slot_cover",
     "create:precision_mechanism",
-    "create:crushed_raw_gold"
+    "create:crushed_raw_gold",
+    "create:crushed_raw_iron",
+    "create:experience_nugget"
   ]
 }

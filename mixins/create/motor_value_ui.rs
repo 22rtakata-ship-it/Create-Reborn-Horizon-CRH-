@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 // Create 6.0.10 ValueSettingsClient/Screen and KineticScrollValueBehaviour.
 // Rendering uses the original private value_settings.png sheet via the importer.
+use super::create_port_motor_control::MotionOptions;
 use super::{Game, create_port_chassis as chassis, create_port_chute as chute};
 use crate::{containers::BlockEntity, mod_api::NativeScreenView};
 use create_engine::contraption::chassis::{DEFAULT_RANGE, MAX_RANGE};
@@ -16,6 +17,7 @@ use horizon_world::nbt::Tag;
 use std::cell::RefCell;
 
 const SPRITE: &str = "create:gui/value_settings";
+pub(super) const ICONS: &str = "create:gui/icons";
 const BACKDROP: [u8; 4] = [24, 16, 12, 216];
 const FRAME: [u8; 4] = [181, 125, 61, 255];
 const LABEL: [u8; 4] = [221, 178, 104, 255];
@@ -104,7 +106,91 @@ enum Board {
     Motor,
     LinearChassis,
     RadialChassis,
+    Motion(MotionOptions),
     Filter { maximum: i32 },
+}
+
+impl MotionOptions {
+    fn title(self) -> Text {
+        let (key, fallback) = match self {
+            Self::Mechanical | Self::Piston | Self::Pulley => {
+                ("create.contraptions.movement_mode", "Movement Mode")
+            }
+            Self::Windmill => (
+                "create.contraptions.windmill.rotation_direction",
+                "Rotation Direction",
+            ),
+            Self::Clockwork => (
+                "create.contraptions.clockwork.clock_hands",
+                "Clock Hand Arrangement",
+            ),
+        };
+        Text::translate_with_fallback(key, fallback, &[])
+    }
+
+    fn label(self, value: i32) -> Text {
+        let (key, fallback) = match self {
+            Self::Mechanical => [
+                (
+                    "create.contraptions.movement_mode.rotate_place",
+                    "Always Place when Stopped",
+                ),
+                (
+                    "create.contraptions.movement_mode.rotate_place_returned",
+                    "Only Place near Initial Angle",
+                ),
+                (
+                    "create.contraptions.movement_mode.rotate_never_place",
+                    "Only Place when Anchor Destroyed",
+                ),
+            ][value as usize],
+            Self::Windmill => [
+                ("create.generic.clockwise", "Clockwise"),
+                ("create.generic.counter_clockwise", "Counter-Clockwise"),
+            ][value as usize],
+            Self::Clockwork => [
+                (
+                    "create.contraptions.clockwork.hour_first",
+                    "Hour hand first",
+                ),
+                (
+                    "create.contraptions.clockwork.minute_first",
+                    "Minute hand first",
+                ),
+                (
+                    "create.contraptions.clockwork.hour_first_24",
+                    "24-Hour hand first",
+                ),
+            ][value as usize],
+            Self::Piston | Self::Pulley => [
+                (
+                    "create.contraptions.movement_mode.move_place",
+                    "Always Place when Stopped",
+                ),
+                (
+                    "create.contraptions.movement_mode.move_place_returned",
+                    "Place only in Starting Position",
+                ),
+                (
+                    "create.contraptions.movement_mode.move_never_place",
+                    "Place only when Anchor Destroyed",
+                ),
+            ][value as usize],
+        };
+        Text::translate_with_fallback(key, fallback, &[])
+    }
+
+    // AllIcons indices in the original 16x16 tile grid.
+    pub(super) fn icon(self, value: i32) -> [f32; 2] {
+        let value = value as f32;
+        match self {
+            Self::Mechanical => [6.0 + value, 1.0],
+            Self::Windmill if value == 0.0 => [3.0, 1.0],
+            Self::Windmill => [4.0, 5.0],
+            Self::Clockwork => [5.0 + value, 5.0],
+            Self::Piston | Self::Pulley => [9.0 + value, 1.0],
+        }
+    }
 }
 
 impl Board {
@@ -113,6 +199,7 @@ impl Board {
             Self::Motor => "create.kinetics.creative_motor.rotation_speed",
             Self::LinearChassis => "create.contraptions.chassis.range",
             Self::RadialChassis => "create.contraptions.chassis.radius",
+            Self::Motion(options) => return options.title(),
             Self::Filter { .. } => return filter_text("extracted_amount", "Extracted Amount"),
         };
         Text::translate(key, &[])
@@ -121,6 +208,7 @@ impl Board {
     fn max(self) -> i32 {
         match self {
             Self::Motor => 256,
+            Self::Motion(options) => options.max(),
             Self::Filter { maximum } => maximum,
             _ => i32::from(MAX_RANGE) - 1,
         }
@@ -141,9 +229,18 @@ impl Board {
         }
     }
 
+    fn milestone_size(self) -> i32 {
+        if matches!(self, Self::Motion(_)) {
+            8
+        } else {
+            4
+        }
+    }
+
     fn label(self, row: i32) -> Text {
         match self {
             Self::Motor => arrow(row),
+            Self::Motion(_) => Text::literal("Select"),
             Self::Filter { .. } if row == 0 => filter_text("up_to", "Up to"),
             Self::Filter { .. } => filter_text("exactly", "Exactly"),
             _ => Text::translate("create.contraptions.chassis.distance", &[]),
@@ -164,6 +261,7 @@ impl Board {
                 if setting.row == 0 { '≤' } else { '=' },
                 setting.value.max(1)
             )),
+            Self::Motion(options) => options.label(setting.value),
             _ => crate::game::create_port_goggles::numeral(f64::from(setting.value + 1)),
         }
     }
@@ -195,6 +293,13 @@ impl Target {
                     value: amount.value,
                 },
             ),
+            Board::Motion(options) => Setting {
+                row: 0,
+                value: match game.world.block_entities.get(&self.pos.into()) {
+                    Some(BlockEntity::Mod(entity)) => options.selection(entity),
+                    _ => 0,
+                },
+            },
             _ => {
                 let value = chassis::configured_range(game, self.pos).unwrap_or(DEFAULT_RANGE);
                 Setting {
@@ -232,6 +337,14 @@ fn saved(game: &Game<'_>, pos: [i32; 3]) -> i32 {
 fn target(game: &Game<'_>) -> Option<Target> {
     let hit = game.pick()?;
     let block = game.native_block(hit.pos);
+    if let Some(options) = MotionOptions::for_block(&block) {
+        return super::create_port_motor_value_world::motion_hit(game, &hit, options).then_some(
+            Target {
+                pos: hit.pos,
+                board: Board::Motion(options),
+            },
+        );
+    }
     let board = match block.as_str() {
         "create:linear_chassis" | "create:secondary_linear_chassis" => Board::LinearChassis,
         "create:radial_chassis" => Board::RadialChassis,
@@ -438,15 +551,16 @@ impl Layout {
     fn coordinate(self, setting: Setting) -> [f32; 2] {
         let column = setting.value;
         let interval = self.board.milestone();
+        let size = self.board.milestone_size();
         let mut x = self.x as f32
-            + (((column.max(1) - 1) / interval) * 4 + column * self.scale()) as f32
+            + (((column.max(1) - 1) / interval) * size + column * self.scale()) as f32
             + 1.5;
         x += (self.label + 18) as f32;
         if column % interval == 0 {
-            x += 2.0;
+            x += (size / 2) as f32;
         }
         if column > 0 {
-            x += 4.0;
+            x += size as f32;
         }
         [x, self.y as f32 + (setting.row as f32 + 0.5) * 11.0 - 0.5]
     }
@@ -498,12 +612,18 @@ impl Layout {
     }
 }
 fn layout(game: &Game<'_>, size: [f32; 2], board: Board) -> Layout {
-    let label = (0..board.rows())
-        .map(|row| game.gui.atlas.font.width_text(&board.label(row)) as i32)
-        .max()
-        .unwrap_or(0);
+    let label = if matches!(board, Board::Motion(_)) {
+        -18
+    } else {
+        (0..board.rows())
+            .map(|row| game.gui.atlas.font.width_text(&board.label(row)) as i32)
+            .max()
+            .unwrap_or(0)
+    };
     let scale = if board.max() > 128 { 1 } else { 2 };
-    let bar = (board.max() + 1) * scale + 1 + (board.max() / board.milestone() + 1) * 4;
+    let bar = (board.max() + 1) * scale
+        + 1
+        + (board.max() / board.milestone() + 1) * board.milestone_size();
     let width = label + 14 + bar + 10;
     let height = board.rows() * 11;
     Layout {
@@ -598,6 +718,27 @@ fn text(game: &Game<'_>, batch: &mut HudBatch, text: &Text, at: [i32; 2], rgb: u
     );
 }
 
+fn mode_icon(game: &Game<'_>, batch: &mut HudBatch, icon: [f32; 2], at: [i32; 2]) -> bool {
+    let Some(mut rect) = game.gui.atlas.sprites.get(ICONS).copied() else {
+        return false;
+    };
+    let width = (rect.u1 - rect.u0) / 16.0;
+    let height = (rect.v1 - rect.v0) / 16.0;
+    rect.u0 += icon[0] * width;
+    rect.v0 += icon[1] * height;
+    rect.u1 = rect.u0 + width;
+    rect.v1 = rect.v0 + height;
+    batch.rect_uv(
+        at[0] as f32,
+        at[1] as f32,
+        16.0,
+        16.0,
+        rect,
+        rgba(68, 32, 0, 255),
+    );
+    true
+}
+
 pub(super) fn draw(game: &Game<'_>, batch: &mut HudBatch, screen: &NativeScreenView<'_>) {
     if game.native_mod_screen() != Some("create") {
         return;
@@ -606,6 +747,8 @@ pub(super) fn draw(game: &Game<'_>, batch: &mut HudBatch, screen: &NativeScreenV
         return;
     };
     let board = panel.target.board;
+    let icon_mode = matches!(board, Board::Motion(_));
+    let extra_height = if icon_mode { 46 } else { 33 };
     let l = layout(game, [batch.width, batch.height], board);
     let partial = screen.partial_tick;
     let shade = (80.0 * ((panel.ticks as f32 + partial) / 20.0).min(1.0)) as u8;
@@ -622,12 +765,13 @@ pub(super) fn draw(game: &Game<'_>, batch: &mut HudBatch, screen: &NativeScreenV
         "Release %1$s to Confirm",
         &[use_name],
     );
-    let fattest = game
-        .gui
-        .atlas
-        .font
-        .width_text(&title)
-        .max(game.gui.atlas.font.width_text(&tip)) as i32;
+    let font = &game.gui.atlas.font;
+    let mut fattest = font.width_text(&title).max(font.width_text(&tip)) as i32;
+    if let Board::Motion(options) = board {
+        for value in 0..=options.max() {
+            fattest = fattest.max(font.width_text(&options.label(value)) as i32);
+        }
+    }
     let fat_offset = (fattest + 10 - (l.width + 13)).max(0) / 2;
     let bg_width = (l.width + 13).max(fattest + 10);
     let fade = ((panel.ticks as f32 + partial) / 4.0).clamp(0., 1.);
@@ -641,7 +785,7 @@ pub(super) fn draw(game: &Game<'_>, batch: &mut HudBatch, screen: &NativeScreenV
             (l.x - 11 + fade_start) as f32,
             (l.y - 17) as f32,
             fade_width as f32,
-            (l.height + 33) as f32,
+            (l.height + extra_height) as f32,
         ],
         BACKDROP,
     );
@@ -677,7 +821,7 @@ pub(super) fn draw(game: &Game<'_>, batch: &mut HudBatch, screen: &NativeScreenV
             &tip,
             [
                 center - game.gui.atlas.font.width_text(&tip) as i32 / 2,
-                l.y + l.height + 6,
+                l.y + l.height + extra_height - 27,
             ],
             0xdddddd,
         );
@@ -705,31 +849,40 @@ pub(super) fn draw(game: &Game<'_>, batch: &mut HudBatch, screen: &NativeScreenV
     for row in 0..board.rows() {
         let y = l.y + row * 11;
         let bar_x = l.x + l.label + 18;
-        crop(game, batch, [0, 31], [l.x - 4, y], [l.label + 8, 11], LABEL);
-        for w in (0..l.bar).step_by(248) {
-            crop(
-                game,
-                batch,
-                [7, 0],
-                [bar_x + w, y + 1],
-                [(l.bar - w).min(249), 8],
-                TRACK,
-            );
+        if !icon_mode {
+            crop(game, batch, [0, 31], [l.x - 4, y], [l.label + 8, 11], LABEL);
+            for w in (0..l.bar).step_by(248) {
+                crop(
+                    game,
+                    batch,
+                    [7, 0],
+                    [bar_x + w, y + 1],
+                    [(l.bar - w).min(249), 8],
+                    TRACK,
+                );
+            }
+            text(game, batch, &board.label(row), [l.x, y + 1], 0x442000);
         }
-        text(game, batch, &board.label(row), [l.x, y + 1], 0x442000);
-        let spacing = 4 + board.milestone() * l.scale();
+        let spacing = board.milestone_size() + board.milestone() * l.scale();
+        let (source, size) = if icon_mode {
+            ([75, 14], [13, 8])
+        } else {
+            ([0, 0], [7, 8])
+        };
         for milestone in 0..=board.max() / board.milestone() {
             crop(
                 game,
                 batch,
-                [0, 0],
+                source,
                 [bar_x + milestone * spacing, y + 1],
-                [7, 8],
+                size,
                 MILESTONE,
             );
         }
     }
-    frame_border(game, batch, l.x - 7, l.y - 3, l.label + 14, l.height + 5);
+    if !icon_mode {
+        frame_border(game, batch, l.x - 7, l.y - 3, l.label + 14, l.height + 5);
+    }
     if panel.ticks < 1 {
         return;
     }
@@ -747,13 +900,42 @@ pub(super) fn draw(game: &Game<'_>, batch: &mut HudBatch, screen: &NativeScreenV
     });
     let coordinate = l.coordinate(hovered);
     let cursor = board.formatted(hovered);
-    let cursor_width = (game.gui.atlas.font.width_text(&cursor) as i32 / 2) * 2 + 3;
+    let cursor_width = if icon_mode {
+        19
+    } else {
+        (font.width_text(&cursor) as i32 / 2) * 2 + 3
+    };
     let x = coordinate[0] as i32 - cursor_width / 2;
     let y = coordinate[1] as i32 - 7;
-    crop(game, batch, [0, 9], [x - 3, y], [3, 14], CURSOR);
-    crop(game, batch, [4, 9], [x, y], [cursor_width, 14], CURSOR);
-    crop(game, batch, [61, 9], [x + cursor_width, y], [3, 14], CURSOR);
-    text(game, batch, &cursor, [x + 2, y + 3], 0x442000);
+    if let Board::Motion(options) = board {
+        crop(game, batch, [0, 44], [x - 2, y - 3], [22, 20], CURSOR);
+        if !mode_icon(game, batch, options.icon(hovered.value), [x + 1, y - 1]) {
+            text(
+                game,
+                batch,
+                &Text::literal((hovered.value + 1).to_string()),
+                [x + 6, y + 3],
+                0x442000,
+            );
+        }
+        if fade_width > fattest {
+            text(
+                game,
+                batch,
+                &cursor,
+                [
+                    l.x - 11 - fat_offset + (bg_width - font.width_text(&cursor) as i32) / 2,
+                    l.y + l.height + extra_height - 40,
+                ],
+                0xfbdc7d,
+            );
+        }
+    } else {
+        crop(game, batch, [0, 9], [x - 3, y], [3, 14], CURSOR);
+        crop(game, batch, [4, 9], [x, y], [cursor_width, 14], CURSOR);
+        crop(game, batch, [61, 9], [x + cursor_width, y], [3, 14], CURSOR);
+        text(game, batch, &cursor, [x + 2, y + 3], 0x442000);
+    }
     if std::env::var_os("CREATE_HORIZON_TRACE").is_some() {
         thread_local! {static LAST:RefCell<String>=const{RefCell::new(String::new())};}
         let trace=serde_json::json!({"pos":panel.target.pos,"value":hovered.value,"row":hovered.row,"origin":[l.x,l.y],"size":[l.width,l.height],"coordinate":coordinate,"cursor":cursor.plain(),"title":title.plain(),"tip":tip.plain(),"title_width":game.gui.atlas.font.width_text(&title),"tip_width":game.gui.atlas.font.width_text(&tip)}).to_string();
@@ -762,6 +944,8 @@ pub(super) fn draw(game: &Game<'_>, batch: &mut HudBatch, screen: &NativeScreenV
                 let name = match board {
                     Board::Motor => "motor",
                     Board::Filter { .. } => "filter",
+                    Board::Motion(options) if options.linear() => "actuator",
+                    Board::Motion(_) => "bearing",
                     _ => "chassis",
                 };
                 log::info!("Create {name} board: {trace}");
@@ -890,6 +1074,7 @@ pub(super) fn frame(game: &mut Game<'_>) {
         let mut bytes = Vec::with_capacity(20);
         let (channel, fields) = match target.board {
             Board::Motor => ("create:motor_settings_v2", [setting.row, setting.value]),
+            Board::Motion(options) => ("create:motion_settings", [options.wire(), setting.value]),
             Board::Filter { .. } => ("create:filter_settings", [setting.row, setting.value]),
             _ => ("create:chassis_settings", [i32::from(bulk), setting.value]),
         };
@@ -957,6 +1142,29 @@ pub(super) fn hud(game: &Game<'_>, batch: &mut HudBatch) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn bearing_options_use_the_source_icon_milestones() {
+        let layout = Layout {
+            x: 10,
+            y: 20,
+            label: -18,
+            bar: 31,
+            width: 37,
+            height: 11,
+            board: Board::Motion(MotionOptions::Mechanical),
+        };
+        for (value, x) in [(0, 15.5), (1, 25.5), (2, 35.5)] {
+            let setting = Setting { row: 0, value };
+            assert_eq!(layout.coordinate(setting), [x, 25.0]);
+            assert_eq!(layout.closest([x, 25.0], false), setting);
+        }
+        assert_eq!(MotionOptions::Mechanical.icon(2), [8.0, 1.0]);
+        assert_eq!(MotionOptions::Windmill.icon(1), [4.0, 5.0]);
+        assert_eq!(MotionOptions::Clockwork.icon(2), [7.0, 5.0]);
+        assert_eq!(MotionOptions::Piston.icon(0), [9.0, 1.0]);
+        assert_eq!(MotionOptions::Pulley.icon(2), [11.0, 1.0]);
+    }
+
     #[test]
     fn original_chassis_coordinates_match_the_live_reference() {
         let layout = Layout {

@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 # Copyright (c) 2026 create-horizon contributors
 # SPDX-License-Identifier: MIT
-"""Verify ordinary chest storage on Gantry, Rope Pulley and Mechanical Pistons."""
+"""Verify ordinary chest and barrel storage on Gantry, Rope Pulley and Mechanical Pistons."""
 
 import argparse
 import json
 from pathlib import Path
 import re
+import shutil
 import tempfile
 
 from actor_native_checks import matched
@@ -21,6 +22,7 @@ from saved_block_checks import read_saved_chunk_tag
 X, Y = 1528, 140
 AIR = 'minecraft:air'
 CHEST = 'minecraft:chest[facing=north,type=single,waterlogged=false]'
+BARREL = 'minecraft:barrel[facing=north,open=false]'
 EAST_POWER = 'create:creative_motor[facing=east]{ScrollValue:-128}'
 PISTON_OUT = 'create:creative_motor[facing=south]{ScrollValue:-128}'
 PISTON_IN = 'create:creative_motor[facing=south]{ScrollValue:128}'
@@ -72,20 +74,20 @@ def farm_case():
     return case, crop
 
 
-def setup(put, command, case):
+def setup(put, command, case, storage=CHEST):
     z = case['z']
     command(f'fill {X - 4} {Y - 2} {z - 2} {X + 5} {Y + 6} {z + 2} {AIR}')
     for position, state in case['setup'].items():
         put(position, state)
     source = case['source']
-    put(source, CHEST)
+    put(source, storage)
     for slot, stack in ((0, 'minecraft:iron_ingot 41'),
                         (9, 'minecraft:diamond_pickaxe[minecraft:damage=37] 1'),
                         (26, 'minecraft:stick[minecraft:custom_data={linear_cargo:73}] 11')):
         command(f'item replace block {xyz(source)} container.{slot} with {stack}')
 
 
-def verify_chest(nbt):
+def verify_cargo(nbt):
     assert items(nbt, 'Items') == EXPECTED, nbt
     cargo = field(nbt, 'Items').replace(' ', '')
     assert sorted(map(int, re.findall(r'Slot:(\d+)b', cargo))) == [0, 9, 26], cargo
@@ -100,9 +102,10 @@ def verify_harvest(nbt):
     assert 'linear_cargo:73' in cargo and '"minecraft:damage":37' in cargo, cargo
 
 
-def java_reference():
+def java_reference(storage):
     host = Original()
-    work = Path(tempfile.mkdtemp(prefix='linear-chest-java-', dir=ROOT / '.local'))
+    block_id = storage.split('[', 1)[0]
+    work = Path(tempfile.mkdtemp(prefix=f'linear-{block_id.split(":")[1]}-java-', dir=ROOT / '.local'))
 
     def put(pos, state):
         host.command(f'setblock {xyz(pos)} {state}')
@@ -122,17 +125,17 @@ def java_reference():
             try:
                 host.command(f'tp @s {X}.5 {Y + 8} {case["z"]}.5')
                 observe(case, 24)
-                setup(put, host.command, case)
+                setup(put, host.command, case, storage)
                 before = observe(case, 2)
-                verify_chest(before[0]['nbt'])
+                verify_cargo(before[0]['nbt'])
                 put(case['motor'], case['power'])
                 moving = observe(case, case['motion_ticks'])
                 assert all(block['id'] == AIR for block in moving), (name, moving)
                 landed = observe(case, 20)
                 source_after = 'create:piston_extension_pole' if name in ('piston', 'sticky') else AIR
-                assert landed[0]['id'] == source_after and landed[1]['id'] == 'minecraft:chest', landed
+                assert landed[0]['id'] == source_after and landed[1]['id'] == block_id, landed
                 assert landed[1]['properties']['facing'].lower() == 'north', landed
-                verify_chest(landed[1]['nbt'])
+                verify_cargo(landed[1]['nbt'])
                 if name in ('piston', 'sticky'):
                     put(case['motor'], AIR)
                     observe(case, 3)
@@ -140,32 +143,33 @@ def java_reference():
                     retracted = observe(case, 24)
                     moved = retracted[0 if name == 'sticky' else 1]
                     emptied = retracted[1 if name == 'sticky' else 0]
-                    assert moved['id'] == 'minecraft:chest' and emptied['id'] == AIR, (name, retracted)
-                    verify_chest(moved['nbt'])
+                    assert moved['id'] == block_id and emptied['id'] == AIR, (name, retracted)
+                    verify_cargo(moved['nbt'])
                 else:
                     retracted = []
                 observed[name] = dict(before=before, moving=moving, landed=landed, retracted=retracted)
             finally:
                 host.command(f'forceload remove {chunk}')
-        case, crop = farm_case()
-        chunk = f'{X} {case["z"]}'
-        host.command(f'forceload add {chunk}')
-        try:
-            host.command(f'tp @s {X}.5 {Y + 8} {case["z"]}.5')
-            observe(case, 24)
-            setup(put, host.command, case)
-            observe(case, 2)
-            put(case['motor'], case['power'])
-            output, plant = host.call('observe_ticks', {'ticks': 20,
-                'positions': [case['target'], crop]})['samples'][-1]['blocks']
-            assert output['id'] == 'minecraft:chest', output
-            assert plant['id'] == 'minecraft:wheat' and plant['properties']['age'] == '0', plant
-            verify_harvest(output['nbt'])
-            observed['farm'] = dict(landed=output, crop=plant)
-        finally:
-            host.command(f'forceload remove {chunk}')
+        if storage == CHEST:
+            case, crop = farm_case()
+            chunk = f'{X} {case["z"]}'
+            host.command(f'forceload add {chunk}')
+            try:
+                host.command(f'tp @s {X}.5 {Y + 8} {case["z"]}.5')
+                observe(case, 24)
+                setup(put, host.command, case)
+                observe(case, 2)
+                put(case['motor'], case['power'])
+                output, plant = host.call('observe_ticks', {'ticks': 20,
+                    'positions': [case['target'], crop]})['samples'][-1]['blocks']
+                assert output['id'] == 'minecraft:chest', output
+                assert plant['id'] == 'minecraft:wheat' and plant['properties']['age'] == '0', plant
+                verify_harvest(output['nbt'])
+                observed['farm'] = dict(landed=output, crop=plant)
+            finally:
+                host.command(f'forceload remove {chunk}')
         result = work / 'result.json'
-        result.write_text(json.dumps(dict(create=PINS['create_revision'], cases=observed), indent=2) + '\n')
+        result.write_text(json.dumps(dict(create=PINS['create_revision'], storage=block_id, cases=observed), indent=2) + '\n')
         return result
     finally:
         (work / 'transcript.json').write_text(json.dumps(host.trace, indent=2) + '\n')
@@ -188,15 +192,15 @@ def mounted(session, case):
     return fields
 
 
-def movement(session, name, case, reference):
+def movement(session, name, case, reference, storage):
     source, target = case['source'], case['target']
     motor, controller = case['motor'], case['controller']
     assert all(block['id'] == AIR for block in reference['moving']), reference['moving']
-    verify_chest(reference['landed'][1]['nbt'])
+    verify_cargo(reference['landed'][1]['nbt'])
 
     batch = Batch()
     batch.load(controller)
-    setup(batch.put, batch.command, case)
+    setup(batch.put, batch.command, case, storage)
     batch.tick(2)
     batch.data(source)
     batch.put(motor, case['power'])
@@ -204,7 +208,7 @@ def movement(session, name, case, reference):
     batch.expect(source, AIR)
     batch.expect(target, AIR)
     before, *captured = batch.run(session, name + '-moving-save')
-    verify_chest(before)
+    verify_cargo(before)
     assert all(map(matched, captured)), captured
     cargo = mounted(session, case)
 
@@ -228,22 +232,22 @@ def movement(session, name, case, reference):
         batch.load(controller)
         batch.put(parking, AIR)
         batch.tick(3)
-        batch.expect(parking, CHEST)
+        batch.expect(parking, storage)
         batch.data(parking)
         placed, parked = batch.run(session, 'gantry-restored-after-second-restart')
         assert matched(placed), placed
-        verify_chest(parked)
+        verify_cargo(parked)
         assert saved(session, case) is None
 
     batch = Batch()
     batch.load(controller)
     if name == 'gantry':
         batch.put(switch, AIR)
-        batch.expect(parking, CHEST)
+        batch.expect(parking, storage)
     batch.tick(20)
     expected_source = reference['landed'][0]['id']
     batch.expect(source, expected_source)
-    batch.expect(target, CHEST)
+    batch.expect(target, storage)
     batch.data(target)
     if name == 'gantry':
         batch.expect(parking, AIR)
@@ -251,7 +255,7 @@ def movement(session, name, case, reference):
     index = len(rows) - (2 if name == 'gantry' else 1)
     landed = rows[index]
     assert all(map(matched, rows[:index] + rows[index + 1:])), rows
-    verify_chest(landed)
+    verify_cargo(landed)
     assert saved(session, case) is None
 
     if name not in ('piston', 'sticky'):
@@ -264,12 +268,12 @@ def movement(session, name, case, reference):
     batch.put(motor, PISTON_IN)
     batch.tick(24)
     destination, clear = (source, target) if name == 'sticky' else (target, source)
-    batch.expect(destination, CHEST)
+    batch.expect(destination, storage)
     batch.expect(clear, AIR)
     batch.data(destination)
     *positions, retracted = batch.run(session, name + '-retract-after-reload')
     assert all(map(matched, positions)), positions
-    verify_chest(retracted)
+    verify_cargo(retracted)
     assert saved(session, case) is None
     return dict(cargo=cargo, landed=landed, retracted=retracted)
 
@@ -290,7 +294,7 @@ def refusals(session):
     batch.data(source)
     *wet_rows, wet_nbt = batch.run(session, 'gantry-refuses-wet-chest')
     assert all(map(matched, wet_rows)), wet_rows
-    verify_chest(wet_nbt)
+    verify_cargo(wet_nbt)
     assert saved(session, case) is None
 
     case = gantry_case(231)
@@ -343,29 +347,44 @@ def farm(session, reference):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--java', action='store_true')
+    parser.add_argument('--barrel', action='store_true', help='verify closed barrels on each linear actuator')
     for arg in ('game', 'resources', 'ctl', 'reference'):
         parser.add_argument('--' + arg, type=Path)
     parser.add_argument('--create-jar', type=Path)
     parser.add_argument('--case', action='append', choices=(*cases(), 'refusals', 'farm'))
     args = parser.parse_args()
+    storage = BARREL if args.barrel else CHEST
+    block_id = storage.split('[', 1)[0]
+    if args.barrel and set(args.case or ()) & {'refusals', 'farm'}:
+        parser.error('Refusals and farm checks use chests')
     if args.java:
-        print(java_reference())
+        print(java_reference(storage))
         return
     if not all((args.game, args.resources, args.ctl, args.reference)):
         parser.error('Specify --java or all native arguments')
     reference = json.loads(args.reference.read_text())
     assert reference['create'] == PINS['create_revision']
+    assert reference.get('storage', 'minecraft:chest') == block_id
     fixtures = cases()
-    for name in args.case or (*fixtures, 'refusals', 'farm'):
+    names = tuple(fixtures) if args.barrel else (*fixtures, 'refusals', 'farm')
+    for name in args.case or names:
+        container = block_id.split(':')[1]
         session = NativeCheckSession(args.game, args.resources, args.ctl, args.create_jar,
-                                     name=f'linear-chest-{name}', graphics=False,
-                                     world='CreateLinearChestCheck')
-        if name == 'refusals':
-            result = refusals(session)
-        elif name == 'farm':
-            result = farm(session, reference['cases']['farm'])
-        else:
-            result = movement(session, name, fixtures[name], reference['cases'][name])
+                                     name=f'linear-{container}-{name}', graphics=False,
+                                     world='CreateLinearStorageCheck')
+        session.env.pop('CREATE_HORIZON_TRACE_POSES', None)
+        session.env.pop('CREATE_HORIZON_PARTICLE_TRACE', None)
+        try:
+            if name == 'refusals':
+                result = refusals(session)
+            elif name == 'farm':
+                result = farm(session, reference['cases']['farm'])
+            else:
+                result = movement(session, name, fixtures[name], reference['cases'][name], storage)
+        finally:
+            session.control_temp.cleanup()
+            for copy in (session.resources, session.scratch / '.horizon-cache', session.scratch / 'horizon-mods'):
+                shutil.rmtree(copy, ignore_errors=True)
         path = session.scratch / 'result.json'
         path.write_text(json.dumps(result, indent=2) + '\n')
         print(path, flush=True)

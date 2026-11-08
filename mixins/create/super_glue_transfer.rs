@@ -119,7 +119,7 @@ impl Footprint {
         let mut cargo = HashSet::with_capacity(record.blocks.len());
         let mut drive = HashSet::new();
         let piston = record.stroke_kind() == Some(StrokeKind::Piston);
-        for (local, block) in &record.blocks {
+        for (local, block) in record.blocks.iter() {
             let at = turn.place(origin, *local)?;
             // The piston stores its normalized head and rods in the same
             // scene as payload. They can become its stationary base on landing

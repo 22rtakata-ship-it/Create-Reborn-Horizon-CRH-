@@ -8,5 +8,8 @@ fn motor_open(
     swing: &mut bool,
     canceled: &mut bool,
 ) {
-    crate::game::create_port_motor_value_ui::interaction(game, button, hand, swing, canceled);
+    crate::game::create_port_contraption_menu::interaction(game, button, hand, swing, canceled);
+    if !*canceled {
+        crate::game::create_port_motor_value_ui::interaction(game, button, hand, swing, canceled);
+    }
 }

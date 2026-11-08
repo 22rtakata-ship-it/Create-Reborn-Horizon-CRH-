@@ -781,6 +781,8 @@ def foundation():
         if item=='goggles':item_decl['components']={'minecraft:equippable':{'slot':'head','equip_sound':'minecraft:item.armor.equip_generic','dispensable':True,'swappable':True,'damage_on_hurt':False}}
         if item == 'super_glue':
             item_decl['components'] = {'minecraft:max_damage': 99, 'minecraft:damage': 0}
+        if item == 'experience_nugget':
+            item_decl['components'] = {'minecraft:enchantment_glint_override': True}
         if item in SANDPAPERS:
             item_decl['components'] = {'minecraft:max_damage': 8, 'minecraft:damage': 0,
                                        'minecraft:enchantable': {'value': 1}}
@@ -793,7 +795,8 @@ def foundation():
                   "sand_paper": "paper", "red_sand_paper": "paper",
                   "electron_tube": "redstone_torch", "brass_hand": "gold_ingot",
                   "crafter_slot_cover": "gold_nugget", "incomplete_precision_mechanism": "iron_nugget",
-                  "precision_mechanism": "clock", "crushed_raw_gold": "raw_gold"}.get(item, "iron_ingot")
+                  "precision_mechanism": "clock", "crushed_raw_gold": "raw_gold",
+                  "crushed_raw_iron": "raw_iron", "experience_nugget": "emerald"}.get(item, "iron_ingot")
         write("assets/create/models/item/" + item + ".json", {"parent": "minecraft:item/generated", "textures": {"layer0": "minecraft:item/" + sprite}})
         write("assets/create/items/" + item + ".json", {"model": {"type": "minecraft:model", "model": "create:item/" + item}})
         if item=='goggles':
@@ -880,7 +883,9 @@ def foundation():
     extra_items.update({'crafter_slot_cover': 'Crafter Slot Cover',
                         'incomplete_precision_mechanism': 'Incomplete Precision Mechanism',
                         'precision_mechanism': 'Precision Mechanism',
-                        'crushed_raw_gold': 'Crushed Raw Gold'})
+                        'crushed_raw_gold': 'Crushed Raw Gold',
+                        'crushed_raw_iron': 'Crushed Raw Iron',
+                        'experience_nugget': 'Nugget of Experience'})
     extra_blocks.update({'basin': 'Basin', 'mechanical_mixer': 'Mechanical Mixer'})
     extra_blocks.update({'blaze_burner': 'Blaze Burner', 'lit_blaze_burner': 'Lit Blaze Burner'})
     extra_blocks['encased_chain_drive'] = 'Encased Chain Drive'
@@ -943,6 +948,8 @@ def foundation():
         lang.update({"block.create."+k:v for k,v in extra_blocks.items()})
         lang.update({"item.create."+k:v for k,v in extra_items.items()})
         lang["itemGroup.create.palettes"] = "Create's Building Blocks"
+        lang['create.contraptions.moving_container'] = (
+            'Moving %1$s' if locale == 'en_us' else '%1$s на штуковине')
         filter_labels = {
             '': ('Filter', 'Фильтр'),
             '.click_to_set': ('Click with item to set', 'Кликните с предметом в руке для установки'),
@@ -955,6 +962,14 @@ def foundation():
         }
         lang.update({'create.logistics.filter' + key: values[locale == 'ru_ru']
                      for key, values in filter_labels.items()})
+        deployer_labels = {
+            'header': ('Deployer Information', 'Информация об автономном активаторе:'),
+            'using': ('Mode: Use', 'Режим: Использование/Размещение'),
+            'punching': ('Mode: Attack', 'Режим: Атака/Разрушение'),
+            'contains': ('Item: %1$s x%2$s', 'Держит: %1$s x%2$s'),
+        }
+        lang.update({'create.tooltip.deployer.' + key: values[locale == 'ru_ru']
+                     for key, values in deployer_labels.items()})
         value_labels = {
             'hold_to_edit': ('Click and hold to edit', 'Удерживайте для изменения'),
             'release_to_confirm': ('Release %1$s to Confirm', 'Отпустите %1$s для подтверждения'),
@@ -1017,7 +1032,9 @@ def foundation():
             lang.update({'item.create.crafter_slot_cover': 'Заглушка слота сборщика',
                          'item.create.incomplete_precision_mechanism': 'Незаконченный механизм точности',
                          'item.create.precision_mechanism': 'Механизм точности',
-                         'item.create.crushed_raw_gold': 'Дроблёное рудное золото'})
+                         'item.create.crushed_raw_gold': 'Дроблёное рудное золото',
+                         'item.create.crushed_raw_iron': 'Дроблёное рудное железо',
+                         'item.create.experience_nugget': 'Кусочек опыта'})
             lang['block.create.' + ITEM_DRAIN] = 'Осушитель предметов'
             lang['block.create.' + FLUID_TANK] = 'Жидкостный бак'
             lang['block.create.' + PIPE] = 'Жидкостная труба'

@@ -4,13 +4,20 @@
 // Create 6.0.10 ScrollValueRenderer, ValueBox.TextValueBox,
 // ValueBoxTransform.Sided, CreativeMotorBlockEntity.MotorValueBox, AllIcons;
 // bundled MIT Catnip Outliner/OutlineEntry. No original asset bytes.
+use super::create_port_motor_control::MotionOptions;
+use super::create_port_motor_value_ui::ICONS;
 use super::{Game, create_port_chassis as chassis, native_world_draw::NativeWorldDraw};
 use crate::containers::BlockEntity;
 use horizon_world::nbt::Tag;
 use std::{cell::RefCell, collections::HashMap};
 
-const ICON: &str = "create:gui/icons";
 const FULL_BRIGHT: u32 = 240 | (240 << 8);
+const TILE_QUAD: [[f32; 3]; 4] = [
+    [0.0, 0.0, 0.0],
+    [0.0, 1.0, 0.0],
+    [1.0, 1.0, 0.0],
+    [1.0, 0.0, 0.0],
+];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) struct Side([i32; 3]);
@@ -40,15 +47,88 @@ impl Side {
     }
 }
 
+/// DirectionalExtenderScrollOptionSlot, or the pulley's centered top slot.
+#[derive(Clone, Copy, Debug)]
+struct MotionSlot {
+    facing: Option<Side>,
+    side: Side,
+}
+impl MotionSlot {
+    fn at(game: &Game<'_>, hit: &super::Hit, options: MotionOptions) -> Option<Self> {
+        let side = Side(hit.face);
+        if options == MotionOptions::Pulley {
+            return (side.0 == [0, 1, 0]).then_some(Self { facing: None, side });
+        }
+        let facing = Side::named(&game.native_block_property(hit.pos, "facing")?)?;
+        let shaft = if options == MotionOptions::Piston {
+            use create_engine::kinetics::Axis;
+            Some(match super::create_port::node(game, hit.pos)?.axis {
+                Axis::X => 0,
+                Axis::Y => 1,
+                Axis::Z => 2,
+            })
+        } else {
+            None
+        };
+        (side.axis() != facing.axis() && shaft != Some(side.axis())).then_some(Self {
+            facing: Some(facing),
+            side,
+        })
+    }
+
+    fn offset(self) -> [f32; 3] {
+        std::array::from_fn(|i| {
+            0.5 + self.side.0[i] as f32 * (7.5 / 16.0)
+                - self.facing.map_or(0.0, |facing| facing.0[i] as f32 / 8.0)
+        })
+    }
+
+    fn rotation(self) -> [f32; 3] {
+        let pitch = match self.side.0 {
+            [0, 1, 0] => 90.0,
+            [0, -1, 0] => 270.0,
+            _ => 0.0,
+        };
+        let y = self
+            .facing
+            .filter(|_| self.side.axis() == 1)
+            .map_or(0.0, |facing| facing.horizontal_angle() + 180.0);
+        [y + self.side.horizontal_angle() + 180.0, pitch, 0.0]
+    }
+}
+
+pub(super) fn motion_hit(game: &Game<'_>, hit: &super::Hit, options: MotionOptions) -> bool {
+    matches!(
+        game.world.block_entities.get(&hit.pos.into()),
+        Some(BlockEntity::Mod(_))
+    ) && !entity_blocks_target(game)
+        && MotionSlot::at(game, hit, options)
+            .is_some_and(|slot| hit_offset(hit.pos, hit.point, slot.offset()))
+}
+
+fn hit_offset(pos: [i32; 3], point: [f64; 3], offset: [f32; 3]) -> bool {
+    (0..3)
+        .map(|i| (point[i] - f64::from(pos[i]) - f64::from(offset[i])).powi(2))
+        .sum::<f64>()
+        < 0.25 * 0.25
+}
+
 #[derive(Clone, Debug)]
 pub(super) struct Plan {
     pub pos: [i32; 3],
     motor_facing: Option<Side>,
+    motion: Option<MotionBox>,
     filter: Option<FilterBox>,
     side: Side,
     pub text: String,
     pub active: bool,
     ticks_until_removal: i32,
+}
+
+#[derive(Clone, Debug)]
+struct MotionBox {
+    slot: MotionSlot,
+    icon: Option<[f32; 2]>,
 }
 
 #[derive(Clone, Debug)]
@@ -65,6 +145,9 @@ impl Plan {
         })
     }
     pub fn offset(&self) -> [f32; 3] {
+        if let Some(motion) = &self.motion {
+            return motion.slot.offset();
+        }
         if let Some(filter) = &self.filter {
             return filter.center;
         }
@@ -74,6 +157,9 @@ impl Plan {
         })
     }
     pub fn rotation(&self) -> [f32; 3] {
+        if let Some(motion) = &self.motion {
+            return motion.slot.rotation();
+        }
         [
             self.side.horizontal_angle() + 180.0,
             match self.side.0 {
@@ -87,12 +173,7 @@ impl Plan {
         ]
     }
     fn hit(&self, point: [f64; 3]) -> bool {
-        let offset = self.offset();
-        self.side_active()
-            && (0..3)
-                .map(|i| (point[i] - f64::from(self.pos[i]) - f64::from(offset[i])).powi(2))
-                .sum::<f64>()
-                < 0.25 * 0.25
+        self.side_active() && hit_offset(self.pos, point, self.offset())
     }
     fn visible(&self, partial: f32) -> bool {
         if !self.side_active() || self.ticks_until_removal < -8 {
@@ -115,7 +196,10 @@ impl Plan {
     /// unshaded with ARGB tint; `text` uses the actual font and its eight-offset
     /// outline; its front glyphs use the original polygon-offset text pass.
     pub fn render(&self, draw: &mut NativeWorldDraw, width: i32, canvas: &mut impl Canvas) {
-        if (width <= 0 && (self.filter.is_none() || !self.active)) || !self.visible(draw.partial) {
+        let icon = self.motion.as_ref().and_then(|motion| motion.icon);
+        if (icon.is_none() && width <= 0 && (self.filter.is_none() || !self.active))
+            || !self.visible(draw.partial)
+        {
             return;
         }
         let light = draw.light;
@@ -138,21 +222,26 @@ impl Plan {
             };
             canvas.quad(
                 draw,
-                ICON,
-                [
-                    [0.0, 0.0, 0.0],
-                    [0.0, 1.0, 0.0],
-                    [1.0, 1.0, 0.0],
-                    [1.0, 0.0, 0.0],
-                ],
+                ICONS,
+                TILE_QUAD,
                 // The 4px and 6px outline icons share row 8 of the source sheet.
                 [icon, 8.0, icon + 1.0, 9.0],
                 0xffff_ffff,
             );
             draw.pop();
         }
-        draw.scale([-1.0 / 64.0; 3]);
-        if width > 0 {
+        if let Some([u, v]) = icon {
+            draw.scale([-0.5; 3]);
+            draw.translate([-0.5, -0.5, 5.0 / 32.0]);
+            canvas.quad(
+                draw,
+                ICONS,
+                TILE_QUAD,
+                [u, v, u + 1.0, v + 1.0],
+                0xffff_ffff,
+            );
+        } else if width > 0 {
+            draw.scale([-1.0 / 64.0; 3]);
             if let Some(filter) = &self.filter {
                 draw.translate([17.5 - width as f32, -5.0, 7.0]);
                 let scale = if filter.filled {
@@ -257,20 +346,8 @@ fn identity(game: &Game<'_>) -> (usize, usize, &'static str) {
     )
 }
 
-fn target(game: &Game<'_>) -> Option<Plan> {
-    let hit = game.pick()?;
-    let block = game.native_block(hit.pos);
-    let motor = block == "create:creative_motor";
-    let wrench_target =
-        chassis::is_chassis(&block) && game.held().is_some_and(|item| chassis::wrench(game, item));
-    let filter = if !motor && !wrench_target {
-        Some(super::create_port_chute::filter_display(
-            game, &hit, &block,
-        )?)
-    } else {
-        None
-    };
-    if [
+fn entity_blocks_target(game: &Game<'_>) -> bool {
+    [
         game.mob_hit().map(|hit| hit.1),
         game.boat_hit().map(|hit| hit.1),
         game.cart_hit().map(|hit| hit.1),
@@ -283,13 +360,30 @@ fn target(game: &Game<'_>) -> Option<Plan> {
     .into_iter()
     .flatten()
     .any(|distance| game.before_block(distance))
-    {
+}
+
+fn target(game: &Game<'_>) -> Option<Plan> {
+    let hit = game.pick()?;
+    let block = game.native_block(hit.pos);
+    let motor = block == "create:creative_motor";
+    let motion = MotionOptions::for_block(&block);
+    let wrench_target =
+        chassis::is_chassis(&block) && game.held().is_some_and(|item| chassis::wrench(game, item));
+    let filter = if !motor && motion.is_none() && !wrench_target {
+        Some(super::create_port_chute::filter_display(
+            game, &hit, &block,
+        )?)
+    } else {
+        None
+    };
+    if entity_blocks_target(game) {
         return None;
     }
     if let Some(filter) = filter {
         return Some(Plan {
             pos: filter.pos,
             motor_facing: None,
+            motion: None,
             filter: Some(FilterBox {
                 center: filter.center,
                 filled: filter.filled,
@@ -308,6 +402,29 @@ fn target(game: &Game<'_>) -> Option<Plan> {
     else {
         return None;
     };
+    if let Some(options) = motion {
+        let slot = MotionSlot::at(game, &hit, options)?;
+        let value = options.selection(entity);
+        let icon = game
+            .gui
+            .atlas
+            .sprites
+            .contains_key(ICONS)
+            .then(|| options.icon(value));
+        return Some(Plan {
+            pos: hit.pos,
+            motor_facing: None,
+            motion: Some(MotionBox { slot, icon }),
+            filter: None,
+            side: Side(hit.face),
+            text: icon
+                .is_none()
+                .then(|| (value + 1).to_string())
+                .unwrap_or_default(),
+            active: hit_offset(hit.pos, hit.point, slot.offset()),
+            ticks_until_removal: 1,
+        });
+    }
     let (value, motor_facing) = if motor {
         let value = match entity.nbt.get(&"ScrollValue".into()) {
             Some(Tag::Int(value)) => *value,
@@ -324,6 +441,7 @@ fn target(game: &Game<'_>) -> Option<Plan> {
     let mut plan = Plan {
         pos: hit.pos,
         motor_facing,
+        motion: None,
         filter: None,
         side: Side(hit.face),
         text: value.to_string(),
@@ -405,6 +523,7 @@ mod tests {
         Plan {
             pos: [0; 3],
             motor_facing: Side::named(facing),
+            motion: None,
             filter: None,
             side: Side::named(side).unwrap(),
             text: "128".into(),
@@ -433,6 +552,29 @@ mod tests {
         assert_eq!(top.rotation(), [180.0, 90.0, 450.0]);
         assert!(top.hit([0.4375, 1.0, 0.5]));
         assert!(!top.hit([0.6875, 0.78125, 0.5]));
+    }
+    #[test]
+    fn bearing_option_slots_face_the_source_direction() {
+        let vertical = MotionSlot {
+            facing: Side::named("up"),
+            side: Side::named("south").unwrap(),
+        };
+        assert_eq!(vertical.offset(), [0.5, 0.375, 0.96875]);
+        assert_eq!(vertical.rotation(), [180.0, 0.0, 0.0]);
+        assert!(hit_offset([0; 3], [0.5, 0.375, 1.0], vertical.offset()));
+        assert!(!hit_offset([0; 3], [0.5, 0.75, 1.0], vertical.offset()));
+        let horizontal = MotionSlot {
+            facing: Side::named("east"),
+            side: Side::named("up").unwrap(),
+        };
+        assert_eq!(horizontal.offset(), [0.375, 0.96875, 0.5]);
+        assert_eq!(horizontal.rotation(), [90.0, 90.0, 0.0]);
+        let pulley = MotionSlot {
+            facing: None,
+            side: Side::named("up").unwrap(),
+        };
+        assert_eq!(pulley.offset(), [0.5, 0.96875, 0.5]);
+        assert_eq!(pulley.rotation(), [180.0, 90.0, 0.0]);
     }
     #[test]
     fn value_box_opaque_until_outliner_cubic_cutoff() {

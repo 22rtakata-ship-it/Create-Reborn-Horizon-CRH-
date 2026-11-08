@@ -231,6 +231,44 @@ fn providers(game: &Game<'_>, pos: Pos, block: &str, nbt: &Compound, goggles: bo
                     add(value, 1);
                 }
             }
+            "create:deployer" => {
+                use create_engine::deployer::Mode;
+                let mode = super::create_port_deployer::mode(nbt).unwrap_or_default();
+                let label = match mode {
+                    Mode::Use => "tooltip.deployer.using",
+                    Mode::Punch => "tooltip.deployer.punching",
+                };
+                add(tr("tooltip.deployer.header"), 0);
+                add(tr(label).with_style(&Style::color(text::YELLOW)), 0);
+                if let Some(stack) = nbt
+                    .get(&"HeldItem".into())
+                    .and_then(horizon_items::item_nbt::item_from_nbt)
+                {
+                    add(
+                        Text::translate(
+                            "create.tooltip.deployer.contains",
+                            &[
+                                Text::literal(game.pack.names.display_item(&stack.item)),
+                                Text::literal(stack.count.to_string()),
+                            ],
+                        )
+                        .with_style(&Style::color(text::GREEN)),
+                        0,
+                    );
+                }
+                let impact = node.impact();
+                if impact != 0.0 {
+                    // The Deployer appends stress after a blank line and omits
+                    // the usual Kinetic Stats header.
+                    lines.push(Text::empty());
+                    lines.push(indent(
+                        game,
+                        tr("tooltip.stressImpact").with_style(&Style::color(text::GRAY)),
+                        0,
+                    ));
+                    lines.push(indent(game, current_stress(impact * speed.abs()), 1));
+                }
+            }
             _ => {
                 let impact = match node.kind {
                     Kind::Press => 8.0,

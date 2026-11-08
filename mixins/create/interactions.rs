@@ -263,6 +263,9 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3]) ->
             if super::create_port_piston::is_piston(&block) {
                 return super::create_port_piston::wrench(game, pos, face);
             }
+            if block == super::create_port_deployer::BLOCK {
+                return super::create_port_deployer::wrench(game, pos, face);
+            }
             if block == super::create_port_basin::pump::VALVE {
                 return wrench_directional_axis(game, pos, face);
             }

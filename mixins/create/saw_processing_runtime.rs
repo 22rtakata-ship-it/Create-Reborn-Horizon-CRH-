@@ -1343,6 +1343,7 @@ pub(super) mod crushing {
         kinetics::Axis,
         placement::Direction,
     };
+    use horizon_core::geometry::Vec3;
     use horizon_core::random::RandomSource;
     use horizon_world::{chunk::BlockState, level::flags, registry::BlockStateId};
     use std::collections::BTreeMap;
@@ -1351,6 +1352,7 @@ pub(super) mod crushing {
     pub(in crate::game) const CONTROLLER: &str = "create:crushing_wheel_controller";
 
     const GAPS: [Direction; 2] = [Direction::East, Direction::South];
+    const PROCESSING_ENTITY: &str = "Entity";
 
     fn offset(pos: Pos, side: Direction) -> Pos {
         let normal = side.vector();
@@ -1495,12 +1497,9 @@ pub(super) mod crushing {
     }
 
     fn recipe(game: &Game<'_>, stack: &ItemStack) -> Option<(i32, Vec<(ItemStack, f32)>)> {
-        let kind = match stack.item.as_ref() {
-            "minecraft:cobblestone" => "create:milling",
-            "minecraft:gravel" => "create:crushing",
-            _ => return None,
-        };
-        for recipe in game.native_recipes_of_type(kind) {
+        let crushing = game.native_recipes_of_type("create:crushing");
+        let milling = game.native_recipes_of_type("create:milling");
+        for recipe in crushing.iter().chain(milling) {
             let json = &recipe.json;
             let Some(input) = json["ingredients"]
                 .as_array()
@@ -1521,14 +1520,91 @@ pub(super) mod crushing {
                     let id = row["id"].as_str()?;
                     let count = row["count"].as_u64().unwrap_or(1);
                     let chance = row["chance"].as_f64().unwrap_or(1.0);
-                    (count > 0 && count <= 64 && (0.0..=1.0).contains(&chance))
-                        .then(|| (ItemStack::new(id, count as u32), chance as f32))
+                    (count > 0
+                        && count <= 64
+                        && (0.0..=1.0).contains(&chance)
+                        && game.native_max_stack_size(id).is_some())
+                    .then(|| (ItemStack::new(id, count as u32), chance as f32))
                 })
                 .collect::<Option<Vec<_>>>()?;
             return (duration > 0 && !results.is_empty() && results.len() < SLOTS)
                 .then_some((duration, results));
         }
         None
+    }
+
+    fn bypasses(game: &Game<'_>, id: u32, pos: Pos) -> bool {
+        matches!(game.persist.raw.get(&id)
+            .and_then(|tag| tag.get("NeoForgeData"))
+            .and_then(|tag| tag.get("BypassCrushingWheel")),
+            Some(Tag::IntArray(value)) if value.as_slice() == pos)
+    }
+
+    fn catch_falling_item(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity, speed: f32) {
+        let tracked = match entity.nbt.get(&PROCESSING_ENTITY.into()) {
+            Some(Tag::IntArray(uuid)) => <[i32; 4]>::try_from(uuid.as_slice()).ok(),
+            _ => None,
+        };
+        let origin = pos.map(f64::from);
+        let margin = if tracked.is_some() { 0.5 } else { 0.0 };
+        let dim = game.dim.id().to_owned();
+        let candidates = game.native_item_entities(
+            &dim,
+            origin.map(|coordinate| coordinate - margin),
+            origin.map(|coordinate| coordinate + 1.0 + margin),
+        );
+        let Some(item) = candidates.into_iter().find(|item| match tracked {
+            Some(uuid) => game.persist.uuid_of(item.id) == Some(uuid),
+            None => !bypasses(game, item.id, pos) && recipe(game, &item.stack).is_some(),
+        }) else {
+            if entity.nbt.remove(&PROCESSING_ENTITY.into()).is_some() {
+                game.native_block_entity_sync(pos);
+            }
+            return;
+        };
+
+        if item.position[1] < origin[1] + 0.25 {
+            let Some((duration, _)) = recipe(game, &item.stack) else {
+                entity.nbt.remove(&PROCESSING_ENTITY.into());
+                game.native_block_entity_sync(pos);
+                return;
+            };
+            let mut discarded = item.stack.clone();
+            discarded.count = 0;
+            let uuid = game.uuid_for(item.id);
+            if game.native_set_item_entity(&dim, item.id, discarded) {
+                entity.items[0] = Some(item.stack);
+                let mut cycle = Cycle::default();
+                cycle.start(duration);
+                save(entity, cycle);
+                entity
+                    .nbt
+                    .insert(PROCESSING_ENTITY.into(), Tag::IntArray(uuid.to_vec()));
+                game.native_block_entity_sync(pos);
+            }
+            return;
+        }
+
+        // Create pulls a captured ItemEntity toward the center and marks its
+        // next move as stuck. Ordinary item physics applies the multiplier,
+        // gravity and world collisions on that next tick.
+        let Some(dropped) = game.dropped.iter_mut().find(|drop| drop.id == item.id) else {
+            return;
+        };
+        dropped.velocity = Vec3::new(
+            (origin[0] + 0.5 - item.position[0]) / 2.0,
+            -f64::from(speed.min(0.5)),
+            (origin[2] + 0.5 - item.position[2]) / 2.0,
+        );
+        dropped.stuck = Vec3::new(0.25, f64::from(0.05_f32), 0.25);
+        dropped.pickup_delay = 20;
+        if tracked.is_none() {
+            let uuid = game.uuid_for(item.id);
+            entity
+                .nbt
+                .insert(PROCESSING_ENTITY.into(), Tag::IntArray(uuid.to_vec()));
+            game.native_block_entity_sync(pos);
+        }
     }
 
     pub(in crate::game) fn insert(
@@ -1548,6 +1624,7 @@ pub(super) mod crushing {
         if entity.id != CONTROLLER
             || cycle(entity).is_none()
             || entity.items.iter().any(Option::is_some)
+            || entity.nbt.contains_key(&PROCESSING_ENTITY.into())
         {
             return 0;
         }
@@ -1619,11 +1696,19 @@ pub(super) mod crushing {
             return;
         }
         let speed = create::running_speed(game, &entity.nbt);
-        if !down(game, pos)
-            || speed <= 0.0
-            || !speed.is_finite()
-            || entity.items.iter().all(Option::is_none)
-        {
+        if !down(game, pos) || speed <= 0.0 || !speed.is_finite() {
+            return;
+        }
+        if entity.items.iter().all(Option::is_none) {
+            if !game.dropped.is_empty() || entity.nbt.contains_key(&PROCESSING_ENTITY.into()) {
+                catch_falling_item(game, pos, entity, speed);
+            }
+            return;
+        }
+        if entity.nbt.remove(&PROCESSING_ENTITY.into()).is_some() {
+            // Java clears the discarded entity on the tick after intake;
+            // inventory processing starts on the following tick.
+            game.native_block_entity_sync(pos);
             return;
         }
         let count = entity.items[0].as_ref().map_or(0, |stack| stack.count);

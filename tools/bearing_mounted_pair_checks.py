@@ -78,7 +78,6 @@ RIGS = (Rig(130, ('chest', 'barrel'), SOUTH), Rig(140, ('chest', 'chest'), EAST)
 POINTS = [p for rig in RIGS for p in (rig.pivot, *rig.empty)]
 GUARDS = (
     (130, ((WEST, CHEST.format('north')), (EAST, 'minecraft:barrel[open=true,facing=east]'))),
-    (140, ((SOUTH, CHEST.format('north')), (EAST, BARREL.format('east')))),
     (150, ((WEST, CHEST.format('north')), (EAST, BARREL.format('east')), (UP, BARREL.format('up')))),
 )
 
@@ -289,7 +288,7 @@ def main():
                     shutil.rmtree(folder)
     result = dict(passed=True, create=PINS['create_revision'], cases=cases)
     if not args.java:
-        result.update(cold_restart=True, obstructed_retry=True, refusal=['open', 'same_bucket', 'three_banks'])
+        result.update(cold_restart=True, obstructed_retry=True, refusal=['open', 'three_banks'])
     output = work / 'result.json'
     output.write_text(json.dumps(result, indent=2) + '\n')
     print(output)

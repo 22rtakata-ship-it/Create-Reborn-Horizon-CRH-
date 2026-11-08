@@ -6,6 +6,113 @@ use crate::{
     kinetics::{Axis, Pos},
     placement::Direction,
 };
+use std::collections::VecDeque;
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct RenderPose {
+    pub angle: f32,
+    pub offset: f32,
+}
+
+impl RenderPose {
+    fn between(self, next: Self, fraction: f32) -> Self {
+        let delta = (next.angle - self.angle + 180.0).rem_euclid(360.0) - 180.0;
+        Self {
+            angle: self.angle + delta * fraction,
+            offset: self.offset + (next.offset - self.offset) * fraction,
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct RenderMotion {
+    // Client time in ticks, paired with authoritative positions. A half-tick
+    // cushion absorbs packet arrival differences without extrapolating a pose.
+    samples: VecDeque<(f64, RenderPose)>,
+}
+
+impl RenderMotion {
+    pub fn sample(
+        &mut self,
+        now: f64,
+        period: f64,
+        previous: RenderPose,
+        current: RenderPose,
+    ) -> RenderPose {
+        while self.samples.get(1).is_some_and(|sample| sample.0 <= now) {
+            self.samples.pop_front();
+        }
+        if self.samples.len() >= 6 {
+            // A sprint or a burst of packets should not queue old motion.
+            self.samples.clear();
+        }
+        if self.samples.is_empty() {
+            self.samples.push_back((now + period * 0.5, previous));
+        }
+        if self
+            .samples
+            .back()
+            .is_some_and(|sample| sample.1 != current)
+        {
+            self.queue(previous, now, period);
+            self.queue(current, now, period);
+        }
+        let (start, pose) = self.samples[0];
+        let Some(&(end, target)) = self.samples.get(1) else {
+            return pose;
+        };
+        pose.between(
+            target,
+            ((now - start) / (end - start)).clamp(0.0, 1.0) as f32,
+        )
+    }
+
+    fn queue(&mut self, pose: RenderPose, now: f64, period: f64) {
+        let last = self.samples.back_mut().unwrap();
+        if last.1 != pose {
+            last.0 = last.0.max(now);
+            let next = last.0 + period;
+            self.samples.push_back((next, pose));
+        }
+    }
+}
+
+#[cfg(test)]
+mod render_motion_tests {
+    use super::*;
+
+    fn pose(angle: f32, offset: f32) -> RenderPose {
+        RenderPose { angle, offset }
+    }
+
+    #[test]
+    fn early_and_repeated_packets_do_not_replay_the_previous_tick() {
+        let mut motion = RenderMotion::default();
+        let zero = pose(0.0, 0.0);
+        let one = pose(10.0, 0.25);
+        let two = pose(20.0, 0.5);
+        let three = pose(30.0, 0.75);
+        assert_eq!(motion.sample(0.0, 1.0, zero, one), zero);
+        assert_eq!(motion.sample(1.0, 1.0, one, two), pose(5.0, 0.125));
+        assert_eq!(motion.sample(2.0, 1.0, one, two), pose(15.0, 0.375));
+        assert_eq!(motion.sample(2.25, 1.0, two, three), pose(17.5, 0.4375));
+        assert_eq!(motion.sample(3.0, 1.0, two, three), pose(25.0, 0.625));
+        assert_eq!(motion.sample(10.0, 1.0, two, three), three);
+    }
+
+    #[test]
+    fn angles_wrap_and_an_idle_track_resumes_from_its_held_pose() {
+        let mut motion = RenderMotion::default();
+        let before = pose(354.0, 1.0);
+        let after = pose(2.0, 0.5);
+        motion.sample(0.0, 1.0, before, after);
+        assert_eq!(motion.sample(1.0, 1.0, before, after), pose(358.0, 0.75));
+        assert_eq!(motion.sample(20.0, 1.0, after, after), after);
+        let reverse = pose(354.0, 1.0);
+        assert_eq!(motion.sample(21.0, 1.0, after, reverse), after);
+        assert_eq!(motion.sample(21.5, 1.0, after, reverse), pose(-2.0, 0.75));
+    }
+}
 
 /// The centre of the local origin block is the pivot. Points are expressed
 /// relative to its lower corner, as in ControlledContraptionEntity.

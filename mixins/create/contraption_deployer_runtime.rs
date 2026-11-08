@@ -16,9 +16,9 @@ use crate::{
 use create_engine::{
     contraption::QuarterTurn,
     deployer::{
-        Aim, BeltAction, Held, Mode, MovingAction, Phase, Segment, Stationary, Target, TickAction,
-        Waiting, belt_action, grabs_from_storage, moving_action, should_use, stationary_aim,
-        timer_speed,
+        Aim, BeltAction, HandPose, Held, Mode, MovingAction, Phase, Segment, Stationary, Target,
+        TickAction, Waiting, belt_action, grabs_from_storage, hand_pose, moving_action, should_use,
+        stationary_aim, timer_speed,
     },
     kinetics::{Axis, Pos},
     placement::Direction,
@@ -97,7 +97,8 @@ pub(super) fn default_nbt() -> Compound {
 
 pub(super) fn update_tag(entity: &ModBlockEntity) -> Compound {
     let mut update: Compound = [
-        "Mode", "HeldItem", "State", "Timer", "Speed", "Powered", "Filter",
+        "Mode", "HeldItem", "State", "Timer", "Speed", "Powered", "Filter", "NetworkStatus",
+        "create_horizon",
     ]
     .into_iter()
     .filter_map(|key| get(&entity.nbt, key).map(|tag| (key.into(), tag.clone())))
@@ -143,7 +144,7 @@ fn draw_arm(
     first: bool,
     shaft_angle: f32,
     extension: f32,
-    holding: bool,
+    pose: HandPose,
 ) {
     let shaft_axis = shaft_axis(facing, first);
     draw.push();
@@ -168,10 +169,10 @@ fn draw_arm(
     }
     game.native_draw_model(draw, "create:block/deployer/pole", 0xffffff);
     draw.pop();
-    let model = if holding {
-        "create:block/deployer/hand_holding"
-    } else {
-        "create:block/deployer/hand_pointing"
+    let model = match pose {
+        HandPose::Pointing => "create:block/deployer/hand_pointing",
+        HandPose::Holding => "create:block/deployer/hand_holding",
+        HandPose::Punching => "create:block/deployer/hand_punching",
     };
     game.native_draw_model(draw, model, 0xffffff);
     draw.pop();
@@ -276,6 +277,7 @@ pub(super) fn draw_station(
         .as_deref()
         == Some("true");
     let holding = get(&entity.nbt, "HeldItem").is_some_and(|held| held.get("id").is_some());
+    let mode = mode(&entity.nbt).unwrap_or_default();
     let rpm = kinetics::number(&entity.nbt, "Speed");
     let arm = station_state(&entity.nbt).map_or(0.0, |mut cycle| {
         cycle.reach = kinetics::number(&entity.nbt, "Reach");
@@ -292,12 +294,13 @@ pub(super) fn draw_station(
             create_engine::visual::rotation_offset(pos, node.axis, false),
         )
     });
-    draw_arm(game, draw, facing, first, shaft_angle, arm, holding);
+    draw_arm(
+        game, draw, facing, first, shaft_angle, arm, hand_pose(mode, holding),
+    );
     draw_filter(game, pos, facing, first, entity, draw);
-    if get(&entity.nbt, "Mode") == Some(&Tag::String("USE".into()))
-        && let Some(stack) = get(&entity.nbt, "HeldItem")
-            .and_then(item_from_nbt)
-            .filter(supported_item)
+    if let Some(stack) = get(&entity.nbt, "HeldItem")
+        .and_then(item_from_nbt)
+        .filter(supported_item)
     {
         draw_held_item(
             game,
@@ -305,6 +308,7 @@ pub(super) fn draw_station(
             facing,
             kinetics::running_speed(game, &entity.nbt),
             arm,
+            mode,
             &stack,
         );
     }
@@ -317,6 +321,7 @@ fn draw_held_item(
     facing: Direction,
     rpm: f32,
     extension: f32,
+    mode: Mode,
     stack: &ItemStack,
 ) {
     draw.push();
@@ -332,7 +337,7 @@ fn draw_held_item(
         _ => 180.0,
     };
     draw.rotate_about([0., 1., 0.], yaw, [0.; 3]);
-    let display = if facing == Direction::Up && rpm == 0.0 {
+    let display = if facing == Direction::Up && rpm == 0.0 && mode == Mode::Use {
         draw.translate([0., 11. / 16., 0.]);
         // Catnip's client animation clock advances one degree per tick.
         let spin = super::create_port_particles::animation_time(draw.partial);
@@ -346,8 +351,14 @@ fn draw_held_item(
         };
         draw.rotate_about([1., 0., 0.], pitch, [0.; 3]);
         draw.translate([0., 0., -11. / 16.]);
-        draw.scale([0.5; 3]);
-        DisplayContext::Fixed
+        if mode == Mode::Punch {
+            draw.translate([0., 1. / 8., -1. / 16.]);
+            draw.scale([0.75; 3]);
+            DisplayContext::ThirdPersonRightHand
+        } else {
+            draw.scale([0.5; 3]);
+            DisplayContext::Fixed
+        }
     };
     game.native_draw_item(draw, stack, display, None, 0);
     draw.pop();
@@ -388,11 +399,19 @@ pub(super) fn draw_moving(
         .properties
         .get("axis_along_first")
         .is_some_and(|value| value == "true");
-    draw_arm(game, draw, facing, first, 0.0, extension, false);
+    draw_arm(game, draw, facing, first, 0.0, extension, HandPose::Pointing);
 }
 
 fn get<'a>(nbt: &'a Compound, key: &str) -> Option<&'a Tag> {
     nbt.get(&key.into())
+}
+
+pub(super) fn mode(nbt: &Compound) -> Option<Mode> {
+    let Tag::String(value) = get(nbt, "Mode")? else {
+        return None;
+    };
+    let value = value.to_string().ok()?;
+    matches!(value.as_str(), "USE" | "PUNCH").then(|| Mode::from_saved(&value))
 }
 
 fn supported_moving_item(item: &ItemStack) -> bool {
@@ -545,9 +564,7 @@ fn entity<'a>(game: &'a Game<'_>, pos: Pos) -> Option<&'a ModBlockEntity> {
 }
 
 fn station_state(nbt: &Compound) -> Option<Stationary> {
-    if get(nbt, "Mode") != Some(&Tag::String("USE".into())) {
-        return None;
-    }
+    let mode = mode(nbt)?;
     let phase = match get(nbt, "State") {
         None => Phase::Waiting,
         Some(Tag::String(phase)) => match phase.to_string().ok()?.as_str() {
@@ -564,6 +581,7 @@ fn station_state(nbt: &Compound) -> Option<Stationary> {
         _ => return None,
     };
     Some(Stationary {
+        mode,
         phase,
         timer,
         ..Stationary::default()
@@ -737,7 +755,11 @@ pub(super) fn process_transport(
     let (Some(state), Some(hand)) = (station_state(&member.nbt), consistent_hand(member)) else {
         return ProcessingResult::Pass.into();
     };
-    if kinetics::running_speed(game, &member.nbt) == 0.0 {
+    // The original refuses new cargo in PUNCH. Its held-item callback still
+    // finishes an operation already accepted by USE before the switch.
+    if (state.mode == Mode::Punch && !already_held)
+        || kinetics::running_speed(game, &member.nbt) == 0.0
+    {
         return ProcessingResult::Pass.into();
     }
     let input = belt::game_stack(&item.stack);
@@ -815,15 +837,17 @@ pub(super) fn tick_station(
     entity: &mut ModBlockEntity,
     rpm: f32,
 ) -> bool {
-    if contraption::facing(game, pos) != Some(Direction::Down)
-        || !matches!(get(&entity.nbt, "Powered"), None | Some(Tag::Byte(0 | 1)))
+    let Some(facing) = contraption::facing(game, pos) else {
+        return false;
+    };
+    if !matches!(get(&entity.nbt, "Powered"), None | Some(Tag::Byte(0 | 1)))
         || !get(&entity.nbt, "Overflow")
             .is_none_or(|v| matches!(v, Tag::List(items) if items.is_empty()))
     {
         return false;
     }
     let (Some(aim), Some(mut cycle), Some(hand), Some(filter)) = (
-        stationary_aim(pos, Direction::Down),
+        stationary_aim(pos, facing),
         station_state(&entity.nbt),
         consistent_hand(entity),
         read_filter(&entity.nbt),
@@ -846,7 +870,7 @@ pub(super) fn tick_station(
     }
     cycle.reach = f32::from_bits(entity.data.first().copied().unwrap_or(0) as u32);
     let previous = cycle;
-    let action = cycle.tick(rpm, |_| {
+    let action = cycle.tick(rpm, |mode| {
         // Java checks the hand filter only on entering the waiting branch.
         // Until there is an overflow inventory, keep a mismatched hand parked.
         if filter_rejects_hand(filter.as_ref(), hand.as_ref())
@@ -855,15 +879,17 @@ pub(super) fn tick_station(
             return Waiting::Locked;
         }
         let block = game.native_block(target);
-        if !should_use(
-            hand.as_ref().map_or(Held::Empty, held_kind),
-            Target {
-                block: &block,
-                fluid: None,
-                transports_items: matches!(block.as_str(), "create:belt" | "create:depot"),
-            },
-            Some(Direction::Down),
-        ) {
+        if mode == Mode::Use
+            && !should_use(
+                hand.as_ref().map_or(Held::Empty, held_kind),
+                Target {
+                    block: &block,
+                    fluid: None,
+                    transports_items: matches!(block.as_str(), "create:belt" | "create:depot"),
+                },
+                Some(facing),
+            )
+        {
             return Waiting::Retry;
         }
         if powered != 0 {
@@ -885,20 +911,51 @@ pub(super) fn tick_station(
                 .insert("State".into(), Tag::String(cycle.phase.saved_name().into()));
         }
     }
-    if matches!(action, TickAction::Activate { .. })
-        && !matches!(
-            game.native_block(target).as_str(),
-            "create:belt" | "create:depot"
-        )
-        && let Some(mut stack) = hand
-        && use_item(game, aim, &stack, Face::Up)
-    {
-        stack.count -= 1;
-        let remaining = (stack.count != 0).then_some(stack);
-        entity.items = vec![remaining.clone()];
-        write_hand(&mut entity.nbt, remaining);
+    if matches!(action, TickAction::Activate { .. }) && cycle.mode == Mode::Use {
+        let block = game.native_block(target);
+        if block == "minecraft:lever" && hand.is_none() {
+            use_lever(game, aim, facing);
+        } else if facing == Direction::Down
+            && !matches!(block.as_str(), "create:belt" | "create:depot")
+            && let Some(mut stack) = hand
+            && use_item(game, aim, &stack, Face::Up)
+        {
+            stack.count -= 1;
+            let remaining = (stack.count != 0).then_some(stack);
+            entity.items = vec![remaining.clone()];
+            write_hand(&mut entity.nbt, remaining);
+        }
     }
     changed || action != TickAction::None
+}
+
+fn use_lever(game: &mut Game<'_>, aim: Aim, facing: Direction) {
+    use horizon_client::mod_api::NativeUseTarget;
+
+    let [x, _, z] = aim.clicked;
+    if !contraption::resident(game, aim.clicked) || !game.border.contains(f64::from(x), f64::from(z))
+    {
+        return;
+    }
+    let ray = aim.action_ray();
+    let hit = clip(game, ray);
+    let face = hit
+        .as_ref()
+        .and_then(|hit| native_face(hit.face))
+        .or_else(|| native_face(facing.opposite().vector()));
+    let Some(face) = face else { return };
+    let _ = game.native_use_as_player(
+        ItemStack::new("minecraft:air", 0),
+        ray.start,
+        aim.yaw,
+        aim.pitch,
+        NativeUseTarget::Block {
+            pos: aim.clicked,
+            face,
+            point: hit.map_or(ray.end, |hit| hit.point),
+        },
+        false,
+    );
 }
 
 fn use_item(game: &mut Game<'_>, aim: Aim, stack: &ItemStack, fallback: Face) -> bool {
@@ -949,11 +1006,40 @@ fn exchange_target(game: &Game<'_>, pos: Pos, hit: [f64; 3], held: Option<&ItemS
     {
         return false;
     }
-    contraption::facing(game, pos).is_some_and(|facing| {
-        let axis = facing.axis().index();
-        let back = f64::from(pos[axis]) + 0.5 - f64::from(facing.vector()[axis]) * 0.5;
-        (hit[axis] - back).abs() >= 0.75
-    })
+    forward_hit(game, pos, hit).is_some_and(|distance| distance >= 0.75)
+}
+
+fn forward_hit(game: &Game<'_>, pos: Pos, hit: [f64; 3]) -> Option<f64> {
+    let facing = contraption::facing(game, pos)?;
+    let axis = facing.axis().index();
+    let back = f64::from(pos[axis]) + 0.5 - f64::from(facing.vector()[axis]) * 0.5;
+    Some((hit[axis] - back).abs())
+}
+
+pub(super) fn wrench(game: &mut Game<'_>, pos: Pos, face: Direction) -> bool {
+    if !game.may_build() {
+        return false;
+    }
+    if game.pick().is_some_and(|hit| {
+        hit.pos == pos && forward_hit(game, pos, hit.point).is_some_and(|distance| distance > 0.75)
+    }) {
+        let Some(next) = entity(game, pos).and_then(|entity| match mode(&entity.nbt)? {
+            Mode::Use => Some(Mode::Punch),
+            Mode::Punch => Some(Mode::Use),
+        }) else {
+            return true;
+        };
+        if game
+            .native_with_mod_block_entity(pos, |entity| {
+                entity.nbt.insert("Mode".into(), Tag::String(next.saved_name().into()));
+            })
+            .is_some()
+        {
+            game.native_block_entity_sync(pos);
+        }
+        return true;
+    }
+    super::create_port_interactions::wrench_directional_axis(game, pos, face)
 }
 
 fn filter_target(game: &Game<'_>, hit: &super::Hit) -> bool {

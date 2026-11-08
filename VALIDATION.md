@@ -80,6 +80,12 @@ developer source build. The three changes are applied in a separate checkout.
   recipe application through real restarts. The downward output position,
   initial velocity, pickup delay and bypass tag match. Unported inputs stay
   in the Horizon Chute, and independent random results are checked by range.
+- [Free-falling ore](tools/crusher_drop_checks.py) matches 400 per-tick
+  observations across two downward Crushing Wheel pairs. Both clients catch
+  the items on tick 8 and store each stack and its custom data on tick 32.
+  The wheels eject the diamond ore results on tick 51 and the four raw iron
+  results on tick 183.
+  Independent chance outputs are checked against their recipe bounds.
 - Mixed colored cargo restores the same cells on a Mechanical Bearing after
   a real Horizon restart. The [separate swept-volume check](tools/bearing_chunk_sweep_checks.py)
   matches nine angles, neighboring-column item support and all 15 landing
@@ -109,6 +115,26 @@ developer source build. The three changes are applied in a separate checkout.
   and the item components through a cold reload and landing. A save from
   the preceding single-bank build also cold-loads. An obstructed landing
   preserves both banks for a retry.
+- [Repeated bearing starts](tools/bearing_repeat_checks.py) cover five ordinary
+  clutch cycles with the same chest and barrel. Both clients agree on their
+  mounting order, facing and tagged contents after each landing. Horizon
+  cold-loads each moving structure before landing it.
+- [Mounted storage menus](tools/mounted_menu_checks.py) open an ordinary Chest
+  and Barrel in both clients, split their stacks and compare the landed slots.
+  Both clients open the chest while it is turning and close it on landing.
+  The native check also covers a parked cold reload, a wall in front of the
+  target, a click followed immediately by close, and a held cursor stack when
+  the player leaves range or dies.
+- [Rendered frame continuity](tools/contraption_frame_checks.py) records the
+  angles and translations actually submitted to Horizon's renderer. In the
+  initial trace, the Bearing played seven frames backwards and the Piston
+  played eight. The corrected trace of the same fixtures moves forward across
+  both local tick boundaries and arrivals of authoritative poses.
+- [Bearing capacity](tools/bearing_capacity_checks.py) checks the default
+  Create limit with a Mechanical Bearing and a plain slime payload. Both
+  clients capture 2,048 blocks and reach 91.20001 degrees on the sampled tick.
+  Horizon lands the payload after a cold restart. Both leave the sampled
+  source blocks in place when a 2,049th block is added.
 - [Adjustable Chain Gearshift transitions](tools/adjustable_chain_transition_checks.py)
   match all 66 lane observations, including analog changes, an instantaneous
   redstone pulse and a native reload. The model state changes at the
@@ -190,6 +216,12 @@ developer source build. The three changes are applied in a separate checkout.
   input. A native restart preserves the in-flight hand and transport state.
   [Filter changes during a stroke](tools/deployer_filter_transport_checks.py)
   match all 16 samples, including both results and the marked hand remainder.
+- [Deployer modes](tools/deployer_mode_checks.py) match 168 samples over two
+  stationary lanes at 32 RPM. The Use hand switches a vanilla lever on ticks
+  19 and 62. The Attack hand has the same stroke timer and leaves its lever
+  alone. Five real clicks confirm front-hand mode switching, rear shaft
+  rotation and retention of the stock and mode after restarting Horizon.
+  The rendered goggles lines match Java text, colors, font widths and bounds.
 - [Copper treatment](tools/deployer_copper_checks.py) matches 70 ticks across
   four lanes, including repeated oxidation removal, one refused input and
   unchanged tool components and damage.

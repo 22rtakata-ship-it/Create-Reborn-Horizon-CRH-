@@ -141,6 +141,8 @@ pub const ITEMS: &[&str] = &[
     "incomplete_precision_mechanism",
     "precision_mechanism",
     "crushed_raw_gold",
+    "crushed_raw_iron",
+    "experience_nugget",
 ];
 pub const PARTS: &[&str] = &[
     "shaft",
@@ -228,6 +230,7 @@ pub const PARTS: &[&str] = &[
     "deployer/pole",
     "deployer/hand_pointing",
     "deployer/hand_holding",
+    "deployer/hand_punching",
     "portable_storage_interface/block_middle",
     "portable_storage_interface/block_middle_powered",
     "portable_storage_interface/block_top",

@@ -31,6 +31,7 @@ def deployer(write, model):
     model('deployer/pole', [([6, 6, 1], [10, 10, 14])], 'minecraft:block/iron_block')
     for hand in ('pointing', 'holding'):
         model(f'deployer/hand_{hand}', [([5, 5, 12], [11, 11, 16])], 'minecraft:block/raw_gold_block')
+    model('deployer/hand_punching', [([4, 4, 11], [12, 12, 16])], 'minecraft:block/raw_gold_block')
     model('deployer/item_fallback', [([0, 0, 0], [16, 16, 12]), ([5, 5, 12], [11, 11, 16])],
           'minecraft:block/andesite')
     write('assets/create/blockstates/deployer.json', {'variants': {

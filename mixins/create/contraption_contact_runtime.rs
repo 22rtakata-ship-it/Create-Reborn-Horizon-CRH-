@@ -13,7 +13,7 @@ use create_engine::contraption::{
 };
 use horizon_client::collisions::{EntityCollisions, LookupCollisions, SceneCollisions};
 use horizon_client_render::create_contraption_scene::{
-    KEY, Pos, Record, dry_slab_type, full_cube_payload, read, upright_side_payload,
+    KEY, POSE_KEY, Pos, Record, dry_slab_type, full_cube_payload, read, upright_side_payload,
 };
 use horizon_core::geometry::{Aabb, Vec3};
 use horizon_world::{
@@ -92,7 +92,7 @@ fn previous_records(game: &Game<'_>, data: &[u8]) -> Option<((i32, i32), Vec<Rec
     if message.replace
         || !message.changes.iter().any(|change| {
             change.namespace == "create".into()
-                && change.name == KEY.into()
+                && (change.name == KEY.into() || change.name == POSE_KEY.into())
                 && change.value.is_some()
         })
     {
@@ -132,12 +132,9 @@ fn carry(game: &mut Game<'_>, column: (i32, i32), previous: &[Record]) {
     // when a nearby rotor also has a side overlap in this column.
     let mut side = None;
     let contact = current.iter().find_map(|record| {
-        let before = previous.iter().find(|before| {
-            before.controller == record.controller
-                && before.anchor == record.anchor
-                && before.axis == record.axis
-                && before.blocks == record.blocks
-        })?;
+        let before = previous
+            .iter()
+            .find(|before| before.same_geometry(record))?;
         let full_blocks = record
             .blocks
             .iter()
@@ -301,7 +298,7 @@ fn linear_colliders(game: &Game<'_>, record: &Record, origin: [f64; 3]) -> Vec<C
         binding: game.collision,
     };
     let mut boxes = Vec::new();
-    for (local, state) in &record.blocks {
+    for (local, state) in record.blocks.iter() {
         let at: [f64; 3] = std::array::from_fn(|i| origin[i] + f64::from(local[i]));
         if full_cube_payload(state) {
             boxes.push(ContactBox {

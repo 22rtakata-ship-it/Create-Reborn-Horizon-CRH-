@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MIT
 // Authoritative KineticScrollValueBehaviour settings. Client UI lives separately.
 use super::{Game, create_port_chassis as chassis, create_port_chute as chute};
-use crate::containers::BlockEntity;
+use crate::containers::{BlockEntity, ModBlockEntity};
 use create_engine::contraption::chassis::MAX_RANGE;
 use horizon_world::nbt::Tag;
 use std::{cell::RefCell, path::PathBuf};
@@ -15,18 +15,100 @@ struct Request {
     pos: [i32; 3],
     setting: Setting,
 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum MotionOptions {
+    Mechanical,
+    Windmill,
+    Clockwork,
+    Piston,
+    Pulley,
+}
+impl MotionOptions {
+    pub(super) fn for_block(block: &str) -> Option<Self> {
+        Some(match block {
+            super::create_port_contraption::BLOCK => Self::Mechanical,
+            super::create_port_contraption::WINDMILL => Self::Windmill,
+            super::create_port_clockwork::BLOCK => Self::Clockwork,
+            super::create_port_piston::NORMAL | super::create_port_piston::STICKY => Self::Piston,
+            super::create_port_pulley::BLOCK => Self::Pulley,
+            _ => return None,
+        })
+    }
+
+    pub(super) const fn max(self) -> i32 {
+        match self {
+            Self::Windmill => 1,
+            Self::Mechanical | Self::Clockwork | Self::Piston | Self::Pulley => 2,
+        }
+    }
+
+    pub(super) const fn linear(self) -> bool {
+        matches!(self, Self::Piston | Self::Pulley)
+    }
+
+    pub(super) const fn wire(self) -> i32 {
+        match self {
+            Self::Mechanical => 0,
+            Self::Windmill => 1,
+            Self::Clockwork => 2,
+            Self::Piston => 3,
+            Self::Pulley => 4,
+        }
+    }
+
+    fn from_wire(value: i32) -> Option<Self> {
+        Some(match value {
+            0 => Self::Mechanical,
+            1 => Self::Windmill,
+            2 => Self::Clockwork,
+            3 => Self::Piston,
+            4 => Self::Pulley,
+            _ => return None,
+        })
+    }
+
+    pub(super) fn selection(self, entity: &ModBlockEntity) -> i32 {
+        match entity.nbt.get(&"ScrollValue".into()) {
+            Some(Tag::Int(value)) if (0..=self.max()).contains(value) => *value,
+            _ => 0,
+        }
+    }
+}
+
+const MODE_CHANGED: &str = "create_horizon:LinearMovementModeChanged";
+
+pub(super) fn take_linear_mode_change(entity: &mut ModBlockEntity) -> bool {
+    entity.nbt.remove(&MODE_CHANGED.into()).is_some()
+}
+
 #[derive(Clone, Copy)]
 enum Setting {
-    Motor { row: i32, raw: i32 },
-    Chassis { range: u8, bulk: bool },
-    FilterAmount { row: i32, raw: i32 },
-    FilterTap { face: [i32; 3], offset: [f32; 3] },
+    Motor {
+        row: i32,
+        raw: i32,
+    },
+    Chassis {
+        range: u8,
+        bulk: bool,
+    },
+    Motion {
+        options: MotionOptions,
+        selection: i32,
+    },
+    FilterAmount {
+        row: i32,
+        raw: i32,
+    },
+    FilterTap {
+        face: [i32; 3],
+        offset: [f32; 3],
+    },
 }
 impl Setting {
     fn allowed(self, game: &mut Game<'_>, player: u128, pos: [i32; 3]) -> bool {
         match self {
             Self::Motor { .. } => game.create_motor_configuration_allowed(player, pos),
-            Self::FilterAmount { .. } | Self::FilterTap { .. } => {
+            Self::Motion { .. } | Self::FilterAmount { .. } | Self::FilterTap { .. } => {
                 game.create_value_configuration_allowed(player, pos, false)
             }
             Self::Chassis { .. } => game.create_value_configuration_allowed(player, pos, true),
@@ -76,6 +158,16 @@ pub(super) fn receive(game: &mut Game<'_>, player: u128, channel: &str, data: &[
                 range: raw as u8 + 1,
                 bulk: bulk == 1,
             }
+        }
+        ("create:motion_settings", 20) => {
+            let Some(options) = MotionOptions::from_wire(word(3)) else {
+                return;
+            };
+            let selection = word(4);
+            if !(0..=options.max()).contains(&selection) {
+                return;
+            }
+            Setting::Motion { options, selection }
         }
         ("create:filter_settings", 20) => {
             let (row, raw) = (word(3), word(4));
@@ -170,6 +262,7 @@ pub(super) fn level_tick(game: &mut Game<'_>) {
                 }
             }
             Setting::Motor { row, raw } => apply_motor(game, pos, row, raw),
+            Setting::Motion { options, selection } => apply_motion(game, pos, options, selection),
             Setting::FilterAmount { row, raw } => {
                 if chute::set_filter_amount(game, pos, row, raw) {
                     feedback(game, pos);
@@ -181,6 +274,34 @@ pub(super) fn level_tick(game: &mut Game<'_>) {
             }
         }
     }
+}
+
+fn apply_motion(game: &mut Game<'_>, pos: [i32; 3], options: MotionOptions, selection: i32) {
+    if MotionOptions::for_block(&game.native_block(pos)) != Some(options) {
+        return;
+    }
+    let changed = game
+        .native_with_mod_block_entity(pos, |entity| {
+            if MotionOptions::for_block(&entity.id) != Some(options)
+                || options.selection(entity) == selection
+            {
+                return false;
+            }
+            entity.nbt.insert("ScrollValue".into(), Tag::Int(selection));
+            if options.linear() && entity.nbt.get(&"Running".into()) == Some(&Tag::Byte(1)) {
+                entity.nbt.insert(MODE_CHANGED.into(), Tag::Byte(1));
+            }
+            true
+        })
+        .unwrap_or(false);
+    if !changed {
+        return;
+    }
+    if options == MotionOptions::Windmill {
+        super::create_port_contraption::windmill_direction_changed(game, pos);
+    }
+    game.native_block_entity_sync(pos);
+    feedback(game, pos);
 }
 
 fn apply_motor(game: &mut Game<'_>, pos: [i32; 3], row: i32, raw: i32) {

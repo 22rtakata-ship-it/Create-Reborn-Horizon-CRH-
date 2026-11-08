@@ -30,6 +30,7 @@ pub(super) const POLE: &str = "create:piston_extension_pole";
 pub(super) const HEAD: &str = "create:mechanical_piston_head";
 const RUNNING: &str = "Running";
 const LAST_SPEED: &str = "create_horizon:PistonPower";
+const REQUEST: &str = "AssembleNextTick";
 
 pub(super) fn is_piston(block: &str) -> bool {
     matches!(block, NORMAL | STICKY)
@@ -176,7 +177,7 @@ fn capture(game: &mut Game<'_>, pos: Pos, facing: Direction, rpm: f32) -> Option
             previous: layout.initial_offset as f32,
             waiting: false,
         }),
-        blocks,
+        blocks: blocks.into(),
     };
     // A linear sweep lies entirely inside a column when both ends do.
     if record.blocks.iter().any(|&(local, _)| {
@@ -189,8 +190,8 @@ fn capture(game: &mut Game<'_>, pos: Pos, facing: Direction, rpm: f32) -> Option
         return None;
     }
     let mut edits = Vec::new();
-    for &(local, ref block) in &record.blocks {
-        let p = world_cell(&record, local, layout.initial_offset);
+    for (local, block) in record.blocks.iter() {
+        let p = world_cell(&record, *local, layout.initial_offset);
         if p == pos {
             continue;
         }
@@ -304,7 +305,7 @@ fn land(game: &mut Game<'_>, pos: Pos, grid_offset: u32, owned: bool) -> bool {
     };
     let record = records.remove(index);
     let mut edits = Vec::new();
-    for (local, block) in &record.blocks {
+    for (local, block) in record.blocks.iter() {
         let p = world_cell(&record, *local, grid_offset);
         let before = state(game, p);
         let after = if owned && p == pos {
@@ -425,7 +426,7 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: Pos, face: Pos) -> bool {
         return make_sticky(game, pos);
     }
     game.native_with_mod_block_entity(pos, |entity| {
-        entity.nbt.insert("AssembleNextTick".into(), Tag::Byte(1));
+        entity.nbt.insert(REQUEST.into(), Tag::Byte(1));
     })
     .is_some()
 }
@@ -505,11 +506,12 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity, r
         return;
     };
     let previous = super::create_port::number(&entity.nbt, LAST_SPEED);
-    let pending = entity.nbt.remove(&"AssembleNextTick".into()).is_some();
+    let mode_changed = super::create_port_motor_control::take_linear_mode_change(entity);
     entity
         .nbt
         .insert(LAST_SPEED.into(), Tag::Float(rpm.to_bits()));
     let Some(index) = records.iter().position(|r| r.controller == pos) else {
+        let pending = entity.nbt.remove(&REQUEST.into()).is_some();
         if (pending || previous != rpm)
             && rpm != 0.0
             && let Some(initial) = capture(game, pos, facing, rpm)
@@ -537,10 +539,17 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity, r
     ) else {
         return;
     };
+    if mode_changed {
+        actuator.mode_changed();
+    }
     let mut stalled = actors::stalled(game, pos);
-    if (rpm != record.rpm || pending) && actuator.speed_changed(record.rpm, rpm, stalled, None) {
+    if rpm != record.rpm && actuator.speed_changed(record.rpm, rpm, stalled, None) {
         actors::remove(game, pos);
         stalled = false;
+    }
+    // Java returns on Waiting before it consumes AssembleNextTick.
+    if !actuator.waiting() && entity.nbt.remove(&REQUEST.into()).is_some() {
+        actuator.request_refresh();
     }
     let mode = match super::create_port::integer(&entity.nbt, "ScrollValue") {
         1 => Mode::PlaceReturned,
@@ -571,7 +580,7 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity, r
             actors::tick(game, &previous, &landed);
             actors::remove(game, pos);
             if retry_extension {
-                entity.nbt.insert("AssembleNextTick".into(), Tag::Byte(1));
+                entity.nbt.insert(REQUEST.into(), Tag::Byte(1));
             }
         }
         return;

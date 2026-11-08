@@ -103,15 +103,16 @@ the port and uses 26.3 world generation in new chunks. The original mining
 tool tier, Silk Touch, Fortune and cooking recipes are retained. Raw Zinc
 can be packed into its original storage block.
 
-The downward Crushing Wheel pair accepts cobblestone and gravel from a
-dry Chute. It ejects into open space or transfers directly onto a Depot,
+The downward Crushing Wheel pair takes supported inputs from a dry Chute
+or catches falling stacks. It looks up Crushing recipes before Milling
+recipes. The catalog includes diamond ores, iron ores, raw iron and raw
+iron blocks. The wheels eject into open space or transfer onto a Depot,
 where the top stack and output buffer control backpressure. Unported items
-stay in the sender.
-The controller retains its original inventory and cycle fields through a
-restart, and produced item entities retain the original bypass data. Its
-downward outlet is open to dropped items while valid. Capturing those items,
-entity-specific collision and damage, and other output destinations remain
-open.
+stay in the Chute. The controller retains its original inventory and cycle
+fields through a restart, and loose outputs retain the original bypass
+data. The Experience Nugget currently drops as an item. Consuming it,
+entity-specific collision and damage, and other directions and output
+destinations are pending.
 
 A vertical Smart Chute can use an ordinary item as a ghost filter. The
 default configuration pulls up to 64 matching items at once. A powered

@@ -10,11 +10,13 @@ rules while using Horizon's block, item and player APIs.
 | Capture | Discover a payload through block movement and attachment rules. Store original identifiers and full block states in local coordinates. |
 | Drive | Mechanical and Windmill Bearings, both hands of the Clockwork Bearing, and the regular and sticky Mechanical Piston advance their own poses. Rope Pulleys share the linear actuator, while Gantry Carriages follow a loaded rail. |
 | Ownership | The structure belongs to the chunk, independently of the driver. It is saved with the removal of the original blocks. Removing a driver leaves a recoverable record if a block obstructs the landing. |
-| Presentation | The client receives the captured structure and successive poses. Models are drawn in the same coordinate system used for collision. Original resources remain an optional local import. |
+| Presentation | The client receives geometry at capture and tracks it with small pose updates during motion. The rendered pose interpolates across packet arrival and local frame boundaries. Collision uses the authoritative pose. Original resources remain an optional local import. |
 | Contact and actors | Horizon's normal collision paths handle moving geometry. A rider on a flat platform can follow horizontal rotation or translation and be lifted. Moving harvesters, saws and drills use the original crop or block rules and Horizon loot. |
 
 The current native adapter keeps each structure's source blocks, landing cells
 and persistent record in one loaded chunk column so they share a chunk save.
+Older saves with geometry and pose in one record are read and converted on
+the next update. Landing removes both attachments.
 A rotor can pass through a neighboring loaded column between snapped poses.
 The adapter refuses unsupported snapshots and most occupied landing cells
 instead of discarding blocks. Capture is limited to an allowlist of stateless
@@ -24,13 +26,33 @@ compares the quarter-turn landing after a native restart. Dry oak and smooth
 stone slabs keep their registered half-block or double-block collision. A
 half-turn about X or Z flips their top or bottom state at landing. A vertical
 Mechanical Bearing can carry a Deployer.
+
+A Mechanical or Windmill Bearing can carry up to 2,048 blocks of eligible
+plain stone, slime, glass, terracotta, wool or concrete. The source and snapped
+positions must still fit in one loaded column. Other cargo and other drivers
+retain the 64-block limit.
 A vertical Mechanical Bearing, Gantry, Rope Pulley or Mechanical Piston can
-carry one ordinary chest. All four can use the three chassis variants to
-expand capture. A Mechanical Bearing can also carry one ordinary closed
-barrel with its full inventory. The supported Gantry path has a fixed loaded
-rail span.
+carry an ordinary chest or closed barrel. All four can use the three chassis
+variants to expand capture. The supported Gantry path has a fixed loaded rail
+span.
 The Rope Pulley supports dry rope and cargo. The clockwork hands are captured
 and restored together and currently accept vanilla payloads only.
+
+The Mechanical, Windmill and Clockwork Bearings expose the pinned Java
+settings boards. Hold Use on the active value box and release on a choice.
+The Mechanical and Clockwork Bearings have three choices. The Windmill
+Bearing has two directions and updates its output when switched while moving.
+Regular and Sticky Mechanical Pistons and the Rope Pulley use the linear
+movement board. A waiting actuator can retain a manual assembly request until
+a new selection or speed change wakes it.
+
+Right-click a mounted ordinary single Chest or closed Barrel where its driver
+supports that storage. The generic inventory has 27 slots and uses the current
+bank shared with automation. The block that the player actually hits selects
+the bank on a rotor with two separate containers. The screen closes when the
+structure lands or leaves range. The menu uses Horizon's inventory actions
+with each click applied before the next packet. Named, locked and double
+chests are outside the supported capture rules.
 
 Collision uses exact boxes at quarter turns, narrow strips for oblique rotation
 and the registered shapes of piston parts and tools. Grounded player transfer
@@ -141,16 +163,15 @@ drop at the tool. The server saves the inventory with the structure's chunk
 and restores it at its rotated or translated landing position, including
 after a restart or controller removal.
 
-A plain closed barrel on a Mechanical Bearing uses the same 27-slot save
-path. Its lid direction rotates with the structure. The paired fixtures
-cover horizontal and vertical rotation, slot contents and custom item data.
-Open barrels and barrels with names, locks or pending loot tables are refused.
+A plain closed barrel uses the same 27-slot save path. A Mechanical Bearing
+rotates its lid direction with the structure. Gantry, Rope Pulley and regular
+or sticky Mechanical Piston translate one chest or barrel. Open barrels and
+barrels with names, locks or pending loot tables are refused.
 
 A vertical Mechanical Bearing can carry two closed ordinary chests, two
 closed barrels or one of each within its loaded chunk column. The order
-matches the original Java local-position hash buckets. Assemblies with two
-banks in the same bucket are refused because their relative order would
-depend on the Java capture traversal. The saved one-bank format is unchanged.
+matches the original Java local-position hash buckets and preserves capture
+order when two banks share a bucket. The saved one-bank format is unchanged.
 The two-bank format stores each 27-slot inventory under the same controller
 and restores both together after landing, including an obstructed restart.
 
@@ -168,6 +189,22 @@ anything the chest could not accept. Both directions preserve the components.
 Access the inventory after landing. Moving menus, more than two banks,
 double chests, named, locked and loot-table containers are outside the
 current adapter.
+
+## Controller settings
+
+Hold Use while aiming at the controller's settings icon. Release Use to save
+the highlighted option. Bearings put the icon on the faces beside their
+rotation axis. Mechanical Pistons put it on the faces clear of both the shaft
+and the extension. Rope Pulleys put it on top.
+
+| Controller | Settings |
+| --- | --- |
+| Mechanical Bearing | Always place when stopped, only place near the initial angle, or only place when the anchor is destroyed |
+| Windmill Bearing | Clockwise or counter-clockwise, including while it is running |
+| Clockwork Bearing | Hour hand first, minute hand first, or 24-hour hand first |
+| Mechanical Piston, Sticky Mechanical Piston and Rope Pulley | Always place when stopped, place only in the starting position, or place only when the anchor is destroyed |
+
+Each selection is saved as Create's `ScrollValue`.
 
 ## Windmill sails
 
@@ -210,6 +247,12 @@ controller motion. The current implementation is exercised by Rust unit tests.
 
 ## Verification
 
+- `tools/bearing_value_settings_checks.py` opens the original bearing boards in
+  Java and Horizon and checks selection, restart and live windmill reversal.
+  `--actuators` checks both piston variants and the rope pulley, including the
+  active faces and the landing of a running piston after a mode change.
+  `--actuators --queued` checks a short click queued while an unpowered piston
+  waits mid-stroke for a mode change.
 - `tools/bearing_reference_checks.py` and `tools/bearing_native_checks.py` compare
   three axes at 32 RPM against Java. The Horizon test also reloads a running
   structure and recovers it after the driver is removed and an obstruction is
@@ -313,7 +356,8 @@ controller motion. The current implementation is exercised by Rust unit tests.
   Pulley, regular Piston and sticky Piston. It verifies source and destination
   states against Java, durability and custom components by slot, and blocked
   placement over a native process restart. A Gantry Harvester fixture checks
-  replanting and delivery of the crop to its moving chest.
+  replanting and delivery of the crop to its moving chest. `--barrel` runs the
+  movement and storage checks with closed barrels, including sticky retraction.
 - `tools/sail_reference_checks.py` and `tools/sail_native_checks.py` verify
   placement, dye, shear, axial exclusion and 1 RPM generation with eight
   sails or frames. The native runs cover restart, landing and both art packs.

@@ -14,12 +14,15 @@ use create_engine::{
 use horizon_client_render::create_contraption_scene::{MAX_RECORDS, Record, StrokeKind};
 use horizon_items::item_nbt::{encode_items, item_from_nbt};
 use horizon_world::{
-    attachments::{AttachmentCodec, AttachmentError, AttachmentType, Attachments, Holder},
+    attachments::{
+        AttachmentCodec, AttachmentError, AttachmentType, Attachments, Holder,
+        create_contraption_attachment::{decoded, encoded},
+    },
     chunk::BlockState,
     nbt::{Compound, Limits, Tag, write_network},
     registry::BlockStateId,
 };
-use std::collections::BTreeMap;
+use std::{borrow::Cow, collections::BTreeMap};
 
 const BLOCK: &str = "minecraft:chest";
 const BARREL: &str = "minecraft:barrel";
@@ -186,13 +189,8 @@ fn local_storage(
         result.push((*position, block));
     }
     // MountedStorageManager copies a default Java HashMap's iteration order.
-    // Distinct buckets are independent of Java's assembly traversal. Colliding
-    // banks depend on insertion order, which is outside the admitted layouts.
-    if let [(first, _), (second, _)] = result.as_slice()
-        && storage_bucket(*first) == storage_bucket(*second)
-    {
-        return Err(AttachmentError::Decode);
-    }
+    // With at most two banks, a bucket's entries keep their insertion order.
+    // Stable sorting preserves the capture traversal order within each bucket.
     result.sort_by_key(|&(local, _)| storage_bucket(local));
     Ok(result)
 }
@@ -387,6 +385,47 @@ fn write_store(game: &mut Game<'_>, key: [i32; 2], store: Store) -> Result<(), A
     } else {
         attachments.set(&STORAGE, store)
     }
+}
+
+pub(super) fn menu_slots(
+    game: &Game<'_>,
+    controller: Pos,
+    local: Pos,
+) -> Option<Vec<Option<ItemStack>>> {
+    let [x, z] = contraption::column(controller);
+    let map = &game.world.chunks.get(&(x, z))?.saved.as_ref()?.attachments;
+    let store = match decoded(map, &STORAGE) {
+        Some(store) => Cow::Borrowed(store),
+        None => Cow::Owned(decode(encoded(map, STORAGE.namespace, STORAGE.name)?).ok()?),
+    };
+    let chest = store.get(&controller)?;
+    let bank = chest.locals.iter().position(|&pos| pos == local)? * SIZE;
+    Some(chest.slots.get(bank..bank + SIZE)?.to_vec())
+}
+
+pub(super) fn set_menu_slots(
+    game: &mut Game<'_>,
+    controller: Pos,
+    local: Pos,
+    slots: Vec<Option<ItemStack>>,
+) -> Result<(), AttachmentError> {
+    let key = contraption::column(controller);
+    let mut store = game
+        .attachment_map_quiet(Holder::Chunk(key))?
+        .get_existing(&STORAGE)?
+        .ok_or(AttachmentError::MissingHolder)?;
+    let chest = store
+        .get_mut(&controller)
+        .ok_or(AttachmentError::MissingHolder)?;
+    let bank = chest
+        .locals
+        .iter()
+        .position(|&pos| pos == local)
+        .ok_or(AttachmentError::MissingHolder)?
+        * SIZE;
+    checked_slots(&slots)?;
+    chest.slots[bank..bank + SIZE].clone_from_slice(&slots);
+    write_store(game, key, store)
 }
 
 fn commit(
@@ -895,6 +934,21 @@ mod tests {
         let west = [-1, 0, 0];
         assert_eq!(storage_bucket(south), storage_bucket(east));
         assert!(storage_bucket(west) < storage_bucket(south));
+
+        let barrel = BlockState {
+            name: BARREL.into(),
+            properties: [
+                ("open".into(), "false".into()),
+                ("facing".into(), "east".into()),
+            ]
+            .into_iter()
+            .collect(),
+        };
+        for capture_order in [[south, east], [east, south], [west, south]] {
+            let blocks = capture_order.map(|pos| (pos, barrel.clone()));
+            let banks = local_storage(&blocks, true).unwrap();
+            assert!(banks.into_iter().map(|(pos, _)| pos).eq(capture_order));
+        }
 
         let controller = [1, 70, 2];
         let diamond = "minecraft:diamond";

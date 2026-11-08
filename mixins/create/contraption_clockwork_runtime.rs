@@ -94,7 +94,7 @@ fn assemble(game: &mut Game<'_>, controller: Pos, facing: Direction) -> Option<(
             return_home: true,
             stroke: None,
             clock_hand: Some(hand),
-            blocks: assembly.blocks().to_vec(),
+            blocks: assembly.blocks().into(),
         });
     }
     shared::commit(game, key, records, &edits).then_some(())
@@ -112,7 +112,7 @@ fn land(game: &mut Game<'_>, controller: Pos) -> Option<()> {
     {
         let axis = [Axis::X, Axis::Y, Axis::Z][record.axis];
         let turn = Rotation::new(record.anchor, axis, clockwork::RESTORE_ANGLE)?.snapped();
-        for (local, block) in &record.blocks {
+        for (local, block) in record.blocks.iter() {
             let at = turn.place(record.anchor, *local)?;
             let before = shared::state(game, at);
             if !positions.insert(at) || !game.res.facts().is_air(before) {

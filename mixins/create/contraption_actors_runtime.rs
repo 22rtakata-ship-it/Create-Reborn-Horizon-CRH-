@@ -363,7 +363,7 @@ fn tick_actors(game: &mut Game<'_>, previous: &Record, current: &Record, phase: 
     let origin_before = DVec3::from_array(previous.origin_at(1.0));
     let origin_after = DVec3::from_array(current.origin_at(1.0));
     let mount = storage::mounted_chest(current);
-    for (local, state) in &current.blocks {
+    for (local, state) in current.blocks.iter() {
         if !phase.handles(state.name.as_str()) {
             continue;
         }
@@ -1139,7 +1139,9 @@ fn crop_at<'s>(
             seed = name;
         }
         // These vanilla BushBlocks have no `age` property in Create 6.0.10.
-        "minecraft:dandelion" | "minecraft:poppy" | "minecraft:oak_sapling"
+        "minecraft:dandelion"
+        | "minecraft:poppy"
+        | "minecraft:oak_sapling"
         | "minecraft:birch_sapling" => {
             plant = Plant::BushOrSpecialPlantable;
             seed = name;

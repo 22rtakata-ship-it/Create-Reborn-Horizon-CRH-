@@ -144,7 +144,8 @@ impl Node {
             0
         }
     }
-    fn impact(self) -> f32 {
+    /// Stress units consumed per RPM by this node.
+    pub fn impact(self) -> f32 {
         match self.kind {
             Kind::Press | Kind::CrushingWheel => 8.0,
             Kind::Millstone | Kind::Mixer | Kind::LinearActuator | Kind::Pump => 4.0,

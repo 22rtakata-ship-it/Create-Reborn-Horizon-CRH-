@@ -1437,6 +1437,38 @@ file = "crates/horizon-client/src/game.rs"
 name = "create_port_contraption_storage"
 source = "contraption_storage_runtime.rs"
 
+[[module]]
+id = "contraption-menu-runtime"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_contraption_menu"
+source = "contraption_menu_runtime.rs"
+
+[[injection]]
+id = "contraption-menu-click"
+# A click on mounted storage must commit before a later close in the same packet batch.
+target = "horizon_client::game::lan_actions::Game<'_>::lan_guest_packet"
+kind = "HEAD"
+cancellable = true
+helper = "contraption_menu_click_hook.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "host", ty = "&mut crate::game::lan::LanHost", value = "&mut *host" },
+  { name = "conn", ty = "u32", value = "conn" },
+  { name = "packet", ty = "&horizon_protocol::packets::play::Serverbound", value = "&packet" },
+]
+
+[[injection]]
+id = "contraption-menu-close"
+hook = "menu_closed"
+hook_version = 1
+kind = "HEAD"
+helper = "contraption_menu_close_hook.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "player", ty = "u128", value = "uuid" },
+  { name = "window", ty = "i32", value = "window" },
+]
+
 [[injection]]
 id = "contraption-draw"
 target = "horizon_client::game::native_hooks::Game<'_>::native_world_submit"

@@ -237,8 +237,11 @@ with the systems they depend on.
   original processing state and cold restart comparisons.
 - [x] Downward Crushing Wheels to a Depot. Compare an occupied top slot,
   a blocked buffer, partial transfer and component retention after a restart.
-- [ ] Crushing Wheels for free-falling items, entities and other directions.
-  Expand the recipe catalog, output destinations and presentation.
+- [x] Downward Crushing Wheels with loose diamond ore and raw iron. Compare
+  capture, intake of a marked stack, processing and ejection on every tick.
+- [ ] Crushing Wheel collisions with queued items and other entities, damage,
+  and other directions. Expand recipes, output destinations and presentation.
+  Add the Experience Nugget's XP interaction.
 - [x] Mechanical Crafters with ordinary manual input, original directions,
   a full 5×5 Crushing Wheel recipe and cold continuation. Match the 21-block
   Create 6.0.10 phase trace.
@@ -314,6 +317,15 @@ with the systems they depend on.
   group settings and the saved value on reopen.
 - [ ] Chassis attached-block outlines, other drivers and complete block movement rules.
 - [x] Mechanical Bearing: native assembly, rotation, restart and orphan recovery.
+- [x] Separate geometry and pose sync, including older saved records and a
+  stationary structure after a cold client/server restart.
+- [x] Smooth Bearing and Piston frame interpolation at the default tick rate.
+- [x] 2,048-block limit for simple Bearing cargo in one column, with a
+  same-tick Java comparison and a native cold landing.
+- [x] Original Mechanical, Windmill and Clockwork Bearing settings boards,
+  including saved settings and a live Windmill direction change.
+- [x] Regular and Sticky Mechanical Piston and Rope Pulley settings boards,
+  including waiting, queued clicks and landing after a mode change.
 - [x] Dry oak and smooth stone slabs on bearings, with narrow collision
   shapes, state rotation and native reload. Full item contact timing remains open.
 - [x] Isolated dry straight oak and stone stairs on bearings and pistons.
@@ -354,7 +366,9 @@ with the systems they depend on.
 - [x] Ordinary chest cargo on Gantry, dry Rope Pulley and both Mechanical
   Pistons. Preserve components and slot order through translated landing and
   an obstructed restart.
-- [ ] Full entity contact, larger mounted inventories, double chests and moving menus.
+- [x] Ordinary single Chest and closed Barrel menus on supported moving
+  structures, with original titles, active banks and validated close handling.
+- [ ] Full entity contact, larger mounted inventories and double chests.
 - [ ] Cross-chunk capture and restoration. First validate a durable two-column
   write with both columns loaded. Recovery must replay an interrupted write
   before either column becomes visible, including across a region boundary.
@@ -386,6 +400,10 @@ with the systems they depend on.
   lock, speed pause and cold-stroke resume.
 - [x] Stationary Deployer held sapling with the original fixed and spinning
   display poses.
+- [x] Stationary Deployer Use and Attack timing. Match the original empty-hand
+  Use interaction with a lever and the Attack stroke that leaves it unchanged.
+- [ ] Deployer attacks on entities and blocks, fist bumps, and switching modes
+  on a moving contraption.
 - [x] Stationary downward Deployer applying ordinary bone meal to supported
   targets, including valid attempts where growth fails.
 - [x] Super Glue selection and transfer planner. Deployer stroke, target and

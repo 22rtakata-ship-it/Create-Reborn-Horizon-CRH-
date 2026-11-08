@@ -108,6 +108,19 @@ open. `tools/deployer_stationary_reference_checks.py` records the Java state
 sequence and `tools/deployer_stationary_native_checks.py` compares the native
 sequence and cold reload of a paused stroke.
 
+### Use and Attack
+
+Click the hand with a Wrench to switch between Use and Attack. Wrenching the
+body adjusts its facing or shaft axis. Goggles show the current mode, the
+held stack and the stress impact. The stationary Deployer saves `Mode` as
+`USE` or `PUNCH` and uses the corresponding original hand pose with the JAR.
+
+An empty hand can flip a vanilla lever in Use. Attack follows the stationary
+stroke cycle and passes new Belt cargo through. An operation already caught
+by the Belt callback can finish after a mode change. Entity attacks,
+block breaking, fist bumps and switching modes on a moving Deployer are
+pending.
+
 ### Bone meal
 
 A stationary downward Deployer in Use mode can hold plain bone meal and

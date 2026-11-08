@@ -125,7 +125,7 @@ fn assemble(game: &mut Game<'_>, controller: Pos, rpm: f32) -> Option<u32> {
         stalled: false,
         return_home: false,
         clock_hand: None,
-        blocks,
+        blocks: blocks.into(),
         stroke: Some(Stroke {
             kind: StrokeKind::RopePulley,
             initial: layout.initial_offset,
@@ -198,7 +198,7 @@ fn land(game: &mut Game<'_>, controller: Pos, offset: u32, rehang: bool) -> Opti
         }
         edits.push((position, state(game, position), rope_state(game, segment)?));
     }
-    for (local, block) in &record.blocks {
+    for (local, block) in record.blocks.iter() {
         let position = cargo_cell(controller, *local, offset)?;
         if !positions.insert(position) || !dry_air(game, position) {
             return None;
@@ -329,11 +329,12 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity, r
         return false;
     };
     let last = super::create_port::number(&entity.nbt, LAST_SPEED);
-    let pending = entity.nbt.remove(&REQUEST.into()).is_some();
+    let mode_changed = super::create_port_motor_control::take_linear_mode_change(entity);
     entity
         .nbt
         .insert(LAST_SPEED.into(), Tag::Float(rpm.to_bits()));
     let Some(record) = records.iter_mut().find(|r| r.controller == pos) else {
+        let pending = entity.nbt.remove(&REQUEST.into()).is_some();
         if (pending || last != rpm)
             && rpm != 0.0
             && let Some(initial) = assemble(game, pos, rpm)
@@ -365,13 +366,17 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity, r
         actuator,
         has_payload: !record.blocks.is_empty(),
     };
+    if mode_changed {
+        drive.actuator.mode_changed();
+    }
     let mut stalled = actors::stalled(game, pos);
     if rpm != record.rpm {
         if drive.actuator.speed_changed(record.rpm, rpm, stalled, None) {
             actors::remove(game, pos);
             stalled = false;
         }
-    } else if pending {
+    }
+    if !drive.actuator.waiting() && entity.nbt.remove(&REQUEST.into()).is_some() {
         drive.actuator.request_refresh();
     }
     let mode = match super::create_port::integer(&entity.nbt, "ScrollValue") {
@@ -422,7 +427,12 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity, r
     false
 }
 
-pub(super) fn draw_line(game: &Game<'_>, draw: &mut NativeWorldDraw, record: &Record) {
+pub(super) fn draw_line(
+    game: &Game<'_>,
+    draw: &mut NativeWorldDraw,
+    record: &Record,
+    payload_offset: f32,
+) {
     use horizon_client::block_entity_render::vertex_light;
     let Some(stroke) = record.stroke.filter(|s| s.kind == StrokeKind::RopePulley) else {
         return;
@@ -431,7 +441,7 @@ pub(super) fn draw_line(game: &Game<'_>, draw: &mut NativeWorldDraw, record: &Re
         (stroke.offset + (draw.partial - 0.5) * pulley::directional_speed(record.rpm))
             .clamp(0.0, stroke.limit as f32)
     } else {
-        stroke.previous + (stroke.offset - stroke.previous) * draw.partial
+        payload_offset
     };
     let [x, y, z] = record.controller;
     let camera = DVec3::from_array(draw.camera);

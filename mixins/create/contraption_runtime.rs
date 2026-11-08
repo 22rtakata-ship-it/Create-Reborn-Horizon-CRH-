@@ -17,16 +17,19 @@ use create_engine::{
     contraption::bearing::{Bearing, Mode, TickAction},
     contraption::windmill::{Config as WindmillConfig, RotationDirection, Windmill},
     contraption::{
-        Adhesion, Assembly, BlockRules, CaptureView, Cell, QuarterTurn, Rotation, plan_landing,
+        Adhesion, Assembly, BlockRules, CaptureView, Cell, QuarterTurn, RenderMotion, RenderPose,
+        Rotation, plan_landing,
     },
     kinetics::{Axis, Pos},
     placement::Direction,
 };
-use glam::DVec3;
+use glam::{DVec3, Mat4, Vec3};
 use horizon_client::collisions::LookupCollisions;
 use horizon_client_render::create_contraption_scene::{
-    ACTIVE, ACTOR_VISUAL_KEY, ClockHand, KEY, MAX_BLOCKS, MAX_RECORDS, RECORDS, Record, StrokeKind,
-    dry_slab_type, dry_straight_stair, read, solid_create_payload, vanilla_stair,
+    ACTIVE, ACTOR_VISUAL_KEY, ClockHand, KEY, MAX_BLOCKS, MAX_PLAIN_ROTARY_BLOCKS, MAX_RECORDS,
+    POSE_KEY, POSES as POSE_ATTACHMENT, RECORDS, Record, StrokeKind, apply_scene_sync, dry_slab_type,
+    dry_straight_stair, plain_rotary_state, plan_scene_update, read, solid_create_payload,
+    vanilla_stair,
 };
 use horizon_core::position::BlockPos;
 use horizon_world::{
@@ -40,12 +43,13 @@ use horizon_world::{
     nbt::Tag,
     registry::BlockStateId,
 };
-use std::{collections::BTreeMap, sync::Arc};
+use std::{cell::RefCell, collections::BTreeMap, sync::Arc};
 
 pub(super) const BLOCK: &str = "create:mechanical_bearing";
 pub(super) const WINDMILL: &str = "create:windmill_bearing";
 pub(super) const LAST_GENERATED: &str = "LastGenerated";
 const WINDMILL_REQUEST: &str = "QueueAssembly";
+const WINDMILL_DIRECTION_REQUEST: &str = "create_horizon:WindmillDirectionChanged";
 
 pub(super) fn is_bearing(block: &str) -> bool {
     matches!(block, BLOCK | WINDMILL | clockwork::BLOCK)
@@ -53,6 +57,59 @@ pub(super) fn is_bearing(block: &str) -> bool {
 const RUNNING: &str = "Running";
 const POWER: &str = "create_horizon:AssemblyPower";
 const REQUEST: &str = "create_horizon:AssembleNextTick";
+
+#[derive(Default)]
+struct PoseTrack {
+    anchor: Pos,
+    axis: usize,
+    kind: Option<StrokeKind>,
+    seen: u64,
+    motion: RenderMotion,
+}
+
+thread_local! {
+    static POSES: RefCell<BTreeMap<(Pos, Option<ClockHand>), PoseTrack>> = const { RefCell::new(BTreeMap::new()) };
+}
+
+pub(super) fn reset_render_motion() {
+    POSES.with(|poses| poses.borrow_mut().clear());
+}
+
+fn rendered_pose(game: &Game<'_>, partial: f32, record: &Record) -> RenderPose {
+    let previous = RenderPose {
+        angle: record.previous_angle,
+        offset: record.stroke.map_or(0.0, |stroke| stroke.previous),
+    };
+    let current = RenderPose {
+        angle: record.angle,
+        offset: record.stroke.map_or(0.0, |stroke| stroke.offset),
+    };
+    if game.remote.is_none() {
+        return RenderPose {
+            angle: record.angle_at(partial),
+            offset: previous.offset + (current.offset - previous.offset) * partial,
+        };
+    }
+    POSES.with(|poses| {
+        let mut poses = poses.borrow_mut();
+        let id = (record.controller, record.clock_hand);
+        if game.clock.frozen() {
+            poses.remove(&id);
+            return current;
+        }
+        let track = poses.entry(id).or_default();
+        let kind = record.stroke_kind();
+        if track.anchor != record.anchor || track.axis != record.axis || track.kind != kind
+            || game.ticks.saturating_sub(track.seen) > 4
+        {
+            *track = PoseTrack { anchor: record.anchor, axis: record.axis, kind, ..PoseTrack::default() };
+        }
+        track.seen = game.ticks;
+        let now = game.ticks as f64 + f64::from(partial);
+        let period = (20.0 * game.clock.tick_duration().as_secs_f64()).min(1.0);
+        track.motion.sample(now, period, previous, current)
+    })
+}
 
 pub(super) fn column(pos: Pos) -> [i32; 2] {
     [pos[0] >> 4, pos[2] >> 4]
@@ -132,24 +189,50 @@ pub(super) fn entries(game: &Game<'_>, [x, z]: [i32; 2]) -> Result<Vec<Record>, 
     .into_owned())
 }
 
+pub(super) fn materialize_geometry(
+    game: &mut Game<'_>,
+    [x, z]: [i32; 2],
+) -> Result<(), AttachmentError> {
+    let chunk = game
+        .world
+        .chunks
+        .get_mut(&(x, z))
+        .ok_or(AttachmentError::MissingHolder)?;
+    let Some(saved) = chunk.saved.as_ref() else { return Ok(()) };
+    let map = &saved.attachments;
+    if (map.has(&RECORDS) && decoded(map, &RECORDS).is_none())
+        || (map.has(&POSE_ATTACHMENT) && decoded(map, &POSE_ATTACHMENT).is_none())
+    {
+        // Populate typed caches without marking the holder for disk or network.
+        let saved = Arc::make_mut(Arc::make_mut(chunk).saved.as_mut().unwrap());
+        saved.attachments.get_existing(&RECORDS)?;
+        saved.attachments.get_existing(&POSE_ATTACHMENT)?;
+    }
+    Ok(())
+}
+
 pub(super) fn set_records(
     game: &mut Game<'_>,
     key: [i32; 2],
     records: Vec<Record>,
 ) -> Result<(), AttachmentError> {
+    let active = !records.is_empty();
+    materialize_geometry(game, key)?;
+    let chunk = game
+        .world
+        .chunks
+        .get(&(key[0], key[1]))
+        .ok_or(AttachmentError::MissingHolder)?;
+    let map = chunk.saved.as_ref().map(|saved| &saved.attachments);
+    let Some(update) = plan_scene_update(map, records)? else {
+        return Ok(());
+    };
     // Update the transient visibility hint first so an error cannot leave a
     // saved record for block edits the caller has not committed.
-    if !records.is_empty() {
+    if active {
         game.world.attachments.set(&ACTIVE, true)?;
     }
-    let map = game.native_attachments(Holder::Chunk(key))?;
-    // An empty replacement also clears the native client on the same channel.
-    if records.is_empty() {
-        map.remove(&RECORDS)?;
-    } else {
-        map.set(&RECORDS, records)?;
-    }
-    Ok(())
+    update.apply(game.native_attachments(Holder::Chunk(key))?)
 }
 
 type Edit = (Pos, BlockStateId, BlockStateId);
@@ -281,6 +364,7 @@ fn supported(state: &BlockState) -> bool {
         || dry_slab_type(state).is_some()
         || dry_straight_stair(state)
         || solid_create_payload(state)
+        || plain_rotary_state(state)
     {
         return true;
     }
@@ -296,31 +380,9 @@ fn supported(state: &BlockState) -> bool {
                 return false;
             };
             if state.properties.is_empty() {
-                return matches!(
-                    name,
-                    "slime_block"
-                        | "honey_block"
-                        | "stone"
-                        | "smooth_stone"
-                        | "cobblestone"
-                        | "andesite"
-                        | "polished_andesite"
-                        | "granite"
-                        | "diorite"
-                        | "bricks"
-                        | "stone_bricks"
-                        | "glass"
-                        | "terracotta"
-                ) || name
+                return name == "honey_block" || name
                     .strip_suffix("_planks")
-                    .is_some_and(|wood| WOOD_FAMILIES.contains(&wood))
-                    || ["_wool", "_concrete", "_stained_glass", "_terracotta"]
-                        .into_iter()
-                        .any(|suffix| {
-                            name.strip_suffix(suffix).is_some_and(|color| {
-                                horizon_client::mobs::render::DYE_NAMES.contains(&color)
-                            })
-                        });
+                    .is_some_and(|wood| WOOD_FAMILIES.contains(&wood));
             }
             let wood = name.strip_prefix("stripped_").unwrap_or(name);
             let pillar = ["_log", "_wood", "_stem", "_hyphae", "_block"]
@@ -503,7 +565,7 @@ impl<'g, 'a> MountedCapture<'g, 'a> {
         Self {
             base: Capture(game),
             allow_chest: true,
-            allow_barrel: false,
+            allow_barrel: true,
             allow_actor_data: false,
             allow_chassis: true,
             allow_sticker: false,
@@ -659,9 +721,11 @@ fn assemble(
             allow_sticker: !windmill,
             glue: &glue,
         };
-        Assembly::capture(&capture, anchor, Some(controller), None, MAX_BLOCKS).ok()?
+        Assembly::capture(&capture, anchor, Some(controller), None, MAX_PLAIN_ROTARY_BLOCKS).ok()?
     };
     if shape.blocks().is_empty()
+        || (shape.blocks().len() > MAX_BLOCKS
+            && shape.blocks().iter().any(|(_, state)| !plain_rotary_state(state)))
         || shape
             .blocks()
             .iter()
@@ -728,7 +792,7 @@ fn assemble(
         return_home: windmill,
         stroke: None,
         clock_hand: None,
-        blocks: shape.blocks().to_vec(),
+        blocks: shape.blocks().into(),
     };
     let glue = super::create_port_glue_transfer::capture(game, key, &record, anchor).ok()?;
     records.push(record);
@@ -1135,6 +1199,7 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: Pos) -> bool {
 }
 
 pub(super) fn recover_orphans(game: &mut Game<'_>) {
+    enable_scene_snapshots(game);
     let mut active = false;
     let mut orphans = Vec::new();
     for chunk in game.world.chunks.values() {
@@ -1167,6 +1232,24 @@ pub(super) fn recover_orphans(game: &mut Game<'_>) {
         } else {
             land(game, pos, angle);
         }
+    }
+}
+
+fn enable_scene_snapshots(game: &mut Game<'_>) {
+    if !game.native_on("create") {
+        return;
+    }
+    let Some(host) = game.lan.as_mut().filter(|host| !host.hub.sync_attachments) else {
+        return;
+    };
+    // Horizon enables full attachment snapshots for registered trait mods.
+    // This mixin mod also needs the existing snapshots, especially when a
+    // stationary contraption never sends a pose delta after a restart.
+    host.hub.sync_attachments = true;
+    for guest in host.hub.guests.iter().filter(|guest| guest.reads_attachment_sync()) {
+        host.hub.attachment_snapshots.extend(guest.sent_chunks.iter().map(|&(x, z)| {
+            crate::lan::hub::AttachmentSnapshot { player: guest.uuid, holder: Holder::Chunk([x, z]) }
+        }));
     }
 }
 
@@ -1237,7 +1320,7 @@ fn update_actor_visuals(map: &mut Attachments, records: &[Record], tick: u64, re
         let rotation = record.orientation(record.angle);
         let pivot = DVec3::splat(0.5);
         let origin = DVec3::from_array(record.origin_at(1.0)) + pivot;
-        for (local, block) in &record.blocks {
+        for (local, block) in record.blocks.iter() {
             let (tool, spin) = match block.name.as_str() {
                 "create:mechanical_harvester" => {
                     (Tool::Harvester, ToolSpin::Harvester(Blade::default()))
@@ -1286,26 +1369,40 @@ pub(super) fn mirror_sync(game: &mut Game<'_>, data: &[u8]) {
     let Holder::Chunk([x, z]) = message.holder else {
         return;
     };
-    for change in message.changes {
-        if change.namespace != "create".into() || change.name != KEY.into() {
-            continue;
-        }
-        let Some(chunk) = game.world.chunks.get_mut(&(x, z)) else {
-            return;
-        };
-        let chunk = Arc::make_mut(chunk);
-        let extras = Arc::make_mut(chunk.saved.get_or_insert_with(Default::default));
-        extras.attachments.apply_sync(change);
-        if let Ok(records) = extras.attachments.get_existing(&RECORDS) {
-            update_actor_visuals(
-                &mut extras.attachments,
-                records.as_deref().unwrap_or_default(),
-                game.ticks,
-                message.replace,
-            );
-        }
-        let _ = game.world.attachments.set(&ACTIVE, true);
+    let changes: Vec<_> = message
+        .changes
+        .into_iter()
+        .filter(|change| {
+            change.namespace == "create".into()
+                && (change.name == KEY.into() || change.name == POSE_KEY.into())
+        })
+        .collect();
+    let Some(chunk) = game.world.chunks.get_mut(&(x, z)) else { return };
+    let replace = message.replace;
+    if changes.is_empty()
+        && !(replace
+            && chunk.saved.as_ref().is_some_and(|saved| {
+                saved.attachments.has(&RECORDS) || saved.attachments.has(&POSE_ATTACHMENT)
+            }))
+    {
+        return;
     }
+    let chunk = Arc::make_mut(chunk);
+    let extras = Arc::make_mut(chunk.saved.get_or_insert_with(Default::default));
+    let map = &mut extras.attachments;
+    if let Ok(records) = apply_scene_sync(map, changes, replace) {
+        POSES.with(|poses| {
+            poses.borrow_mut().retain(|&(controller, hand), _| {
+                column(controller) != [x, z]
+                    || !replace
+                        && records.iter().any(|record| {
+                            record.controller == controller && record.clock_hand == hand
+                        })
+            });
+        });
+        update_actor_visuals(map, &records, game.ticks, replace);
+    }
+    let _ = game.world.attachments.set(&ACTIVE, true);
 }
 
 fn draw_actor(
@@ -1402,6 +1499,11 @@ fn draw_actor(
 
 pub(super) fn draw_structures(game: &Game<'_>, draw: &mut NativeWorldDraw) {
     use horizon_client::block_entity_render::vertex_light;
+    if game.ticks.is_multiple_of(20) {
+        POSES.with(|poses| {
+            poses.borrow_mut().retain(|_, track| game.ticks.saturating_sub(track.seen) <= 40);
+        });
+    }
     let camera = DVec3::from_array(draw.camera);
     for chunk in game.world.chunks.values() {
         if (f64::from(chunk.x) * 16.0 + 8.0 - camera.x).abs() > 80.0
@@ -1415,8 +1517,9 @@ pub(super) fn draw_structures(game: &Game<'_>, draw: &mut NativeWorldDraw) {
             .as_ref()
             .and_then(|saved| decoded(&saved.attachments, &ACTOR_VISUALS));
         for record in records.iter() {
-            pulley::draw_line(game, draw, record);
-            let anchor = record.origin_at(draw.partial);
+            let pose = rendered_pose(game, draw.partial, record);
+            pulley::draw_line(game, draw, record, pose.offset);
+            let anchor = record.origin_for_offset(pose.offset);
             if DVec3::from_array(anchor).distance_squared(camera) > 64.0 * 64.0 {
                 continue;
             }
@@ -1424,40 +1527,65 @@ pub(super) fn draw_structures(game: &Game<'_>, draw: &mut NativeWorldDraw) {
             draw.translate_world(anchor);
             let mut axis = [0.0; 3];
             axis[record.axis] = 1.0;
-            let angle = record.angle_at(draw.partial);
+            let angle = pose.angle;
+            trace_pose(game, draw, record, anchor, angle);
             draw.rotate_about(axis, angle, [0.5; 3]);
             let [x, y, z] = record.anchor;
             let previous_light = draw.light;
             draw.light = vertex_light(game.world.light(x, y, z));
-            for (local, block) in &record.blocks {
-                let properties: Vec<_> = block
-                    .properties
-                    .iter()
-                    .map(|(k, v)| (k.as_str(), v.as_str()))
-                    .collect();
-                draw.push();
-                draw.translate(local.map(|v| v as f32));
-                let chest = block.name == "minecraft:chest"
-                    && game.pack.assets.registry.id(block).is_some_and(|id| {
+            let structure_pose = draw.pose();
+            let light = draw.light;
+            for (local, block) in record.blocks.iter() {
+                let translation = local.map(|value| value as f32);
+                let block_pose = structure_pose * Mat4::from_translation(Vec3::from_array(translation));
+                if let Some(id) = game.pack.assets.registry.id(block) {
+                    let chest = block.name == "minecraft:chest" &&
                         horizon_client_render::block_entity_render::create_contraption_chest::closed(
                             game.res.block_entity_render(),
                             &game.gui.atlas,
                             id.0,
                             game.dim == super::Dim::Nether,
-                            draw.pose(),
-                            draw.light,
+                            block_pose,
+                            light,
                             draw.vertices_mut(),
-                        )
-                    });
-                if !chest {
+                        );
+                    if !chest {
+                        // Same seeded model path as native_draw_block, using
+                        // the complete state already stored in the geometry.
+                        game.block_model_vertices(id, 42, block_pose, light, true, draw.vertices_mut());
+                    }
+                } else {
+                    // Older snapshots may have only part of the state.
+                    let properties: Vec<_> = block.properties.iter()
+                        .map(|(key, value)| (key.as_str(), value.as_str())).collect();
+                    draw.push();
+                    draw.translate(translation);
                     game.native_draw_block(draw, &block.name, &properties);
+                    draw.pop();
                 }
-                draw_actor(game, draw, record, *local, block, visuals);
-                draw.pop();
+                if record.blocks.len() <= MAX_BLOCKS {
+                    draw.push();
+                    draw.translate(translation);
+                    draw_actor(game, draw, record, *local, block, visuals);
+                    draw.pop();
+                }
             }
             draw.light = previous_light;
             draw.pop();
         }
+    }
+}
+
+fn trace_pose(game: &Game<'_>, draw: &NativeWorldDraw, record: &Record, anchor: [f64; 3], angle: f32) {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    if *ENABLED.get_or_init(|| std::env::var_os("CREATE_TRACE_CONTRAPTION_FRAMES").is_some()) {
+        log::info!("Create contraption frame: {}", serde_json::json!({
+            "controller": record.controller, "tick": game.ticks, "time": draw.game_time,
+            "partial": draw.partial, "angle": angle, "origin": anchor,
+            "previous_angle": record.previous_angle, "current_angle": record.angle,
+            "stroke": record.stroke.map(|stroke| [stroke.previous, stroke.offset]),
+            "rpm": record.rpm, "stalled": record.stalled,
+        }));
     }
 }
 
@@ -1472,7 +1600,7 @@ pub(super) fn draw_bearing(game: &Game<'_>, pos: Pos, draw: &mut BlockEntityDraw
                 record.controller == pos && record.clock_hand != Some(ClockHand::Minute)
             })
         })
-        .map_or(0.0, |record| record.angle_at(draw.partial));
+        .map_or(0.0, |record| rendered_pose(game, draw.partial, &record).angle);
     let mut axis = [0.0; 3];
     axis[facing.axis().index()] = 1.0;
     draw.push();
@@ -1494,6 +1622,17 @@ pub(super) fn draw_bearing(game: &Game<'_>, pos: Pos, draw: &mut BlockEntityDraw
     draw.pop();
 }
 
+/// Queue the source callback for the windmill's next kinetic turn.
+pub(super) fn windmill_direction_changed(game: &mut Game<'_>, pos: Pos) {
+    game.native_with_mod_block_entity(pos, |entity| {
+        if entity.nbt.get(&RUNNING.into()) == Some(&Tag::Byte(1)) {
+            entity
+                .nbt
+                .insert(WINDMILL_DIRECTION_REQUEST.into(), Tag::Byte(1));
+        }
+    });
+}
+
 /// The windmill's queued assembly creates its own power before network evaluation.
 pub(super) fn windmill_source(
     game: &mut Game<'_>,
@@ -1502,6 +1641,8 @@ pub(super) fn windmill_source(
 ) -> (f32, bool) {
     let previous = super::create_port::number(&entity.nbt, LAST_GENERATED);
     let mut generated = previous;
+    let reversed = super::create_port::integer(&entity.nbt, "ScrollValue") == 1;
+    let direction_changed = entity.nbt.remove(&WINDMILL_DIRECTION_REQUEST.into()).is_some();
     if entity.nbt.remove(&WINDMILL_REQUEST.into()).is_some() {
         if entity.nbt.get(&RUNNING.into()) == Some(&Tag::Byte(1)) {
             if land(game, pos, 0.0) {
@@ -1509,10 +1650,32 @@ pub(super) fn windmill_source(
                 generated = 0.0;
             }
         } else if let Some(direction) = facing(game, pos) {
-            let reversed = super::create_port::integer(&entity.nbt, "ScrollValue") == 1;
             if let Some(rpm) = assemble(game, pos, direction, true, reversed) {
                 write_controller(entity, true, 0.0);
                 generated = rpm;
+            }
+        }
+    }
+    if direction_changed
+        && entity.nbt.get(&RUNNING.into()) == Some(&Tag::Byte(1))
+        && let Ok(mut records) = entries(game, column(pos))
+        && let Some(record) = records
+            .iter_mut()
+            .find(|record| record.controller == pos && record.return_home)
+    {
+        let new_rpm = record.rpm.abs() * if reversed { -1.0 } else { 1.0 };
+        if record.rpm != new_rpm {
+            let mut driver = Windmill::restored(true, record.angle, record.rpm, false);
+            let effective = super::create_port::running_speed(game, &entity.nbt);
+            let stopped = driver.speed_changed(effective, new_rpm, record.stalled);
+            record.angle = driver.angle();
+            record.previous_angle = record.angle;
+            record.rpm = new_rpm;
+            if set_records(game, column(pos), records).is_ok() {
+                generated = new_rpm;
+                if stopped {
+                    actors::remove(game, pos);
+                }
             }
         }
     }
