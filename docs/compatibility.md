@@ -221,9 +221,10 @@ A supported line can include one `create:fluid_valve`. Drive its perpendicular
 shaft with positive RPM to open it or negative RPM to close it. At zero RPM
 the pointer stays where it is, and the valve keeps its last fully open or
 closed state. A closed valve still carries pressure and stops fluid transfer.
-The save uses `enabled` and Create's `Pointer` compound. The original JAR
-supplies the block and pointer models. Subtick pointer interpolation and Wrench
-reorientation are pending.
+The save uses `enabled` and Create's `Pointer` compound. The Wrench rotates
+the casing and changes the shaft and pipe axes as in Java while retaining
+the pointer position. The original JAR supplies the block and pointer
+models. Subtick pointer interpolation is pending.
 
 Bends, branches, waterlogged pipes, open ends, multiple pumps on one line and
 connections to other fluid machines are pending.

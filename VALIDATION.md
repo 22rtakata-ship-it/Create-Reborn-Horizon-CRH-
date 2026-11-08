@@ -245,6 +245,11 @@ developer source build. The three changes are applied in a separate checkout.
   uninterrupted close moves 160 mB before stopping. Both clients retain a
   partially closed valve through a cold restart. The built-in pointer renders
   without a JAR, and the original model renders with a supplied JAR.
+- [Fluid Valve Wrench rotation](tools/fluid_valve_wrench_checks.py) matches
+  nine ordinary clicks on three faces of valves with all six initial facings.
+  The open state and pointer position survive every rotation. The existing
+  [piston hand actions](tools/piston_interaction_checks.py) also passed with
+  the shared rotation code.
 - The five Fluid Tank, Fluid Pipe, Mechanical Pump and Fluid Valve recipes
   match the pinned Java ingredients, patterns and results. All five crafted
   through the ordinary Horizon Survival crafting menu.

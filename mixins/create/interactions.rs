@@ -263,6 +263,9 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3]) ->
             if super::create_port_piston::is_piston(&block) {
                 return super::create_port_piston::wrench(game, pos, face);
             }
+            if block == super::create_port_basin::pump::VALVE {
+                return wrench_directional_axis(game, pos, face);
+            }
             let before_rotation = game.world.block(pos[0], pos[1], pos[2]);
             if super::create_port_chain::is_chain(&block) {
                 if super::create_port_chain::wrench(game, pos, face) {
@@ -389,6 +392,45 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3]) ->
         return true;
     }
     false
+}
+
+/// `IWrenchable` rotation for `DirectionalAxisKineticBlock` states.
+pub(super) fn wrench_directional_axis(game: &mut Game<'_>, pos: [i32; 3], face: Direction) -> bool {
+    let registry = game.pack.assets.registry;
+    let Some(before) = registry.state(game.world.block(pos[0], pos[1], pos[2])) else {
+        return false;
+    };
+    let Some(direction) = before.properties.get("facing").and_then(|name| {
+        Direction::ALL
+            .into_iter()
+            .find(|direction| direction.name() == name)
+    }) else {
+        return false;
+    };
+    let mut rotated = before.clone();
+    let face_axis = face.axis();
+    if direction.axis() != face_axis {
+        rotated.properties.insert(
+            "facing".into(),
+            direction.clockwise(face_axis).name().into(),
+        );
+    }
+    if direction.axis() == face_axis || face_axis == Axis::Y {
+        let Some(first) = rotated.properties.get_mut("axis_along_first") else {
+            return false;
+        };
+        *first = if first == "true" { "false" } else { "true" }.into();
+    }
+    let Some(rotated) = registry.id(&rotated) else {
+        return false;
+    };
+    let dim = game.dim.id().to_owned();
+    if !game.native_set_block(&dim, pos, rotated, horizon_world::level::flags::UPDATE_ALL) {
+        return false;
+    }
+    super::create_port_kinetic_runtime::invalidate();
+    super::create_port_sounds::wrench(game, pos, false);
+    true
 }
 
 pub(super) fn encased_cog_size(block: &str) -> Option<bool> {

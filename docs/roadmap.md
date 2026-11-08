@@ -440,7 +440,8 @@ with the systems they depend on.
   Water and lava, RPM and pressure traces, Wrench reversal, backpressure,
   cross-chunk transfer and cold restart.
 - [x] One inline Fluid Valve in the dry straight line. Signed shaft speed,
-  pressure while closed, partial-travel stops, cold restart and resumed flow.
+  pressure while closed, partial-travel stops, cold restart, resumed flow
+  and face-sensitive Wrench rotation.
 - [ ] Bends, branches, waterlogged pipes, open ends and other fluid machines.
 - [x] Item Drain from a bare Belt to a Depot. Water bucket, full tank,
   blocked exit, resumed cargo and original resource rendering.

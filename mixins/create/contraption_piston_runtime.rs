@@ -435,9 +435,6 @@ pub(super) fn wrench(game: &mut Game<'_>, pos: Pos, face: Direction) -> bool {
     let Some(before) = registry.state(state(game, pos)) else {
         return false;
     };
-    let Some(direction) = facing(game, pos) else {
-        return false;
-    };
     if before
         .properties
         .get("state")
@@ -445,38 +442,7 @@ pub(super) fn wrench(game: &mut Game<'_>, pos: Pos, face: Direction) -> bool {
     {
         return false;
     }
-    let mut rotated = before.clone();
-    if direction.axis() != face.axis() {
-        rotated.properties.insert(
-            "facing".into(),
-            direction.clockwise(face.axis()).name().into(),
-        );
-    }
-    if direction.axis() == face.axis() || face.axis() == create_engine::kinetics::Axis::Y {
-        let Some(first) = rotated.properties.get_mut("axis_along_first") else {
-            return false;
-        };
-        *first = if first == "true" {
-            "false".into()
-        } else {
-            "true".into()
-        };
-    }
-    let Some(rotated) = registry.id(&rotated) else {
-        return false;
-    };
-    let dim = game.dim.id().to_owned();
-    if !game.native_set_block(
-        &dim,
-        pos,
-        rotated,
-        flags::UPDATE_NEIGHBORS | flags::UPDATE_CLIENTS,
-    ) {
-        return false;
-    }
-    super::create_port_kinetic_runtime::invalidate();
-    super::create_port_sounds::wrench(game, pos, false);
-    true
+    super::create_port_interactions::wrench_directional_axis(game, pos, face)
 }
 
 fn make_sticky(game: &mut Game<'_>, pos: Pos) -> bool {
