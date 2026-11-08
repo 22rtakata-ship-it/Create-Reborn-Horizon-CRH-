@@ -346,14 +346,8 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity, r
                         changed = true;
                     }
                 }
-                // The receiver may have already ticked this turn. Publish its
-                // canonical input before the next Millstone tick or a save.
-                if changed
-                    && millstone
-                    && game.native_with_mod_block_entity(target, super::create_port_millstone::data)
-                        == Some(true)
-                {
-                    game.native_block_entity_sync(target);
+                if changed && millstone {
+                    super::create_port_millstone::publish_inventory(game, target);
                 }
                 // Direct input retains the finished phase. Keep rejected
                 // stacks in their slots and try again on the next tick.

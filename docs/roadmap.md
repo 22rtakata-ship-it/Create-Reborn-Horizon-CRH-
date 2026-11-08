@@ -146,6 +146,8 @@ with the systems they depend on.
   components, backpressure and same-tick inventory publication after a restart.
 - [x] Upward Saw output onto a bare horizontal Belt, including inline and
   side entry, rejected insertion, position traces and a native restart.
+- [x] Bare Belt output to a Millstone. Match accepted, partial and refused
+  insertion and preserve accepted items when the world closes on the transfer tick.
 - [ ] Fan: players/mobs/other entities, ignition/damage/effects and exact particles/sound.
 - [ ] Full observable parity of already supported machines, including item animation.
 - [x] Bounded press over a bare belt: single-item processing, holding the remainder,

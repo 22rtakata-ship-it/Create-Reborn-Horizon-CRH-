@@ -1327,11 +1327,15 @@ impl Hooks<ItemStack> for WorldHooks<'_, '_> {
             }
         } else {
             // MillstoneBlockEntity has the default DirectBeltInputBehaviour.
-            let remaining =
-                self.game
-                    .native_insert_item(target, world_direction(from), game_stack(stack));
+            let remaining = self
+                .game
+                .native_insert_item(target, world_direction(from), game_stack(stack))
+                .map_or(0, |s| s.count);
+            if remaining < stack.count {
+                super::create_port_millstone::publish_inventory(self.game, target);
+            }
             Stack {
-                count: remaining.map_or(0, |s| s.count),
+                count: remaining,
                 ..stack.clone()
             }
         }

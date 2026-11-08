@@ -233,6 +233,13 @@ pub(super) fn data(entity: &mut ModBlockEntity) -> bool {
     changed
 }
 
+pub(super) fn publish_inventory(game: &mut Game<'_>, pos: [i32; 3]) {
+    // Direct input can run after the Millstone's block entity tick.
+    if game.native_with_mod_block_entity(pos, data) == Some(true) {
+        game.native_block_entity_sync(pos);
+    }
+}
+
 fn max_stack(game: &Game<'_>, stack: &ItemStack) -> u32 {
     super::create_port::stack_maximum(game, stack)
 }
