@@ -239,13 +239,18 @@ with the systems they depend on.
   and release it after an actual restart.
 - [x] Crafter Slot Covers with ordinary front clicks and downward chest output
   with partial transfer and an actual restart.
+- [x] Ordinary shaped and shapeless Crafting Table recipes in a Crafter grid
+  up to 3×3. Compare a mirrored axe, a shapeless book, and a cake with blocked
+  bucket output that resumes after a native restart.
+  [Paired fixture](../tools/crafter_standard_checks.py)
 - [x] Empty unlinked Mechanical Crafters in source schematics. Rotation and
   mirror cases match Java, with active or occupied entities rejected atomically.
 - [x] Crafter ingredient merge and finished-item turn captured in both clients.
   The export and crafting particle events are implemented.
 - [x] Downward Crafter output to a horizontal Belt, including a stopped Belt,
   an actual restart and delivery of both wheels on the first powered tick.
-- [ ] Crafter linked inputs, other recipes, sideways Belt output and full presentation.
+- [ ] Crafter linked inputs, special recipes, mixed remainders, sideways Belt
+  output and full presentation.
 - [x] Downward Deployer over a Depot and bare Belt. Match small and large
   Cogwheel application, item counts, hand changes and native restart.
 - [x] Downward Deployer for vanilla copper waxing, wax removal and oxidation

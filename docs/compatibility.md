@@ -128,9 +128,15 @@ a restart. The 21-Crafter test matches all 62 Java ticks. A full 5×5 grid
 can use a redstone pulse or four Crafter Slot Covers for its empty corners.
 The finished stack can also feed down into an ordinary container or horizontal
 Belt. A blocked receiver or stopped Belt keeps the remainder after a restart.
+Ordinary shaped and shapeless recipes use the loaded crafting table's recipe
+order, within a 3×3 occupied area. Mirrored patterns and empty cells follow
+the normal crafting rules. A recipe marked `_manual_only` stays manual.
+Equal item remainders occupy separate output
+cells and wait for space, as with the three buckets from a cake.
 The animation shows ingredients merging and the finished item turning, with
 the export and crafting particles. Scrolling on the Crafter's small belts,
-linked input, other recipes and side insertion into a Belt remain open.
+linked input, special recipes, mixed remainders and side insertion into a
+Belt remain open.
 
 A downward Deployer can apply the original small and large cogwheel recipes
 to cargo on a Depot or bare horizontal Belt. It also has the original

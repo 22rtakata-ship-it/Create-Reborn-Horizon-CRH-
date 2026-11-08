@@ -477,12 +477,53 @@ pub(super) mod crafter {
         true
     }
 
-    fn recipe(game: &Game<'_>, grouped: &GroupedItems<ItemStack>) -> Option<ItemStack> {
+    fn recipe(
+        game: &Game<'_>,
+        grouped: &GroupedItems<ItemStack>,
+    ) -> Option<GroupedItems<ItemStack>> {
         let grid = grouped.recipe_grid()?;
+        // Regular crafting is enabled by default. The same recipe manager
+        // used by a crafting table selects the first match before Create's
+        // automation filter is applied.
+        let size = grid.width.max(grid.height);
+        if size <= 3 {
+            let recipes = game.recipes();
+            let input: Vec<_> = (0..size * size)
+                .map(|i| grid.get(i % size, i / size).cloned())
+                .collect();
+            if let Some((id, result)) = recipes.find(&input, size)
+                && !id.ends_with("_manual_only")
+                && recipes
+                    .recipe(id)
+                    .is_some_and(|recipe| !recipe.is_special())
+            {
+                let remainders: Vec<_> = recipes
+                    .remainders(id, &input, size)
+                    .into_iter()
+                    .flatten()
+                    .collect();
+                // Java visits the input's unordered GroupedItems map. Equal
+                // remainders need no reconstruction of that map's order.
+                if remainders.first().is_some_and(|first| {
+                    remainders
+                        .iter()
+                        .any(|stack| !stack.same_item_same_components(first))
+                }) {
+                    return None;
+                }
+                let mut output = GroupedItems::single(Some(result));
+                output.grid.extend(
+                    remainders
+                        .into_iter()
+                        .enumerate()
+                        .map(|(i, stack)| ((i as i32 + 1, 0), Some(stack))),
+                );
+                return Some(output);
+            }
+        }
         for candidate in game.native_recipes_of_type("create:mechanical_crafting") {
             let data = &candidate.json;
-            // Only the first recipe is wired until crafting remainders and
-            // other recipe types have their native behavior.
+            // Only this mechanical recipe is currently imported.
             if data["result"]["id"] != "create:crushing_wheel" {
                 continue;
             }
@@ -509,7 +550,9 @@ pub(super) mod crafter {
                     })
             });
             if fits {
-                return game.native_recipe_result(&data["result"]);
+                return game
+                    .native_recipe_result(&data["result"])
+                    .map(|stack| GroupedItems::single(Some(stack)));
             }
         }
         None
@@ -736,7 +779,7 @@ pub(super) mod crafter {
                 if crafter::target(pos, layout_here, &mut |p| layout(game, p)).is_some() {
                     set_cycle(&mut entity.nbt, Cycle::exporting(grouped.only_empty()));
                 } else if let Some(output) = recipe(game, &grouped) {
-                    set_grid(&mut entity.nbt, &GroupedItems::single(Some(output)));
+                    set_grid(&mut entity.nbt, &output);
                     set_cycle(&mut entity.nbt, Cycle::crafting());
                 } else {
                     eject_chain(game, pos, Some(entity));
