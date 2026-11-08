@@ -314,6 +314,22 @@
         "id": "create:cogwheel"
       }
     },
+    "create/recipe/crafting/kinetics/crafter_slot_cover.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "A": {
+          "tag": "c:nuggets/brass"
+        }
+      },
+      "pattern": [
+        "AAA"
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:crafter_slot_cover"
+      }
+    },
     "create/recipe/crafting/kinetics/deployer.json": {
       "type": "minecraft:crafting_shaped",
       "category": "misc",
@@ -603,6 +619,26 @@
       "result": {
         "count": 1,
         "id": "create:hand_crank"
+      }
+    },
+    "create/recipe/crafting/kinetics/item_drain.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "P": {
+          "item": "minecraft:iron_bars"
+        },
+        "S": {
+          "item": "create:copper_casing"
+        }
+      },
+      "pattern": [
+        "P",
+        "S"
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:item_drain"
       }
     },
     "create/recipe/crafting/kinetics/large_cogwheel.json": {
@@ -1398,6 +1434,30 @@
       "result": {
         "count": 2,
         "id": "create:andesite_funnel"
+      }
+    },
+    "create/recipe/crafting/logistics/brass_funnel.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "A": {
+          "tag": "c:ingots/brass"
+        },
+        "E": {
+          "item": "create:electron_tube"
+        },
+        "K": {
+          "item": "minecraft:dried_kelp"
+        }
+      },
+      "pattern": [
+        "E",
+        "A",
+        "K"
+      ],
+      "result": {
+        "count": 2,
+        "id": "create:brass_funnel"
       }
     },
     "create/recipe/crafting/materials/andesite_alloy.json": {
@@ -6182,6 +6242,7 @@
         "create:smart_chute",
         "create:speedometer",
         "create:stressometer",
+        "create:item_drain",
         "create:mechanical_piston",
         "create:sticky_mechanical_piston",
         "create:piston_extension_pole",
@@ -6208,6 +6269,7 @@
         "create:mechanical_crafter",
         "create:flywheel",
         "create:andesite_funnel",
+        "create:brass_funnel",
         "create:zinc_ore",
         "create:deepslate_zinc_ore",
         "create:raw_zinc_block",
@@ -6717,6 +6779,27 @@
       ],
       "random_sequence": "create:blocks/andesite_funnel"
     },
+    "create/loot_table/blocks/brass_funnel.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:brass_funnel"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/brass_funnel"
+    },
     "create/loot_table/blocks/crushing_wheel.json": {
       "type": "minecraft:block",
       "pools": [
@@ -6758,6 +6841,27 @@
         }
       ],
       "random_sequence": "create:blocks/mechanical_crafter"
+    },
+    "create/loot_table/blocks/item_drain.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:item_drain"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/item_drain"
     },
     "create/loot_table/blocks/sticker.json": {
       "type": "minecraft:block",

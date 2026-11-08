@@ -12,7 +12,7 @@ use std::ops::ControlFlow;
 type Inventories = &'static [(&'static str, usize, usize)];
 fn schema(id: &str) -> Option<(usize, Inventories)> {
     Some(match id {
-        "create:chute" | "create:smart_chute" => (1, &[]),
+        "create:chute" | "create:smart_chute" | "create:item_drain" => (1, &[]),
         "create:depot" => (9, &[("OutputBuffer", 1, 8)]),
         "create:basin" => (18, &[("InputItems", 0, 9), ("OutputItems", 9, 9)]),
         "create:millstone" => (10, &[("InputInventory", 0, 1), ("OutputInventory", 1, 9)]),
@@ -37,7 +37,7 @@ pub fn parse_slots(id: &str, tag: &Tag) -> Option<Vec<Option<ItemStack>>> {
             Some(Tag::Int(size)) if *size != count as i32)
     });
     if !unsupported {
-        if id == "create:depot" {
+        if matches!(id, "create:depot" | "create:item_drain") {
             items[0] = tag
                 .get("HeldItem")
                 .and_then(|held| held.get("Item"))
@@ -141,7 +141,7 @@ pub fn receive(entity: &mut ModBlockEntity, packet_type: &str, block: &str, tag:
     for key in inventories
         .iter()
         .map(|&(key, _, _)| key)
-        .chain((packet_type == "create:depot").then_some("HeldItem"))
+        .chain(matches!(packet_type, "create:depot" | "create:item_drain").then_some("HeldItem"))
         .chain(matches!(packet_type, "create:chute" | "create:smart_chute").then_some("Item"))
     {
         if tag.get(key).is_none() && entity.nbt.contains_key(&key.into()) {

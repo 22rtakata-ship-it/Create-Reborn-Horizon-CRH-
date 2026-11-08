@@ -38,6 +38,7 @@
     "create:clockwork_bearing",
     "create:rope_pulley",
     "create:mechanical_crafter",
+    "create:item_drain",
     "create:mechanical_piston",
     "create:sticky_mechanical_piston",
     "create:piston_extension_pole",
@@ -55,6 +56,7 @@
     "create:chute",
     "create:smart_chute",
     "create:andesite_funnel",
+    "create:brass_funnel",
     "create:crushing_wheel",
     "create:portable_storage_interface",
     "create:sticker",
@@ -88,6 +90,7 @@
     "create:brass_hand",
     "create:sand_paper",
     "create:red_sand_paper",
-    "create:raw_zinc"
+    "create:raw_zinc",
+    "create:crafter_slot_cover"
   ]
 }

@@ -170,6 +170,8 @@ def scenarios(host, work):
     host.command(f'fill {AREA} minecraft:air')
     host.command(f'kill {ALL_DROPS}')
     put(host.command, OUT, BLOCK)
+    if isinstance(host, Native):
+        host.session.call('wait', 4)
     default = block(host, OUT)['properties']
     assert {k: v.lower() for k, v in default.items()} == {
         'facing': 'north', 'extracting': 'false', 'powered': 'false', 'waterlogged': 'false',

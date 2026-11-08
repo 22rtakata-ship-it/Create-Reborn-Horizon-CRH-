@@ -5,10 +5,11 @@ import math
 import subprocess
 from common import CREATE, PINS, ROOT
 from catalog import BLOCKS, INTERNAL_BLOCKS, IRON_PALETTE, ITEMS, PALETTE_BLOCKS, STONE_PALETTES, ZINC_BLOCKS
-from funnel_content import BLOCK as FUNNEL
+from funnel_content import BLOCK as FUNNEL, BRASS as BRASS_FUNNEL
 from smart_chute_content import BLOCK as SMART_CHUTE
 from crushing_content import WHEEL as CRUSHER
 from crafter_content import CRAFTER
+from item_drain_content import BLOCK as ITEM_DRAIN
 from sail_content import COLORED_SAILS, SAIL_ITEMS
 from portable_storage_content import PSI
 from chute_content import CHUTE
@@ -372,8 +373,10 @@ def main():
         f'create/loot_table/blocks/{CHUTE}.json',
         f'create/loot_table/blocks/{SMART_CHUTE}.json',
         f'create/loot_table/blocks/{FUNNEL}.json',
+        f'create/loot_table/blocks/{BRASS_FUNNEL}.json',
         f'create/loot_table/blocks/{CRUSHER}.json',
         f'create/loot_table/blocks/{CRAFTER}.json',
+        f'create/loot_table/blocks/{ITEM_DRAIN}.json',
         f'create/loot_table/blocks/{STICKER}.json',
         'create/loot_table/blocks/zinc_block.json',
         *[f'create/loot_table/blocks/{name}.json' for name in ZINC_BLOCKS],

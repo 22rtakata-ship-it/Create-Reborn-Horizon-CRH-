@@ -4,9 +4,10 @@ from chassis_content import CHASSIS
 from portable_storage_content import PSI
 from chute_content import CHUTE
 from smart_chute_content import BLOCK as SMART_CHUTE
-from funnel_content import BLOCK as FUNNEL
+from funnel_content import BLOCK as FUNNEL, BRASS as BRASS_FUNNEL
 from crushing_content import CONTROLLER as CRUSHER_CONTROLLER, WHEEL as CRUSHER
 from crafter_content import CRAFTER, PARTS as CRAFTER_PARTS
+from item_drain_content import BLOCK as ITEM_DRAIN
 from sticker_content import STICKER
 
 BASE_BLOCKS = ['creative_motor', 'shaft', 'cogwheel', 'large_cogwheel', 'mechanical_press', 'depot']
@@ -22,19 +23,19 @@ PALETTE_BLOCKS = [name for variants in STONE_PALETTES.values() for name in varia
 ZINC_BLOCKS = ('zinc_ore', 'deepslate_zinc_ore', 'raw_zinc_block')
 INSTRUMENTS = ['speedometer', 'stressometer']
 GENERATORS = ['water_wheel', 'large_water_wheel']
-PROCESSORS = ['millstone', 'encased_fan', 'mechanical_drill', 'basin', 'mechanical_mixer', 'blaze_burner', 'mechanical_bearing', 'windmill_bearing', 'clockwork_bearing', 'rope_pulley', CRAFTER]
+PROCESSORS = ['millstone', 'encased_fan', 'mechanical_drill', 'basin', 'mechanical_mixer', 'blaze_burner', 'mechanical_bearing', 'windmill_bearing', 'clockwork_bearing', 'rope_pulley', CRAFTER, ITEM_DRAIN]
 PISTONS = ['mechanical_piston', 'sticky_mechanical_piston', 'piston_extension_pole']
 GANTRY = ['gantry_shaft', 'gantry_carriage']
 ACTORS = ['mechanical_harvester', 'mechanical_saw', 'mechanical_plough', 'deployer']
 INTERNAL_BLOCKS = ['water_wheel_structure', 'belt', 'lit_blaze_burner', 'mechanical_piston_head', 'rope', 'pulley_magnet', CRUSHER_CONTROLLER] + COLORED_SAILS
 EXTRA_BLOCKSTATES = ['lit_blaze_burner', 'mechanical_piston_head', 'rope', 'pulley_magnet', CRUSHER_CONTROLLER] + COLORED_SAILS
 EXTRA_MODELS = ['entity/train_hat', 'entity/logistics_hat']
-BLOCKS = BASE_BLOCKS + TRANSMISSIONS + STATIC_BLOCKS + INSTRUMENTS + GENERATORS + PROCESSORS + PISTONS + GANTRY + ACTORS + SAIL_ITEMS + CHASSIS + [CHUTE, SMART_CHUTE, FUNNEL, CRUSHER, PSI, STICKER, *ZINC_BLOCKS] + PALETTE_BLOCKS
+BLOCKS = BASE_BLOCKS + TRANSMISSIONS + STATIC_BLOCKS + INSTRUMENTS + GENERATORS + PROCESSORS + PISTONS + GANTRY + ACTORS + SAIL_ITEMS + CHASSIS + [CHUTE, SMART_CHUTE, FUNNEL, BRASS_FUNNEL, CRUSHER, PSI, STICKER, *ZINC_BLOCKS] + PALETTE_BLOCKS
 ITEMS = ['iron_sheet', 'golden_sheet', 'copper_sheet', 'andesite_alloy', 'brass_ingot', 'brass_nugget', 'zinc_ingot', 'zinc_nugget', 'wrench', 'brass_sheet', 'vertical_gearbox', 'goggles', 'propeller', 'wheat_flour', 'dough', 'belt_connector', 'whisk', 'empty_blaze_burner', 'blaze_cake', 'creative_blaze_cake']
 ITEMS.append('super_glue')
 SANDPAPERS = ['sand_paper', 'red_sand_paper']
 ITEMS += ['rose_quartz', 'polished_rose_quartz', 'electron_tube', 'brass_hand'] + SANDPAPERS
-ITEMS.append('raw_zinc')
+ITEMS.extend(['raw_zinc', 'crafter_slot_cover'])
 PARTS = ['shaft', 'shaft_half', 'cogwheel', 'large_cogwheel', 'creative_motor/block', 'creative_motor/block_vertical', 'mechanical_press/block', 'mechanical_press/head', 'depot/block', 'hand_crank/handle', 'hand_crank/block', 'gauge/dial', 'gauge/speedometer/head', 'gauge/stressometer/head', 'goggles', 'water_wheel/wheel', 'large_water_wheel/block', 'large_water_wheel/block_extension', 'millstone/block', 'millstone/inner', 'encased_fan/block', 'encased_fan/propeller', 'mechanical_drill/block', 'mechanical_drill/head']
 PARTS += ['belt_pulley', 'belt/particle'] + ['belt/' + part for part in
     ['start', 'middle', 'end', 'start_bottom', 'middle_bottom', 'end_bottom',

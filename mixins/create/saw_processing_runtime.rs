@@ -40,6 +40,7 @@ pub(super) mod crafter {
     use horizon_items::item_nbt::{item_from_nbt, item_to_nbt};
 
     pub(in crate::game) const BLOCK: &str = "create:mechanical_crafter";
+    const SLOT_COVER: &str = "create:crafter_slot_cover";
     const INVENTORY: &str = "Inventory";
     const GROUPED: &str = "GroupedItems";
     const PHASE: &str = "Phase";
@@ -179,6 +180,37 @@ pub(super) mod crafter {
             .then_some(chain)
     }
 
+    #[derive(Clone, Copy)]
+    enum Outlet {
+        Open,
+        Depot,
+        Container,
+    }
+
+    fn outlet(game: &Game<'_>, pos: Pos, layout: Layout) -> Option<Outlet> {
+        let target @ [x, y, z] = layout.target_position(pos);
+        let block = game.native_block(target);
+        if block == "create:depot" {
+            return Some(Outlet::Depot);
+        }
+        if layout.target_direction() == Direction::Down
+            && matches!(
+                block.as_str(),
+                "minecraft:chest"
+                    | "minecraft:trapped_chest"
+                    | "minecraft:barrel"
+                    | "minecraft:hopper"
+            )
+            && game.chute_source_available((x, y, z))
+        {
+            return Some(Outlet::Container);
+        }
+        game.res
+            .behaviours()
+            .is_air(game.world.block(x, y, z))
+            .then_some(Outlet::Open)
+    }
+
     fn start_plan(
         game: &Game<'_>,
         pos: Pos,
@@ -197,19 +229,16 @@ pub(super) mod crafter {
             let has_item = member.items.first().is_some_and(Option::is_some);
             nonempty |= has_item;
             if cycle(&member.nbt).phase != Phase::Idle
-                || (!powered && !has_item)
+                || (!powered && !has_item && create::integer(&member.nbt, "Cover") == 0)
                 || create::running_speed(game, &member.nbt) == 0.0
             {
                 return None;
             }
             let state = layout(game, at)?;
-            if crafter::target(at, state, &mut |p| layout(game, p)).is_none() {
-                let destination @ [x, y, z] = state.target_position(at);
-                if game.native_block(destination) != "create:depot"
-                    && !game.res.behaviours().is_air(game.world.block(x, y, z))
-                {
-                    return None;
-                }
+            if crafter::target(at, state, &mut |p| layout(game, p)).is_none()
+                && outlet(game, at, state).is_none()
+            {
+                return None;
             }
             let waits = !crafter::preceding(at, state, &mut |p| layout(game, p)).is_empty();
             plan.push((at, waits));
@@ -302,9 +331,41 @@ pub(super) mod crafter {
     }
 
     pub(in crate::game) fn removed(game: &mut Game<'_>, pos: Pos) {
-        if entity(game, pos).is_some() {
-            eject_chain(game, pos, None);
+        let Some(member) = entity(game, pos) else {
+            return;
+        };
+        if create::integer(&member.nbt, "Cover") != 0 {
+            game.spawn_item(
+                ItemStack::new(SLOT_COVER, 1),
+                pos.map(|v| f64::from(v) + 0.5),
+                [0.0, 0.2, 0.0],
+                10,
+            );
         }
+        eject_chain(game, pos, None);
+    }
+
+    fn return_stack(game: &mut Game<'_>, item: ItemStack) {
+        let uuid = game.native_acting_id();
+        if let Some(rest) = game.native_give_stack(uuid, item)
+            && let Some(player) = game.native_player()
+        {
+            game.spawn_item(
+                rest,
+                [player.x, player.y + 1.0, player.z],
+                [0.0, 0.2, 0.0],
+                10,
+            );
+        }
+    }
+
+    fn set_cover(game: &mut Game<'_>, pos: Pos, value: bool) {
+        game.native_with_mod_block_entity(pos, |entity| {
+            entity
+                .nbt
+                .insert("Cover".into(), Tag::Byte(i8::from(value)));
+        });
+        game.native_block_entity_sync(pos);
     }
 
     pub(in crate::game) fn predicts_use(game: &Game<'_>, pos: Pos, face: Pos) -> bool {
@@ -341,7 +402,28 @@ pub(super) mod crafter {
             return true;
         }
         let occupied = member.items.first().is_some_and(Option::is_some);
-        match (occupied, game.held().cloned()) {
+        let covered = create::integer(&member.nbt, "Cover") != 0;
+        let held = game.held();
+        if held.is_some_and(|stack| stack.item.as_ref() == SLOT_COVER) {
+            if occupied || covered {
+                return false;
+            }
+            set_cover(game, pos, true);
+            if !game.creative {
+                game.consume_held();
+            }
+            return true;
+        }
+        if covered {
+            if held.is_none() {
+                set_cover(game, pos, false);
+                if !game.creative {
+                    return_stack(game, ItemStack::new(SLOT_COVER, 1));
+                }
+            }
+            return true;
+        }
+        match (occupied, held.cloned()) {
             (false, Some(mut stack)) => {
                 stack.count = 1;
                 if game
@@ -370,17 +452,7 @@ pub(super) mod crafter {
                     save_inventory(entity);
                     item
                 }) {
-                    let uuid = game.native_acting_id();
-                    if let Some(rest) = game.native_give_stack(uuid, stack)
-                        && let Some(player) = game.native_player()
-                    {
-                        game.spawn_item(
-                            rest,
-                            [player.x, player.y + 1.0, player.z],
-                            [0.0, 0.2, 0.0],
-                            10,
-                        );
-                    }
+                    return_stack(game, stack);
                     game.native_block_entity_sync(pos);
                 }
             }
@@ -452,24 +524,46 @@ pub(super) mod crafter {
         powered && previous == 0
     }
 
-    fn try_output(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity, layout: Layout) {
-        let destination = layout.target_position(pos);
-        if game.native_block(destination) != "create:depot" {
+    fn try_output(
+        game: &mut Game<'_>,
+        pos: Pos,
+        entity: &mut ModBlockEntity,
+        layout: Layout,
+        outlet: Option<Outlet>,
+    ) -> bool {
+        let Some(outlet @ (Outlet::Depot | Outlet::Container)) = outlet else {
             eject_chain(game, pos, Some(entity));
-            return;
-        }
-
+            return true;
+        };
+        let destination @ [x, y, z] = layout.target_position(pos);
         let mut grouped = grid(&entity.nbt);
+        let mut changed = false;
         grouped.grid.retain(|_, stack| {
             let Some(stack) = stack else { return false };
-            let item = Transported::new(
-                belt::core_stack(game, stack.clone()),
-                belt::angle(game, stack),
-            );
-            stack.count -=
-                belt::insert_depot_from_side(game, destination, &item, layout.target_direction());
+            let moved = match outlet {
+                Outlet::Depot => {
+                    let item = Transported::new(
+                        belt::core_stack(game, stack.clone()),
+                        belt::angle(game, stack),
+                    );
+                    belt::insert_depot_from_side(
+                        game,
+                        destination,
+                        &item,
+                        layout.target_direction(),
+                    )
+                }
+                Outlet::Container => game.chute_insert((x, y, z), stack, false).unwrap_or(0),
+                Outlet::Open => unreachable!("only accepting outlets reach insertion"),
+            };
+            changed |= moved != 0;
+            stack.count -= moved;
             stack.count != 0
         });
+        let phase = cycle(&entity.nbt).phase;
+        if !changed && phase == Phase::Inserting {
+            return false;
+        }
         set_grid(&mut entity.nbt, &grouped);
         if grouped.grid.is_empty() {
             eject_chain(game, pos, Some(entity));
@@ -482,6 +576,7 @@ pub(super) mod crafter {
                 },
             );
         }
+        true
     }
 
     pub(in crate::game) fn tick(
@@ -494,7 +589,8 @@ pub(super) mod crafter {
             return false;
         };
         let before = cycle(&entity.nbt);
-        if lazy_turn(entity)
+        let lazy = lazy_turn(entity);
+        if lazy
             && before.phase == Phase::Idle
             && rpm != 0.0
             && entity.items.first().is_some_and(Option::is_some)
@@ -506,8 +602,9 @@ pub(super) mod crafter {
         }
         let mut state = cycle(&entity.nbt);
         if state.phase == Phase::Inserting {
-            try_output(game, pos, entity, layout_here);
-            return cycle(&entity.nbt).phase != before.phase;
+            let target = outlet(game, pos, layout_here);
+            return (lazy || matches!(target, Some(Outlet::Depot)))
+                && try_output(game, pos, entity, layout_here, target);
         }
         let action = state.tick(rpm);
         if state != before {
@@ -579,7 +676,10 @@ pub(super) mod crafter {
                 crate::game::create_port_sounds::crafter_craft(game, pos);
                 return false;
             }
-            Tick::CraftComplete => try_output(game, pos, entity, layout_here),
+            Tick::CraftComplete => {
+                let target = outlet(game, pos, layout_here);
+                try_output(game, pos, entity, layout_here, target);
+            }
         }
         true
     }
@@ -632,10 +732,9 @@ pub(super) mod crafter {
         } else {
             grid(&entity.nbt)
         };
-        if !matches!(
-            running.phase,
-            Phase::Idle | Phase::Crafting | Phase::Inserting
-        ) {
+        if !matches!(running.phase, Phase::Crafting | Phase::Inserting)
+            && (running.phase != Phase::Idle || create::integer(&entity.nbt, "Cover") != 0)
+        {
             draw.push();
             create::face_south(draw, state.facing);
             draw.rotate_about([0.0, 1.0, 0.0], 90.0, [0.5; 3]);

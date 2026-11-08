@@ -14,9 +14,10 @@ from deployer_content import deployer
 from portable_storage_content import PSI, portable_storage
 from chute_content import CHUTE, chute
 from smart_chute_content import BLOCK as SMART_CHUTE, smart_chute
-from funnel_content import BLOCK as FUNNEL, funnel
+from funnel_content import BLOCK as FUNNEL, BRASS as BRASS_FUNNEL, funnel
 from crushing_content import WHEEL as CRUSHER, crushing
 from crafter_content import CRAFTER, crafter
+from item_drain_content import BLOCK as ITEM_DRAIN, item_drain
 from sticker_content import STICKER, sticker
 
 CONTENT = ROOT / "content"
@@ -766,7 +767,8 @@ def foundation():
         sprite = {"raw_zinc": "raw_iron", "wheat_flour": "sugar", "dough": "bread", "super_glue": "slime_ball",
                   "rose_quartz": "amethyst_shard", "polished_rose_quartz": "quartz",
                   "sand_paper": "paper", "red_sand_paper": "paper",
-                  "electron_tube": "redstone_torch", "brass_hand": "gold_ingot"}.get(item, "iron_ingot")
+                  "electron_tube": "redstone_torch", "brass_hand": "gold_ingot",
+                  "crafter_slot_cover": "gold_nugget"}.get(item, "iron_ingot")
         write("assets/create/models/item/" + item + ".json", {"parent": "minecraft:item/generated", "textures": {"layer0": "minecraft:item/" + sprite}})
         write("assets/create/items/" + item + ".json", {"model": {"type": "minecraft:model", "model": "create:item/" + item}})
         if item=='goggles':
@@ -786,8 +788,10 @@ def foundation():
     chute(write, model)
     smart_chute(write, model)
     funnel(write, model)
+    funnel(write, model, BRASS_FUNNEL)
     crushing(write, model)
     crafter(write, model)
+    item_drain(write)
     sticker(write, model)
     deployer(write, model)
     contraption_actors()
@@ -838,6 +842,7 @@ def foundation():
     # These fallback labels are ours; the JAR replaces them with all upstream locales.
     extra_blocks = {"gearbox":"Gearbox","clutch":"Clutch","gearshift":"Gearshift","hand_crank":"Hand Crank","andesite_encased_shaft":"Andesite Encased Shaft","brass_encased_shaft":"Brass Encased Shaft","andesite_casing":"Andesite Casing","brass_casing":"Brass Casing","andesite_alloy_block":"Block of Andesite Alloy","brass_block":"Block of Brass","zinc_block":"Block of Zinc","speedometer":"Speedometer","stressometer":"Stressometer","water_wheel":"Water Wheel","large_water_wheel":"Large Water Wheel","millstone":"Millstone","encased_fan":"Encased Fan","mechanical_drill":"Mechanical Drill"}
     extra_items = {"andesite_alloy":"Andesite Alloy","brass_ingot":"Brass Ingot","brass_nugget":"Brass Nugget","zinc_ingot":"Zinc Ingot","zinc_nugget":"Zinc Nugget","wrench":"Wrench","brass_sheet":"Brass Sheet","vertical_gearbox":"Vertical Gearbox","goggles":"Engineer’s Goggles","propeller":"Propeller","wheat_flour":"Wheat Flour","dough":"Dough"}
+    extra_items['crafter_slot_cover'] = 'Crafter Slot Cover'
     extra_blocks.update({'basin': 'Basin', 'mechanical_mixer': 'Mechanical Mixer'})
     extra_blocks.update({'blaze_burner': 'Blaze Burner', 'lit_blaze_burner': 'Lit Blaze Burner'})
     extra_blocks['encased_chain_drive'] = 'Encased Chain Drive'
@@ -856,8 +861,10 @@ def foundation():
     extra_blocks[CHUTE] = 'Chute'
     extra_blocks[SMART_CHUTE] = 'Smart Chute'
     extra_blocks[FUNNEL] = 'Andesite Funnel'
+    extra_blocks[BRASS_FUNNEL] = 'Brass Funnel'
     extra_blocks[CRUSHER] = 'Crushing Wheel'
     extra_blocks[CRAFTER] = 'Mechanical Crafter'
+    extra_blocks[ITEM_DRAIN] = 'Item Drain'
     extra_blocks.update({'linear_chassis': 'Linear Chassis',
                          'secondary_linear_chassis': 'Secondary Linear Chassis',
                          'radial_chassis': 'Radial Chassis'})
@@ -895,6 +902,13 @@ def foundation():
         lang.update({"block.create."+k:v for k,v in extra_blocks.items()})
         lang.update({"item.create."+k:v for k,v in extra_items.items()})
         lang["itemGroup.create.palettes"] = "Create's Building Blocks"
+        filter_labels = {
+            '': ('Filter', 'Фильтр'),
+            '.click_to_set': ('Click with item to set', 'Кликните с предметом в руке для установки'),
+            '.click_to_replace': ('Click with item to replace', 'Кликните с предметом в руке для замены'),
+        }
+        lang.update({'create.logistics.filter' + key: values[locale == 'ru_ru']
+                     for key, values in filter_labels.items()})
         glue_status = {
             'first_pos': ('First corner selected', 'Первый угол выбран'),
             'abort': ('Selection cleared', 'Выделение сброшено'),
@@ -945,8 +959,11 @@ def foundation():
             lang['block.create.' + CHUTE] = 'Жёлоб'
             lang['block.create.' + SMART_CHUTE] = 'Умный жёлоб'
             lang['block.create.' + FUNNEL] = 'Андезитовый шлюз'
+            lang['block.create.' + BRASS_FUNNEL] = 'Латунный шлюз'
             lang['block.create.' + CRUSHER] = 'Дробильное колесо'
             lang['block.create.' + CRAFTER] = 'Механический сборщик'
+            lang['item.create.crafter_slot_cover'] = 'Заглушка слота сборщика'
+            lang['block.create.' + ITEM_DRAIN] = 'Осушитель предметов'
             lang['block.create.' + STICKER] = 'Блок-липучка'
             lang.update({"block.create.mechanical_piston": "Механический поршень",
                          "block.create.sticky_mechanical_piston": "Липкий механический поршень",

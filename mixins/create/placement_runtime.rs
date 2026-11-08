@@ -95,7 +95,7 @@ pub(super) fn state(
         });
         return;
     }
-    if block == super::create_port_chute::funnel::BLOCK {
+    if super::create_port_chute::funnel::is_funnel(block) {
         *answer = Some(super::create_port_chute::funnel::placement(
             game,
             state,

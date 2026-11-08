@@ -193,8 +193,10 @@ with the systems they depend on.
 - [x] Dry Smart Chute with a plain ghost filter, the default 64-item limit,
   powered parking and an actual restart.
 - [ ] Smart Chute amount panel, special filters and external insertion.
+- [x] Dry vertical Brass Funnel with plain filters, full matching batches,
+  redstone, original cooldown and saved amount. Verify filter/count hover.
 - [ ] Funnel dropped-item intake, horizontal and wet placement, Belt Funnels,
-  filters, Brass Funnels and their full presentation.
+  advanced filter items and the amount board.
 - [x] Ordinary physical item intake into the Basin and Millstone: original scenes,
   partial transfer, components and an actual restart.
 - [x] Bounded Press/Basin: separate compacting pool, square crafting recipes,
@@ -218,8 +220,11 @@ with the systems they depend on.
 - [x] Redstone start in a full 5×5 Crafter grid with four empty corners and
   direct output to a Depot. Keep the finished stack when the Depot is blocked
   and release it after an actual restart.
-- [ ] Crafter covers, linked inputs, other recipes, ordinary inventory and Belt
-  output, and full presentation.
+- [x] Crafter Slot Covers with ordinary front clicks and downward chest output
+  with partial transfer and an actual restart.
+- [x] Empty unlinked Mechanical Crafters in source schematics. Rotation and
+  mirror cases match Java, with active or occupied entities rejected atomically.
+- [ ] Crafter linked inputs, other recipes, Belt output and full presentation.
 - [ ] Remaining Mechanical Saw, Deployer, Spout, Item Drain and Sand Paper
   behavior.
 - [ ] Sequenced Assembly, tools/components of incomplete items and random results.
@@ -368,7 +373,10 @@ with the systems they depend on.
   Raw Zinc, its storage block and the original furnace and blast furnace recipes
   complete the ordinary zinc supply route.
 - [ ] Pipes/pumps/valves, connectivity and flow direction.
-- [ ] Fluid Tanks, Hose Pulley, Item Drain/Spout, displays and fluid levels.
+- [x] Item Drain from a bare Belt to a Depot. Water bucket, full tank,
+  blocked exit, resumed cargo and original resource rendering.
+- [ ] Item Drain hand exchange, comparator and pipes. Fluid Tanks, Hose
+  Pulley, Spout, displays and fluid levels.
 - [ ] Trains: tracks, signals, stations, assembly, controls, schedules and persistence.
 - [ ] Logistics networks, Redstone Links, Display Links and Display Boards.
 - [ ] Materials/ores/world generation, decorative families and the full crafting set.

@@ -7,7 +7,7 @@
 // Casings/dyes and passengers remain separate integrations. Processor callbacks
 // use the portable transport result/queue contract.
 use super::create_port_block_entity_revision::EntityRevision as _;
-use super::{Game, native_block_entity_draw::BlockEntityDraw};
+use super::{Game, create_port_basin_recipes::item_drain, native_block_entity_draw::BlockEntityDraw};
 use crate::{
     containers::{BlockEntity, ModBlockEntity, ModRevision},
     items::ItemStack,
@@ -1296,7 +1296,7 @@ impl Hooks<ItemStack> for WorldHooks<'_, '_> {
         let target = self.target();
         if matches!(
             self.game.native_block(target).as_str(),
-            ID | "create:depot" | "create:millstone"
+            ID | "create:depot" | "create:millstone" | item_drain::BLOCK
         ) {
             return Ending::Insert;
         }
@@ -1325,6 +1325,12 @@ impl Hooks<ItemStack> for WorldHooks<'_, '_> {
             stack.clone()
         } else if self.game.native_block(target) == "create:depot" {
             let moved = insert_depot_from_side(self.game, target, item, from);
+            Stack {
+                count: stack.count - moved,
+                ..stack.clone()
+            }
+        } else if self.game.native_block(target) == item_drain::BLOCK {
+            let moved = item_drain::insert(self.game, target, item, from);
             Stack {
                 count: stack.count - moved,
                 ..stack.clone()

@@ -1,6 +1,7 @@
-"""Authored fallback geometry for the ordinary Andesite Funnel."""
+"""Authored fallback geometry for ordinary Funnels."""
 
 BLOCK = 'andesite_funnel'
+BRASS = 'brass_funnel'
 FACES = ('down', 'up', 'north', 'south', 'west', 'east')
 NORTH = [(2, 2, 14, 14, 14, 18), (1, 8, 12, 15, 15, 14),
          (0.1, 13, 7, 15.9, 15, 11), (0.1, 9, 8, 15.9, 13, 12),
@@ -26,29 +27,33 @@ def shape(facing):
     return boxes
 
 
-def funnel(write, model):
+def funnel(write, model, block=BLOCK):
+    brass = block == BRASS
+    model_dir = 'brass_funnel' if brass else 'funnel'
+    off, on = (('minecraft:block/gold_block', 'minecraft:block/copper_block') if brass
+               else ('minecraft:block/andesite', 'minecraft:block/polished_andesite'))
     shapes = {'property': 'facing', 'values': {
         face: [[value / 16 for value in box] for box in shape(face)] for face in FACES
     }}
-    write(f'data/create/horizon/block/{BLOCK}.json', {
-        'template': 'minecraft:stone', 'item': True,
-        'properties': {'occludes': False, 'requires_tool': True},
+    write(f'data/create/horizon/block/{block}.json', {
+        'template': 'minecraft:gold_block' if brass else 'minecraft:stone', 'item': True,
+        'properties': {'occludes': False, 'requires_tool': True, **({'map_color': 40} if brass else {})},
         'state_properties': {'facing': {'type': 'enum', 'values': FACES},
                              **{name: {'type': 'boolean'} for name in ('extracting', 'powered', 'waterlogged')}},
         'default_state': {'facing': 'north', 'extracting': 'false', 'powered': 'false', 'waterlogged': 'false'},
         'shapes': shapes, 'collision_shapes': shapes,
     })
     for kind, geometry in [('horizontal', NORTH), ('vertical', UP)]:
-        for powered, texture in [('off', 'minecraft:block/andesite'), ('on', 'minecraft:block/polished_andesite')]:
-            model(f'funnel/{kind}_{powered}', [(box[:3], box[3:]) for box in geometry], texture)
+        for powered, texture in [('off', off), ('on', on)]:
+            model(f'{model_dir}/{kind}_{powered}', [(box[:3], box[3:]) for box in geometry], texture)
     variants = {}
     for face in FACES:
         orientation = ({'y': Y_ROTATION[face]} if face in Y_ROTATION else {'x': 180} if face == 'down' else {})
         kind = 'horizontal' if face in Y_ROTATION else 'vertical'
         for powered, suffix in [('false', 'off'), ('true', 'on')]:
             variants[f'facing={face},powered={powered}'] = {
-                'model': f'create:block/funnel/{kind}_{suffix}', **orientation,
+                'model': f'create:block/{model_dir}/{kind}_{suffix}', **orientation,
             }
-    write(f'assets/create/blockstates/{BLOCK}.json', {'variants': variants})
-    write(f'assets/create/models/item/{BLOCK}.json', {'parent': 'create:block/funnel/horizontal_off'})
-    write(f'assets/create/items/{BLOCK}.json', {'model': {'type': 'minecraft:model', 'model': f'create:item/{BLOCK}'}})
+    write(f'assets/create/blockstates/{block}.json', {'variants': variants})
+    write(f'assets/create/models/item/{block}.json', {'parent': f'create:block/{model_dir}/horizontal_off'})
+    write(f'assets/create/items/{block}.json', {'model': {'type': 'minecraft:model', 'model': f'create:item/{block}'}})

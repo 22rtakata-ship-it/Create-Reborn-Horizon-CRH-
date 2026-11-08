@@ -36,6 +36,7 @@ pub const BLOCKS: &[&str] = &[
     "clockwork_bearing",
     "rope_pulley",
     "mechanical_crafter",
+    "item_drain",
     "mechanical_piston",
     "sticky_mechanical_piston",
     "piston_extension_pole",
@@ -53,6 +54,7 @@ pub const BLOCKS: &[&str] = &[
     "chute",
     "smart_chute",
     "andesite_funnel",
+    "brass_funnel",
     "crushing_wheel",
     "portable_storage_interface",
     "sticker",
@@ -127,6 +129,7 @@ pub const ITEMS: &[&str] = &[
     "sand_paper",
     "red_sand_paper",
     "raw_zinc",
+    "crafter_slot_cover",
 ];
 pub const PARTS: &[&str] = &[
     "shaft",

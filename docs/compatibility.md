@@ -69,6 +69,8 @@ implementing each feature, and test save/reload inside Horizon.
 | `create:smart_chute` | `create:smart_chute` | `powered`, `Filter`, `FilterAmount`, `UpTo`, and the normal Chute cargo and position fields |
 | `create:crushing_wheel` | `create:crushing_wheel` | `axis`, axial shaft at each end, 8 SU/RPM |
 | `create:crushing_wheel_controller` | `create:crushing_wheel_controller` | Internal `facing` and `valid` states, `Speed` float and 32-slot `Inventory` with the original processing fields |
+| `create:brass_funnel` | `create:funnel` | Dry vertical placement; `extracting`, `powered`, `waterlogged`, plain `Filter`, `FilterAmount`, `UpTo` and `TransferCooldown` |
+| `create:item_drain` | `create:item_drain` | 1500 mB `Tanks`, transported `HeldItem` and `ProcessingTicks` |
 | `create:mechanical_crafter` | `create:mechanical_crafter` | Horizontal `facing`, `pointing`, `Inventory`, `ConnectedInput`, `GroupedItems.Grid`, `Phase` and `CountDown`; 2 SU/RPM |
 | `create:encased_fan` | `create:encased_fan` | six-way `facing`, original default `down`; common kinetic `Speed` |
 | `create:mechanical_drill` | `create:drill` | six-way `facing`, `waterlogged`; defaults `down`, false; `Progress`, `NextTick`, `Breaking` |
@@ -112,11 +114,25 @@ Mechanical Crafters support manual front-slot loading and the original
 5×5 Crushing Wheel recipe in a same-facing array inside one chunk column.
 The finished stack drops at the front of the last Crafter or enters a Depot.
 The phase, countdown and component-bearing grouped items can resume after
-a restart. The 21-Crafter test matches all 62 Java ticks. A redstone pulse
-can start a full 5×5 grid with four empty corners. A blocked Depot keeps
-the finished stack in the Crafter until it can be delivered. Linked input,
-covers, other recipes, ordinary inventory and Belt output, and parts of the
-craft animation are pending.
+a restart. The 21-Crafter test matches all 62 Java ticks. A full 5×5 grid
+can use a redstone pulse or four Crafter Slot Covers for its empty corners.
+The finished stack can also feed down into an ordinary container. A blocked
+Depot or full container keeps the remainder for retry after a restart.
+Linked input, other recipes, Belt output and parts of the craft animation
+are pending.
+
+
+A dry vertical Brass Funnel can filter with a plain item sample. Downward
+extraction uses the original eight-tick cooldown, a default limit of 64, and
+the stored Exact or Up To setting. Its hover outline shows the filter sample
+and count. The hold-to-edit board, special filter items and Belt Funnel
+variants remain open.
+
+An Item Drain accepts a water bucket from a bare horizontal Belt, stores
+1000 mB of water and hands the empty bucket to a neighboring Depot. With an
+incompatible or full tank, it waits at the pour position. With a blocked
+Depot, it holds the bucket at the exit. The three flows match the pinned Java
+tick traces and survive a restart. This path does not connect to fluid pipes.
 
 The four sheet items retain `create:iron_sheet`, `create:golden_sheet` and
 `create:copper_sheet` and `create:brass_sheet`. Kinetic entities retain `Speed` as a float. Depot data

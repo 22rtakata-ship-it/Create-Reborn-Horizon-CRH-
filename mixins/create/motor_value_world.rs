@@ -44,11 +44,20 @@ impl Side {
 pub(super) struct Plan {
     pub pos: [i32; 3],
     motor_facing: Option<Side>,
+    filter: Option<FilterBox>,
     side: Side,
     pub text: String,
     pub active: bool,
     ticks_until_removal: i32,
 }
+
+#[derive(Clone, Debug)]
+struct FilterBox {
+    center: [f32; 3],
+    filled: bool,
+    solid_item: bool,
+}
+
 impl Plan {
     fn side_active(&self) -> bool {
         self.motor_facing.is_none_or(|facing| {
@@ -56,6 +65,9 @@ impl Plan {
         })
     }
     pub fn offset(&self) -> [f32; 3] {
+        if let Some(filter) = &self.filter {
+            return filter.center;
+        }
         std::array::from_fn(|i| match self.motor_facing {
             Some(facing) => 0.5 + self.side.0[i] as f32 * (4.5 / 16.0) - facing.0[i] as f32 / 16.0,
             None => 0.5 + self.side.0[i] as f32 * (7.5 / 16.0),
@@ -103,7 +115,7 @@ impl Plan {
     /// unshaded with ARGB tint; `text` uses the actual font and its eight-offset
     /// outline; its front glyphs use the original polygon-offset text pass.
     pub fn render(&self, draw: &mut NativeWorldDraw, width: i32, canvas: &mut impl Canvas) {
-        if width <= 0 || !self.visible(draw.partial) {
+        if (width <= 0 && (self.filter.is_none() || !self.active)) || !self.visible(draw.partial) {
             return;
         }
         let light = draw.light;
@@ -119,6 +131,11 @@ impl Plan {
             draw.push();
             draw.scale([-2.01, -2.01, 2.01]);
             draw.translate([-0.5, -0.5, -0.5 / 16.0]);
+            let icon = if self.filter.as_ref().is_some_and(|filter| !filter.filled) {
+                3.0
+            } else {
+                2.0
+            };
             canvas.quad(
                 draw,
                 ICON,
@@ -128,26 +145,42 @@ impl Plan {
                     [1.0, 1.0, 0.0],
                     [1.0, 0.0, 0.0],
                 ],
-                // AllIcons.VALUE_BOX_HOVER_6PX = texels (32,128)..(48,144)
-                // on the 256x256 sheet; native helpers use 16 texels per side.
-                [2.0, 8.0, 3.0, 9.0],
+                // The 4px and 6px outline icons share row 8 of the source sheet.
+                [icon, 8.0, icon + 1.0, 9.0],
                 0xffff_ffff,
             );
             draw.pop();
         }
         draw.scale([-1.0 / 64.0; 3]);
-        draw.scale([3.0, 3.0, 1.0]);
-        draw.translate([-4.0, -3.75, 5.0]);
-        let single = width < 10;
-        let scale = 9.0 / width as f32 / if single { 2.0 } else { 1.0 };
-        let margin = (width - 9) as f32 / 2.0;
-        draw.scale([scale; 3]);
-        draw.translate([
-            if single { (width / 2) as f32 } else { 0.0 },
-            if single { -margin } else { margin },
-            0.0,
-        ]);
-        canvas.text(draw, &self.text, 0xffed_eded, 0xff33_3333);
+        if width > 0 {
+            if let Some(filter) = &self.filter {
+                draw.translate([17.5 - width as f32, -5.0, 7.0]);
+                let scale = if filter.filled {
+                    draw.translate([-7.0, 10.0, if filter.solid_item { 10.25 } else { 0.0 }]);
+                    1.5
+                } else {
+                    draw.translate([-15.0, -1.0, -2.75]);
+                    1.65
+                };
+                if self.text == "*" {
+                    draw.translate([-1.0, 3.0, 0.0]);
+                }
+                draw.scale([scale; 3]);
+            } else {
+                draw.scale([3.0, 3.0, 1.0]);
+                draw.translate([-4.0, -3.75, 5.0]);
+                let single = width < 10;
+                let scale = 9.0 / width as f32 / if single { 2.0 } else { 1.0 };
+                let margin = (width - 9) as f32 / 2.0;
+                draw.scale([scale; 3]);
+                draw.translate([
+                    if single { (width / 2) as f32 } else { 0.0 },
+                    if single { -margin } else { margin },
+                    0.0,
+                ]);
+            }
+            canvas.text(draw, &self.text, 0xffed_eded, 0xff33_3333);
+        }
         draw.pop();
         draw.light = light;
     }
@@ -230,22 +263,43 @@ fn target(game: &Game<'_>) -> Option<Plan> {
     let motor = block == "create:creative_motor";
     let wrench_target =
         chassis::is_chassis(&block) && game.held().is_some_and(|item| chassis::wrench(game, item));
-    if !(motor || wrench_target)
-        || [
-            game.mob_hit().map(|hit| hit.1),
-            game.boat_hit().map(|hit| hit.1),
-            game.cart_hit().map(|hit| hit.1),
-            game.armor_stand_hit().map(|hit| hit.1),
-            game.cushion_hit().map(|hit| hit.1),
-            game.frame_hit().map(|hit| hit.1),
-            game.painting_hit().map(|hit| hit.1),
-            game.dragon_hit().map(|hit| hit.1),
-        ]
-        .into_iter()
-        .flatten()
-        .any(|distance| game.before_block(distance))
+    let filter = if !motor && !wrench_target {
+        Some(super::create_port_chute::filter_display(
+            game, &hit, &block,
+        )?)
+    } else {
+        None
+    };
+    if [
+        game.mob_hit().map(|hit| hit.1),
+        game.boat_hit().map(|hit| hit.1),
+        game.cart_hit().map(|hit| hit.1),
+        game.armor_stand_hit().map(|hit| hit.1),
+        game.cushion_hit().map(|hit| hit.1),
+        game.frame_hit().map(|hit| hit.1),
+        game.painting_hit().map(|hit| hit.1),
+        game.dragon_hit().map(|hit| hit.1),
+    ]
+    .into_iter()
+    .flatten()
+    .any(|distance| game.before_block(distance))
     {
         return None;
+    }
+    if let Some(filter) = filter {
+        return Some(Plan {
+            pos: filter.pos,
+            motor_facing: None,
+            filter: Some(FilterBox {
+                center: filter.center,
+                filled: filter.filled,
+                solid_item: filter.solid_item,
+            }),
+            side: Side(filter.side),
+            text: filter.count,
+            active: filter.hit,
+            ticks_until_removal: 1,
+        });
     }
     let BlockEntity::Mod(entity) = game
         .world
@@ -270,6 +324,7 @@ fn target(game: &Game<'_>) -> Option<Plan> {
     let mut plan = Plan {
         pos: hit.pos,
         motor_facing,
+        filter: None,
         side: Side(hit.face),
         text: value.to_string(),
         active: false,
@@ -316,6 +371,19 @@ pub(super) fn active(game: &Game<'_>) -> bool {
     })
 }
 
+pub(super) fn filter_hover(game: &Game<'_>) -> Option<bool> {
+    STATE.with_borrow(|state| {
+        if state.identity != identity(game) {
+            return None;
+        }
+        let plan = state
+            .boxes
+            .values()
+            .find(|plan| plan.active && plan.ticks_until_removal == 1)?;
+        plan.filter.as_ref().map(|filter| filter.filled)
+    })
+}
+
 /// A world pass must also draw cached entries after a motor is removed; a block
 /// entity submit callback alone does not cover that source Outliner behavior.
 pub(super) fn plans(game: &Game<'_>) -> Vec<Plan> {
@@ -335,6 +403,7 @@ mod tests {
         Plan {
             pos: [0; 3],
             motor_facing: Side::named(facing),
+            filter: None,
             side: Side::named(side).unwrap(),
             text: "128".into(),
             active: true,

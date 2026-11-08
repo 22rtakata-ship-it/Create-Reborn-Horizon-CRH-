@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: MIT
 // Game-side adapter. The engine crate contains the portable algorithms.
 use super::{
-    Game, create_port_saw_processing::{crafter, crushing as crusher},
+    Game,
+    create_port_basin_recipes::item_drain,
+    create_port_saw_processing::{crafter, crushing as crusher},
     native_block_entity_draw::BlockEntityDraw,
 };
 use crate::{
@@ -155,6 +157,10 @@ pub(super) fn owns(block: &str) -> bool {
 }
 
 pub(super) fn entity(block: &str, entity: &mut Option<(String, Compound)>) {
+    if block == item_drain::BLOCK && entity.is_none() {
+        *entity = Some((block.into(), item_drain::default_nbt()));
+        return;
+    }
     if block == crafter::BLOCK && entity.is_none() {
         *entity = Some((block.into(), crafter::default_nbt()));
         return;
@@ -176,7 +182,7 @@ pub(super) fn entity(block: &str, entity: &mut Option<(String, Compound)>) {
         *entity = Some((block.into(), nbt));
         return;
     }
-    if block == super::create_port_chute::funnel::BLOCK && entity.is_none() {
+    if super::create_port_chute::funnel::is_funnel(block) && entity.is_none() {
         let funnel = super::create_port_chute::funnel::ENTITY;
         *entity = Some((
             funnel.into(),
@@ -226,8 +232,9 @@ pub(super) fn ticks(block: &str, ticks: &mut bool) {
     if (owns(block) && block != "create:mechanical_harvester")
         || block == super::create_port_portable_storage::BLOCK
         || super::create_port_chute::is_chute(block)
-        || block == super::create_port_chute::funnel::BLOCK
+        || super::create_port_chute::funnel::is_funnel(block)
         || block == crusher::CONTROLLER
+        || block == item_drain::BLOCK
     {
         *ticks = true;
     }
@@ -327,7 +334,7 @@ pub(super) fn nearest(yaw: f32, pitch: f32) -> Direction {
 }
 
 pub(super) fn placed(game: &mut Game<'_>, stack: &ItemStack, pos: [i32; 3]) {
-    if game.native_on("create") && stack.item.as_ref() == super::create_port_chute::funnel::BLOCK {
+    if game.native_on("create") && super::create_port_chute::funnel::is_funnel(&stack.item) {
         super::create_port_chute::funnel::refresh_power(game, pos);
     }
     if game.native_on("create") && stack.item.as_ref() == super::create_port_chute::SMART {
@@ -1075,6 +1082,10 @@ pub(super) fn apply_network(
 
 pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEntity) {
     let block = game.native_block(pos);
+    if block == item_drain::BLOCK {
+        item_drain::tick(game, pos, entity);
+        return;
+    }
     if block == crusher::CONTROLLER && entity.id == crusher::CONTROLLER {
         crusher::tick(game, pos, entity);
         return;
@@ -1083,7 +1094,7 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
         super::create_port_chute::tick(game, pos, entity);
         return;
     }
-    if block == super::create_port_chute::funnel::BLOCK {
+    if super::create_port_chute::funnel::is_funnel(&block) {
         super::create_port_chute::funnel::tick(game, pos, entity);
         return;
     }
@@ -1436,7 +1447,14 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
 }
 
 pub(super) fn update_tag(entity: &ModBlockEntity, tag: &mut Option<Compound>) {
-    if super::create_port_chute::is_chute(&entity.id) && tag.is_none() {
+    if entity.id == item_drain::BLOCK && tag.is_none() {
+        *tag = Some(entity.nbt.clone());
+        return;
+    }
+    if (super::create_port_chute::is_chute(&entity.id)
+        || entity.id == super::create_port_chute::funnel::ENTITY)
+        && tag.is_none()
+    {
         *tag = Some(entity.nbt.clone());
         return;
     }
@@ -1477,6 +1495,15 @@ pub(super) fn update_tag(entity: &ModBlockEntity, tag: &mut Option<Compound>) {
 }
 
 pub(super) fn container(block: &str, container: &mut Option<ModContainer>) {
+    if block == item_drain::BLOCK && container.is_none() {
+        *container = Some(ModContainer {
+            slots: 1,
+            faces: std::array::from_fn(|_| Vec::new()),
+            inputs: Vec::new(),
+            outputs: Vec::new(),
+            menu: None,
+        });
+    }
     crate::game::create_port_basin::container(block, container);
     crate::game::create_port_millstone::container(block, container);
     if super::create_port_chute::is_chute(block) && container.is_none() {
@@ -1582,6 +1609,10 @@ pub(super) fn draw(
     entity: &ModBlockEntity,
     draw: &mut BlockEntityDraw,
 ) {
+    if block == item_drain::BLOCK {
+        item_drain::draw(game, pos, entity, draw);
+        return;
+    }
     if block == crafter::BLOCK {
         crafter::draw(game, pos, entity, draw);
         return;
@@ -1594,6 +1625,10 @@ pub(super) fn draw(
     }
     if super::create_port_chute::is_chute(block) {
         super::create_port_chute::draw(game, pos, entity, draw);
+        return;
+    }
+    if block == super::create_port_chute::funnel::BRASS {
+        super::create_port_chute::funnel::draw(game, pos, entity, draw);
         return;
     }
     if block == super::create_port_portable_storage::BLOCK {

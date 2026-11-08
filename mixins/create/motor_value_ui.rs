@@ -43,9 +43,42 @@ struct State {
     close: bool,
     hover_warmup: i32,
     hover_ticks: i32,
-    last_hover_tip: Option<Board>,
+    last_hover_tip: Option<HoverTip>,
 }
 thread_local! {static STATE: RefCell<State> = RefCell::new(State::default());}
+
+#[derive(Clone, Copy)]
+enum HoverTip {
+    Board(Board),
+    Filter { filled: bool },
+}
+
+impl HoverTip {
+    fn lines(self) -> [Text; 2] {
+        match self {
+            Self::Board(board) => [
+                board.title(),
+                Text::translate("create.gui.value_settings.hold_to_edit", &[]),
+            ],
+            Self::Filter { filled } => [
+                Text::translate_with_fallback("create.logistics.filter", "Filter", &[]),
+                if filled {
+                    Text::translate_with_fallback(
+                        "create.logistics.filter.click_to_replace",
+                        "Click with item to replace",
+                        &[],
+                    )
+                } else {
+                    Text::translate_with_fallback(
+                        "create.logistics.filter.click_to_set",
+                        "Click with item to set",
+                        &[],
+                    )
+                },
+            ],
+        }
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Board {
@@ -277,7 +310,12 @@ pub(super) fn tick(game: &mut Game<'_>) {
         }
     }
     if game.native_mod_screen().is_none()
-        && let Some(target) = target(game)
+        && let Some(tip) = target(game)
+            .map(|target| HoverTip::Board(target.board))
+            .or_else(|| {
+                super::create_port_motor_value_world::filter_hover(game)
+                    .map(|filled| HoverTip::Filter { filled })
+            })
     {
         // ScrollValueRenderer.showHoverTip; one call per client tick.
         STATE.with_borrow_mut(|state| {
@@ -290,7 +328,7 @@ pub(super) fn tick(game: &mut Game<'_>) {
                 } else {
                     state.hover_ticks.max(6)
                 };
-                state.last_hover_tip = Some(target.board);
+                state.last_hover_tip = Some(tip);
             }
         });
     }
@@ -759,8 +797,8 @@ pub(super) fn hud(game: &Game<'_>, batch: &mut HudBatch) {
     if game.ui.hide_gui || game.native_mod_screen().is_some() || !can_interact(game) {
         return;
     }
-    let (ticks, board) = STATE.with_borrow(|state| (state.hover_ticks, state.last_hover_tip));
-    let Some(board) = board else { return };
+    let (ticks, tip) = STATE.with_borrow(|state| (state.hover_ticks, state.last_hover_tip));
+    let Some(tip) = tip else { return };
     if ticks == 0 {
         return;
     }
@@ -771,13 +809,7 @@ pub(super) fn hud(game: &Game<'_>, batch: &mut HudBatch) {
     };
     let x = batch.width as i32 / 2;
     let mut y = batch.height as i32 - 75 - 24;
-    for (i, line) in [
-        board.title(),
-        Text::translate("create.gui.value_settings.hold_to_edit", &[]),
-    ]
-    .into_iter()
-    .enumerate()
-    {
+    for (i, line) in tip.lines().into_iter().enumerate() {
         let [r, g, b] = if i == 0 {
             [0xfb, 0xdc, 0x7d]
         } else {
