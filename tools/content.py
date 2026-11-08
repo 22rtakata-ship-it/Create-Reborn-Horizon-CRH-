@@ -914,6 +914,12 @@ def foundation():
         }
         lang.update({'create.logistics.filter' + key: values[locale == 'ru_ru']
                      for key, values in filter_labels.items()})
+        value_labels = {
+            'hold_to_edit': ('Click and hold to edit', 'Удерживайте для изменения'),
+            'release_to_confirm': ('Release %1$s to Confirm', 'Отпустите %1$s для подтверждения'),
+        }
+        lang.update({'create.gui.value_settings.' + key: values[locale == 'ru_ru']
+                     for key, values in value_labels.items()})
         glue_status = {
             'first_pos': ('First corner selected', 'Первый угол выбран'),
             'abort': ('Selection cleared', 'Выделение сброшено'),

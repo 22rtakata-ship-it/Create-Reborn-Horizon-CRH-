@@ -127,7 +127,8 @@ A dry vertical Brass Funnel can filter with a plain item sample. Downward
 extraction uses the original eight-tick cooldown, a default limit of 64, and
 the stored Exactly or Up to setting. Tap use over the filter to change its
 sample. Hold use to open the amount board, then release to confirm the
-selection. Special filter items and Belt Funnel variants remain open.
+selection. The same controls use a simpler panel without the optional
+Create JAR. Special filter items and Belt Funnel variants remain open.
 
 An Item Drain accepts a water bucket from a bare horizontal Belt, stores
 1000 mB of water and hands the empty bucket to a neighboring Depot. With an

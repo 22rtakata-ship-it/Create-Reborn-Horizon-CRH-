@@ -16,6 +16,12 @@ use horizon_world::nbt::Tag;
 use std::cell::RefCell;
 
 const SPRITE: &str = "create:gui/value_settings";
+const BACKDROP: [u8; 4] = [24, 16, 12, 216];
+const FRAME: [u8; 4] = [181, 125, 61, 255];
+const LABEL: [u8; 4] = [221, 178, 104, 255];
+const TRACK: [u8; 4] = [63, 43, 28, 255];
+const MILESTONE: [u8; 4] = [123, 86, 51, 255];
+const CURSOR: [u8; 4] = [250, 211, 129, 255];
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct Setting {
     row: i32,
@@ -58,7 +64,11 @@ impl HoverTip {
         match self {
             Self::Board(board) => (
                 board.title(),
-                Text::translate("create.gui.value_settings.hold_to_edit", &[]),
+                Text::translate_with_fallback(
+                    "create.gui.value_settings.hold_to_edit",
+                    "Click and hold to edit",
+                    &[],
+                ),
                 None,
             ),
             Self::Filter {
@@ -507,12 +517,25 @@ fn layout(game: &Game<'_>, size: [f32; 2], board: Board) -> Layout {
     }
 }
 
-fn quad(game: &Game<'_>, batch: &mut HudBatch, src: [f32; 4], dst: [f32; 4]) {
-    game.native_sprite(batch, SPRITE, src, dst);
+fn quad(game: &Game<'_>, batch: &mut HudBatch, src: [f32; 4], dst: [f32; 4], fallback: [u8; 4]) {
+    if !game.native_sprite(batch, SPRITE, src, dst) && dst[2] > 0.0 && dst[3] > 0.0 {
+        // Author a solid-color panel when the player has no private Create art.
+        let [r, g, b, a] = fallback;
+        let color = rgba(r, g, b, a);
+        let [x, y, w, h] = dst;
+        batch.fill_gradient(&game.gui.atlas, (x, y, w, h), color, color);
+    }
 }
 // UIRenderHelper.drawCropped samples with the original sheet's repeating UVs.
 // Split at the 256px sheet boundary so a crop never reads a neighboring atlas slot.
-fn crop(game: &Game<'_>, batch: &mut HudBatch, source: [i32; 2], at: [i32; 2], size: [i32; 2]) {
+fn crop(
+    game: &Game<'_>,
+    batch: &mut HudBatch,
+    source: [i32; 2],
+    at: [i32; 2],
+    size: [i32; 2],
+    fallback: [u8; 4],
+) {
     let mut dy = 0;
     while dy < size[1] {
         let sy = (source[1] + dy).rem_euclid(256);
@@ -526,6 +549,7 @@ fn crop(game: &Game<'_>, batch: &mut HudBatch, source: [i32; 2], at: [i32; 2], s
                 batch,
                 [sx as f32, sy as f32, w as f32, h as f32],
                 [(at[0] + dx) as f32, (at[1] + dy) as f32, w as f32, h as f32],
+                fallback,
             );
             dx += w;
         }
@@ -539,7 +563,7 @@ fn frame_border(game: &Game<'_>, batch: &mut HudBatch, x: i32, y: i32, w: i32, h
         ([65, 19], [x, y + h - 4]),
         ([70, 19], [x + w - 4, y + h - 4]),
     ] {
-        crop(game, batch, src, at, [4, 4]);
+        crop(game, batch, src, at, [4, 4], FRAME);
     }
     if h > 8 {
         quad(
@@ -547,17 +571,19 @@ fn frame_border(game: &Game<'_>, batch: &mut HudBatch, x: i32, y: i32, w: i32, h
             batch,
             [65., 14., 3., 4.],
             [x as f32, (y + 4) as f32, 3., (h - 8) as f32],
+            FRAME,
         );
         quad(
             game,
             batch,
             [71., 14., 3., 4.],
             [(x + w - 3) as f32, (y + 4) as f32, 3., (h - 8) as f32],
+            FRAME,
         );
     }
     if w > 8 {
-        crop(game, batch, [0, 24], [x + 4, y], [w - 8, 3]);
-        crop(game, batch, [0, 27], [x + 4, y + h - 3], [w - 8, 3]);
+        crop(game, batch, [0, 24], [x + 4, y], [w - 8, 3], FRAME);
+        crop(game, batch, [0, 27], [x + 4, y + h - 3], [w - 8, 3], FRAME);
     }
 }
 fn text(game: &Game<'_>, batch: &mut HudBatch, text: &Text, at: [i32; 2], rgb: u32) {
@@ -591,7 +617,11 @@ pub(super) fn draw(game: &Game<'_>, batch: &mut HudBatch, screen: &NativeScreenV
     );
     let title = board.title();
     let use_name = keybinds::display_name(game.settings.keys.get("key.use"));
-    let tip = Text::translate("create.gui.value_settings.release_to_confirm", &[use_name]);
+    let tip = Text::translate_with_fallback(
+        "create.gui.value_settings.release_to_confirm",
+        "Release %1$s to Confirm",
+        &[use_name],
+    );
     let fattest = game
         .gui
         .atlas
@@ -613,6 +643,7 @@ pub(super) fn draw(game: &Game<'_>, batch: &mut HudBatch, screen: &NativeScreenV
             fade_width as f32,
             (l.height + 33) as f32,
         ],
+        BACKDROP,
     );
     quad(
         game,
@@ -624,6 +655,7 @@ pub(super) fn draw(game: &Game<'_>, batch: &mut HudBatch, screen: &NativeScreenV
             (fade_width - 2) as f32,
             1.,
         ],
+        BACKDROP,
     );
     // The pinned source's third drawStretched call has width=zLevel=0;
     // it draws no bottom-strip pixels. Preserve that observable behavior.
@@ -668,11 +700,12 @@ pub(super) fn draw(game: &Game<'_>, batch: &mut HudBatch, screen: &NativeScreenV
             (l.bar + 2) as f32,
             (l.height - 1) as f32,
         ],
+        TRACK,
     );
     for row in 0..board.rows() {
         let y = l.y + row * 11;
         let bar_x = l.x + l.label + 18;
-        crop(game, batch, [0, 31], [l.x - 4, y], [l.label + 8, 11]);
+        crop(game, batch, [0, 31], [l.x - 4, y], [l.label + 8, 11], LABEL);
         for w in (0..l.bar).step_by(248) {
             crop(
                 game,
@@ -680,6 +713,7 @@ pub(super) fn draw(game: &Game<'_>, batch: &mut HudBatch, screen: &NativeScreenV
                 [7, 0],
                 [bar_x + w, y + 1],
                 [(l.bar - w).min(249), 8],
+                TRACK,
             );
         }
         text(game, batch, &board.label(row), [l.x, y + 1], 0x442000);
@@ -691,6 +725,7 @@ pub(super) fn draw(game: &Game<'_>, batch: &mut HudBatch, screen: &NativeScreenV
                 [0, 0],
                 [bar_x + milestone * spacing, y + 1],
                 [7, 8],
+                MILESTONE,
             );
         }
     }
@@ -715,9 +750,9 @@ pub(super) fn draw(game: &Game<'_>, batch: &mut HudBatch, screen: &NativeScreenV
     let cursor_width = (game.gui.atlas.font.width_text(&cursor) as i32 / 2) * 2 + 3;
     let x = coordinate[0] as i32 - cursor_width / 2;
     let y = coordinate[1] as i32 - 7;
-    crop(game, batch, [0, 9], [x - 3, y], [3, 14]);
-    crop(game, batch, [4, 9], [x, y], [cursor_width, 14]);
-    crop(game, batch, [61, 9], [x + cursor_width, y], [3, 14]);
+    crop(game, batch, [0, 9], [x - 3, y], [3, 14], CURSOR);
+    crop(game, batch, [4, 9], [x, y], [cursor_width, 14], CURSOR);
+    crop(game, batch, [61, 9], [x + cursor_width, y], [3, 14], CURSOR);
     text(game, batch, &cursor, [x + 2, y + 3], 0x442000);
     if std::env::var_os("CREATE_HORIZON_TRACE").is_some() {
         thread_local! {static LAST:RefCell<String>=const{RefCell::new(String::new())};}
@@ -874,12 +909,23 @@ pub(super) fn frame(game: &mut Game<'_>) {
 }
 
 pub(super) fn hud(game: &Game<'_>, batch: &mut HudBatch) {
-    if game.ui.hide_gui || game.native_mod_screen().is_some() || !can_interact(game) {
+    if game.ui.hide_gui || !can_interact(game) {
         return;
     }
-    let (ticks, tip) = STATE.with_borrow(|state| (state.hover_ticks, state.last_hover_tip));
+    let (ticks, tip, filter_board) = STATE.with_borrow(|state| {
+        (
+            state.hover_ticks,
+            state.last_hover_tip,
+            state
+                .panel
+                .is_some_and(|panel| matches!(panel.target.board, Board::Filter { .. })),
+        )
+    });
     let Some(tip) = tip else { return };
-    if ticks == 0 {
+    if ticks == 0
+        || (game.native_mod_screen().is_some()
+            && !(filter_board && matches!(tip, HoverTip::Filter { .. })))
+    {
         return;
     }
     let alpha = if ticks > 5 {

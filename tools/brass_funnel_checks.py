@@ -102,6 +102,7 @@ def board(host, work, row, *, pos=FUNNEL, aim_at=aim, maximum=64, value=16, case
         assert call('screen')['screen'] == 'mod', call('screen')
         initial = trace()
         assert initial['title'] == 'Extracted Amount' and initial['size'][1] == 22, initial
+        assert initial['tip'] == 'Release Right Button to Confirm', initial
         left, top = initial['origin']
         bar = (maximum + 1) * 2 + 1 + (maximum // 16 + 1) * 4
         label = initial['size'][0] - 24 - bar
