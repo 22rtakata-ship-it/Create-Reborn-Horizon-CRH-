@@ -72,6 +72,8 @@ pub enum Kind {
     Mixer,
     /// Horizontal small cog without an exposed shaft.
     Crafter,
+    /// A Mechanical Pump is a small cog without a shaft on either fluid port.
+    Pump,
     Consumer {
         facing: Pos,
         impact: f32,
@@ -105,7 +107,7 @@ impl Node {
             Kind::Motor { facing, .. } => delta == facing,
             Kind::Consumer { facing, .. } => delta == facing,
             Kind::Millstone => delta == [0, -1, 0],
-            Kind::Mixer | Kind::Crafter => false,
+            Kind::Mixer | Kind::Crafter | Kind::Pump => false,
             Kind::Belt { pulley: false, .. } => false,
             Kind::Gearbox => delta[self.axis.index()] == 0,
             Kind::EncasedCog {
@@ -145,7 +147,7 @@ impl Node {
     fn impact(self) -> f32 {
         match self.kind {
             Kind::Press | Kind::CrushingWheel => 8.0,
-            Kind::Millstone | Kind::Mixer | Kind::LinearActuator => 4.0,
+            Kind::Millstone | Kind::Mixer | Kind::LinearActuator | Kind::Pump => 4.0,
             Kind::Consumer { impact, .. } => impact,
             Kind::Crafter => 2.0,
             _ => 0.0,
@@ -154,7 +156,7 @@ impl Node {
     fn cog(self) -> Option<bool> {
         match self.kind {
             Kind::Cog { large } | Kind::EncasedCog { large, .. } => Some(large),
-            Kind::Millstone | Kind::Mixer | Kind::Crafter => Some(false),
+            Kind::Millstone | Kind::Mixer | Kind::Crafter | Kind::Pump => Some(false),
             _ => None,
         }
     }

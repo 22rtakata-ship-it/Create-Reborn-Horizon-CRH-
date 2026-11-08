@@ -49,6 +49,10 @@ pub(super) fn state(
     answer: &mut Option<Option<BlockStateId>>,
 ) {
     let block = game.native_state_block(state).unwrap_or("");
+    if matches!(block, super::create_port_basin::pump::PIPE | super::create_port_basin::pump::PUMP) {
+        *answer = Some(super::create_port_basin::pump::placement(game, state, ctx, block));
+        return;
+    }
     if block == super::create_port_basin::tank::BLOCK {
         *answer = Some(super::create_port_basin::tank::placement(game, ctx).then_some(state));
         return;
@@ -588,6 +592,7 @@ pub(super) fn cog_size(block: &str) -> Option<bool> {
         "create:cogwheel"
         | "create:millstone"
         | "create:mechanical_mixer"
+        | super::create_port_basin::pump::PUMP
         | super::create_port_saw_processing::crafter::BLOCK => Some(false),
         _ => super::create_port_interactions::encased_cog_size(block),
     }

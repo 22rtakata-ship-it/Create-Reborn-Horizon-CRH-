@@ -70,6 +70,8 @@
   "block.create.mechanical_crafter": "Механический сборщик",
   "block.create.item_drain": "Осушитель предметов",
   "block.create.fluid_tank": "Жидкостный бак",
+  "block.create.fluid_pipe": "Жидкостная труба",
+  "block.create.mechanical_pump": "Механическая помпа",
   "block.create.linear_chassis": "Линейное шасси",
   "block.create.secondary_linear_chassis": "Вторичное линейное шасси",
   "block.create.radial_chassis": "Радиальное шасси",

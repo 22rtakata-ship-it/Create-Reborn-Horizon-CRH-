@@ -16,7 +16,7 @@ pub const CREATE_VERSION: &str = "6.0.10+mc1.21.1 (NeoForge)";
 pub const JAR_SHA256: &str = "ef87fe5709f1ba1f5b8bb20a2925b5afb4669e178fd6d8bf10c167759eefe37a";
 // Bump whenever the import catalog changes: the cache key pins the JAR, not
 // BLOCKS/ITEMS/PARTS, so an older valid cache lacks newly required resources.
-const SCHEMA: u32 = 41;
+const SCHEMA: u32 = 43;
 const MAX_JAR: u64 = 128 << 20;
 const MAX_FILE: u64 = 16 << 20;
 const MAX_TOTAL: usize = 64 << 20;
@@ -70,6 +70,43 @@ pub const WHEEL_PARTS: &[&str] = &[
     "large_water_wheel/block",
     "large_water_wheel/block_extension",
 ];
+
+/// Directional PipeAttachmentModel pieces. The built-in pipe geometry already
+/// includes its arms; these models are only loaded from a supplied JAR.
+#[derive(Clone, Copy)]
+pub enum PipeAttachment {
+    Connection,
+    RimConnector,
+    Rim,
+    Drain,
+}
+
+macro_rules! pipe_faces {
+    ($part:literal) => {
+        [
+            concat!("create:block/fluid_pipe/", $part, "/down"),
+            concat!("create:block/fluid_pipe/", $part, "/up"),
+            concat!("create:block/fluid_pipe/", $part, "/north"),
+            concat!("create:block/fluid_pipe/", $part, "/south"),
+            concat!("create:block/fluid_pipe/", $part, "/west"),
+            concat!("create:block/fluid_pipe/", $part, "/east"),
+        ]
+    };
+}
+
+const PIPE_MODELS: [[&str; 6]; 4] = [
+    pipe_faces!("connection"), pipe_faces!("rim_connector"), pipe_faces!("rim"), pipe_faces!("drain"),
+];
+
+impl PipeAttachment {
+    pub fn model(self, side: usize) -> &'static str {
+        PIPE_MODELS[self as usize][side]
+    }
+}
+
+pub fn pipe_attachment_models() -> impl Iterator<Item = &'static str> {
+    PIPE_MODELS.into_iter().flatten()
+}
 
 #[derive(Debug)]
 pub struct Imported {
@@ -312,6 +349,10 @@ fn valid_cache(target: &Path, hash: &str, format: (i64, i64)) -> Option<usize> {
         || !PARTS
             .iter()
             .all(|part| files.contains_key(&format!("assets/create/models/block/{part}.json")))
+        || !pipe_attachment_models().all(|id| {
+            let path = id.strip_prefix("create:").expect("Create pipe model identifier");
+            files.contains_key(&format!("assets/create/models/{path}.json"))
+        })
         || !PARTS.iter().filter_map(|part| part.strip_prefix("belt_casing/")).all(|part| {
             files.contains_key(&format!("assets/create/models/block/belt_casing/andesite_{part}.json"))
         })
@@ -596,6 +637,9 @@ fn collect(bytes: Vec<u8>) -> io::Result<BTreeMap<String, Vec<u8>>> {
                 serde_json::to_vec(&json!({"parent": format!("create:block/{part}"), "textures": replacements}))?,
             );
         }
+    }
+    for model in pipe_attachment_models() {
+        reader.model(model)?;
     }
     for model in EXTRA_MODELS {
         reader.model(&format!("create:{model}"))?;

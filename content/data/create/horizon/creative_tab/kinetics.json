@@ -40,6 +40,8 @@
     "create:mechanical_crafter",
     "create:item_drain",
     "create:fluid_tank",
+    "create:fluid_pipe",
+    "create:mechanical_pump",
     "create:mechanical_piston",
     "create:sticky_mechanical_piston",
     "create:piston_extension_pole",

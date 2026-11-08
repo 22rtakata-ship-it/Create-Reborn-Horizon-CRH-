@@ -19,6 +19,7 @@ from crushing_content import WHEEL as CRUSHER, crushing
 from crafter_content import CRAFTER, crafter
 from item_drain_content import BLOCK as ITEM_DRAIN, item_drain
 from fluid_tank_content import BLOCK as FLUID_TANK, fluid_tank
+from fluid_pipe_content import PIPE, PUMP, fluid_pipes
 from sticker_content import STICKER, sticker
 from encased_cog_content import ENGLISH as ENCASED_COGS_EN, RUSSIAN as ENCASED_COGS_RU, encased_cogs
 
@@ -817,6 +818,7 @@ def foundation():
     crafter(write, model)
     item_drain(write)
     fluid_tank(write, model)
+    fluid_pipes(write, model, axial_boxes)
     sticker(write, model)
     encased_cogs(write, model)
     deployer(write, model)
@@ -902,6 +904,7 @@ def foundation():
     extra_blocks[CRAFTER] = 'Mechanical Crafter'
     extra_blocks[ITEM_DRAIN] = 'Item Drain'
     extra_blocks[FLUID_TANK] = 'Fluid Tank'
+    extra_blocks.update({PIPE: 'Fluid Pipe', PUMP: 'Mechanical Pump'})
     extra_blocks.update({'linear_chassis': 'Linear Chassis',
                          'secondary_linear_chassis': 'Secondary Linear Chassis',
                          'radial_chassis': 'Radial Chassis'})
@@ -1017,6 +1020,8 @@ def foundation():
                          'item.create.crushed_raw_gold': 'Дроблёное рудное золото'})
             lang['block.create.' + ITEM_DRAIN] = 'Осушитель предметов'
             lang['block.create.' + FLUID_TANK] = 'Жидкостный бак'
+            lang['block.create.' + PIPE] = 'Жидкостная труба'
+            lang['block.create.' + PUMP] = 'Механическая помпа'
             lang['block.create.' + STICKER] = 'Блок-липучка'
             lang.update({f'block.create.{name}': text for name, text in ENCASED_COGS_RU.items()})
             lang.update({"block.create.mechanical_piston": "Механический поршень",

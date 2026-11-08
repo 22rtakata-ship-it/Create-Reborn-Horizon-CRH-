@@ -44,7 +44,7 @@ with the systems they depend on.
 | Schematics | Bounded `.nbt` preflight and creative paste with horizontal rotation and mirroring | Preview/UI and broader block/entity transformations |
 | Transport and automation | Bare belts, Minecraft hoppers and basic IO | Complete belts, funnels/tunnels, mechanical arms |
 | Mixing and heating | Dry Basin/Mixer; heated brass; burner and fuel in separate native runs | Combined regression, missing interactions and presentation |
-| Fluids | Water/lava in Basins and standalone Fluid Tanks, Item Drain, buckets, dough and mud | Complete processing, pipe networks, pumps, multiblock tanks and boilers |
+| Fluids | Water/lava in Basins, standalone Fluid Tanks, straight pipes and pumps, Item Drain, buckets, dough and mud | Branching networks, open ends, other fluid machines, multiblock tanks and boilers |
 | Contraptions | Bearings, pistons, Gantry and Rope Pulley with bounded cargo, riders and farm tools | Broader payloads, cross-chunk ownership, more drives, contact and portable storage |
 | Trains and logistics | Pending | Tracks, trains, schedules, cargo |
 | Ponder and guides | Pending | Original scenes, controls and presentation |
@@ -428,7 +428,10 @@ with the systems they depend on.
 - [x] Zinc and Deepslate Zinc Ore generate in new Overworld chunks.
   Raw Zinc, its storage block and the original furnace and blast furnace recipes
   complete the ordinary zinc supply route.
-- [ ] Pipes/pumps/valves, connectivity and flow direction.
+- [x] Straight dry Fluid Pipes and one Mechanical Pump between standalone tanks.
+  Water and lava, RPM and pressure traces, Wrench reversal, backpressure,
+  cross-chunk transfer and cold restart.
+- [ ] Bends, branches, waterlogged pipes, open ends, valves and other fluid machines.
 - [x] Item Drain from a bare Belt to a Depot. Water bucket, full tank,
   blocked exit, resumed cargo and original resource rendering.
 - [x] Item Drain with a held water bucket in Survival and Creative. Match a

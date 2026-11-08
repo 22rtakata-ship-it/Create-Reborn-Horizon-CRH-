@@ -48,6 +48,13 @@ The following MIT code informed or was adapted into the Rust engine:
   square-crafting compression eligibility, deferred Basin checks, completion
   restarts and retained in-flight recipes. World adapters and actual-client
   presentation have separate acceptance evidence and documented limits.
+- `content/fluids/pump/PumpBlock[Entity]`, `FluidPropagator`,
+  `FluidTransportBehaviour`, `PipeConnection`, `FluidNetwork` and
+  `PipeAttachmentModel` inform straight pressure routing, flow progress,
+  transfer quantities, connection saves and pipe attachment selection.
+- `content/fluids/tank/FluidTankBlock[Entity]`, `FluidTankRenderer` and
+  `foundation/fluid/FluidHelper` inform singleton storage, bucket exchange,
+  Wrench windows, comparator output and fluid rendering.
 - `content/kinetics/press/BeltPressingCallbacks`, `MechanicalPressBlockEntity`,
   `logistics/depot/DepotBehaviour`, `DepotItemHandler` and `SharedDepotBlockMethods`:
   one-at-a-time default pressing, output buffering, automation and landed items.

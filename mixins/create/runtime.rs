@@ -151,12 +151,17 @@ pub(super) fn owns(block: &str) -> bool {
             | "create:mechanical_harvester"
             | "create:basin"
             | "create:mechanical_mixer"
+            | super::create_port_basin::pump::PUMP
             | "create:blaze_burner"
             | "create:belt"
     ) || super::create_port_interactions::encased_cog_size(block).is_some()
 }
 
 pub(super) fn entity(block: &str, entity: &mut Option<(String, Compound)>) {
+    if block == super::create_port_basin::pump::PIPE && entity.is_none() {
+        *entity = Some((block.into(), Compound::new()));
+        return;
+    }
     use super::create_port_basin::tank;
     if block == tank::BLOCK && entity.is_none() {
         *entity = Some((block.into(), tank::default_nbt()));
@@ -250,6 +255,7 @@ pub(super) fn ticks(block: &str, ticks: &mut bool) {
         || block == crusher::CONTROLLER
         || block == item_drain::BLOCK
         || block == super::create_port_basin::tank::BLOCK
+        || block == super::create_port_basin::pump::PIPE
     {
         *ticks = true;
     }
@@ -459,6 +465,7 @@ pub(super) fn predicts_use(game: &Game<'_>, pos: [i32; 3], face: [i32; 3]) -> bo
         && (crate::game::create_port_burner::reacts(game, pos)
             || crate::game::create_port_basin::reacts(game, pos)
             || crate::game::create_port_basin::tank::predicts_use(game, pos)
+            || crate::game::create_port_basin::pump::reacts(game, pos)
             || item_drain::predicts_use(game, pos)
             || super::create_port_belt::predicts_dye(game, pos)
             || super::create_port_belt::predicts_casing(game, pos, face)
@@ -516,6 +523,7 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3], ca
     }
     if crate::game::create_port_basin::right_click(game, pos)
         || crate::game::create_port_basin::tank::right_click(game, pos)
+        || crate::game::create_port_basin::pump::right_click(game, pos)
         || item_drain::right_click(game, pos)
     {
         *canceled = true;
@@ -772,6 +780,7 @@ pub(super) fn node(game: &Game<'_>, pos: [i32; 3]) -> Option<Node> {
         super::create_port_drill::SAW => Kind::LinearActuator,
         "create:millstone" => Kind::Millstone,
         crafter::BLOCK => Kind::Crafter,
+        super::create_port_basin::pump::PUMP => Kind::Pump,
         "create:mechanical_mixer" => Kind::Mixer,
         "create:encased_fan" | "create:mechanical_drill" => Kind::Consumer {
             facing: direction.map(|v| -v),
@@ -1108,6 +1117,12 @@ pub(super) fn apply_network(
 
 pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEntity) {
     let block = game.native_block(pos);
+    if block == super::create_port_basin::pump::PIPE {
+        if super::create_port_basin::pump::tick(game, pos, entity, 0.0) {
+            game.native_block_entity_sync(pos);
+        }
+        return;
+    }
     if block == super::create_port_basin::tank::BLOCK {
         super::create_port_basin::tank::tick(game, pos, entity);
         return;
@@ -1295,6 +1310,9 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
     }
     let mut sync = old_rpm != rpm || chain_signal_changed;
     let running_rpm = running_speed(game, &entity.nbt);
+    if block == super::create_port_basin::pump::PUMP {
+        sync |= super::create_port_basin::pump::tick(game, pos, entity, running_rpm);
+    }
     if block == super::create_port_contraption::BLOCK {
         let theoretical = super::create_port_kinetic_runtime::theoretical(entity);
         super::create_port_contraption::tick(game, pos, entity, theoretical, running_rpm);
@@ -1477,7 +1495,7 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
 }
 
 pub(super) fn update_tag(entity: &ModBlockEntity, tag: &mut Option<Compound>) {
-    if matches!(entity.id.as_str(), item_drain::BLOCK | super::create_port_basin::tank::BLOCK) && tag.is_none() {
+    if matches!(entity.id.as_str(), item_drain::BLOCK | super::create_port_basin::tank::BLOCK | super::create_port_basin::pump::PIPE) && tag.is_none() {
         *tag = Some(entity.nbt.clone());
         return;
     }
@@ -1591,6 +1609,7 @@ pub(super) fn models(models: &mut Vec<String>) {
             .iter()
             .map(|name| format!("create:{name}")),
     );
+    models.extend(create_assets::pipe_attachment_models().map(str::to_owned));
 }
 
 pub(super) fn face_south(draw: &mut BlockEntityDraw, direction: Direction) {
@@ -1645,6 +1664,10 @@ pub(super) fn draw(
     entity: &ModBlockEntity,
     draw: &mut BlockEntityDraw,
 ) {
+    if matches!(block, super::create_port_basin::pump::PUMP | super::create_port_basin::pump::PIPE) {
+        super::create_port_basin::pump::draw(game, pos, entity, draw);
+        return;
+    }
     if block == super::create_port_basin::tank::BLOCK {
         super::create_port_basin::tank::draw(game, pos, entity, draw);
         return;

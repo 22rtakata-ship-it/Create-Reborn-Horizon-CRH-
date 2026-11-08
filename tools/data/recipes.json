@@ -472,6 +472,46 @@
         "id": "create:encased_fan"
       }
     },
+    "create/recipe/crafting/kinetics/fluid_pipe.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "C": {
+          "tag": "c:ingots/copper"
+        },
+        "S": {
+          "tag": "c:plates/copper"
+        }
+      },
+      "pattern": [
+        "SCS"
+      ],
+      "result": {
+        "count": 4,
+        "id": "create:fluid_pipe"
+      }
+    },
+    "create/recipe/crafting/kinetics/fluid_pipe_vertical.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "C": {
+          "tag": "c:ingots/copper"
+        },
+        "S": {
+          "tag": "c:plates/copper"
+        }
+      },
+      "pattern": [
+        "S",
+        "C",
+        "S"
+      ],
+      "result": {
+        "count": 4,
+        "id": "create:fluid_pipe"
+      }
+    },
     "create/recipe/crafting/kinetics/fluid_tank.json": {
       "type": "minecraft:crafting_shaped",
       "category": "misc",
@@ -955,6 +995,22 @@
       "result": {
         "count": 1,
         "id": "create:mechanical_press"
+      }
+    },
+    "create/recipe/crafting/kinetics/mechanical_pump.json": {
+      "type": "minecraft:crafting_shapeless",
+      "category": "misc",
+      "ingredients": [
+        {
+          "item": "create:cogwheel"
+        },
+        {
+          "item": "create:fluid_pipe"
+        }
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:mechanical_pump"
       }
     },
     "create/recipe/crafting/kinetics/mechanical_saw.json": {
@@ -8136,6 +8192,8 @@
         "create:smart_chute",
         "create:speedometer",
         "create:stressometer",
+        "create:fluid_pipe",
+        "create:mechanical_pump",
         "create:fluid_tank",
         "create:item_drain",
         "create:mechanical_piston",
@@ -8778,6 +8836,48 @@
         }
       ],
       "random_sequence": "create:blocks/fluid_tank"
+    },
+    "create/loot_table/blocks/fluid_pipe.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:fluid_pipe"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/fluid_pipe"
+    },
+    "create/loot_table/blocks/mechanical_pump.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:mechanical_pump"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/mechanical_pump"
     },
     "create/loot_table/blocks/sticker.json": {
       "type": "minecraft:block",

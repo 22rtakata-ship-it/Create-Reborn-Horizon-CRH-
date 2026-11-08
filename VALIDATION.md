@@ -210,6 +210,11 @@ developer source build. The three changes are applied in a separate checkout.
 - [Harvester flowers and saplings](tools/harvester_bush_checks.py) match 90
   block observations on a moving Mechanical Bearing. Dandelion, poppy, oak
   and birch saplings drop one item apiece. Young wheat stays planted.
+- [Straight Pump lines](tools/fluid_pump_native_checks.py) match 115 ticks in
+  each of six [Java cases](tools/fluid_pump_java_checks.py), including both
+  fluids, both RPM signs and both placement orders. The fixture also checks
+  backpressure, actual Wrench reversal, cold restart and motor removal. The
+  original-resource run checks rendered connections and tank collars.
 
 The [offscreen engineering run](tools/engineering_checks.py) used ordinary
 crank clicks on all six facings and measured the rendered base and handle

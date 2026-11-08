@@ -31,6 +31,10 @@ fn fixture(change: impl FnOnce(&mut BTreeMap<String, Vec<u8>>)) -> Vec<u8> {
             model,
         );
     }
+    for model in pipe_attachment_models() {
+        let path = model.strip_prefix("create:").unwrap();
+        json_file(format!("assets/create/models/{path}.json"), json!({"parent": "create:block/shared"}));
+    }
     for model in EXTRA_MODELS {
         json_file(
             format!("assets/create/models/{model}.json"),

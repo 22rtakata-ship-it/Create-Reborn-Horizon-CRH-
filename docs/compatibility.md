@@ -204,6 +204,17 @@ Tank placement that would form a vertical stack or a wider tank is refused.
 Boilers, moving tanks, goggles tooltips, splash particles and world light
 from lava are pending.
 
+Fluid Pipes and a Mechanical Pump can move water or lava between two
+standalone tanks on a dry straight line. The pump takes power from a cog and
+pushes in the direction it faces. Use a Wrench to reverse the pump. Each side
+can reach a tank through up to 15 pipes, including across loaded chunks.
+After the line fills, a pump at 32 RPM moves 16 mB per tick. A full tank or one
+containing another fluid blocks the transfer. The supported lines resume after
+a restart. The original JAR supplies the pipe connections and tank collars.
+
+Bends, branches, waterlogged pipes, open ends, multiple pumps on one line and
+connections to other fluid machines are pending.
+
 The four sheet items retain `create:iron_sheet`, `create:golden_sheet` and
 `create:copper_sheet` and `create:brass_sheet`. Kinetic entities retain `Speed` as a float. Depot data
 uses `HeldItem.Item`, `Pos`, `PrevPos`, `Offset`, `PrevOffset`, `InSegment`,
