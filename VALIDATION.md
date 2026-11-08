@@ -47,6 +47,10 @@ developer source build. The three changes are applied in a separate checkout.
   four cross-column lanes. Plain and matching Smart Chutes receive marked
   stacks. The Saw holds rejected cargo through a native restart and publishes
   on the same tick after changing the filter or removing redstone power.
+- [Belt-to-Saw intake](tools/belt_saw_checks.py) retains a marked log in
+  the stopped Saw and two on the Belt through a cold restart in each
+  client. Cutting and export match. Five of 103 samples show a one-tick
+  difference in Belt refills or Chute deliveries after the reload.
 - [Belt-to-Millstone transfer](tools/belt_millstone_checks.py) matches
   full and partial acceptance, recipe rejection and a full receiver.
   The canonical input is visible on the transfer tick even if the

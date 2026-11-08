@@ -235,6 +235,8 @@ pub(super) fn entity(block: &str, entity: &mut Option<(String, Compound)>) {
             nbt.insert("ScrollValue".into(), Tag::Int(16));
         } else if block == super::create_port_chain::ADJUSTABLE {
             nbt.insert("Signal".into(), Tag::Int(0));
+        } else if block == super::create_port_drill::SAW {
+            nbt = super::create_port_saw_processing::default_nbt();
         }
         *entity = Some((id.to_owned(), nbt));
     }

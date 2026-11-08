@@ -1692,7 +1692,7 @@ impl Hooks<ItemStack> for WorldHooks<'_, '_> {
         let target_block = self.game.native_block(target);
         if matches!(
             target_block.as_str(),
-            ID | "create:depot" | "create:millstone" | item_drain::BLOCK
+            ID | "create:depot" | "create:millstone" | item_drain::BLOCK | super::create_port_drill::SAW
         ) || super::create_port_chute::is_chute(&target_block)
         {
             return Ending::Insert;
@@ -1726,6 +1726,11 @@ impl Hooks<ItemStack> for WorldHooks<'_, '_> {
             item_drain::BLOCK => stack.count - item_drain::insert(self.game, target, item, from),
             chute::BLOCK | chute::SMART => {
                 stack.count - chute::insert_from_transport(self.game, target, &game_stack(stack))
+            }
+            super::create_port_drill::SAW => {
+                stack.count - super::create_port_saw_processing::insert_from_transport(
+                    self.game, target, &game_stack(stack),
+                )
             }
             _ => {
                 // MillstoneBlockEntity has the default DirectBeltInputBehaviour.

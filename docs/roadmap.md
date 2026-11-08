@@ -396,6 +396,8 @@ with the systems they depend on.
 - [x] Upward Saw's stock vanilla plank variants, stonecutting and Andesite
   Alloy, including recipe rotation and the saved plain output filter.
 - [x] Upward Saw ordinary output filter slot, replacement and clearing.
+- [x] Horizontal Belt feed into an upward Saw. One log enters while it is
+  stopped and resumes cutting after a cold restart. Remaining logs wait.
 - [ ] Remaining Saw recipes, automation, advanced filter items, hover feedback
   and cutting particles.
 - [x] Portable Storage Interface unloading from one moving chest into a

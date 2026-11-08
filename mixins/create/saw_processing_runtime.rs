@@ -1413,6 +1413,17 @@ pub(super) fn container() -> ModContainer {
     }
 }
 
+pub(super) fn default_nbt() -> Compound {
+    let cycle = CuttingCycle::default();
+    Compound::from([
+        (
+            INVENTORY.into(),
+            processing_inventory(&[], cycle.remaining, cycle.duration, cycle.applied),
+        ),
+        ("RecipeIndex".into(), Tag::Int(0)),
+    ])
+}
+
 fn cycle(entity: &ModBlockEntity) -> Option<CuttingCycle> {
     let Some(saved) = entity.nbt.get(&INVENTORY.into()) else {
         return Some(CuttingCycle::default());
@@ -1625,7 +1636,7 @@ fn apply(
     }
 }
 
-pub(super) fn landed(game: &mut Game<'_>, pos: Pos, stack: &mut ItemStack) -> bool {
+fn accept_input(game: &mut Game<'_>, pos: Pos, stack: &ItemStack, from_world: bool) -> bool {
     if stack.count == 0
         || !game.native_on("create")
         || game.native_block(pos) != super::create_port_drill::SAW
@@ -1637,8 +1648,8 @@ pub(super) fn landed(game: &mut Game<'_>, pos: Pos, stack: &mut ItemStack) -> bo
     else {
         return false;
     };
-    if game.clock.frozen()
-        || create::number(&entity.nbt, "Speed") == 0.0
+    if (from_world && (game.clock.frozen() || create::number(&entity.nbt, "Speed") == 0.0))
+        || entity.id != "create:saw"
         || entity.items.len() != SLOTS
         || entity.items.iter().any(Option::is_some)
     {
@@ -1659,8 +1670,19 @@ pub(super) fn landed(game: &mut Game<'_>, pos: Pos, stack: &mut ItemStack) -> bo
     {
         return false;
     }
-    stack.count -= 1;
     game.native_block_entity_sync(pos);
+    true
+}
+
+pub(super) fn insert_from_transport(game: &mut Game<'_>, pos: Pos, stack: &ItemStack) -> u32 {
+    u32::from(accept_input(game, pos, stack, false))
+}
+
+pub(super) fn landed(game: &mut Game<'_>, pos: Pos, stack: &mut ItemStack) -> bool {
+    if !accept_input(game, pos, stack, true) {
+        return false;
+    }
+    stack.count -= 1;
     true
 }
 
