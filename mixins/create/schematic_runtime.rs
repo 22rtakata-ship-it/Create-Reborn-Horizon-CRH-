@@ -271,6 +271,15 @@ impl Resolver for Registry<'_, '_> {
                             .map(str::to_owned),
                     );
                 }
+                "create:mechanical_crafter" => {
+                    schema
+                        .safe_fields
+                        .insert("ConnectedInput".into(), TagKind::Compound);
+                    schema.discarded_fields.extend(
+                        ["Inventory", "GroupedItems", "Phase", "CountDown", "Cover"]
+                            .map(str::to_owned),
+                    );
+                }
                 "create:mechanical_drill" => {
                     schema
                         .discarded_fields
@@ -542,7 +551,12 @@ fn destination(game: &Game<'_>, plan: &Plan, origin: [i32; 3]) -> Result<Vec<Wri
             }
         };
         let nbt = block.block_entity.as_ref().map(|be| {
-            let mut data = world_compound(&be.data);
+            let mut data = if be.id == super::create_port_saw_processing::crafter::BLOCK {
+                super::create_port_saw_processing::crafter::default_nbt()
+            } else {
+                WorldCompound::new()
+            };
+            data.extend(world_compound(&be.data));
             data.insert("id".into(), WorldTag::String(be.id.as_str().into()));
             for (k, v) in ["x", "y", "z"].iter().zip(pos) {
                 data.insert((*k).into(), WorldTag::Int(v));

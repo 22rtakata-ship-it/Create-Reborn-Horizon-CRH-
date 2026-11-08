@@ -551,6 +551,7 @@ fn transform_state(
         "create:shaft" => (&["axis", "waterlogged"], Some("axis")),
         "create:flywheel" => (&["axis"], Some("axis")),
         "create:creative_motor" | "create:mechanical_press" => (&["facing"], Some("facing")),
+        "create:mechanical_crafter" => (&["facing", "pointing"], Some("facing")),
         "create:depot" => (&["waterlogged"], None),
         "minecraft:air"
         | "minecraft:cave_air"
@@ -579,6 +580,12 @@ fn transform_state(
     {
         return Err(format!(
             "{operation} does not support {} property {key}",
+            state.name
+        ));
+    }
+    if state.name == "create:mechanical_crafter" && !requested.properties.contains_key("pointing") {
+        return Err(format!(
+            "{operation} requires the explicit pointing property for {}",
             state.name
         ));
     }
@@ -620,6 +627,63 @@ fn transform_state(
         state.properties.insert(key.into(), after.into());
     }
     Ok(state)
+}
+
+fn validate_crafter_source(raw: &Compound) -> Result<(), String> {
+    let empty =
+        |tag: Option<&Tag>| matches!(tag, Some(Tag::List { values, .. }) if values.is_empty());
+    if let Some(input) = raw.get("ConnectedInput") {
+        let valid = input.as_compound().is_some_and(|input| {
+            input.len() == 2
+                && input.get("Controller") == Some(&Tag::Byte(1))
+                && matches!(input.get("Data"), Some(Tag::List { values, .. })
+                    if matches!(values.as_slice(), [Tag::Compound(offset)]
+                        if offset.len() == 3 && ["X", "Y", "Z"].iter()
+                            .all(|axis| offset.get(*axis) == Some(&Tag::Int(0)))))
+        });
+        if !valid {
+            return Err("only an unlinked Mechanical Crafter ConnectedInput is supported".into());
+        }
+    }
+    for (key, valid) in [
+        (
+            "Inventory",
+            raw.get("Inventory").is_none_or(|tag| {
+                tag.as_compound().is_some_and(|inventory| {
+                    inventory.len() == 2
+                        && inventory.get("Size") == Some(&Tag::Int(1))
+                        && empty(inventory.get("Items"))
+                })
+            }),
+        ),
+        (
+            "GroupedItems",
+            raw.get("GroupedItems").is_none_or(|tag| {
+                tag.as_compound()
+                    .is_some_and(|grouped| grouped.len() == 1 && empty(grouped.get("Grid")))
+            }),
+        ),
+        (
+            "Phase",
+            raw.get("Phase")
+                .is_none_or(|tag| tag.as_str() == Some("IDLE")),
+        ),
+        (
+            "CountDown",
+            raw.get("CountDown").is_none_or(|tag| *tag == Tag::Int(0)),
+        ),
+        (
+            "Cover",
+            raw.get("Cover").is_none_or(|tag| *tag == Tag::Byte(0)),
+        ),
+    ] {
+        if !valid {
+            return Err(format!(
+                "only empty idle Mechanical Crafter data is supported ({key})"
+            ));
+        }
+    }
+    Ok(())
 }
 
 /// Validate the complete schematic before returning a world-independent plan.
@@ -825,6 +889,12 @@ pub fn preflight(
                 );
                 continue;
             };
+            if prepared.state.name == "create:mechanical_crafter"
+                && let Err(message) = validate_crafter_source(raw)
+            {
+                fail(format!("{path}.nbt"), Some(pos), message);
+                continue;
+            }
             if raw.get("id").and_then(Tag::as_str) != Some(be_schema.id.as_str()) {
                 fail(
                     format!("{path}.nbt.id"),
@@ -879,7 +949,11 @@ pub fn preflight(
             }
             if transformed
                 && safe.keys().any(|key| {
-                    prepared.state.name != "create:creative_motor" || key != "ScrollValue"
+                    !matches!(
+                        (prepared.state.name.as_str(), key.as_str()),
+                        ("create:creative_motor", "ScrollValue")
+                            | ("create:mechanical_crafter", "ConnectedInput")
+                    )
                 })
             {
                 fail(

@@ -26,6 +26,18 @@ impl Resolver for Registry {
                     .extend(["Speed", "Source", "Network", "Items"].map(str::to_owned));
                 be = Some(schema);
             }
+            "create:mechanical_crafter" => {
+                defaults.insert("facing", "north");
+                defaults.insert("pointing", "up");
+                let mut schema = BlockEntitySchema::new("create:mechanical_crafter");
+                schema
+                    .safe_fields
+                    .insert("ConnectedInput".into(), TagKind::Compound);
+                schema.discarded_fields.extend(
+                    ["Inventory", "GroupedItems", "Phase", "CountDown", "Cover"].map(str::to_owned),
+                );
+                be = Some(schema);
+            }
             "minecraft:piston" => {
                 defaults.insert("extended", "false");
             }
@@ -41,6 +53,7 @@ impl Resolver for Registry {
                 "facing" => {
                     ["north", "south", "east", "west", "up", "down"].contains(&value.as_str())
                 }
+                "pointing" => ["up", "left", "down", "right"].contains(&value.as_str()),
                 _ => ["false", "true"].contains(&value.as_str()),
             };
             if !valid {
@@ -290,6 +303,114 @@ fn rotated_preflight_rejects_unsupported_blocks_missing_axes_and_invalid_positio
             .message
             .contains("position outside size")
     );
+}
+
+fn crafter_fixture() -> Schematic {
+    let offset = Tag::Compound(Compound::from(
+        ["X", "Y", "Z"].map(|key| (key.into(), Tag::Int(0))),
+    ));
+    let connected = Tag::Compound(Compound::from([
+        ("Controller".into(), Tag::Byte(1)),
+        ("Data".into(), Tag::list(TagKind::Compound, vec![offset])),
+    ]));
+    Schematic {
+        data_version: SOURCE_DATA_VERSION,
+        size: [1; 3],
+        palettes: vec![vec![state(
+            "create:mechanical_crafter",
+            &[("facing", "east"), ("pointing", "left")],
+        )]],
+        blocks: vec![Block {
+            relative_pos: [0; 3],
+            state_index: 0,
+            block_entity: Some(Compound::from([
+                ("id".into(), Tag::String("create:mechanical_crafter".into())),
+                ("ConnectedInput".into(), connected),
+                (
+                    "Inventory".into(),
+                    Tag::Compound(Compound::from([
+                        ("Size".into(), Tag::Int(1)),
+                        ("Items".into(), Tag::list(TagKind::Compound, Vec::new())),
+                    ])),
+                ),
+                (
+                    "GroupedItems".into(),
+                    Tag::Compound(Compound::from([(
+                        "Grid".into(),
+                        Tag::list(TagKind::Compound, Vec::new()),
+                    )])),
+                ),
+                ("Phase".into(), Tag::String("IDLE".into())),
+                ("CountDown".into(), Tag::Int(0)),
+                ("Cover".into(), Tag::Byte(0)),
+            ])),
+        }],
+        entities: Vec::new(),
+    }
+}
+
+#[test]
+fn crafter_facing_transforms_but_pointing_and_safe_input_stay_fixed() {
+    let schematic = crafter_fixture();
+    let connected = schematic.blocks[0].block_entity.as_ref().unwrap()["ConnectedInput"].clone();
+    for mirror in [Mirror::None, Mirror::LeftRight, Mirror::FrontBack] {
+        let facings = if mirror == Mirror::FrontBack {
+            ["west", "north", "east", "south"]
+        } else {
+            ["east", "south", "west", "north"]
+        };
+        for (quarter_turns, facing) in facings.into_iter().enumerate() {
+            let plan = preflight(
+                &schematic,
+                &Registry,
+                &Options {
+                    mirror,
+                    quarter_turns: quarter_turns as u8,
+                    ..Options::default()
+                },
+            )
+            .unwrap();
+            let block = &plan.blocks[0];
+            assert_eq!(block.state.properties["facing"], facing);
+            assert_eq!(block.state.properties["pointing"], "left");
+            assert_eq!(
+                block.block_entity.as_ref().unwrap().data,
+                Compound::from([("ConnectedInput".into(), connected.clone())])
+            );
+        }
+    }
+}
+
+#[test]
+fn crafter_links_and_live_fields_are_rejected_before_any_plan() {
+    for (field, value, message) in [
+        (
+            "ConnectedInput",
+            Tag::Compound(Compound::from([("Controller".into(), Tag::Byte(0))])),
+            "unlinked",
+        ),
+        ("Cover", Tag::Byte(1), "Cover"),
+        ("Phase", Tag::String("EXPORTING".into()), "Phase"),
+        ("CountDown", Tag::Int(250), "CountDown"),
+        ("Inventory", Tag::Compound(Compound::new()), "Inventory"),
+        (
+            "GroupedItems",
+            Tag::Compound(Compound::new()),
+            "GroupedItems",
+        ),
+    ] {
+        let mut schematic = crafter_fixture();
+        schematic.blocks[0]
+            .block_entity
+            .as_mut()
+            .unwrap()
+            .insert(field.into(), value);
+        let issues = preflight(&schematic, &Registry, &Options::default()).unwrap_err();
+        assert!(
+            issues.iter().any(|issue| issue.message.contains(message)),
+            "{issues:?}"
+        );
+    }
 }
 
 #[test]
