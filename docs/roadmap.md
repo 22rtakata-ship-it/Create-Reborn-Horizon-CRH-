@@ -236,6 +236,8 @@ with the systems they depend on.
   Bearing, with a pinned JAR geometry oracle and separate live-client tests.
 - [x] One ordinary mounted chest on a vertical Mechanical Bearing, with crop
   and cutter loot, item components, restart and landing recovery.
+- [x] One closed barrel on a Mechanical Bearing, including horizontal and
+  vertical turns, slot contents and item components after a native restart.
 - [x] Ordinary chest cargo on Gantry, dry Rope Pulley and both Mechanical
   Pistons. Preserve components and slot order through translated landing and
   an obstructed restart.

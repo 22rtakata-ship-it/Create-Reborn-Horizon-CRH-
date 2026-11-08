@@ -440,6 +440,7 @@ impl CaptureView for Capture<'_, '_> {
 pub(super) struct MountedCapture<'g, 'a> {
     base: Capture<'g, 'a>,
     allow_chest: bool,
+    allow_barrel: bool,
     allow_actor_data: bool,
     allow_chassis: bool,
     allow_sticker: bool,
@@ -454,6 +455,7 @@ impl<'g, 'a> MountedCapture<'g, 'a> {
         Self {
             base: Capture(game),
             allow_chest: true,
+            allow_barrel: false,
             allow_actor_data: false,
             allow_chassis: true,
             allow_sticker: false,
@@ -521,7 +523,12 @@ impl CaptureView for MountedCapture<'_, '_> {
     fn snapshot(&self, p: Pos) -> Option<BlockState> {
         let game = self.base.0;
         let block = game.pack.assets.registry.state(state(game, p))?;
-        if (self.allow_chest && storage::can_capture(game, p, block))
+        let allow_storage = if storage::barrel_state(block) {
+            self.allow_barrel
+        } else {
+            self.allow_chest
+        };
+        if (allow_storage && storage::can_capture(game, p, block))
             || (self.allow_actor_data
                 && (deployer::can_capture(game, p, block) || psi::can_capture(game, p, block)))
             || (self.allow_chassis && chassis::can_capture(game, p, block))
@@ -598,6 +605,7 @@ fn assemble(
         let capture = MountedCapture {
             base: Capture(game),
             allow_chest: allow_mounted_data,
+            allow_barrel: !windmill,
             allow_actor_data: allow_mounted_data,
             allow_chassis: allow_mounted_data,
             allow_sticker: !windmill,
@@ -692,7 +700,7 @@ fn rotate_state(state: &BlockState, turn: QuarterTurn) -> Option<BlockState> {
         return chassis::rotate_state(state, turn);
     }
     if !supported(state)
-        && !storage::chest_state(state)
+        && !storage::mounted_state(state)
         && !deployer::block_state(state)
         && !psi::block_state(state)
     {

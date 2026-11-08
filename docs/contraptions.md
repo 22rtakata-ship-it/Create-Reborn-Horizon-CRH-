@@ -26,8 +26,8 @@ half-turn about X or Z flips their top or bottom state at landing. A vertical
 Mechanical Bearing can carry a Deployer.
 A vertical Mechanical Bearing, Gantry, Rope Pulley or Mechanical Piston can
 carry one ordinary chest. All four can use the three chassis variants to
-expand capture.
-Other inventories and fluid-containing payloads still need adapters. The
+expand capture. A Mechanical Bearing can also carry one ordinary closed
+barrel with its full inventory. The
 supported Gantry path has a fixed loaded rail span.
 The Rope Pulley supports dry rope and cargo. The clockwork hands are captured
 and restored together and currently accept vanilla payloads only.
@@ -128,7 +128,7 @@ Offhand placement works within one loaded chunk column. Fluid-specific and
 Create alias placement paths, custom glue entity data, and the face burst
 for other players tracking the placement are still pending.
 
-## Mounted chest
+## Mounted inventory
 
 An ordinary dry single chest keeps all 27 slots and item components on a
 vertical Mechanical Bearing, Gantry, dry Rope Pulley or Mechanical Piston.
@@ -138,6 +138,11 @@ column in ascending slot order, matching Java's `ChestMountedStorage` and
 drop at the tool. The server saves the inventory with the structure's chunk
 and restores it at its rotated or translated landing position, including
 after a restart or controller removal.
+
+A plain closed barrel on a Mechanical Bearing uses the same 27-slot save
+path. Its lid direction rotates with the structure. The paired fixtures
+cover horizontal and vertical rotation, slot contents and custom item data.
+Open barrels and barrels with names, locks or pending loot tables are refused.
 
 A vertical Mechanical Bearing can land through ordinary dry vanilla leaves
 when the incoming block has collision. The leaves use the usual block-break

@@ -2,13 +2,14 @@
 // Copyright (c) 2026 create-horizon contributors
 // SPDX-License-Identifier: MIT
 
-// ChestMountedStorage and the exposed MountedStorageManager item handler.
+// ChestMountedStorage, simple barrel storage and the mounted item handler.
 
 use super::{Game, create_port_contraption as contraption};
 use crate::{containers::BlockEntity, items::ItemStack};
 use create_engine::{
     contraption::QuarterTurn,
     kinetics::{Axis, Pos},
+    placement::Direction,
 };
 use horizon_client_render::create_contraption_scene::{MAX_RECORDS, Record, StrokeKind};
 use horizon_items::item_nbt::{encode_items, item_from_nbt};
@@ -21,12 +22,14 @@ use horizon_world::{
 use std::collections::BTreeMap;
 
 const BLOCK: &str = "minecraft:chest";
+const BARREL: &str = "minecraft:barrel";
 const SIZE: usize = 27;
 const SLOT_LIMIT: u32 = 64;
 const MAX_STORAGE_BYTES: usize = 1024 * 1024;
 
 #[derive(Clone, Debug)]
 pub(super) struct Chest {
+    // Horizon uses BlockEntity::Chest for both of these 27-slot containers.
     local: Pos,
     slots: Vec<Option<ItemStack>>,
 }
@@ -68,9 +71,26 @@ pub(super) fn chest_state(state: &BlockState) -> bool {
             .is_some_and(|face| matches!(face.as_str(), "north" | "south" | "east" | "west"))
 }
 
+pub(super) fn barrel_state(state: &BlockState) -> bool {
+    state.name == BARREL
+        && state.properties.len() == 2
+        && state
+            .properties
+            .get("open")
+            .is_some_and(|open| open == "false")
+        && state
+            .properties
+            .get("facing")
+            .is_some_and(|facing| Direction::ALL.into_iter().any(|face| face.name() == facing))
+}
+
+pub(super) fn mounted_state(state: &BlockState) -> bool {
+    chest_state(state) || barrel_state(state)
+}
+
 pub(super) fn can_capture(game: &Game<'_>, position: Pos, state: &BlockState) -> bool {
     let key = (position[0], position[1], position[2]);
-    if !chest_state(state)
+    if !mounted_state(state)
         || !matches!(game.world.block_entities.get(&key), Some(BlockEntity::Chest(slots)) if slots.len() == SIZE)
         || game.world.block_names.contains_key(&key)
         || game.world.block_lock(key).is_some()
@@ -117,17 +137,17 @@ pub(super) fn can_capture(game: &Game<'_>, position: Pos, state: &BlockState) ->
             .block_entity_sources
             .iter()
             .find(|(pos, _)| *pos == key)
-            .is_none_or(|(_, tag)| plain_source(tag))
+            .is_none_or(|(_, tag)| plain_source(tag, &state.name))
 }
 
-fn plain_source(tag: &Tag) -> bool {
+fn plain_source(tag: &Tag, block: &str) -> bool {
     let Tag::Compound(fields) = tag else {
         return false;
     };
     fields
         .iter()
         .all(|(key, value)| match key.to_string().as_deref() {
-            Ok("id") => *value == Tag::String(BLOCK.into()),
+            Ok("id") => *value == Tag::String(block.into()),
             Ok("x" | "y" | "z") => matches!(value, Tag::Int(_)),
             Ok("keepPacked") => matches!(value, Tag::Byte(0)),
             Ok("components") => matches!(value, Tag::Compound(components) if components.is_empty()),
@@ -136,10 +156,18 @@ fn plain_source(tag: &Tag) -> bool {
         })
 }
 
-fn local_chest(blocks: &[(Pos, BlockState)]) -> Result<Option<Pos>, AttachmentError> {
+fn local_storage(
+    blocks: &[(Pos, BlockState)],
+) -> Result<Option<(Pos, &BlockState)>, AttachmentError> {
     let mut result = None;
-    for (position, block) in blocks.iter().filter(|(_, block)| block.name == BLOCK) {
-        if !chest_state(block) || !valid_local(*position) || result.replace(*position).is_some() {
+    for (position, block) in blocks
+        .iter()
+        .filter(|(_, block)| matches!(block.name.as_str(), BLOCK | BARREL))
+    {
+        if !mounted_state(block)
+            || !valid_local(*position)
+            || result.replace((*position, block)).is_some()
+        {
             return Err(AttachmentError::Decode);
         }
     }
@@ -151,16 +179,17 @@ fn valid_local(pos: Pos) -> bool {
 }
 
 pub(super) fn mounted_chest(record: &Record) -> Option<Mount> {
+    let (local, state) = local_storage(&record.blocks).ok()??;
     let supported = match record.stroke_kind() {
         Some(StrokeKind::Gantry | StrokeKind::RopePulley | StrokeKind::Piston) => true,
-        None => record.axis == Axis::Y.index(),
+        None => record.axis == Axis::Y.index() || state.name == BARREL,
     };
     if !supported || record.clock_hand.is_some() || record.return_home {
         return None;
     }
     Some(Mount {
         controller: record.controller,
-        local: local_chest(&record.blocks).ok()??,
+        local,
     })
 }
 
@@ -169,7 +198,7 @@ pub(super) fn capture(
     anchor: Pos,
     blocks: &[(Pos, BlockState)],
 ) -> Result<Option<Chest>, AttachmentError> {
-    let Some(local) = local_chest(blocks)? else {
+    let Some((local, expected)) = local_storage(blocks)? else {
         return Ok(None);
     };
     let position = place(anchor, local).ok_or(AttachmentError::Encode)?;
@@ -179,7 +208,7 @@ pub(super) fn capture(
         .registry
         .state(contraption::state(game, position))
         .ok_or(AttachmentError::Encode)?;
-    if !can_capture(game, position, state) {
+    if state != expected || !can_capture(game, position, state) {
         return Err(AttachmentError::Encode);
     }
     let Some(BlockEntity::Chest(slots)) =
@@ -225,8 +254,8 @@ pub(super) fn commit_landing(
     origin: Pos,
     turn: QuarterTurn,
 ) -> bool {
-    let local = match local_chest(&record.blocks) {
-        Ok(Some(local)) => local,
+    let (local, state) = match local_storage(&record.blocks) {
+        Ok(Some(storage)) => storage,
         Ok(None) => return contraption::commit(game, key, records, edits),
         Err(_) => return false,
     };
@@ -252,7 +281,7 @@ pub(super) fn commit_landing(
                     .assets
                     .registry
                     .state(*after)
-                    .is_some_and(chest_state)
+                    .is_some_and(|target| target.name == state.name && mounted_state(target))
         })
         || write_store(game, key, store).is_err()
     {
@@ -261,7 +290,7 @@ pub(super) fn commit_landing(
     if !commit(game, key, records, edits, before) {
         return false;
     }
-    // The world edit creates a vanilla chest; install its already-validated
+    // The world edit creates a vanilla container; install its validated
     // contents before the server can save, tick hoppers, or accept a click.
     game.world
         .block_entities

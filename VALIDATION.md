@@ -45,6 +45,9 @@ developer source build. The three changes are applied in a separate checkout.
   placements match coordinates, states and RPM, with one Copper Sheet made
   by each press. Unsupported rotations and blocked destinations are refused
   before any changes are written.
+- [Mounted barrels](tools/bearing_barrel_checks.py) match the original
+  position, lid direction and contents after a native restart on two axes.
+  The refusal checks preserve open, named, locked and loot-table barrels.
 
 ## 0.8.0-alpha.5 chassis, saw and Deployer crafting
 
