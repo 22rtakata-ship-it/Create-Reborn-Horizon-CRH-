@@ -107,13 +107,12 @@ fn passenger_motion(game: &Game<'_>) -> Option<Vec3> {
     }
     let support = player.ground.supporting_block?;
     let pos = [support.x, support.y, support.z];
-    let is_bare_horizontal = |pos| {
+    let is_dry_horizontal = |pos| {
         game.native_block(pos) == ID
             && slope(game, pos) == Slope::Horizontal
-            && !cased(game, pos)
             && game.native_block_property(pos, "waterlogged").as_deref() == Some("false")
     };
-    if player.position.y - 0.25 < f64::from(support.y) || !is_bare_horizontal(pos) {
+    if player.position.y - 0.25 < f64::from(support.y) || !is_dry_horizontal(pos) {
         return None;
     }
     let (controller, index) = node_data(game, pos)?;
@@ -126,7 +125,7 @@ fn passenger_motion(game: &Game<'_>) -> Option<Vec3> {
         || !boolean(&owner.nbt, "IsController")
         || !(2..=1000).contains(&length)
         || !(0..length).contains(&index)
-        || !is_bare_horizontal(controller)
+        || !is_dry_horizontal(controller)
         || facing(game, controller) != direction
         || at(controller, direction, Slope::Horizontal, index) != pos
     {

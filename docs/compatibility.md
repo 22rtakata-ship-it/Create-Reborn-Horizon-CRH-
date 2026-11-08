@@ -124,8 +124,9 @@ Horizontal Mechanical Belts can feed dry Chutes and receive their downward
 output. Stopped, incomplete and incompatible receivers hold cargo upstream.
 The same item and components continue after a restart. Andesite and Brass
 Casing use the original per-segment states, and dye or washing changes the
-color of the full Belt. Dry, bare horizontal Belts carry grounded local
-players. Sloped belts and other passenger types still need separate checks.
+color of the full Belt. Dry horizontal Belts carry grounded local players
+across bare segments and segments with Andesite or Brass Casing. Sloped
+Belts and other passenger types remain open.
 
 Mechanical Crafters support manual front-slot loading and the original
 5×5 Crushing Wheel recipe in a same-facing array inside one chunk column.

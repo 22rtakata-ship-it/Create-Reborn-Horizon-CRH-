@@ -196,8 +196,11 @@ developer source build. The three changes are applied in a separate checkout.
   [Drain-to-Belt run](tools/item_drain_belt_checks.py) matches 38 warm and
   12 resumed ticks across a column boundary, including the entry pose.
 - [Dry Belt riders](tools/belt_rider_checks.py) match Java player motion on
-  bare horizontal Belts across a chunk boundary, including direction,
-  steering, crouching, stopping and a collision with a wall.
+  horizontal Belts across a chunk boundary, including direction, steering,
+  crouching, stopping and a collision with a wall. The `--cased` run adds
+  Andesite and Brass segments, mixed controllers, and a transition from
+  casing to a bare segment. Server positions match after stopping and at
+  the wall.
 - [Belt casings](tools/belt_casing_checks.py) and
   [dyes](tools/belt_dye_checks.py) were checked in Java and in native clients
   with fallback and imported resources, including persistence after restart.

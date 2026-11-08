@@ -194,8 +194,9 @@ with the systems they depend on.
   Replacing a belt preserves the new chain and ejects the old load once.
   [Motion review](reviews/belt-motion.md)
 - [ ] Belts: frame-by-frame scrolling, item shadows, complete lifecycle and IO.
-- [x] Dry bare horizontal Belts carry a grounded local player. Compare both
-  X directions, Z movement, steering, crouching, a stop and a wall.
+- [x] Dry horizontal Belts carry a grounded local player across bare segments
+  and segments with Andesite or Brass Casing. Compare both X directions,
+  Z movement, steering, crouching, a stop and a wall.
 - [ ] Belt passengers on slopes and other actors. Moving surfaces also need
   transformed contact geometry and a world-space movement request.
 - [x] Bounded surface geometry: X rotation fixed; 1600 source cases,

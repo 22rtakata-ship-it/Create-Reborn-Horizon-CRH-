@@ -31,15 +31,29 @@ def setblock(command, pos, state):
     command(f'setblock {xyz(pos)} {state}')
 
 
-def setup(command):
+def setup(command, cased):
     command(f'fill {AREA} {AIR}')
     command('fill 2353 115 1540 2375 115 1561 minecraft:stone')
     for origin, axis, facing in ((ROOT_X, 0, 'east'), (ROOT_Z, 2, 'south')):
+        # Reverse travel crosses a bare segment on the cased Andesite
+        # chain. The Brass chain instead has a bare controller.
+        material, bare_index = ('ANDESITE', 12) if axis == 0 else ('BRASS', 0)
         for index in range(14):
             part = 'start' if index == 0 else 'end' if index == 13 else 'middle'
             pos = tuple(value + (index if i == axis else 0) for i, value in enumerate(origin))
-            setblock(command, pos, f'create:belt[facing={facing},slope=horizontal,part={part}]')
+            casing = ',casing=true' if cased and index != bare_index else ''
+            nbt = f'{{Casing:"{material}"}}' if casing else ''
+            setblock(command, pos, f'create:belt[facing={facing},slope=horizontal,part={part}{casing}]{nbt}')
     command('gamemode survival')
+
+
+def verify_casing(read_block):
+    fixtures = ((ROOT_X, 'ANDESITE'), ((X + 7, Y, Z), 'ANDESITE'), ((X + 12, Y, Z), 'NONE'),
+                (ROOT_Z, 'NONE'), ((ROOT_Z[0], Y, ROOT_Z[2] + 6), 'BRASS'))
+    for pos, material in fixtures:
+        state, nbt = read_block(pos)
+        assert state['casing'] == str(material != 'NONE').lower(), (pos, state)
+        assert re.search(r'\bCasing:\s*"' + material + '"', nbt), (pos, nbt)
 
 
 def wait_for(read, predicate, limit=12):
@@ -91,8 +105,8 @@ def verify_motion(rows, axis, signed_rpm, centered):
     return sum(seen) / len(seen)
 
 
-def exercise(command, read, aim, key):
-    setup(command)
+def exercise(command, read, read_block, aim, key, cased):
+    setup(command, cased)
     trace = {}
 
     def power(pos, facing, rpm):
@@ -127,6 +141,8 @@ def exercise(command, read, aim, key):
     power(MOTOR_X, 'south', 32)
     trace['forward'] = moving(0, east)
     forward = verify_motion(trace['forward'], 0, -32, True)
+    if cased:
+        verify_casing(read_block)
     key('shift', True)
     trace['crouch'] = settled(trace['forward'][-1])
     key('shift', False)
@@ -172,7 +188,7 @@ def exercise(command, read, aim, key):
                 wall_gap=wall - X - 6, trace=trace)
 
 
-def java(work):
+def java(work, cased):
     host = Original()
     initial = host.call('state', {})
     if initial.get('screen') == 'PauseScreen':
@@ -184,6 +200,10 @@ def java(work):
     def read():
         state = host.call('state', {})
         return dict(position=state['position'], time=state['server']['game_time'])
+
+    def read_block(pos):
+        block = host.call('block', {'pos': pos})
+        return block['properties'], block['nbt']
 
     def aim(feet, yaw):
         host.call('camera', {'position': feet, 'yaw': yaw, 'pitch': 0})
@@ -198,7 +218,7 @@ def java(work):
         host.snapshot([ROOT_X, ROOT_Z], 18)
         host.command('tick rate 8')
         host.call('tick', {'frozen': False})
-        return exercise(host.command, read, aim, key)
+        return exercise(host.command, read, read_block, aim, key, cased)
     finally:
         for name in ('shift', 'forward'):
             key(name, False)
@@ -212,7 +232,7 @@ def java(work):
         (work / 'transcript.json').write_text(json.dumps(host.trace, indent=2) + '\n')
 
 
-def native(session):
+def native(session, cased):
     call = session.call
 
     def command(text):
@@ -222,6 +242,10 @@ def native(session):
         state = call('state')
         player = state['player']
         return dict(position=player['position'], time=state['ticks'], grounded=player['on_ground'])
+
+    def read_block(pos):
+        state = dict(re.findall(r'(\w+)=(\w+)', call('block', *pos)['state']))
+        return state, ' '.join(command(f'data get block {xyz(pos)}')['chat'])
 
     def aim(feet, yaw):
         command('tp @s ' + xyz(feet) + f' {yaw} 0')
@@ -234,16 +258,17 @@ def native(session):
         wait_loaded(call, [ROOT_X, ROOT_Z])
         command('tick rate 8')
         command('tick unfreeze')
-        return exercise(command, read, aim, key)
+        return exercise(command, read, read_block, aim, key, cased)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--java', action='store_true')
+    parser.add_argument('--cased', action='store_true', help='exercise Andesite, Brass and bare segments together')
     for name in ('game', 'resources', 'ctl', 'reference'):
         parser.add_argument('--' + name, type=Path)
     args = parser.parse_args()
-    report = dict(passed=False, create=PINS['create_revision'])
+    report = dict(passed=False, create=PINS['create_revision'], cased=args.cased)
     session = None
     if args.java:
         work = Path(tempfile.mkdtemp(prefix='belt-rider-java-', dir=ROOT / '.local'))
@@ -252,11 +277,12 @@ def main():
             parser.error('Horizon requires --game, --resources, --ctl and --reference')
         source = json.loads(args.reference.read_text())
         assert source['passed'] and source['create'] == report['create']
+        assert source.get('cased', False) == args.cased
         session = NativeCheckSession(args.game, args.resources, args.ctl, None,
                                      world='BeltRider', name='belt-rider-native')
         work = session.scratch
     try:
-        report['cases'] = native(session) if session else java(work)
+        report['cases'] = native(session, args.cased) if session else java(work, args.cased)
         if session:
             for key in ('forward', 'reverse', 'north_south', 'wall_gap'):
                 assert near(report['cases'][key], source['cases'][key]), (key, report, source)
