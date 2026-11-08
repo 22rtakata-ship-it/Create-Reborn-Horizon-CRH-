@@ -205,6 +205,9 @@ developer source build. The three changes are applied in a separate checkout.
 - [Belt casings](tools/belt_casing_checks.py) and
   [dyes](tools/belt_dye_checks.py) were checked in Java and in native clients
   with fallback and imported resources, including persistence after restart.
+- [Harvester flowers and saplings](tools/harvester_bush_checks.py) match 90
+  block observations on a moving Mechanical Bearing. Dandelion, poppy, oak
+  and birch saplings drop one item apiece. Young wheat stays planted.
 
 The [offscreen engineering run](tools/engineering_checks.py) used ordinary
 crank clicks on all six facings and measured the rendered base and handle

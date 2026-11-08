@@ -1138,6 +1138,12 @@ fn crop_at<'s>(
             plant = Plant::SugarCane;
             seed = name;
         }
+        // These vanilla BushBlocks have no `age` property in Create 6.0.10.
+        "minecraft:dandelion" | "minecraft:poppy" | "minecraft:oak_sapling"
+        | "minecraft:birch_sapling" => {
+            plant = Plant::BushOrSpecialPlantable;
+            seed = name;
+        }
         _ if leaves => {
             plant = Plant::Other;
             seed = name;
