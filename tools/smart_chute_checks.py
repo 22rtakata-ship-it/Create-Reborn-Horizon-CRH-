@@ -43,8 +43,10 @@ def click(host, work, name, facing, item):
         call('wait', 4)
         hit = call('looking-at')['block']
         assert hit['pos'] == list(CHUTE) and hit['face'] == facing, hit
-        call('mouse', 'right', 'click')
-        call('wait', 4)
+        call('mouse', 'right', 'down')
+        call('wait', 2)
+        call('mouse', 'right', 'up')
+        step(host, 1, CHUTE)
         return
     host.call('camera', {'position': feet, 'target': aim})
     host.call('capture', {'name': f'{work.name}/{name}-aim.png', 'frames': 8})

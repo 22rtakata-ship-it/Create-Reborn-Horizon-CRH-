@@ -184,13 +184,9 @@ fn pull(game: &mut Game<'_>, [x, y, z]: Pos, smart: Option<&ModBlockEntity>) -> 
     }
     let dim = game.dim.id();
     let slots = game.native_container_slots(dim, source, Direction::Down)?;
-    let filter = if let Some(entity) = smart {
-        if !default_amount(entity) {
-            return None;
-        }
-        read_filter(game, entity)?
-    } else {
-        None
+    let filter = match smart {
+        Some(entity) => read_filter(game, entity)?,
+        None => None,
     };
     let slots = slots
         .iter()
@@ -210,8 +206,14 @@ fn pull(game: &mut Game<'_>, [x, y, z]: Pos, smart: Option<&ModBlockEntity>) -> 
                 maximum: super::create_port::stack_maximum(game, stack),
             })
         });
-    let plan = if smart.is_some() {
-        grouped_pull_plan(&slots.collect::<Vec<_>>(), 64, false)
+    let plan = if let Some(entity) = smart {
+        let maximum = filter_maximum(game, filter.as_ref());
+        let (amount, exact) = if maximum > 1 && smart_extracting(game, [x, y, z]) {
+            extraction_amount(entity, maximum)?
+        } else {
+            (64, false)
+        };
+        grouped_pull_plan(&slots.collect::<Vec<_>>(), amount, exact)
     } else {
         chute::pull_plan(slots, ItemStack::same_item_same_components)
     };
@@ -484,12 +486,28 @@ pub(super) fn refresh_power(game: &mut Game<'_>, pos: Pos) -> bool {
     signal
 }
 
-fn default_amount(entity: &ModBlockEntity) -> bool {
-    match entity.nbt.get(&"FilterAmount".into()) {
-        None | Some(Tag::Int(0)) => true,
-        Some(Tag::Int(64)) => matches!(entity.nbt.get(&"UpTo".into()), None | Some(Tag::Byte(1))),
-        _ => false,
+fn smart_extracting(game: &Game<'_>, [x, y, z]: Pos) -> bool {
+    !is_chute(&game.native_block([x, y - 1, z]))
+        && !game
+            .res
+            .behaviours()
+            .is_replaceable(game.world.block(x, y - 1, z))
+}
+
+fn filter_maximum(game: &Game<'_>, sample: Option<&ItemStack>) -> u32 {
+    sample.map_or(64, |stack| super::create_port::stack_maximum(game, stack))
+}
+
+fn extraction_amount(entity: &ModBlockEntity, maximum: u32) -> Option<(u32, bool)> {
+    match super::create_port::integer(&entity.nbt, "FilterAmount") {
+        0 => Some((maximum, false)),
+        amount @ 1..=99 => Some((amount as u32, exact_amount(entity))),
+        _ => None,
     }
+}
+
+fn exact_amount(entity: &ModBlockEntity) -> bool {
+    matches!(entity.nbt.get(&"UpTo".into()), Some(Tag::Byte(0)))
 }
 
 fn read_filter(game: &Game<'_>, entity: &ModBlockEntity) -> Option<Option<ItemStack>> {
@@ -536,7 +554,123 @@ fn hits_filter(point: [f64; 3], pos: Pos, center: [f32; 3]) -> bool {
         < 0.25 * 0.25
 }
 
-/// Read-only presentation of the original FilteringRenderer for dry logistics.
+#[derive(Clone, Copy)]
+struct FilterSlot {
+    entity: &'static str,
+    height: f32,
+    extracting: bool,
+}
+
+fn filter_slot(game: &Game<'_>, pos: Pos, block: &str) -> Option<FilterSlot> {
+    match block {
+        SMART => Some(FilterSlot {
+            entity: SMART,
+            height: 11.0 / 16.0,
+            extracting: smart_extracting(game, pos),
+        }),
+        funnel::BRASS
+            if game.native_block_property(pos, "waterlogged").as_deref() == Some("false") =>
+        {
+            Some(FilterSlot {
+                entity: funnel::ENTITY,
+                height: funnel::filter_height(game, pos)?,
+                extracting: game.native_block_property(pos, "extracting").as_deref()
+                    == Some("true"),
+            })
+        }
+        _ => None,
+    }
+}
+
+#[derive(Clone, Copy)]
+pub(super) struct FilterAmount {
+    pub maximum: i32,
+    pub value: i32,
+    pub up_to: bool,
+}
+
+fn visible_amount(
+    game: &Game<'_>,
+    slot: FilterSlot,
+    entity: &ModBlockEntity,
+    sample: Option<&ItemStack>,
+) -> Option<FilterAmount> {
+    let maximum = filter_maximum(game, sample);
+    if !slot.extracting || maximum <= 1 {
+        return None;
+    }
+    let (value, exact) = extraction_amount(entity, maximum)?;
+    Some(FilterAmount {
+        maximum: maximum as i32,
+        value: value as i32,
+        up_to: !exact,
+    })
+}
+
+fn slot_amount(game: &Game<'_>, pos: Pos, slot: FilterSlot) -> Option<FilterAmount> {
+    let entity = filter_entity(game, pos, slot.entity)?;
+    let sample = read_filter(game, entity)?;
+    visible_amount(game, slot, entity, sample.as_ref())
+}
+
+pub(super) fn amount_board(game: &Game<'_>, pos: Pos) -> Option<FilterAmount> {
+    slot_amount(game, pos, filter_slot(game, pos, &game.native_block(pos))?)
+}
+
+pub(super) fn amount_board_hit(
+    game: &Game<'_>,
+    hit: &super::Hit,
+    block: &str,
+) -> Option<FilterAmount> {
+    let slot = filter_slot(game, hit.pos, block)?;
+    if hit.face[1] != 0 || !hits_filter(hit.point, hit.pos, filter_center(hit.face, slot.height)) {
+        return None;
+    }
+    slot_amount(game, hit.pos, slot)
+}
+
+pub(super) fn set_filter_amount(game: &mut Game<'_>, pos: Pos, row: i32, raw: i32) -> bool {
+    let Some(old) = amount_board(game, pos) else {
+        return false;
+    };
+    let up_to = row == 0;
+    if old.up_to == up_to && old.value == raw {
+        return false;
+    }
+    let value = raw.clamp(1, old.maximum);
+    if game
+        .native_with_mod_block_entity(pos, |entity| {
+            entity.nbt.insert("FilterAmount".into(), Tag::Int(value));
+            entity.nbt.insert("UpTo".into(), Tag::Byte(i8::from(up_to)));
+        })
+        .is_none()
+    {
+        return false;
+    }
+    game.native_block_entity_sync(pos);
+    true
+}
+
+pub(super) fn filter_tap(
+    game: &mut Game<'_>,
+    pos: Pos,
+    face: Pos,
+    offset: [f32; 3],
+    sample: Option<&ItemStack>,
+) {
+    let Some(slot) = filter_slot(game, pos, &game.native_block(pos)) else {
+        return;
+    };
+    let point = std::array::from_fn(|axis| f64::from(pos[axis]) + f64::from(offset[axis]));
+    if !hits_filter(point, pos, filter_center(face, slot.height))
+        || slot_amount(game, pos, slot).is_none()
+    {
+        return;
+    }
+    change_filter(game, pos, slot.entity, sample);
+}
+
+/// Presentation of the original FilteringRenderer for dry logistics.
 pub(super) struct FilterDisplay {
     pub pos: Pos,
     pub side: Pos,
@@ -555,50 +689,18 @@ pub(super) fn filter_display(
     if hit.face[1] != 0 || game.native_sneaking() {
         return None;
     }
-    let [x, y, z] = hit.pos;
-    let (height, entity_id, show_count) = match block {
-        SMART => {
-            let below = [x, y - 1, z];
-            let extracting = !is_chute(&game.native_block(below))
-                && !game
-                    .res
-                    .behaviours()
-                    .is_replaceable(game.world.block(x, y - 1, z));
-            (11.0 / 16.0, SMART, extracting)
-        }
-        funnel::BRASS
-            if game
-                .native_block_property(hit.pos, "waterlogged")
-                .as_deref()
-                == Some("false") =>
-        {
-            (
-                funnel::filter_height(game, hit.pos)?,
-                funnel::ENTITY,
-                game.native_block_property(hit.pos, "extracting").as_deref() == Some("true"),
-            )
-        }
-        _ => return None,
-    };
-    let entity = filter_entity(game, hit.pos, entity_id)?;
+    let slot = filter_slot(game, hit.pos, block)?;
+    let entity = filter_entity(game, hit.pos, slot.entity)?;
     let filter = read_filter(game, entity)?;
-    let center = filter_center(hit.face, height);
-    let count = if show_count {
-        let max = filter
-            .as_ref()
-            .map_or(64, |stack| super::create_port::stack_maximum(game, stack));
-        let raw = super::create_port::integer(&entity.nbt, "FilterAmount");
-        let up_to = raw == 0 || !matches!(entity.nbt.get(&"UpTo".into()), Some(Tag::Byte(0)));
-        if max <= 1 {
-            String::new()
-        } else if up_to && (raw == 0 || raw == max as i32) {
-            "*".into()
-        } else {
-            raw.to_string()
-        }
-    } else {
-        String::new()
-    };
+    let center = filter_center(hit.face, slot.height);
+    let count =
+        visible_amount(game, slot, entity, filter.as_ref()).map_or_else(String::new, |amount| {
+            if amount.up_to && amount.value == amount.maximum {
+                "*".into()
+            } else {
+                amount.value.to_string()
+            }
+        });
     let solid_item = !count.is_empty()
         && filter.as_ref().is_some_and(|stack| {
             game.resolve_item(
@@ -620,11 +722,11 @@ pub(super) fn filter_display(
     })
 }
 
-fn change_filter(game: &mut Game<'_>, pos: Pos, id: &str) -> bool {
-    if game.held().is_some_and(|stack| {
+fn change_filter(game: &mut Game<'_>, pos: Pos, id: &str, sample: Option<&ItemStack>) -> bool {
+    if sample.is_some_and(|stack| {
         matches!(
             stack.item.as_ref(),
-            "create:wrench" | "create:mechanical_arm"
+            "create:wrench" | "create:mechanical_arm" | "create:clipboard"
         ) || !super::create_port_saw_processing::ordinary_filter_item(game, stack)
     }) || filter_entity(game, pos, id)
         .and_then(|e| read_filter(game, e))
@@ -632,12 +734,8 @@ fn change_filter(game: &mut Game<'_>, pos: Pos, id: &str) -> bool {
     {
         return true;
     }
-    let sample = game
-        .held()
-        .map_or_else(|| Tag::Compound(Compound::new()), item_to_nbt);
-    let maximum = game
-        .held()
-        .map(|stack| super::create_port::stack_maximum(game, stack) as i32);
+    let maximum = sample.map(|stack| filter_maximum(game, Some(stack)) as i32);
+    let sample = sample.map_or_else(|| Tag::Compound(Compound::new()), item_to_nbt);
     if game
         .native_with_mod_block_entity(pos, |entity| {
             entity.nbt.insert("Filter".into(), sample);
@@ -707,7 +805,8 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: Pos) -> bool {
         return false;
     }
     if game.native_block(pos) == SMART && filter_hit(game, pos, 11.0 / 16.0) {
-        return change_filter(game, pos, SMART);
+        let sample = game.held().cloned();
+        return change_filter(game, pos, SMART, sample.as_ref());
     }
     if let Some(item) = game.held() {
         let Some((shape, next)) = shape_change(game, pos, item) else {
@@ -816,8 +915,8 @@ fn draw_filter(game: &Game<'_>, entity: &ModBlockEntity, draw: &mut BlockEntityD
 
 pub(in crate::game) mod funnel {
     use super::{
-        BlockEntityDraw, Source, accepts_filter, change_filter, draw_filter, filter_entity,
-        filter_hit, grouped_pull_plan, read_filter, take_from,
+        BlockEntityDraw, Source, accepts_filter, change_filter, draw_filter, extraction_amount,
+        filter_entity, filter_hit, filter_maximum, grouped_pull_plan, read_filter, take_from,
     };
     use crate::game::{Game, GameLevel, create_port_belt::world_direction};
     use crate::{containers::ModBlockEntity, items::ItemStack};
@@ -937,15 +1036,9 @@ pub(in crate::game) mod funnel {
             let Some(filter) = read_filter(game, entity) else {
                 return false;
             };
-            let amount = crate::game::create_port::integer(&entity.nbt, "FilterAmount");
-            let (amount, exact) = if amount == 0 {
-                (64, false)
-            } else if (1..=99).contains(&amount) {
-                (
-                    amount as u32,
-                    matches!(entity.nbt.get(&"UpTo".into()), Some(Tag::Byte(0))),
-                )
-            } else {
+            let Some((amount, exact)) =
+                extraction_amount(entity, filter_maximum(game, filter.as_ref()))
+            else {
                 return false;
             };
             let sources = slots
@@ -1087,7 +1180,7 @@ pub(in crate::game) mod funnel {
             return false;
         };
         match (action, game.held().cloned()) {
-            (Use::Filter, _) => return change_filter(game, pos, ENTITY),
+            (Use::Filter, sample) => return change_filter(game, pos, ENTITY, sample.as_ref()),
             (Use::Attach, Some(stack)) => attach(game, pos, face, &stack),
             (Use::Pickup, Some(stack)) => pickup(game, pos, &stack),
             (Use::Wrench, _) => {

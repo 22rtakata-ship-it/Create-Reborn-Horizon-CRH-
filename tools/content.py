@@ -906,6 +906,11 @@ def foundation():
             '': ('Filter', 'Фильтр'),
             '.click_to_set': ('Click with item to set', 'Кликните с предметом в руке для установки'),
             '.click_to_replace': ('Click with item to replace', 'Кликните с предметом в руке для замены'),
+            '.extracted_amount': ('Extracted Amount', 'Извлекаемое количество'),
+            '.up_to': ('Up to', 'До'),
+            '.exactly': ('Exactly', 'Точно'),
+            '.any_amount_short': ('Any', 'Любое'),
+            '.hold_to_set_amount': ('Click and hold for amount', 'Удерживайте для изменения количества'),
         }
         lang.update({'create.logistics.filter' + key: values[locale == 'ru_ru']
                      for key, values in filter_labels.items()})

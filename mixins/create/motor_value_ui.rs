@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MIT
 // Create 6.0.10 ValueSettingsClient/Screen and KineticScrollValueBehaviour.
 // Rendering uses the original private value_settings.png sheet via the importer.
-use super::{Game, create_port_chassis as chassis};
+use super::{Game, create_port_chassis as chassis, create_port_chute as chute};
 use crate::{containers::BlockEntity, mod_api::NativeScreenView};
 use create_engine::contraption::chassis::{DEFAULT_RANGE, MAX_RANGE};
 use horizon_client::{
@@ -50,17 +50,21 @@ thread_local! {static STATE: RefCell<State> = RefCell::new(State::default());}
 #[derive(Clone, Copy)]
 enum HoverTip {
     Board(Board),
-    Filter { filled: bool },
+    Filter { filled: bool, show_amount: bool },
 }
 
 impl HoverTip {
-    fn lines(self) -> [Text; 2] {
+    fn lines(self) -> (Text, Text, Option<Text>) {
         match self {
-            Self::Board(board) => [
+            Self::Board(board) => (
                 board.title(),
                 Text::translate("create.gui.value_settings.hold_to_edit", &[]),
-            ],
-            Self::Filter { filled } => [
+                None,
+            ),
+            Self::Filter {
+                filled,
+                show_amount,
+            } => (
                 Text::translate_with_fallback("create.logistics.filter", "Filter", &[]),
                 if filled {
                     Text::translate_with_fallback(
@@ -75,9 +79,14 @@ impl HoverTip {
                         &[],
                     )
                 },
-            ],
+                show_amount.then(|| filter_text("hold_to_set_amount", "Click and hold for amount")),
+            ),
         }
     }
+}
+
+fn filter_text(key: &str, fallback: &str) -> Text {
+    Text::translate_with_fallback(&format!("create.logistics.filter.{key}"), fallback, &[])
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -85,6 +94,7 @@ enum Board {
     Motor,
     LinearChassis,
     RadialChassis,
+    Filter { maximum: i32 },
 }
 
 impl Board {
@@ -93,40 +103,58 @@ impl Board {
             Self::Motor => "create.kinetics.creative_motor.rotation_speed",
             Self::LinearChassis => "create.contraptions.chassis.range",
             Self::RadialChassis => "create.contraptions.chassis.radius",
+            Self::Filter { .. } => return filter_text("extracted_amount", "Extracted Amount"),
         };
         Text::translate(key, &[])
     }
 
     fn max(self) -> i32 {
-        if self == Self::Motor {
-            256
-        } else {
-            i32::from(MAX_RANGE) - 1
+        match self {
+            Self::Motor => 256,
+            Self::Filter { maximum } => maximum,
+            _ => i32::from(MAX_RANGE) - 1,
         }
     }
 
     fn milestone(self) -> i32 {
-        if self == Self::Motor { 32 } else { 1 }
+        match self {
+            Self::Motor => 32,
+            Self::Filter { .. } => 16,
+            _ => 1,
+        }
     }
 
     fn rows(self) -> i32 {
-        if self == Self::Motor { 2 } else { 1 }
+        match self {
+            Self::Motor | Self::Filter { .. } => 2,
+            _ => 1,
+        }
     }
 
     fn label(self, row: i32) -> Text {
-        if self == Self::Motor {
-            arrow(row)
-        } else {
-            Text::translate("create.contraptions.chassis.distance", &[])
+        match self {
+            Self::Motor => arrow(row),
+            Self::Filter { .. } if row == 0 => filter_text("up_to", "Up to"),
+            Self::Filter { .. } => filter_text("exactly", "Exactly"),
+            _ => Text::translate("create.contraptions.chassis.distance", &[]),
         }
     }
 
     fn formatted(self, setting: Setting) -> Text {
-        if self == Self::Motor {
-            crate::game::create_port_goggles::numeral(f64::from(setting.value.abs().max(1)))
-                .append(arrow(setting.row))
-        } else {
-            crate::game::create_port_goggles::numeral(f64::from(setting.value + 1))
+        match self {
+            Self::Motor => {
+                crate::game::create_port_goggles::numeral(f64::from(setting.value.abs().max(1)))
+                    .append(arrow(setting.row))
+            }
+            Self::Filter { maximum } if setting.row == 0 && setting.value == maximum => {
+                filter_text("any_amount_short", "Any")
+            }
+            Self::Filter { .. } => Text::literal(format!(
+                "{}{}",
+                if setting.row == 0 { '≤' } else { '=' },
+                setting.value.max(1)
+            )),
+            _ => crate::game::create_port_goggles::numeral(f64::from(setting.value + 1)),
         }
     }
 }
@@ -139,17 +167,30 @@ struct Target {
 
 impl Target {
     fn setting(self, game: &Game<'_>) -> Setting {
-        if self.board == Board::Motor {
-            let value = saved(game, self.pos);
-            Setting {
-                row: i32::from(value >= 0),
-                value: value.saturating_abs().min(256),
+        match self.board {
+            Board::Motor => {
+                let value = saved(game, self.pos);
+                Setting {
+                    row: i32::from(value >= 0),
+                    value: value.saturating_abs().min(256),
+                }
             }
-        } else {
-            let value = chassis::configured_range(game, self.pos).unwrap_or(DEFAULT_RANGE);
-            Setting {
-                row: 0,
-                value: i32::from(value) - 1,
+            Board::Filter { maximum } => chute::amount_board(game, self.pos).map_or(
+                Setting {
+                    row: 0,
+                    value: maximum,
+                },
+                |amount| Setting {
+                    row: i32::from(!amount.up_to),
+                    value: amount.value,
+                },
+            ),
+            _ => {
+                let value = chassis::configured_range(game, self.pos).unwrap_or(DEFAULT_RANGE);
+                Setting {
+                    row: 0,
+                    value: i32::from(value) - 1,
+                }
             }
         }
     }
@@ -180,11 +221,19 @@ fn saved(game: &Game<'_>, pos: [i32; 3]) -> i32 {
 // CreativeMotorBlockEntity.MotorValueBox plus ValueBoxTransform.testHit.
 fn target(game: &Game<'_>) -> Option<Target> {
     let hit = game.pick()?;
-    let board = match game.native_block(hit.pos).as_str() {
+    let block = game.native_block(hit.pos);
+    let board = match block.as_str() {
         "create:linear_chassis" | "create:secondary_linear_chassis" => Board::LinearChassis,
         "create:radial_chassis" => Board::RadialChassis,
         "create:creative_motor" => Board::Motor,
-        _ => return None,
+        _ => {
+            return chute::amount_board_hit(game, &hit, &block).map(|amount| Target {
+                pos: hit.pos,
+                board: Board::Filter {
+                    maximum: amount.maximum,
+                },
+            });
+        }
     };
     let target = Target {
         pos: hit.pos,
@@ -222,9 +271,13 @@ fn target(game: &Game<'_>) -> Option<Target> {
 pub(super) fn chassis_preview_value(pos: [i32; 3]) -> Option<i32> {
     STATE.with_borrow(|state| {
         let panel = state.panel?;
-        (panel.target.pos == pos && panel.target.board != Board::Motor)
-            .then(|| panel.hovered.map(|setting| setting.value + 1))
-            .flatten()
+        (panel.target.pos == pos
+            && matches!(
+                panel.target.board,
+                Board::LinearChassis | Board::RadialChassis
+            ))
+        .then(|| panel.hovered.map(|setting| setting.value + 1))
+        .flatten()
     })
 }
 
@@ -282,8 +335,10 @@ pub(super) fn tick(game: &mut Game<'_>) {
                 .held()
                 .is_some_and(|stack| stack.item.as_ref() == "create:clipboard");
         if !valid || !game.native_mapping("key.use").is_some_and(|value| value.0) {
-            // ScrollValueBehaviour.onShortInteract does nothing for a real player.
             STATE.with_borrow_mut(|state| state.holding = None);
+            if valid && matches!(holding.target.board, Board::Filter { .. }) {
+                send_filter_tap(game, holding.target.pos);
+            }
         } else if holding.ticks >= 5 {
             STATE.with_borrow_mut(|state| state.holding = None);
             if game.native_mod_screen_open("create") {
@@ -311,10 +366,15 @@ pub(super) fn tick(game: &mut Game<'_>) {
     }
     if game.native_mod_screen().is_none()
         && let Some(tip) = target(game)
+            .filter(|target| !matches!(target.board, Board::Filter { .. }))
             .map(|target| HoverTip::Board(target.board))
             .or_else(|| {
-                super::create_port_motor_value_world::filter_hover(game)
-                    .map(|filled| HoverTip::Filter { filled })
+                super::create_port_motor_value_world::filter_hover(game).map(
+                    |(filled, show_amount)| HoverTip::Filter {
+                        filled,
+                        show_amount,
+                    },
+                )
             })
     {
         // ScrollValueRenderer.showHoverTip; one call per client tick.
@@ -331,6 +391,26 @@ pub(super) fn tick(game: &mut Game<'_>) {
                 state.last_hover_tip = Some(tip);
             }
         });
+    }
+}
+
+fn send_filter_tap(game: &mut Game<'_>, pos: [i32; 3]) {
+    let Some(hit) = game.pick().filter(|hit| hit.pos == pos) else {
+        return;
+    };
+    let offset = std::array::from_fn::<_, 3, _>(|axis| {
+        ((hit.point[axis] - f64::from(pos[axis])) as f32).to_bits() as i32
+    });
+    let mut bytes = Vec::with_capacity(32);
+    for value in pos
+        .into_iter()
+        .chain([hit.face[0], hit.face[2]])
+        .chain(offset)
+    {
+        bytes.extend_from_slice(&value.to_be_bytes());
+    }
+    if let Err(error) = game.native_net_send_to_server("create:filter_tap", &bytes) {
+        log::debug!("Create filter tap: {error}");
     }
 }
 
@@ -644,10 +724,10 @@ pub(super) fn draw(game: &Game<'_>, batch: &mut HudBatch, screen: &NativeScreenV
         let trace=serde_json::json!({"pos":panel.target.pos,"value":hovered.value,"row":hovered.row,"origin":[l.x,l.y],"size":[l.width,l.height],"coordinate":coordinate,"cursor":cursor.plain(),"title":title.plain(),"tip":tip.plain(),"title_width":game.gui.atlas.font.width_text(&title),"tip_width":game.gui.atlas.font.width_text(&tip)}).to_string();
         LAST.with_borrow_mut(|last| {
             if *last != trace {
-                let name = if board == Board::Motor {
-                    "motor"
-                } else {
-                    "chassis"
+                let name = match board {
+                    Board::Motor => "motor",
+                    Board::Filter { .. } => "filter",
+                    _ => "chassis",
                 };
                 log::info!("Create {name} board: {trace}");
                 *last = trace;
@@ -773,10 +853,10 @@ pub(super) fn frame(game: &mut Game<'_>) {
     }
     if let Some((target, setting, bulk)) = submission {
         let mut bytes = Vec::with_capacity(20);
-        let (channel, fields) = if target.board == Board::Motor {
-            ("create:motor_settings_v2", [setting.row, setting.value])
-        } else {
-            ("create:chassis_settings", [i32::from(bulk), setting.value])
+        let (channel, fields) = match target.board {
+            Board::Motor => ("create:motor_settings_v2", [setting.row, setting.value]),
+            Board::Filter { .. } => ("create:filter_settings", [setting.row, setting.value]),
+            _ => ("create:chassis_settings", [i32::from(bulk), setting.value]),
         };
         for value in target.pos.into_iter().chain(fields) {
             bytes.extend_from_slice(&value.to_be_bytes());
@@ -808,8 +888,9 @@ pub(super) fn hud(game: &Game<'_>, batch: &mut HudBatch) {
         (ticks as f32 / 5.0).min(1.)
     };
     let x = batch.width as i32 / 2;
-    let mut y = batch.height as i32 - 75 - 24;
-    for (i, line) in tip.lines().into_iter().enumerate() {
+    let (title, hint, amount) = tip.lines();
+    let mut y = batch.height as i32 - 75 - 12 * (2 + i32::from(amount.is_some()));
+    for (i, line) in [title, hint].into_iter().chain(amount).enumerate() {
         let [r, g, b] = if i == 0 {
             [0xfb, 0xdc, 0x7d]
         } else {

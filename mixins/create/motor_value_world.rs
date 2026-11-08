@@ -371,7 +371,7 @@ pub(super) fn active(game: &Game<'_>) -> bool {
     })
 }
 
-pub(super) fn filter_hover(game: &Game<'_>) -> Option<bool> {
+pub(super) fn filter_hover(game: &Game<'_>) -> Option<(bool, bool)> {
     STATE.with_borrow(|state| {
         if state.identity != identity(game) {
             return None;
@@ -380,7 +380,9 @@ pub(super) fn filter_hover(game: &Game<'_>) -> Option<bool> {
             .boxes
             .values()
             .find(|plan| plan.active && plan.ticks_until_removal == 1)?;
-        plan.filter.as_ref().map(|filter| filter.filled)
+        plan.filter
+            .as_ref()
+            .map(|filter| (filter.filled, !plan.text.is_empty()))
     })
 }
 

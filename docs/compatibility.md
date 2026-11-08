@@ -106,8 +106,9 @@ open.
 A vertical Smart Chute can use an ordinary item as a ghost filter. The
 default configuration pulls up to 64 matching items at once. A powered
 Chute parks its cargo halfway along the block and resumes after the signal
-clears. The filter and cargo survive a restart. The hold-to-configure panel,
-amount changes, and special filters remain open.
+clears. The filter and cargo survive a restart. Hold use over the filter when
+the Chute feeds an inventory to choose Up to or Exactly. The board uses the
+sample item's stack limit. Special filters remain open.
 
 
 Mechanical Crafters support manual front-slot loading and the original
@@ -124,9 +125,9 @@ are pending.
 
 A dry vertical Brass Funnel can filter with a plain item sample. Downward
 extraction uses the original eight-tick cooldown, a default limit of 64, and
-the stored Exact or Up To setting. Its hover outline shows the filter sample
-and count. The hold-to-edit board, special filter items and Belt Funnel
-variants remain open.
+the stored Exactly or Up to setting. Tap use over the filter to change its
+sample. Hold use to open the amount board, then release to confirm the
+selection. Special filter items and Belt Funnel variants remain open.
 
 An Item Drain accepts a water bucket from a bare horizontal Belt, stores
 1000 mB of water and hands the empty bucket to a neighboring Depot. With an

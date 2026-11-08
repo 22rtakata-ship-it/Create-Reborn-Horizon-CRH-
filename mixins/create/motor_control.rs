@@ -2,7 +2,7 @@
 // Copyright (c) 2026 create-horizon contributors
 // SPDX-License-Identifier: MIT
 // Authoritative KineticScrollValueBehaviour settings. Client UI lives separately.
-use super::{Game, create_port_chassis as chassis};
+use super::{Game, create_port_chassis as chassis, create_port_chute as chute};
 use crate::containers::BlockEntity;
 use create_engine::contraption::chassis::MAX_RANGE;
 use horizon_world::nbt::Tag;
@@ -19,13 +19,22 @@ struct Request {
 enum Setting {
     Motor { row: i32, raw: i32 },
     Chassis { range: u8, bulk: bool },
+    FilterAmount { row: i32, raw: i32 },
+    FilterTap { face: [i32; 3], offset: [f32; 3] },
 }
 impl Setting {
     fn allowed(self, game: &mut Game<'_>, player: u128, pos: [i32; 3]) -> bool {
         match self {
             Self::Motor { .. } => game.create_motor_configuration_allowed(player, pos),
+            Self::FilterAmount { .. } | Self::FilterTap { .. } => {
+                game.create_value_configuration_allowed(player, pos, false)
+            }
             Self::Chassis { .. } => game.create_value_configuration_allowed(player, pos, true),
         }
+    }
+
+    fn filter(self) -> bool {
+        matches!(self, Self::FilterAmount { .. } | Self::FilterTap { .. })
     }
 }
 thread_local! {
@@ -68,6 +77,28 @@ pub(super) fn receive(game: &mut Game<'_>, player: u128, channel: &str, data: &[
                 bulk: bulk == 1,
             }
         }
+        ("create:filter_settings", 20) => {
+            let (row, raw) = (word(3), word(4));
+            if !(0..=1).contains(&row) || !(0..=99).contains(&raw) {
+                return;
+            }
+            Setting::FilterAmount { row, raw }
+        }
+        ("create:filter_tap", 32) => {
+            let (x, z) = (word(3), word(4));
+            let offset = [5, 6, 7].map(|index| f32::from_bits(word(index) as u32));
+            if !matches!((x, z), (1 | -1, 0) | (0, 1 | -1))
+                || !offset
+                    .into_iter()
+                    .all(|value| (-0.125..=1.125).contains(&value))
+            {
+                return;
+            }
+            Setting::FilterTap {
+                face: [x, 0, z],
+                offset,
+            }
+        }
         _ => return,
     };
     let pos = [word(0), word(1), word(2)];
@@ -81,7 +112,7 @@ pub(super) fn receive(game: &mut Game<'_>, player: u128, channel: &str, data: &[
     else {
         return;
     };
-    if !setting.allowed(game, player, pos) {
+    if (setting.filter() && p.sneaking) || !setting.allowed(game, player, pos) {
         return;
     }
     REQUESTS.with_borrow_mut(|requests| {
@@ -120,12 +151,15 @@ pub(super) fn level_tick(game: &mut Game<'_>) {
         selected
     });
     for (player, pos, setting) in requests {
-        if !players
+        let Some(actor) = players
             .iter()
-            .any(|p| p.uuid == player && p.dimension == dim)
-        {
+            .find(|p| p.uuid == player && p.dimension == dim)
+        else {
             continue;
         };
+        if setting.filter() && actor.sneaking {
+            continue;
+        }
         if !setting.allowed(game, player, pos) || !game.world.loaded(pos[0], pos[2]) {
             continue;
         }
@@ -136,6 +170,15 @@ pub(super) fn level_tick(game: &mut Game<'_>) {
                 }
             }
             Setting::Motor { row, raw } => apply_motor(game, pos, row, raw),
+            Setting::FilterAmount { row, raw } => {
+                if chute::set_filter_amount(game, pos, row, raw) {
+                    feedback(game, pos);
+                }
+            }
+            Setting::FilterTap { face, offset } => {
+                let sample = game.native_held_stack(player);
+                chute::filter_tap(game, pos, face, offset, sample.as_ref());
+            }
         }
     }
 }

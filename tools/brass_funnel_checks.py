@@ -16,6 +16,7 @@ from common import PINS, ROOT
 from funnel_checks import block, put, step, text
 from native_check_session import NativeCheckSession, wait_loaded
 import reference_java as java
+import smart_chute_checks as smart
 
 
 FUNNEL = (1815, 110, 865)
@@ -49,61 +50,103 @@ def aim(host, work, name):
     assert hit['pos'] == list(FUNNEL) and hit['face'] == 'south', hit
 
 
-def tap_filter(host, work):
-    host.command(f'item replace entity @s weapon.mainhand with {marked(7, 3)}')
-    aim(host, work, 'filter')
+def tap_filter(host, work, *, item=marked(7, 3), expected=None, case='filter'):
+    original = items(block(host, FUNNEL)['nbt'], 'Filter')
+    host.command(f'item replace entity @s weapon.mainhand with {item}')
+    aim(host, work, case)
     if isinstance(host, Native):
         call = host.session.call
-        call('mouse', 'right', 'click')
+        call('mouse', 'right', 'down')
+        call('wait', 2)
+        assert items(block(host, FUNNEL)['nbt'], 'Filter') == original
+        call('mouse', 'right', 'up')
+        step(host, 1)
         call('wait', 12)
-        ghost = str(work / 'filter-ghost.png')
+        ghost = str(work / f'{case}-ghost.png')
         call('screenshot', ghost)
     else:
         host.call('input', {'key': 'use', 'down': True})
         try:
-            host.call('capture', {'name': f'{work.name}/filter-tap.png', 'frames': 4})
+            host.call('capture', {'name': f'{work.name}/{case}-tap.png', 'frames': 4})
         finally:
             host.call('input', {'key': 'use', 'down': False})
-        ghost = host.call('capture', {'name': f'{work.name}/filter-ghost.png', 'frames': 12})['path']
+        ghost = host.call('capture', {'name': f'{work.name}/{case}-ghost.png', 'frames': 12})['path']
     raw = block(host, FUNNEL)['nbt']
-    assert items(raw, 'Filter') == {STICK: 3} and 'brass_probe:7' in re.sub(r'\s+', '', raw), raw
+    expected = expected if expected is not None else {STICK: 3}
+    assert items(raw, 'Filter') == expected, raw
+    if item.startswith(STICK):
+        assert 'brass_probe:7' in re.sub(r'\s+', '', raw), raw
     held = text(host, 'data get entity @s SelectedItem')
-    assert STICK in held and number({'nbt': held}, 'count') == 3, held
+    (key, count), = expected.items()
+    assert key in held and number({'nbt': held}, 'count') == count, held
     return ghost
 
 
-def board(host, work, row):
+def board(host, work, row, *, pos=FUNNEL, aim_at=aim, maximum=64, value=16, case=''):
+    name = f'board-{row}{case}'
+    aim_at(host, work, name)
+    original_filter = items(block(host, pos)['nbt'], 'Filter')
+    expected_cursor = 'Any' if row == 0 and value == maximum else f'{"=" if row else "≤"}{max(value, 1)}'
     if isinstance(host, Native):
-        host.command(f'data merge block {xyz(FUNNEL)} {{FilterAmount:16,UpTo:{1-row}b}}')
-        configured = block(host, FUNNEL)
-        assert number(configured, 'FilterAmount') == 16 and number(configured, 'UpTo') == (1 - row), configured
-        if row == 1:
-            host.session.call('wait', 8)
-            host.session.call('screenshot', str(work / 'filter-count-16.png'))
-        return {'seeded': True, 'selected': [row, 16]}
-    aim(host, work, f'board-{row}')
-    host.call('input', {'key': 'use', 'down': True})
-    try:
-        for _ in range(6):
-            host.call('capture', {'name': f'{work.name}/board-{row}.png', 'frames': 12})
-            ui = host.call('ui', {})
-            if 'value_settings' in ui:
-                break
-        settings = ui['value_settings']
-        assert settings['max_value'] == 64 and settings['milestone_interval'] == 16, settings
-        point = next(r['gui_coordinate'] for r in settings['sample_coordinates']
-                     if r['row'] == row and r['value'] == 16)
-        host.call('input', {'kind': 'move', 'x': point[0], 'y': point[1]})
-        host.call('capture', {'name': f'{work.name}/board-{row}-16.png', 'frames': 6})
-        hovered = host.call('ui', {})['value_settings']['hovered']
-        assert hovered['row'] == row and hovered['value'] == 16, hovered
-        host.call('input', {'kind': 'mouse', 'button': 1, 'x': point[0], 'y': point[1], 'down': False})
-    finally:
-        host.call('input', {'key': 'use', 'down': False})
-    host.call('capture', {'name': f'{work.name}/board-{row}-done.png', 'frames': 8})
-    configured = block(host, FUNNEL)
-    assert number(configured, 'FilterAmount') == 16 and number(configured, 'UpTo') == (1 - row), configured
-    return {'title': settings['title'], 'rows': settings['rows'], 'selected': [row, 16]}
+        call = host.session.call
+        prefix = 'Create filter board: '
+
+        def trace():
+            rows = [json.loads(line.split(prefix, 1)[1]) for line in host.session.log.read_text().splitlines()
+                    if prefix in line]
+            assert rows and rows[-1]['pos'] == list(pos), rows[-1:]
+            return rows[-1]
+
+        call('mouse', 'right', 'down')
+        call('wait', 9)
+        assert call('screen')['screen'] == 'mod', call('screen')
+        initial = trace()
+        assert initial['title'] == 'Extracted Amount' and initial['size'][1] == 22, initial
+        left, top = initial['origin']
+        bar = (maximum + 1) * 2 + 1 + (maximum // 16 + 1) * 4
+        label = initial['size'][0] - 24 - bar
+        horizontal = left + ((max(1, value) - 1) // 16) * 4 + value * 2 + 1.5 + label + 18
+        point = (horizontal + (2 if value % 16 == 0 else 0) + (4 if value > 0 else 0), top + row * 11 + 5.)
+        call('click-at', *point)
+        call('wait', 3)
+        assert call('screen')['screen'] == 'mod'
+        assert items(block(host, pos)['nbt'], 'Filter') == original_filter
+        hovered = trace()
+        assert (hovered['row'], hovered['value'], hovered['cursor']) == (row, value, expected_cursor), hovered
+        call('screenshot', work / f'{name}.png')
+        call('click-at', *point, 'right')
+        call('release')
+        step(host, 1)
+        call('wait', 8)
+        assert call('screen')['screen'] == 'playing'
+        call('screenshot', work / f'{name}-done.png')
+    else:
+        host.call('input', {'key': 'use', 'down': True})
+        try:
+            for _ in range(6):
+                host.call('capture', {'name': f'{work.name}/{name}.png', 'frames': 12})
+                ui = host.call('ui', {})
+                if 'value_settings' in ui:
+                    break
+            settings = ui['value_settings']
+            assert settings['max_value'] == maximum and settings['milestone_interval'] == 16, settings
+            assert settings['title']['text'] == 'Extracted Amount', settings
+            assert [row['text'] for row in settings['rows']] == ['Up to', 'Exactly'], settings
+            point = next(r['gui_coordinate'] for r in settings['sample_coordinates']
+                         if r['row'] == row and r['value'] == value)
+            host.call('input', {'kind': 'move', 'x': point[0], 'y': point[1]})
+            host.call('capture', {'name': f'{work.name}/{name}-{value}.png', 'frames': 6})
+            hovered = host.call('ui', {})['value_settings']['hovered']
+            assert hovered['row'] == row and hovered['value'] == value, hovered
+            assert items(block(host, pos)['nbt'], 'Filter') == original_filter
+            host.call('input', {'kind': 'mouse', 'button': 1, 'x': point[0], 'y': point[1], 'down': False})
+        finally:
+            host.call('input', {'key': 'use', 'down': False})
+        host.call('capture', {'name': f'{work.name}/{name}-done.png', 'frames': 8})
+    configured = block(host, pos)
+    assert number(configured, 'FilterAmount') == max(1, value) and number(configured, 'UpTo') == (1 - row), configured
+    assert items(configured['nbt'], 'Filter') == original_filter, configured
+    return {'title': 'Extracted Amount', 'selected': [row, value]}
 
 
 def samples(host, count):
@@ -153,6 +196,7 @@ def exercise(host, work, report, cold_restart=None):
     samples(host, 4)
     cmd('gamemode survival')
     report['filter_ghost'] = tap_filter(host, work)
+    cmd('item replace entity @s weapon.mainhand with minecraft:wheat 5')
     report['exact_board'] = board(host, work, 1)
     for slot, stack in [(0, 'minecraft:wheat 8'), (1, marked(31, 6)), (4, marked(82, 18))]:
         cmd(f'item replace block {xyz(SOURCE)} container.{slot} with {stack}')
@@ -183,6 +227,64 @@ def exercise(host, work, report, cold_restart=None):
     assert paused == {'powered': True, 'cooldown': 0, 'source': {STICK: 2, 'minecraft:wheat': 8}}, paused
     report['up_to'] = {'pull': up_to, 'output': output(host, 31, 7), 'paused': paused}
     report['default'] = default_pull(host)
+    put(cmd, SIGNAL, 'minecraft:redstone_block')
+    samples(host, 1)
+    report['replacement_ghost'] = tap_filter(host, work, item='minecraft:snowball 4',
+                                             expected={'minecraft:snowball': 4}, case='snowball')
+    report['snowball_board'] = board(host, work, 0, maximum=16, case='-snowball')
+
+
+def smart_aim(host, work, name):
+    x, y, z = smart.CHUTE
+    feet, target = (x + .5, y, z + 2.9), (x + .5, y + 11 / 16, z + 1.)
+    if isinstance(host, Native):
+        call = host.session.call
+        host.command(f'tp @s {xyz(feet)}')
+        call('look-at', *target)
+        call('wait', 4)
+        hit = call('looking-at')['block']
+    else:
+        host.call('camera', {'position': feet, 'target': target})
+        host.call('capture', {'name': f'{work.name}/{name}-aim.png', 'frames': 8})
+        hit = host.call('state', {})['hit']
+    assert hit['pos'] == list(smart.CHUTE) and hit['face'] == 'south', hit
+
+
+def smart_amounts(host, work):
+    cmd = host.command
+    cmd('gamemode creative')
+    cmd('tp @s 1767.5 118 845.5')
+    if isinstance(host, Native):
+        wait_loaded(host.session.call, [smart.CHUTE])
+    else:
+        host.snapshot([smart.CHUTE], 16)
+    smart.setup(host)
+    step(host, 4, smart.CHUTE)
+    cmd('gamemode survival')
+    smart.click(host, work, 'smart-filter-south', 'south', smart.FILTER)
+    step(host, 1, smart.CHUTE)
+    assert items(block(host, smart.CHUTE)['nbt'], 'Filter') == {STICK: 3}
+    cmd('item replace entity @s weapon.mainhand with minecraft:wheat 5')
+    exact_board = board(host, work, 1, pos=smart.CHUTE, aim_at=smart_aim, case='-smart')
+    for slot, stack in [(0, 'minecraft:wheat 8'), (1, marked(31, 6)), (4, marked(82, 18))]:
+        cmd(f'item replace block {xyz(smart.SOURCE)} container.{slot} with {stack}')
+    put(cmd, smart.SIGNAL, 'minecraft:air')
+    [exact, source] = step(host, 1, smart.CHUTE, smart.SOURCE)
+    assert items(exact['nbt'], 'Item') == {STICK: 16} and 'brass_probe:82' in re.sub(r'\s+', '', exact['nbt']), exact
+    assert items(source['nbt'], 'Items') == {STICK: 8, 'minecraft:wheat': 8}, source
+    [idle, target] = step(host, 8, smart.CHUTE, smart.TARGET)
+    assert not items(idle['nbt'], 'Item'), idle
+    assert items(target['nbt'], 'Items') == {STICK: 16}, target
+    put(cmd, smart.SIGNAL, 'minecraft:redstone_block')
+    step(host, 1, smart.CHUTE)
+    up_to_board = board(host, work, 0, pos=smart.CHUTE, aim_at=smart_aim, case='-smart')
+    cmd(f'item replace block {xyz(smart.SOURCE)} container.1 with {marked(31, 7)}')
+    put(cmd, smart.SIGNAL, 'minecraft:air')
+    [up_to, source] = step(host, 1, smart.CHUTE, smart.SOURCE)
+    assert items(up_to['nbt'], 'Item') == {STICK: 7} and 'brass_probe:31' in re.sub(r'\s+', '', up_to['nbt']), up_to
+    assert items(source['nbt'], 'Items') == {STICK: 2, 'minecraft:wheat': 8}, source
+    return {'exact_board': exact_board, 'up_to_board': up_to_board,
+            'exact': [82, 16], 'up_to': [31, 7]}
 
 
 def run_java(host, work, report):
@@ -193,16 +295,20 @@ def run_java(host, work, report):
     host.command('gamemode creative')
     host.command('tp @s 1815.5 118 865.5')
     host.command(f'forceload add {COLUMN}')
+    host.command(f'forceload add {smart.COLUMN}')
     try:
         host.snapshot([FUNNEL], 24)
         exercise(host, work, report)
+        report['smart'] = smart_amounts(host, work)
     finally:
         if host.call('state', {})['screen'] != 'playing':
             host.call('input', {'kind': 'escape'})
         host.command('gamemode creative')
         host.command(f'fill {AREA} minecraft:air')
+        host.command(f'fill {smart.AREA} minecraft:air')
         host.command(f'kill {DROPS}')
         host.command(f'forceload remove {COLUMN}')
+        host.command(f'forceload remove {smart.COLUMN}')
         host.call('tick', {'frozen': original['server']['frozen']})
 
 
@@ -220,7 +326,8 @@ def run_native(session, reference, report):
         wait_loaded(session.call, [FUNNEL, SOURCE])
         host.command('tick freeze')
         exercise(host, session.scratch, report, cold_restart)
-        for field in ('exact', 'up_to', 'default'):
+        report['smart'] = smart_amounts(host, session.scratch)
+        for field in ('exact_board', 'up_to_board', 'snowball_board', 'exact', 'up_to', 'default', 'smart'):
             assert report[field] == reference[field], (field, report[field], reference[field])
 
 

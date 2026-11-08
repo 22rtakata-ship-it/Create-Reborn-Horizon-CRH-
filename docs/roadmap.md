@@ -192,11 +192,13 @@ with the systems they depend on.
 - [x] Crouched Wrench pickup for the dry vertical Funnel in Survival and Creative.
 - [x] Dry Smart Chute with a plain ghost filter, the default 64-item limit,
   powered parking and an actual restart.
-- [ ] Smart Chute amount panel, special filters and external insertion.
+- [x] Shared amount panel for extracting Smart Chutes and vertical Brass
+  Funnels, with ordinary filter taps, per-item limits and both transfer modes.
+- [ ] Smart Chute special filters and external insertion.
 - [x] Dry vertical Brass Funnel with plain filters, full matching batches,
   redstone, original cooldown and saved amount. Verify filter/count hover.
 - [ ] Funnel dropped-item intake, horizontal and wet placement, Belt Funnels,
-  advanced filter items and the amount board.
+  and advanced filter items.
 - [x] Ordinary physical item intake into the Basin and Millstone: original scenes,
   partial transfer, components and an actual restart.
 - [x] Bounded Press/Basin: separate compacting pool, square crafting recipes,
