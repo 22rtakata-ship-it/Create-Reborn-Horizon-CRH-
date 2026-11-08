@@ -97,6 +97,7 @@ def run(call,graphics,log,scratch):
             setblock(2,64,3,'minecraft:smooth_stone')
             tp(2.5,65,3.5)
             setblock(0,65,0,'create:hand_crank[facing='+facing+']')
+            call('wait', 4)  # Let the visible block catch up with the server write.
             # A live turn publishes generator speed. Reading an InUse NBT
             # edit into an already initialized crank does not perform a turn.
             for _ in range(12):
