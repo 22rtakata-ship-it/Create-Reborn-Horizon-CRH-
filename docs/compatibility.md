@@ -309,5 +309,8 @@ with operator permission. The mirror values are `none`, `left_right` and
 quarter turns around the supplied anchor. The placement can extend into
 negative offsets from the anchor. The transformed palette is limited to
 verified simple blocks, logs, shafts, Flywheels, Creative Motors, Mechanical
-Presses and Depots. See the [paired checks](../VALIDATION.md) for the layouts.
+Presses, Depots, empty horizontal Belts, unlinked Crafters and inactive
+empty Deployers in USE mode. Unsupported Deployer data or an unsafe
+destination refuses the paste before any cells are written. See the
+[paired checks](../VALIDATION.md) for the layouts.
 Cross-version world interchange remains outside the supported scope.

@@ -489,6 +489,13 @@ fn resolve(resolver: &impl Resolver, state: &BlockState) -> Result<BlockSchema, 
     if state.name == "create:belt" && horizontal_belt_step(state).is_none() {
         return Err("only explicit dry uncased horizontal Belt states are supported".into());
     }
+    if state.name == "create:deployer"
+        && ["facing", "axis_along_first"]
+            .iter()
+            .any(|key| !state.properties.contains_key(*key))
+    {
+        return Err("a Deployer requires explicit facing and axis_along_first properties".into());
+    }
     if !valid_id(&state.name) {
         return Err(format!("invalid namespaced block ID {:?}", state.name));
     }
@@ -555,6 +562,7 @@ fn transform_state(
         "create:flywheel" => (&["axis"], Some("axis")),
         "create:creative_motor" | "create:mechanical_press" => (&["facing"], Some("facing")),
         "create:mechanical_crafter" => (&["facing", "pointing"], Some("facing")),
+        "create:deployer" => (&["facing", "axis_along_first"], Some("facing")),
         "create:belt" => (
             &["facing", "slope", "part", "casing", "waterlogged"],
             Some("facing"),
@@ -633,6 +641,19 @@ fn transform_state(
         };
         state.properties.insert(key.into(), after.into());
     }
+    if state.name == "create:deployer" && options.quarter_turns % 2 != 0 {
+        // DirectionalAxisKineticBlock.rotate toggles this property even when
+        // facing is vertical. Its mirror delegates to a 0° or 180° rotation.
+        let along = state
+            .properties
+            .get_mut("axis_along_first")
+            .ok_or("resolved Deployer has no axis_along_first property")?;
+        *along = match along.as_str() {
+            "true" => "false".into(),
+            "false" => "true".into(),
+            _ => return Err("invalid Deployer axis_along_first property".into()),
+        };
+    }
     Ok(state)
 }
 
@@ -691,6 +712,56 @@ fn validate_crafter_source(raw: &Compound) -> Result<(), String> {
         }
     }
     Ok(())
+}
+
+fn validate_deployer_source(raw: &Compound) -> Result<(), String> {
+    let empty_compound = |key| {
+        raw.get(key)
+            .is_none_or(|tag| matches!(tag, Tag::Compound(values) if values.is_empty()))
+    };
+    let empty_list = |key| {
+        raw.get(key)
+            .is_none_or(|tag| matches!(tag, Tag::List { values, .. } if values.is_empty()))
+    };
+    for (key, valid) in [
+        ("Mode", raw.get("Mode").and_then(Tag::as_str) == Some("USE")),
+        (
+            "State",
+            raw.get("State")
+                .is_none_or(|tag| tag.as_str() == Some("WAITING")),
+        ),
+        (
+            "Timer",
+            raw.get("Timer")
+                .is_none_or(|tag| matches!(tag, Tag::Int(-511..=5120))),
+        ),
+        (
+            "Powered",
+            raw.get("Powered").is_none_or(|tag| *tag == Tag::Byte(0)),
+        ),
+        (
+            "Speed",
+            raw.get("Speed")
+                .is_none_or(|tag| matches!(tag, Tag::Float(bits) if f32::from_bits(*bits) == 0.0)),
+        ),
+        ("Inventory", empty_list("Inventory")),
+        ("Overflow", empty_list("Overflow")),
+        ("HeldItem", empty_compound("HeldItem")),
+        ("Filter", empty_compound("Filter")),
+        ("Source", !raw.contains_key("Source")),
+        ("Network", !raw.contains_key("Network")),
+        ("Sequence", !raw.contains_key("Sequence")),
+    ] {
+        if !valid {
+            return Err(format!(
+                "only empty inactive Deployer use mode is supported ({key})"
+            ));
+        }
+    }
+    match (raw.get("Filter"), raw.get("FilterAmount"), raw.get("UpTo")) {
+        (None, None, None) | (Some(_), Some(Tag::Int(1..=64)), Some(Tag::Byte(0 | 1))) => Ok(()),
+        _ => Err("invalid Deployer FilterAmount or UpTo safe data".into()),
+    }
 }
 
 /// The horizontal direction of a supported, explicit source Belt state.
@@ -1006,6 +1077,12 @@ pub fn preflight(
                 fail(format!("{path}.nbt"), Some(pos), message);
                 continue;
             }
+            if prepared.state.name == "create:deployer"
+                && let Err(message) = validate_deployer_source(raw)
+            {
+                fail(format!("{path}.nbt"), Some(pos), message);
+                continue;
+            }
             if raw.get("id").and_then(Tag::as_str) != Some(be_schema.id.as_str()) {
                 fail(
                     format!("{path}.nbt.id"),
@@ -1064,6 +1141,10 @@ pub fn preflight(
                         (prepared.state.name.as_str(), key.as_str()),
                         ("create:creative_motor", "ScrollValue")
                             | ("create:mechanical_crafter", "ConnectedInput")
+                            | (
+                                "create:deployer",
+                                "Mode" | "Filter" | "FilterAmount" | "UpTo"
+                            )
                     )
                 })
             {

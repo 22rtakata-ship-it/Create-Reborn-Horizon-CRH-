@@ -257,6 +257,8 @@ with the systems they depend on.
   eight-block Flywheel and Press layout runs in all four directions in both games.
 - [x] Bounded horizontal mirrors before rotation. All eight combinations
   preserve the original supported states, motor settings and production.
+- [x] Empty inactive Deployers in USE mode, including all 144 orientation
+  and transform combinations and atomic refusal of unsafe source or destination data.
 - [ ] Rotate and mirror the remaining blocks, block entities and entities.
 - [ ] Original Schematic and Quill, preview, UI, deployment and Schematicannon.
 - [x] Core captures connected blocks with host-provided attachment rules and

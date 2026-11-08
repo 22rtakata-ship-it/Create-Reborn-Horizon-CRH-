@@ -38,6 +38,29 @@ impl Resolver for Registry {
                 );
                 be = Some(schema);
             }
+            "create:deployer" => {
+                defaults.extend([("facing", "down"), ("axis_along_first", "true")]);
+                let mut schema = BlockEntitySchema::new("create:deployer");
+                schema.safe_fields.extend([
+                    ("Mode".into(), TagKind::String),
+                    ("Filter".into(), TagKind::Compound),
+                    ("FilterAmount".into(), TagKind::Int),
+                    ("UpTo".into(), TagKind::Byte),
+                ]);
+                schema.discarded_fields.extend(
+                    [
+                        "State",
+                        "Timer",
+                        "Powered",
+                        "Speed",
+                        "Inventory",
+                        "HeldItem",
+                        "Overflow",
+                    ]
+                    .map(str::to_owned),
+                );
+                be = Some(schema);
+            }
             "create:belt" => {
                 defaults.extend([
                     ("facing", "north"),
@@ -433,6 +456,120 @@ fn crafter_links_and_live_fields_are_rejected_before_any_plan() {
         let issues = preflight(&schematic, &Registry, &Options::default()).unwrap_err();
         assert!(
             issues.iter().any(|issue| issue.message.contains(message)),
+            "{issues:?}"
+        );
+    }
+}
+
+fn deployer_fixture(facing: &str, axis: &str) -> Schematic {
+    let safe = Compound::from([
+        ("id".into(), Tag::String("create:deployer".into())),
+        ("Mode".into(), Tag::String("USE".into())),
+        ("Filter".into(), Tag::Compound(Compound::new())),
+        ("FilterAmount".into(), Tag::Int(23)),
+        ("UpTo".into(), Tag::Byte(0)),
+        ("State".into(), Tag::String("WAITING".into())),
+        ("Timer".into(), Tag::Int(500)),
+        ("Speed".into(), Tag::Float(0)),
+        ("Powered".into(), Tag::Byte(0)),
+        ("HeldItem".into(), Tag::Compound(Compound::new())),
+        ("Inventory".into(), Tag::list(TagKind::Compound, Vec::new())),
+        ("Overflow".into(), Tag::list(TagKind::Compound, Vec::new())),
+    ]);
+    Schematic {
+        data_version: SOURCE_DATA_VERSION,
+        size: [2, 1, 3],
+        palettes: vec![vec![state(
+            "create:deployer",
+            &[("facing", facing), ("axis_along_first", axis)],
+        )]],
+        blocks: vec![Block {
+            relative_pos: [1, 0, 2],
+            state_index: 0,
+            block_entity: Some(safe),
+        }],
+        entities: Vec::new(),
+    }
+}
+
+#[test]
+fn deployer_rotation_toggles_both_shaft_choices_for_all_six_facings() {
+    let facings = ["north", "east", "south", "west", "up", "down"];
+    for (direction, facing) in facings.into_iter().enumerate() {
+        for axis in ["true", "false"] {
+            let schematic = deployer_fixture(facing, axis);
+            let source = schematic.blocks[0].block_entity.as_ref().unwrap();
+            let safe = ["Mode", "Filter", "FilterAmount", "UpTo"]
+                .map(|key| (key.into(), source[key].clone()));
+            for (mirror, reflect) in [
+                (Mirror::None, [0, 1, 2, 3, 4, 5]),
+                (Mirror::LeftRight, [2, 1, 0, 3, 4, 5]),
+                (Mirror::FrontBack, [0, 3, 2, 1, 4, 5]),
+            ] {
+                for quarter_turns in 0..=3 {
+                    let mirrored = reflect[direction];
+                    let placed = if mirrored < 4 {
+                        facings[(mirrored + usize::from(quarter_turns)) % 4]
+                    } else {
+                        facing
+                    };
+                    let options = Options {
+                        mirror,
+                        quarter_turns,
+                        ..Options::default()
+                    };
+                    let plan = preflight(&schematic, &Registry, &options).unwrap();
+                    let block = &plan.blocks[0];
+                    assert_eq!(block.state.properties["facing"], placed);
+                    assert_eq!(
+                        block.state.properties["axis_along_first"],
+                        ((axis == "true") ^ (quarter_turns % 2 != 0)).to_string()
+                    );
+                    assert_eq!(
+                        block.block_entity.as_ref().unwrap().data,
+                        Compound::from(safe.clone())
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn deployer_requires_explicit_orientation_and_refuses_live_or_nonempty_data() {
+    let mut missing = deployer_fixture("up", "true");
+    missing.palettes[0][0].properties.remove("axis_along_first");
+    assert!(preflight(&missing, &Registry, &Options::default()).is_err());
+
+    let stack = Compound::from([("id".into(), Tag::String("minecraft:stick".into()))]);
+    for (key, value) in [
+        ("Mode", Tag::String("PUNCH".into())),
+        ("State", Tag::String("EXPANDING".into())),
+        ("Speed", Tag::Float(16f32.to_bits())),
+        ("Powered", Tag::Byte(1)),
+        ("HeldItem", Tag::Compound(stack.clone())),
+        (
+            "Inventory",
+            Tag::list(TagKind::Compound, vec![Tag::Compound(stack.clone())]),
+        ),
+        (
+            "Overflow",
+            Tag::list(TagKind::Compound, vec![Tag::Compound(stack.clone())]),
+        ),
+        ("Filter", Tag::Compound(stack)),
+        ("Source", Tag::IntArray(vec![0, 0, 0])),
+        ("Network", Tag::Compound(Compound::new())),
+        ("FilterAmount", Tag::Int(0)),
+    ] {
+        let mut schematic = deployer_fixture("down", "false");
+        schematic.blocks[0]
+            .block_entity
+            .as_mut()
+            .unwrap()
+            .insert(key.into(), value);
+        let issues = preflight(&schematic, &Registry, &Options::default()).unwrap_err();
+        assert!(
+            issues.iter().any(|issue| issue.message.contains(key)),
             "{issues:?}"
         );
     }

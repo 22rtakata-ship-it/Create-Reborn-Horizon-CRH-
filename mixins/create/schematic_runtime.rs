@@ -277,6 +277,25 @@ impl Resolver for Registry<'_, '_> {
                             .map(str::to_owned),
                     );
                 }
+                "create:deployer" => {
+                    schema.safe_fields.extend([
+                        ("Mode".into(), TagKind::String),
+                        ("Filter".into(), TagKind::Compound),
+                        ("FilterAmount".into(), TagKind::Int),
+                        ("UpTo".into(), TagKind::Byte),
+                    ]);
+                    schema.discarded_fields.extend(
+                        [
+                            "State",
+                            "Timer",
+                            "Powered",
+                            "Inventory",
+                            "HeldItem",
+                            "Overflow",
+                        ]
+                        .map(str::to_owned),
+                    );
+                }
                 "create:belt" => {
                     // Java clears kinetic/chain data on paste. Complete
                     // chains regenerate controller, index and empty inventory.
@@ -542,6 +561,31 @@ fn belt_destination(game: &Game<'_>, block: &BlockState, pos: [i32; 3]) -> Optio
     None
 }
 
+fn protected_deployer(game: &Game<'_>, [x, y, z]: [i32; 3]) -> bool {
+    let Some(BlockEntity::Mod(entity)) = game.world.block_entities.get(&(x, y, z)) else {
+        return true;
+    };
+    let field = |key: &str| entity.nbt.get(&key.into());
+    entity.id != super::create_port_deployer::BLOCK
+        || entity.items.iter().any(Option::is_some)
+        || field("Mode") != Some(&WorldTag::String("USE".into()))
+        || field("State").is_some_and(|tag| *tag != WorldTag::String("WAITING".into()))
+        || field("Powered").is_some_and(|tag| *tag != WorldTag::Byte(0))
+        || field("Speed")
+            .is_some_and(|tag| !matches!(tag, WorldTag::Float(v) if f32::from_bits(*v) == 0.0))
+        || field("create_horizon")
+            .and_then(|tag| tag.get("TheoreticalSpeed"))
+            .is_some_and(|tag| !matches!(tag, WorldTag::Float(v) if f32::from_bits(*v) == 0.0))
+        || ["HeldItem", "Filter"].into_iter().any(|key| {
+            field(key)
+                .is_some_and(|tag| !matches!(tag, WorldTag::Compound(values) if values.is_empty()))
+        })
+        || ["Inventory", "Overflow"].into_iter().any(|key| {
+            field(key)
+                .is_some_and(|tag| !matches!(tag, WorldTag::List(values) if values.is_empty()))
+        })
+}
+
 fn destination(game: &Game<'_>, plan: &Plan, origin: [i32; 3]) -> Result<Vec<Write>, Value> {
     let registry = Registry { game };
     let (min_y, height) = game.native_world_height();
@@ -598,11 +642,31 @@ fn destination(game: &Game<'_>, plan: &Plan, origin: [i32; 3]) -> Result<Vec<Wri
                 continue;
             }
         };
+        let old = game.world.block(pos[0], pos[1], pos[2]);
+        if old != state
+            && block.state.name == super::create_port_deployer::BLOCK
+            && game.native_block(pos) == super::create_port_deployer::BLOCK
+            && protected_deployer(game, pos)
+        {
+            issues.push(json!({"path":"destination","pos":pos,
+                "message":"cannot replace an occupied or active Deployer"}));
+            continue;
+        }
         let nbt = block.block_entity.as_ref().map(|be| {
-            let mut data = if be.id == super::create_port_saw_processing::crafter::BLOCK {
-                super::create_port_saw_processing::crafter::default_nbt()
-            } else {
-                WorldCompound::new()
+            let mut data = match be.id.as_str() {
+                super::create_port_saw_processing::crafter::BLOCK => {
+                    super::create_port_saw_processing::crafter::default_nbt()
+                }
+                super::create_port_deployer::BLOCK => {
+                    let mut data = super::create_port_deployer::default_nbt();
+                    data.extend([
+                        ("Filter".into(), WorldTag::Compound(WorldCompound::new())),
+                        ("FilterAmount".into(), WorldTag::Int(64)),
+                        ("UpTo".into(), WorldTag::Byte(1)),
+                    ]);
+                    data
+                }
+                _ => WorldCompound::new(),
             };
             data.extend(world_compound(&be.data));
             data.insert("id".into(), WorldTag::String(be.id.as_str().into()));
@@ -615,7 +679,7 @@ fn destination(game: &Game<'_>, plan: &Plan, origin: [i32; 3]) -> Result<Vec<Wri
             pos,
             state,
             nbt,
-            old: game.world.block(pos[0], pos[1], pos[2]),
+            old,
             old_entity: game
                 .world
                 .block_entities
