@@ -724,30 +724,29 @@ pub(super) fn client_tick(game: &mut Game<'_>) {
     if !run {
         return;
     }
+    use super::create_port_saw_processing::crafter;
+
     let entries: Vec<_> = game
         .world
         .block_entities
         .iter()
-        .filter_map(|(&(x, y, z), e)| {
-            let BlockEntity::Mod(e) = e else {
+        .filter_map(|(&(x, y, z), entry)| {
+            let BlockEntity::Mod(entity) = entry else {
                 return None;
             };
-            if !e.id.starts_with("create:") {
-                return None;
+            match entity.id.as_str() {
+                "create:encased_fan" => Some(([x, y, z], super::create_port_fan::synced_current(entity))),
+                crafter::BLOCK => Some(([x, y, z], None)),
+                _ => None,
             }
-            Some((
-                [x, y, z],
-                if e.id == "create:encased_fan" {
-                    super::create_port_fan::synced_current(e)
-                } else {
-                    None
-                },
-            ))
         })
         .collect();
     let mut flows = BTreeMap::new();
     for (pos, current) in entries {
         let Some(current) = current else {
+            if game.native_block(pos) == crafter::BLOCK {
+                crafter::client_particles(game, pos);
+            }
             continue;
         };
         if game.native_block_property(pos, "facing").as_deref() != Some(current.facing.name()) {

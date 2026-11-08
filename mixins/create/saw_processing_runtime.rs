@@ -31,6 +31,7 @@ pub(super) mod crafter {
         BlockEntity, BlockEntityDraw, Compound, Game, ItemStack, ModBlockEntity, Pos, Tag,
         Transported, belt, create,
     };
+    use crate::particles::{ParticleOptions, ParticleType};
     use create_engine::{
         crafter::{self, Cycle, GroupedItems, Layout, Phase, Pointing, Tick},
         kinetics::Axis,
@@ -45,6 +46,9 @@ pub(super) mod crafter {
     const GROUPED: &str = "GroupedItems";
     const PHASE: &str = "Phase";
     const COUNTDOWN: &str = "CountDown";
+    const ANIMATION_TIME: &str = "CreateHorizonCrafterTime";
+    const CLIENT_INPUTS: &str = "CreateHorizonCrafterInputs";
+    const TIME_SLOT: usize = 2;
 
     fn layout(game: &Game<'_>, pos: Pos) -> Option<Layout> {
         if game.native_block(pos) != BLOCK {
@@ -90,7 +94,11 @@ pub(super) mod crafter {
     }
 
     fn grid(nbt: &Compound) -> GroupedItems<ItemStack> {
-        let Some(Tag::List(rows)) = nbt.get(&GROUPED.into()).and_then(|tag| tag.get("Grid")) else {
+        read_grid(nbt.get(&GROUPED.into()))
+    }
+
+    fn read_grid(tag: Option<&Tag>) -> GroupedItems<ItemStack> {
+        let Some(Tag::List(rows)) = tag.and_then(|tag| tag.get("Grid")) else {
             return GroupedItems::default();
         };
         GroupedItems {
@@ -517,6 +525,100 @@ pub(super) mod crafter {
         }
     }
 
+    fn stamp_animation(entity: &mut ModBlockEntity, tick: i64) {
+        if entity.data.len() <= TIME_SLOT {
+            entity.data.resize(TIME_SLOT + 1, 0);
+        }
+        entity.data[TIME_SLOT] = tick as i32;
+    }
+
+    pub(in crate::game) fn render_update(entity: &ModBlockEntity, snapshot: &mut Compound) {
+        if let Some(&tick) = entity.data.get(TIME_SLOT) {
+            snapshot.insert(ANIMATION_TIME.into(), Tag::Int(tick));
+        }
+    }
+
+    fn elapsed_ticks(entity: &ModBlockEntity, time: i64) -> i32 {
+        match entity.nbt.get(&ANIMATION_TIME.into()) {
+            Some(Tag::Int(tick)) => (time as i32).wrapping_sub(*tick).max(0),
+            _ => 0,
+        }
+    }
+
+    fn export_particle(game: &mut Game<'_>, pos: Pos, layout: Layout) {
+        let facing = layout.facing.vector();
+        let target = layout.target_direction().vector();
+        let at = std::array::from_fn(|i| {
+            f64::from(pos[i]) + 0.5 + 0.75 * f64::from(facing[i]) + f64::from(target[i])
+        });
+        game.with_level(|_, level, _| {
+            level.native_send_particles(
+                &ParticleOptions::simple(ParticleType::Crit),
+                None,
+                at,
+                [0.0; 3],
+                0.0,
+                0,
+            );
+        });
+    }
+
+    pub(in crate::game) fn client_particles(game: &mut Game<'_>, pos: Pos) {
+        let Some(layout) = layout(game, pos) else {
+            return;
+        };
+        let Some(entity) = entity(game, pos) else {
+            return;
+        };
+        if !entity.nbt.contains_key(&CLIENT_INPUTS.into()) {
+            return;
+        }
+        let state = cycle(&entity.nbt);
+        let elapsed = elapsed_ticks(entity, game.world.game_time);
+        let speed = crafter::countdown_speed(create::running_speed(game, &entity.nbt));
+        if state.phase != Phase::Crafting
+            || state
+                .countdown
+                .saturating_sub(elapsed.saturating_mul(speed))
+                >= 1000
+        {
+            return;
+        }
+        let Some(Some(item)) = grid(&entity.nbt).grid.remove(&(0, 0)) else {
+            return;
+        };
+        if let Some(BlockEntity::Mod(entity)) =
+            game.world.block_entities.get_mut(&(pos[0], pos[1], pos[2]))
+        {
+            entity.nbt.remove(&CLIENT_INPUTS.into());
+        }
+        let face = layout.facing.vector().map(f64::from);
+        let center: [f64; 3] = std::array::from_fn(|i| f64::from(pos[i]) + 0.5 + 0.65 * face[i]);
+        let options = game.item_particle(&item);
+        // The original computes one unused random offset before the burst.
+        for _ in 0..3 {
+            game.world.random.next_float();
+        }
+        for _ in 0..10 {
+            let sample: [f64; 3] = std::array::from_fn(|i| {
+                f64::from((game.world.random.next_float() - 0.5) * 0.25) * (1.0 - face[i].abs())
+            });
+            let length = sample
+                .iter()
+                .map(|coordinate| coordinate * coordinate)
+                .sum::<f64>()
+                .sqrt();
+            let offset = if length < 1.0e-4 {
+                [0.0; 3]
+            } else {
+                sample.map(|coordinate| coordinate * 0.25 / length)
+            };
+            let at = std::array::from_fn(|i| center[i] + offset[i]);
+            game.particles
+                .add(&options, at, offset.map(|coordinate| coordinate * 0.35));
+        }
+    }
+
     fn powered_edge(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity) -> bool {
         let dimension = game.dim.id().to_owned();
         let powered = game.native_neighbor_signal(&dimension, pos) > 0;
@@ -601,6 +703,12 @@ pub(super) mod crafter {
             start(game, pos, Some(entity), true);
         }
         let mut state = cycle(&entity.nbt);
+        if matches!(
+            state.phase,
+            Phase::Assembling | Phase::Exporting | Phase::Crafting
+        ) {
+            stamp_animation(entity, game.world.game_time);
+        }
         if state.phase == Phase::Inserting {
             let target = outlet(game, pos, layout_here);
             return (lazy || matches!(target, Some(Outlet::Depot)))
@@ -665,6 +773,7 @@ pub(super) mod crafter {
                 });
                 game.native_block_entity_sync(at);
                 if !empty {
+                    export_particle(game, pos, layout_here);
                     crate::game::create_port_sounds::crafter_click(
                         game,
                         pos,
@@ -727,11 +836,6 @@ pub(super) mod crafter {
         draw.pop();
 
         let running = cycle(&entity.nbt);
-        let grouped = if running.phase == Phase::Idle {
-            GroupedItems::single(entity.items.first().cloned().flatten())
-        } else {
-            grid(&entity.nbt)
-        };
         if !matches!(running.phase, Phase::Crafting | Phase::Inserting)
             && (running.phase != Phase::Idle || create::integer(&entity.nbt, "Cover") != 0)
         {
@@ -741,15 +845,13 @@ pub(super) mod crafter {
             game.native_draw_model(draw, &format!("{base}lid"), 0xFFFFFF);
             draw.pop();
         }
-        if running.phase == Phase::Crafting && running.countdown >= 1000 {
-            return;
-        }
+
+        let elapsed = elapsed_ticks(entity, draw.game_time);
+        let remaining = running.countdown as f32
+            - crafter::countdown_speed(create::running_speed(game, &entity.nbt)) as f32
+                * (elapsed as f32 + draw.partial);
         let advance = if running.phase == Phase::Exporting {
-            let progress = ((1000 - running.countdown) as f32
-                + crafter::countdown_speed(create::running_speed(game, &entity.nbt)) as f32
-                    * draw.partial)
-                / 1000.0;
-            0.75 * progress.clamp(0.0, 1.0)
+            0.75 * ((1000.0 - remaining) / 1000.0).clamp(0.0, 1.0)
         } else {
             0.0
         };
@@ -762,24 +864,103 @@ pub(super) mod crafter {
             1.08,
         ]);
         draw.scale([0.5; 3]);
-        for ((x, y), stack) in grouped.grid {
-            let Some(stack) = stack else { continue };
-            draw.push();
-            draw.translate([
-                x as f32 * 0.5,
-                y as f32 * 0.5,
-                (x as f32 + y as f32 * 3.0) / 1024.0,
-            ]);
-            game.native_draw_item(
-                draw,
-                &stack,
-                horizon_assets::item_model::DisplayContext::Fixed,
-                None,
-                0,
-            );
-            draw.pop();
+        match running.phase {
+            Phase::Idle => {
+                if let Some(Some(stack)) = entity.items.first() {
+                    draw.translate([0.0, 0.0, -1.0 / 256.0]);
+                    draw_stack(game, draw, stack);
+                }
+            }
+            Phase::Crafting => draw_craft(game, entity, draw, remaining),
+            phase => {
+                let grid = grid(&entity.nbt);
+                let depth = if phase == Phase::Exporting {
+                    match state.pointing {
+                        Pointing::Up => -9.0,
+                        Pointing::Left => 18.0,
+                        Pointing::Right => -18.0,
+                        Pointing::Down => 9.0,
+                    }
+                } else {
+                    0.0
+                };
+                draw_group(game, draw, &grid, 0.5, depth, phase == Phase::Inserting);
+            }
         }
         draw.pop();
+    }
+
+    fn draw_stack(game: &Game<'_>, draw: &mut BlockEntityDraw, stack: &ItemStack) {
+        game.native_draw_item(
+            draw,
+            stack,
+            horizon_assets::item_model::DisplayContext::Fixed,
+            None,
+            0,
+        );
+    }
+
+    fn draw_group(
+        game: &Game<'_>,
+        draw: &mut BlockEntityDraw,
+        grid: &GroupedItems<ItemStack>,
+        spacing: f32,
+        depth: f32,
+        only_center: bool,
+    ) {
+        for (&(x, y), stack) in &grid.grid {
+            let Some(stack) = stack else { continue };
+            if only_center && (x, y) != (0, 0) {
+                continue;
+            }
+            draw.push();
+            draw.translate([
+                x as f32 * spacing,
+                y as f32 * spacing,
+                (x as f32 + y as f32 * 3.0 + depth) / 1024.0,
+            ]);
+            draw_stack(game, draw, stack);
+            draw.pop();
+        }
+    }
+
+    fn draw_craft(
+        game: &Game<'_>,
+        entity: &ModBlockEntity,
+        draw: &mut BlockEntityDraw,
+        remaining: f32,
+    ) {
+        let pose = crafter::craft_pose(remaining);
+        if pose.input_scale > 0.0 {
+            let inputs = read_grid(entity.nbt.get(&CLIENT_INPUTS.into()));
+            let (min, max) =
+                inputs
+                    .grid
+                    .keys()
+                    .fold(([0; 2], [0; 2]), |(mut min, mut max), &(x, y)| {
+                        min[0] = min[0].min(x);
+                        min[1] = min[1].min(y);
+                        max[0] = max[0].max(x);
+                        max[1] = max[1].max(y);
+                        (min, max)
+                    });
+            draw.push();
+            draw.scale([pose.input_scale; 3]);
+            draw.translate([
+                -0.25 * (min[0] as f32 + max[0] as f32) * pose.center,
+                -0.25 * (min[1] as f32 + max[1] as f32) * pose.center,
+                0.0,
+            ]);
+            draw_group(game, draw, &inputs, pose.spacing, 0.0, false);
+            draw.pop();
+        }
+        if pose.result_scale > 0.0
+            && let Some(Some(stack)) = grid(&entity.nbt).grid.get(&(0, 0))
+        {
+            draw.rotate_about([0.0, 0.0, 1.0], pose.result_angle, [0.0; 3]);
+            draw.scale([pose.result_scale; 3]);
+            draw_stack(game, draw, stack);
+        }
     }
 }
 

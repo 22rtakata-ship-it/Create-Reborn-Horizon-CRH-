@@ -382,6 +382,32 @@ impl Cycle {
     }
 }
 
+/// MechanicalCrafterRenderer's two overlapping half-cycle poses.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct CraftPose {
+    pub input_scale: f32,
+    pub center: f32,
+    pub spacing: f32,
+    pub result_scale: f32,
+    pub result_angle: f32,
+}
+
+pub fn craft_pose(remaining: f32) -> CraftPose {
+    let input_progress = ((2000.0 - remaining) / 1000.0).clamp(0.0, 1.0);
+    let result_progress = ((1000.0 - remaining) / 1000.0).clamp(0.0, 1.0);
+    let early = |progress: f32| (progress * 2.0).clamp(0.0, 1.0);
+    let late = |progress: f32| (progress * 2.0 - 1.0).clamp(0.0, 1.0);
+    CraftPose {
+        input_scale: 1.0 - late(input_progress),
+        center: early(input_progress),
+        spacing: 0.5 + (-4.0 * (input_progress - 0.5).powi(2) + 1.0) * 0.25,
+        result_scale: early(result_progress)
+            * 1.125
+            * (1.0 + (1.0 - late(result_progress)) * 0.125),
+        result_angle: early(result_progress) * 720.0,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -392,6 +418,33 @@ mod tests {
             facing: Direction::South,
             pointing,
         }
+    }
+
+    #[test]
+    fn craft_pose_centers_and_shrinks_the_input_then_spins_and_grows_the_result() {
+        assert_eq!(
+            [2000., 1750., 1500., 1250., 1000., 750., 500., 250., 0.].map(|remaining| {
+                let pose = craft_pose(remaining);
+                [
+                    pose.input_scale,
+                    pose.center,
+                    pose.spacing,
+                    pose.result_scale,
+                    pose.result_angle,
+                ]
+            }),
+            [
+                [1., 0., 0.5, 0., 0.],
+                [1., 0.5, 0.6875, 0., 0.],
+                [1., 1., 0.75, 0., 0.],
+                [0.5, 1., 0.6875, 0., 0.],
+                [0., 1., 0.5, 0., 0.],
+                [0., 1., 0.5, 0.6328125, 360.],
+                [0., 1., 0.5, 1.265625, 720.],
+                [0., 1., 0.5, 1.1953125, 720.],
+                [0., 1., 0.5, 1.125, 720.],
+            ],
+        );
     }
 
     #[test]

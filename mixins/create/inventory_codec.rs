@@ -135,6 +135,20 @@ pub fn receive(entity: &mut ModBlockEntity, packet_type: &str, block: &str, tag:
     let Some(items) = parse_slots(packet_type, tag) else {
         return false;
     };
+    if packet_type == "create:mechanical_crafter"
+        && let Some(phase) = tag.get("Phase")
+    {
+        // MechanicalCrafterBlockEntity.read(clientPacket) retains the prior
+        // grouped input for rendering the crafting phase. It is client-only.
+        let preview = "CreateHorizonCrafterInputs".into();
+        if phase != &Tag::String("CRAFTING".into()) {
+            entity.nbt.remove(&preview);
+        } else if entity.nbt.get(&"Phase".into()) != Some(phase)
+            && let Some(before) = entity.nbt.get(&"GroupedItems".into()).cloned()
+        {
+            entity.nbt.insert(preview, before);
+        }
+    }
     if entity.items != items {
         entity.items = items;
     }

@@ -1477,6 +1477,9 @@ pub(super) fn update_tag(entity: &ModBlockEntity, tag: &mut Option<Compound>) {
         && tag.is_none()
     {
         let mut snapshot = entity.nbt.clone();
+        if entity.id == crafter::BLOCK {
+            crafter::render_update(entity, &mut snapshot);
+        }
         super::create_port_belt::dye_update(entity, &mut snapshot);
         if entity.id == "create:depot"
             && inventory_supported(entity)
