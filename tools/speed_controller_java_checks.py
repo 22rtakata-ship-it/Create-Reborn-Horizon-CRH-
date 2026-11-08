@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 # Copyright (c) 2026 create-horizon contributors
 # SPDX-License-Identifier: MIT
-"""Record Create 6.0.10 speed controller port, source and tick behavior.
+"""Record Create 6.0.10 speed controller ports, source order and live settings.
 
 The isolated Java bridge captures actual block state and kinetic NBT during
 ordinary server ticks. The report retains commands, probe coordinates and tick
-indices for replay when the native controller is available. A placed setting
-uses ScrollValue NBT; this fixture does not drive the settings screen.
+indices for replay when the native controller is available. Distinguish saved
+ScrollValue, a raw NBT edit and a real setting from the value board.
 """
+import argparse
 import hashlib
 import json
 from pathlib import Path
@@ -140,6 +141,140 @@ def cases(host):
             yield dict(name=f'{first}_first_shaft_{shaft_speed}', positions=positions, phases=phases)
 
 
+def latest(phase):
+    return phase['samples'][-1]['blocks']
+
+
+def network_field(block, name):
+    return number({'nbt': block['network'] or ''}, name)
+
+
+def network_id(block):
+    return re.search(r'\bId:(-?\d+)L', block['network']).group(1)
+
+
+def check_shared_stress(phase, powered, shaft_rpm, cog_rpm, previous_stress=None):
+    for sample in phase['samples']:
+        blocks = sample['blocks']
+        controller = blocks['controller']
+        group = network_id(controller)
+        stress = (abs(shaft_rpm) + abs(cog_rpm)) * 4
+        if sample['tick'] == 0 and previous_stress is not None:
+            stress = previous_stress
+        assert controller['rpm'] == shaft_rpm and blocks['cog']['rpm'] == cog_rpm, blocks
+        assert network_field(controller, 'Stress') == stress, blocks
+        assert network_field(controller, 'Capacity') == 32 * 16384, blocks
+        assert controller['source'] == ('cog' if powered == 'cog' else 'shaft_in'), blocks
+        for side, rpm in [('shaft', shaft_rpm), ('cog', cog_rpm)]:
+            load = blocks['load_' + side]
+            assert load['rpm'] == rpm, (side, blocks)
+            if rpm:
+                assert network_id(load) == group and network_field(load, 'Stress') == stress, blocks
+            else:
+                assert load['network'] is None, blocks
+
+
+def set_live_value(host, work, row, raw):
+    x, y, z = CENTER
+    host.command('gamemode creative')
+    host.command('item replace entity @s weapon.mainhand with minecraft:air')
+    host.call('camera', {'position': [x + .5, y, z + 3.7], 'target': [x + .5, y + 11 / 16, z + 1]})
+    host.call('capture', {'name': f'{work.name}/controller-aim-{row}-{raw}.png', 'frames': 6})
+    hit = host.call('state', {})['hit']
+    assert hit['pos'] == list(CENTER) and hit['face'] == 'south', hit
+    host.call('input', {'key': 'use', 'down': True})
+    try:
+        for _ in range(6):
+            host.call('capture', {'name': f'{work.name}/controller-board-{row}-{raw}.png', 'frames': 12})
+            ui = host.call('ui', {})
+            if 'value_settings' in ui:
+                break
+        board = ui['value_settings']
+        assert board['title']['text'] == 'Targeted Speed in RPM', board
+        assert board['max_value'] == 256 and board['milestone_interval'] == 32, board
+        assert [option['text'] for option in board['rows']] == ['⟳', '⟲'], board
+        point = next(value for value in board['sample_coordinates']
+                     if (value['row'], value['value']) == (row, raw))
+        x, y = point['gui_coordinate']
+        host.call('input', {'kind': 'move', 'x': x, 'y': y})
+        host.call('capture', {'name': f'{work.name}/controller-setting-{row}-{raw}.png', 'frames': 6})
+        hovered = host.call('ui', {})['value_settings']['hovered']
+        assert (hovered['row'], hovered['value']) == (row, raw), hovered
+        host.call('input', {'kind': 'mouse', 'button': 1, 'x': x, 'y': y, 'down': False})
+    finally:
+        host.call('input', {'key': 'use', 'down': False})
+    expected = max(1, raw) * (1 if row == 1 else -1)
+    for _ in range(4):
+        host.call('capture', {'name': f'{work.name}/controller-saved-{row}-{raw}.png', 'frames': 8})
+        saved = host.call('block', {'pos': CENTER})
+        if number(saved, 'ScrollValue') == expected:
+            break
+    else:
+        raise AssertionError(saved)
+    return {'title': board['title'], 'max_value': board['max_value'], 'rows': board['rows'],
+            'initial': board['initial'], 'selected': hovered}
+
+
+def stress_cases(host, work, report):
+    for side in ('cog', 'shaft'):
+        for setting in (24, 0):
+            positions, layout, shaft_axis, cog_axis = fixture(0, target=setting)
+            positions['load_shaft'] = offset(CENTER, shaft_axis, 2)
+            positions['load_cog'] = offset(positions['cog'], cog_axis, 1)
+            layout.extend([
+                put(positions['load_shaft'], 'create:mechanical_drill[facing=east]'),
+                put(positions['load_cog'], 'create:mechanical_drill[facing=south]'),
+            ])
+            use_board = side == 'shaft' and setting == 24
+            if use_board:
+                layout.extend([
+                    put(positions['wrong_face'], AIR),
+                    'fill 1654 179 648 1656 179 651 minecraft:smooth_stone',
+                ])
+            power_axis = cog_axis if side == 'cog' else shaft_axis
+            setup = [*layout, put(positions['motor_' + side], motor(power_axis, 32))]
+            phases = {}
+            active = dict(name=f'{side}_load_target_{setting}', positions=positions, phases=phases)
+            report['active'] = active
+            phases['connected'] = sample(host, positions, setup)
+            shaft_rpm, cog_rpm = (setting, 32) if side == 'cog' else (32, setting)
+            check_shared_stress(phases['connected'], side, shaft_rpm, cog_rpm)
+            if use_board:
+                phases['raw_edit'] = sample(host, positions, [
+                    f'data merge block {xyz(CENTER)} {{ScrollValue:64}}',
+                ], immediate=True)
+                for observed in phases['raw_edit']['samples']:
+                    edited = observed['blocks']
+                    assert edited['controller']['scroll'] == 64, edited
+                    assert edited['controller']['rpm'] == 0 and edited['controller']['source'] is None, edited
+                    assert edited['controller']['network'] is None, edited
+                    assert (edited['load_shaft']['rpm'], edited['load_cog']['rpm']) == (32, 24), edited
+                phases['reset_after_raw_edit'] = sample(host, positions, setup)
+                check_shared_stress(phases['reset_after_raw_edit'], side, 32, 24)
+                phases['gui_reverse'] = dict(board=set_live_value(host, work, 0, 32),
+                                             **sample(host, positions, [], immediate=True))
+                reverse = latest(phases['gui_reverse'])
+                assert reverse['controller']['scroll'] == -32, reverse
+                check_shared_stress(phases['gui_reverse'], side, 32, -32, previous_stress=224)
+                phases['gui_minimum'] = dict(board=set_live_value(host, work, 1, 0),
+                                             **sample(host, positions, [], immediate=True))
+                minimum = latest(phases['gui_minimum'])
+                assert minimum['controller']['scroll'] == 1, minimum
+                check_shared_stress(phases['gui_minimum'], side, 32, 1, previous_stress=256)
+            yield active
+            report.pop('active')
+
+    positions, layout, _, cog_axis = fixture(0, wheel=None, target=24)
+    phases = {'connected': sample(host, positions, [
+        *layout, put(positions['cog'], 'create:andesite_encased_large_cogwheel[axis=z,bottom_shaft=true]'),
+        put(positions['motor_cog'], motor(cog_axis, 32)),
+    ])}
+    connected = latest(phases['connected'])
+    assert connected['controller']['source'] == 'cog', connected
+    assert [connected[key]['rpm'] for key in ('cog', 'controller', 'shaft_out')] == [32, 24, 24], connected
+    yield dict(name='encased_large_cog_input', positions=positions, phases=phases)
+
+
 def verify(results):
     def at(name, phase, tick=-1):
         samples = results[name]['phases'][phase]['samples']
@@ -147,9 +282,6 @@ def verify(results):
 
     def rpm(blocks, *roles):
         return tuple(blocks[role]['rpm'] for role in roles)
-
-    def network_id(block):
-        return re.search(r'\bId:(-?\d+)L', block['network']).group(1)
 
     for case in results.values():
         for phase in case['phases'].values():
@@ -212,6 +344,9 @@ def verify(results):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--stress-only', action='store_true', help='Run the live stress and settings cases')
+    args = parser.parse_args()
     host = Original()
     work = Path(tempfile.mkdtemp(prefix='speed-controller-java-', dir=ROOT / '.local'))
     report = dict(passed=False, scope=__doc__, create_revision=PINS['create_revision'],
@@ -226,12 +361,17 @@ def main():
         host.command(f'forceload add {FORCE_RANGE}')
         try:
             host.call('observe_ticks', {'ticks': 40, 'positions': [list(map(int, state['position']))]})
-            for case in cases(host):
+            if not args.stress_only:
+                for case in cases(host):
+                    report['cases'].append(case)
+                verify({case['name']: case for case in report['cases']})
+            for case in stress_cases(host, work, report):
                 report['cases'].append(case)
-            verify({case['name']: case for case in report['cases']})
         finally:
             host.command(CLEAR)
             host.command(f'forceload remove {FORCE_RANGE}')
+            host.call('camera', {'position': state['position'], 'yaw': state['yaw'], 'pitch': state['pitch']})
+            host.call('tick', {'frozen': state['server']['frozen']})
         report['passed'] = True
     except BaseException as error:
         report['error'] = repr(error)

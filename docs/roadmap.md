@@ -120,9 +120,14 @@ with the systems they depend on.
   both shaft faces and the perpendicular large cog above. At a target of zero,
   cog input owns the idle controller while its shafts remain outside the
   network. Shaft input still passes through the controller and owns the idle
-  cog. Competing inputs can retain different source ownership depending on
-  connection order. The solver needs directed speed transfer and shared stress
-  accounting across both RPM domains.
+  cog. Competing inputs can retain different owners even when their geometry
+  and RPM match. Removing the same source can then yield different speeds.
+  A real settings-board change publishes the new rotation immediately. The
+  shared stress total reflects both domains on the next tick. The board clamps
+  either direction to at least 1 RPM. A raw `ScrollValue` edit instead clears
+  the controller's own rotation and owner while neighboring drills retain
+  their old speeds during the measured 12 ticks. The solver needs to preserve
+  the source tree and distinguish these events before exposing the block.
 - [x] Windmill Bearing: wool sails, assembly, rear shaft output and restoration.
 - [ ] Complete Windmill controls, sail blocks, Steam Engine, boiler and other stress sources/consumers.
 
