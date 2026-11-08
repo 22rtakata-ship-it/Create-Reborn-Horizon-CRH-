@@ -190,6 +190,9 @@ with the systems they depend on.
 - [x] Dry vertical Andesite Funnel with an ordinary inventory. Verify the
   original stack order, Wrench, extraction cooldown and redstone.
 - [x] Crouched Wrench pickup for the dry vertical Funnel in Survival and Creative.
+- [x] Dry Smart Chute with a plain ghost filter, the default 64-item limit,
+  powered parking and an actual restart.
+- [ ] Smart Chute amount panel, special filters and external insertion.
 - [ ] Funnel dropped-item intake, horizontal and wet placement, Belt Funnels,
   filters, Brass Funnels and their full presentation.
 - [x] Ordinary physical item intake into the Basin and Millstone: original scenes,
@@ -205,9 +208,10 @@ with the systems they depend on.
   other fluids/heated recipes and network scenarios.
 - [x] Downward Crushing Wheels with direct Chute feed, cobblestone and gravel,
   original processing state and cold restart comparisons.
+- [x] Downward Crushing Wheels to a Depot. Compare an occupied top slot,
+  a blocked buffer, partial transfer and component retention after a restart.
 - [ ] Crushing Wheels for free-falling items, entities and other directions.
-  Expand the recipe catalog, output adapters, presentation and the original
-  Mechanical Crafter recipe.
+  Expand the recipe catalog, output destinations and presentation.
 - [ ] Remaining Mechanical Saw, Deployer, Spout, Item Drain, Mechanical Crafter
   and Sand Paper behavior.
 - [ ] Sequenced Assembly, tools/components of incomplete items and random results.

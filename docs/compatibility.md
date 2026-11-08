@@ -66,6 +66,7 @@ implementing each feature, and test save/reload inside Horizon.
 | `create:encased_chain_drive` | `create:encased_shaft` | `axis`, `axis_along_first`, `part` (`none`, `start`, `middle`, `end`) |
 | `create:adjustable_chain_gearshift` | `create:adjustable_chain_gearshift` | Same chain properties and `powered`. Integer `Signal` stores the analog redstone strength. |
 | `create:millstone` | `create:millstone` | no block-state properties; `Timer` int, `InputInventory`, `OutputInventory` |
+| `create:smart_chute` | `create:smart_chute` | `powered`, `Filter`, `FilterAmount`, `UpTo`, and the normal Chute cargo and position fields |
 | `create:crushing_wheel` | `create:crushing_wheel` | `axis`, axial shaft at each end, 8 SU/RPM |
 | `create:crushing_wheel_controller` | `create:crushing_wheel_controller` | Internal `facing` and `valid` states, `Speed` float and 32-slot `Inventory` with the original processing fields |
 | `create:encased_fan` | `create:encased_fan` | six-way `facing`, original default `down`; common kinetic `Speed` |
@@ -90,12 +91,20 @@ tool tier, Silk Touch, Fortune and cooking recipes are retained. Raw Zinc
 can be packed into its original storage block.
 
 The downward Crushing Wheel pair accepts cobblestone and gravel from a
-dry Chute and ejects into open space. Unported items stay in the sender.
+dry Chute. It ejects into open space or transfers directly onto a Depot,
+where the top stack and output buffer control backpressure. Unported items
+stay in the sender.
 The controller retains its original inventory and cycle fields through a
 restart, and produced item entities retain the original bypass data. Its
 downward outlet is open to dropped items while valid. Capturing those items,
-entity-specific collision and damage, direct output into other machines,
-and crafting on the Mechanical Crafter remain open.
+entity-specific collision and damage, and other output destinations remain
+open.
+
+A vertical Smart Chute can use an ordinary item as a ghost filter. The
+default configuration pulls up to 64 matching items at once. A powered
+Chute parks its cargo halfway along the block and resumes after the signal
+clears. The filter and cargo survive a restart. The hold-to-configure panel,
+amount changes, and special filters remain open.
 
 The four sheet items retain `create:iron_sheet`, `create:golden_sheet` and
 `create:copper_sheet` and `create:brass_sheet`. Kinetic entities retain `Speed` as a float. Depot data
