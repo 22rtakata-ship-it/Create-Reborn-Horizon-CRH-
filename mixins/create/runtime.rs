@@ -1,7 +1,10 @@
 // Copyright (c) 2026 create-horizon contributors
 // SPDX-License-Identifier: MIT
 // Game-side adapter. The engine crate contains the portable algorithms.
-use super::{Game, create_port_saw_processing::crushing as crusher, native_block_entity_draw::BlockEntityDraw};
+use super::{
+    Game, create_port_saw_processing::crushing as crusher,
+    native_block_entity_draw::BlockEntityDraw,
+};
 use crate::{
     containers::{BlockEntity, ModBlockEntity, ModContainer},
     items::ItemStack,
@@ -159,8 +162,13 @@ pub(super) fn entity(block: &str, entity: &mut Option<(String, Compound)>) {
         *entity = Some((block.into(), super::create_port_sticker::default_nbt()));
         return;
     }
-    if block == super::create_port_chute::BLOCK && entity.is_none() {
-        *entity = Some((block.into(), super::create_port_chute::default_nbt()));
+    if super::create_port_chute::is_chute(block) && entity.is_none() {
+        let nbt = if block == super::create_port_chute::SMART {
+            super::create_port_chute::smart_nbt()
+        } else {
+            super::create_port_chute::default_nbt()
+        };
+        *entity = Some((block.into(), nbt));
         return;
     }
     if block == super::create_port_chute::funnel::BLOCK && entity.is_none() {
@@ -212,7 +220,7 @@ pub(super) fn entity(block: &str, entity: &mut Option<(String, Compound)>) {
 pub(super) fn ticks(block: &str, ticks: &mut bool) {
     if (owns(block) && block != "create:mechanical_harvester")
         || block == super::create_port_portable_storage::BLOCK
-        || block == super::create_port_chute::BLOCK
+        || super::create_port_chute::is_chute(block)
         || block == super::create_port_chute::funnel::BLOCK
         || block == crusher::CONTROLLER
     {
@@ -316,6 +324,9 @@ pub(super) fn nearest(yaw: f32, pitch: f32) -> Direction {
 pub(super) fn placed(game: &mut Game<'_>, stack: &ItemStack, pos: [i32; 3]) {
     if game.native_on("create") && stack.item.as_ref() == super::create_port_chute::funnel::BLOCK {
         super::create_port_chute::funnel::refresh_power(game, pos);
+    }
+    if game.native_on("create") && stack.item.as_ref() == super::create_port_chute::SMART {
+        super::create_port_chute::refresh_power(game, pos);
     }
     let Some((clicked, face)) = PLACEMENT_HIT.take() else {
         return;
@@ -1059,7 +1070,7 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
         crusher::tick(game, pos, entity);
         return;
     }
-    if block == super::create_port_chute::BLOCK {
+    if super::create_port_chute::is_chute(&block) {
         super::create_port_chute::tick(game, pos, entity);
         return;
     }
@@ -1413,7 +1424,7 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
 }
 
 pub(super) fn update_tag(entity: &ModBlockEntity, tag: &mut Option<Compound>) {
-    if entity.id == super::create_port_chute::BLOCK && tag.is_none() {
+    if super::create_port_chute::is_chute(&entity.id) && tag.is_none() {
         *tag = Some(entity.nbt.clone());
         return;
     }
@@ -1456,8 +1467,8 @@ pub(super) fn update_tag(entity: &ModBlockEntity, tag: &mut Option<Compound>) {
 pub(super) fn container(block: &str, container: &mut Option<ModContainer>) {
     crate::game::create_port_basin::container(block, container);
     crate::game::create_port_millstone::container(block, container);
-    if block == super::create_port_chute::BLOCK && container.is_none() {
-        *container = Some(super::create_port_chute::container());
+    if super::create_port_chute::is_chute(block) && container.is_none() {
+        *container = Some(super::create_port_chute::container(block));
     }
     if matches!(block, super::create_port_drill::SAW | crusher::CONTROLLER) && container.is_none() {
         *container = Some(super::create_port_saw_processing::container());
@@ -1565,7 +1576,7 @@ pub(super) fn draw(
         }
         return;
     }
-    if block == super::create_port_chute::BLOCK {
+    if super::create_port_chute::is_chute(block) {
         super::create_port_chute::draw(game, pos, entity, draw);
         return;
     }

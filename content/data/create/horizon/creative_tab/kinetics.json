@@ -52,6 +52,7 @@
     "create:secondary_linear_chassis",
     "create:radial_chassis",
     "create:chute",
+    "create:smart_chute",
     "create:andesite_funnel",
     "create:crushing_wheel",
     "create:portable_storage_interface",

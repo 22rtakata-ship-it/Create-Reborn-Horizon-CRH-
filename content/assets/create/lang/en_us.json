@@ -63,6 +63,7 @@
   "block.create.deployer": "Deployer",
   "block.create.portable_storage_interface": "Portable Storage Interface",
   "block.create.chute": "Chute",
+  "block.create.smart_chute": "Smart Chute",
   "block.create.andesite_funnel": "Andesite Funnel",
   "block.create.crushing_wheel": "Crushing Wheel",
   "block.create.linear_chassis": "Linear Chassis",

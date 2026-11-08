@@ -6,6 +6,7 @@ import subprocess
 from common import CREATE, PINS, ROOT
 from catalog import BLOCKS, INTERNAL_BLOCKS, IRON_PALETTE, ITEMS, PALETTE_BLOCKS, STONE_PALETTES, ZINC_BLOCKS
 from funnel_content import BLOCK as FUNNEL
+from smart_chute_content import BLOCK as SMART_CHUTE
 from crushing_content import WHEEL as CRUSHER
 from sail_content import COLORED_SAILS, SAIL_ITEMS
 from portable_storage_content import PSI
@@ -364,6 +365,7 @@ def main():
         'create/loot_table/blocks/deployer.json',
         f'create/loot_table/blocks/{PSI}.json',
         f'create/loot_table/blocks/{CHUTE}.json',
+        f'create/loot_table/blocks/{SMART_CHUTE}.json',
         f'create/loot_table/blocks/{FUNNEL}.json',
         f'create/loot_table/blocks/{CRUSHER}.json',
         f'create/loot_table/blocks/{STICKER}.json',

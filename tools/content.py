@@ -13,6 +13,7 @@ from chassis_content import chassis
 from deployer_content import deployer
 from portable_storage_content import PSI, portable_storage
 from chute_content import CHUTE, chute
+from smart_chute_content import BLOCK as SMART_CHUTE, smart_chute
 from funnel_content import BLOCK as FUNNEL, funnel
 from crushing_content import WHEEL as CRUSHER, crushing
 from sticker_content import STICKER, sticker
@@ -782,6 +783,7 @@ def foundation():
     chassis(write)
     portable_storage(write, model, axial_boxes)
     chute(write, model)
+    smart_chute(write, model)
     funnel(write, model)
     crushing(write, model)
     sticker(write, model)
@@ -850,6 +852,7 @@ def foundation():
     extra_blocks['deployer'] = 'Deployer'
     extra_blocks[PSI] = 'Portable Storage Interface'
     extra_blocks[CHUTE] = 'Chute'
+    extra_blocks[SMART_CHUTE] = 'Smart Chute'
     extra_blocks[FUNNEL] = 'Andesite Funnel'
     extra_blocks[CRUSHER] = 'Crushing Wheel'
     extra_blocks.update({'linear_chassis': 'Linear Chassis',
@@ -937,6 +940,7 @@ def foundation():
             lang['block.create.deployer'] = 'Автономный активатор'
             lang['block.create.' + PSI] = 'Портативный интерфейс хранения'
             lang['block.create.' + CHUTE] = 'Жёлоб'
+            lang['block.create.' + SMART_CHUTE] = 'Умный жёлоб'
             lang['block.create.' + FUNNEL] = 'Андезитовый шлюз'
             lang['block.create.' + CRUSHER] = 'Дробильное колесо'
             lang['block.create.' + STICKER] = 'Блок-липучка'

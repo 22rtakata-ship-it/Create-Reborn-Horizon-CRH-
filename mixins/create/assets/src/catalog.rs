@@ -50,6 +50,7 @@ pub const BLOCKS: &[&str] = &[
     "secondary_linear_chassis",
     "radial_chassis",
     "chute",
+    "smart_chute",
     "andesite_funnel",
     "crushing_wheel",
     "portable_storage_interface",

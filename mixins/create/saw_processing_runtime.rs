@@ -26,8 +26,8 @@ const INVENTORY: &str = "Inventory";
 
 pub(super) mod crushing {
     use super::{
-        BlockEntity, Compound, Game, INVENTORY, ItemStack, ModBlockEntity, Pos, SLOTS, Tag, create,
-        processing_inventory, roll_count,
+        BlockEntity, Compound, Game, INVENTORY, ItemStack, ModBlockEntity, Pos, SLOTS, Tag,
+        Transported, belt, create, processing_inventory, roll_count,
     };
     use create_engine::{
         crushing::{Action, Cycle, direction},
@@ -321,6 +321,7 @@ pub(super) mod crushing {
         if !cycle.applied && count == 0 {
             return;
         }
+        let previous = cycle;
         match cycle.tick(speed, count) {
             Action::Idle => {
                 if let Some(Tag::Compound(saved)) = entity.nbt.get_mut(&INVENTORY.into()) {
@@ -367,6 +368,34 @@ pub(super) mod crushing {
             Action::Eject => {
                 let below = offset(pos, Direction::Down);
                 let state = game.world.block(below[0], below[1], below[2]);
+                if game.res.facts().get(state).name.as_ref() == "create:depot" {
+                    let mut changed = false;
+                    for slot in &mut entity.items {
+                        let Some(stack) = slot else { continue };
+                        let item = Transported::new(
+                            belt::core_stack(game, stack.clone()),
+                            belt::angle(game, stack),
+                        );
+                        let moved =
+                            belt::insert_depot_from_side(game, below, &item, Direction::Down);
+                        if moved != 0 {
+                            stack.count -= moved;
+                            if stack.count == 0 {
+                                *slot = None;
+                            }
+                            changed = true;
+                        }
+                    }
+                    // Direct input keeps the applied phase, even when the receiver
+                    // takes the final result. Open-space ejection clears the cycle.
+                    if changed || cycle != previous {
+                        save(entity, cycle);
+                    }
+                    if changed {
+                        game.native_block_entity_sync(pos);
+                    }
+                    return;
+                }
                 if !game.res.behaviours().is_air(state) {
                     return;
                 }

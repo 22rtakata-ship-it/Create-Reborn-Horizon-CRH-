@@ -3,6 +3,7 @@ from sail_content import COLORED_SAILS, SAIL_ITEMS
 from chassis_content import CHASSIS
 from portable_storage_content import PSI
 from chute_content import CHUTE
+from smart_chute_content import BLOCK as SMART_CHUTE
 from funnel_content import BLOCK as FUNNEL
 from crushing_content import CONTROLLER as CRUSHER_CONTROLLER, WHEEL as CRUSHER
 from sticker_content import STICKER
@@ -27,7 +28,7 @@ ACTORS = ['mechanical_harvester', 'mechanical_saw', 'mechanical_plough', 'deploy
 INTERNAL_BLOCKS = ['water_wheel_structure', 'belt', 'lit_blaze_burner', 'mechanical_piston_head', 'rope', 'pulley_magnet', CRUSHER_CONTROLLER] + COLORED_SAILS
 EXTRA_BLOCKSTATES = ['lit_blaze_burner', 'mechanical_piston_head', 'rope', 'pulley_magnet', CRUSHER_CONTROLLER] + COLORED_SAILS
 EXTRA_MODELS = ['entity/train_hat', 'entity/logistics_hat']
-BLOCKS = BASE_BLOCKS + TRANSMISSIONS + STATIC_BLOCKS + INSTRUMENTS + GENERATORS + PROCESSORS + PISTONS + GANTRY + ACTORS + SAIL_ITEMS + CHASSIS + [CHUTE, FUNNEL, CRUSHER, PSI, STICKER, *ZINC_BLOCKS] + PALETTE_BLOCKS
+BLOCKS = BASE_BLOCKS + TRANSMISSIONS + STATIC_BLOCKS + INSTRUMENTS + GENERATORS + PROCESSORS + PISTONS + GANTRY + ACTORS + SAIL_ITEMS + CHASSIS + [CHUTE, SMART_CHUTE, FUNNEL, CRUSHER, PSI, STICKER, *ZINC_BLOCKS] + PALETTE_BLOCKS
 ITEMS = ['iron_sheet', 'golden_sheet', 'copper_sheet', 'andesite_alloy', 'brass_ingot', 'brass_nugget', 'zinc_ingot', 'zinc_nugget', 'wrench', 'brass_sheet', 'vertical_gearbox', 'goggles', 'propeller', 'wheat_flour', 'dough', 'belt_connector', 'whisk', 'empty_blaze_burner', 'blaze_cake', 'creative_blaze_cake']
 ITEMS.append('super_glue')
 SANDPAPERS = ['sand_paper', 'red_sand_paper']

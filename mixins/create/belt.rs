@@ -400,7 +400,11 @@ pub(super) fn insert_depot_from_side(
         })
         .unwrap_or(false);
     if moved {
-        super::create_port_sounds::depot(game, target);
+        if from.axis() == Axis::Y {
+            super::create_port_sounds::land(game, target);
+        } else {
+            super::create_port_sounds::depot(game, target);
+        }
         game.native_block_entity_sync(target);
         inserted.stack.count
     } else {

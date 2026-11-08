@@ -63,6 +63,7 @@
   "block.create.deployer": "Автономный активатор",
   "block.create.portable_storage_interface": "Портативный интерфейс хранения",
   "block.create.chute": "Жёлоб",
+  "block.create.smart_chute": "Умный жёлоб",
   "block.create.andesite_funnel": "Андезитовый шлюз",
   "block.create.crushing_wheel": "Дробильное колесо",
   "block.create.linear_chassis": "Линейное шасси",

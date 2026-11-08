@@ -26,6 +26,7 @@
     "create:lit_blaze_burner",
     "create:depot",
     "create:chute",
+    "create:smart_chute",
     "create:speedometer",
     "create:stressometer",
     "create:mechanical_piston",

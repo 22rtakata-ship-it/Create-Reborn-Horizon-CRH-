@@ -1057,6 +1057,30 @@
         "id": "create:shaft"
       }
     },
+    "create/recipe/crafting/kinetics/smart_chute.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "I": {
+          "tag": "c:plates/brass"
+        },
+        "P": {
+          "item": "create:electron_tube"
+        },
+        "S": {
+          "item": "create:chute"
+        }
+      },
+      "pattern": [
+        "I",
+        "S",
+        "P"
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:smart_chute"
+      }
+    },
     "create/recipe/crafting/kinetics/speedometer.json": {
       "type": "minecraft:crafting_shaped",
       "category": "misc",
@@ -5871,6 +5895,11 @@
         "minecraft:slime_ball"
       ]
     },
+    "c/tags/item/plates/brass.json": {
+      "values": [
+        "create:brass_sheet"
+      ]
+    },
     "c/tags/item/storage_blocks/iron.json": {
       "values": [
         "minecraft:iron_block"
@@ -5884,11 +5913,6 @@
     "c/tags/item/netherracks.json": {
       "values": [
         "minecraft:netherrack"
-      ]
-    },
-    "c/tags/item/plates/brass.json": {
-      "values": [
-        "create:brass_sheet"
       ]
     },
     "c/tags/item/foods/dough/wheat.json": {
@@ -6102,6 +6126,7 @@
         "create:lit_blaze_burner",
         "create:depot",
         "create:chute",
+        "create:smart_chute",
         "create:speedometer",
         "create:stressometer",
         "create:mechanical_piston",
@@ -6595,6 +6620,27 @@
         }
       ],
       "random_sequence": "create:blocks/chute"
+    },
+    "create/loot_table/blocks/smart_chute.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:smart_chute"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/smart_chute"
     },
     "create/loot_table/blocks/andesite_funnel.json": {
       "type": "minecraft:block",
