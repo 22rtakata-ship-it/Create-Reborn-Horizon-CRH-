@@ -217,6 +217,14 @@ pub fn segments(
     }
     result
 }
+/// Catnip `VecHelper.alignedDistanceToFace` narrows the entity position
+/// before subtracting the block face coordinate, then takes the absolute value.
+pub fn aligned_distance_to_face(origin: [i32; 3], facing: Direction, position: [f64; 3]) -> f32 {
+    let axis = facing.axis().index();
+    let face = origin[axis].wrapping_add(i32::from(facing.vector()[axis] > 0));
+    (position[axis] as f32 - face as f32).abs()
+}
+
 pub fn type_at(
     distance: f32,
     push: bool,
@@ -290,6 +298,31 @@ pub fn accelerated(
 mod tests {
     use super::*;
     use crate::transport::{Inventory, Stack, Transported, TransportedResult};
+
+    #[test]
+    fn entity_medium_uses_float_coordinates_and_absolute_face_distance() {
+        let origin = [262144, 0, 0];
+        let east = Direction::East;
+        let segments = segments(3.0, true, |cell| {
+            (cell == 2).then_some(ProcessingType::Haunting)
+        });
+        let rounded = aligned_distance_to_face(origin, east, [262146.0078125, 0.0, 0.0]);
+        assert_eq!(rounded, 1.0);
+        assert_eq!(type_at(3.0, true, &segments, rounded), None);
+        let inside = aligned_distance_to_face(origin, east, [262146.125, 0.0, 0.0]);
+        assert_eq!(
+            type_at(3.0, true, &segments, inside),
+            Some(ProcessingType::Haunting)
+        );
+        assert_eq!(
+            aligned_distance_to_face(origin, east, [262144.875, 0.0, 0.0]),
+            0.125
+        );
+        assert_eq!(
+            aligned_distance_to_face(origin, Direction::West, [262144.125, 0.0, 0.0]),
+            0.125
+        );
+    }
 
     struct Context {
         valid: bool,

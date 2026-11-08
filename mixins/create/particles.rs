@@ -273,14 +273,12 @@ fn cell_range(b: [[f64; 3]; 2]) -> impl Iterator<Item = [i32; 2]> {
     (a[0]..=b[0]).flat_map(move |x| (a[2]..=b[2]).map(move |z| [x, z]))
 }
 fn type_at(origin: Pos, flow: &Flow, p: [f64; 3]) -> Option<ProcessingType> {
-    let dir = flow.facing.vector();
-    let axis = flow.facing.axis().index();
-    let offset = (p[axis] - (f64::from(origin[axis]) + 0.5)) * f64::from(dir[axis]) - 0.5;
+    let offset = fan::aligned_distance_to_face(origin, flow.facing, p);
     fan::type_at(
         flow.distance,
         fan::pushing(flow.rpm, flow.facing),
         &flow.segments,
-        offset as f32,
+        offset,
     )
 }
 fn airflow(game: &mut Game<'_>, origin: Pos, flow: &Flow, world: usize) {

@@ -242,9 +242,10 @@ in `VALIDATION.md`.
 The fan's shaft is opposite `facing`; both directions and all six orientations
 are represented. Airflow range, push/pull choice, processing segments, partial
 obstacle sampling, propeller speed and stack-dependent processing timers are
-source-derived. The implemented targets are dropped item entities and depot-held
-stacks. Water washes, lit ordinary fire/campfires smoke, soul fire/campfires haunt,
-and lava blasts. Blasting can destroy items, including smokeable food, according
+source-derived. Current targets include dropped items, cargo on Depots and
+Belts, local players and mobs. Water washes, lit ordinary fire and campfires
+smoke, soul fire and soul campfires haunt, and lava blasts. Blasting can
+destroy items, including smokeable food, according
 to the source policy; it is not a general-purpose way to cook food.
 The current blasting adapter reads the item's default fire resistance. Per-stack
 fire/damage-resistance component overrides are not yet used for that decision;
@@ -261,12 +262,11 @@ Depot-held progress uses `HeldItem.FanProcessingType` and
 `NeoForgeData.CreateData.Processing.Type` and `Time` entity NBT fields, retained
 through Horizon's existing persistent unknown-field storage. Native save/reload
 tests verify the exact remaining timer, preserved unknown sibling keys and
-one-time conversion. Item stack components are not used to
-disguise entity state, and no additional raw hook is needed. Airflow on players
-and mobs is not implemented. The full native 0.5 regression, including Metal,
-audio and restart, has passed. Fan particles, soundscape and exhaustive
-collision/media edge coverage remain separate work; no complete fan parity
-is claimed.
+one-time conversion. Normal unfrozen play has been checked for player push,
+pull and smoking damage. Live Java and Horizon checks also agree on mob
+effects at a dry-to-haunting boundary, including Java's single-precision
+position at the fan face. A frozen motor-start check still needs investigation.
+Other entity types and further particle, sound and collision cases remain open.
 
 The stationary mechanical drill uses the source rear shaft, six orientations and
 12-pixel directional casing collision. Its front target, progress and retry timing

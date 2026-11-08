@@ -148,7 +148,10 @@ with the systems they depend on.
   side entry, rejected insertion, position traces and a native restart.
 - [x] Bare Belt output to a Millstone. Match accepted, partial and refused
   insertion and preserve accepted items when the world closes on the transfer tick.
-- [ ] Fan: players/mobs/other entities, ignition/damage/effects and exact particles/sound.
+- [x] Fan push, pull and smoking damage on a player in normal simulation.
+  Match Java's living-entity effects at a dry-to-haunting boundary.
+- [ ] Remaining fan entity types, frozen motor-start timing and further particle
+  and sound comparisons.
 - [ ] Full observable parity of already supported machines, including item animation.
 - [x] Bounded press over a bare belt: single-item processing, holding the remainder,
   output through a Depot/hopper, independent power loss and an actual restart.

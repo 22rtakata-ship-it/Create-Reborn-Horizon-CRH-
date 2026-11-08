@@ -141,13 +141,8 @@ fn kind_at(
     segments: &[Segment],
     position: [f64; 3],
 ) -> Option<ProcessingType> {
-    let axis = facing.axis().index();
-    let offset = if facing.vector()[axis] > 0 {
-        position[axis] - f64::from(origin[axis]) - 1.0
-    } else {
-        f64::from(origin[axis]) - position[axis]
-    };
-    fan::type_at(distance, fan::pushing(rpm, facing), segments, offset as f32)
+    let offset = fan::aligned_distance_to_face(origin, facing, position);
+    fan::type_at(distance, fan::pushing(rpm, facing), segments, offset)
 }
 fn flow(facing: Direction, rpm: f32) -> [i32; 3] {
     if fan::pushing(rpm, facing) {

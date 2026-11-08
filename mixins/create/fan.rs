@@ -633,14 +633,8 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
             e.velocity = Vec3::new(velocity[0], velocity[1], velocity[2]);
             e.needs_sync = true;
             let stack = e.stack.clone();
-            let axis = facing.axis().index();
-            let offset = if facing.vector()[axis] > 0 {
-                p[axis] - f64::from(pos[axis]) - 1.0
-            } else {
-                f64::from(pos[axis]) - p[axis]
-            };
-            let Some(kind) = fan::type_at(current.distance, push, &current.segments, offset as f32)
-            else {
+            let offset = fan::aligned_distance_to_face(pos, facing, p);
+            let Some(kind) = fan::type_at(current.distance, push, &current.segments, offset) else {
                 continue;
             };
             let output = plan(game, &stack, kind);
