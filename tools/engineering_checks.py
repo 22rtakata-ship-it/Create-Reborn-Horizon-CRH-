@@ -93,8 +93,16 @@ def run(call,graphics,log,scratch):
                 assert abs(actual-expected)<.05,(kind,sign,actual,expected)
         print('Engineering: actual gearbox/clutch/gearshift half-shaft matrices agree with adjacent canonical RPM',flush=True)
         for facing,axis,sign in [('east',0,1),('west',0,-1),('up',1,1),('down',1,-1),('south',2,1),('north',2,-1)]:
-            reset();tp(2.5,65,3.5);setblock(0,65,0,'create:hand_crank[facing='+facing+']')
-            call('command',f'data merge block {X} 65 0 {{InUse:200,Backwards:0b}}');call('look-at',X+.5,65.5,.5);call('wait',40)
+            reset()
+            setblock(2,64,3,'minecraft:smooth_stone')
+            tp(2.5,65,3.5)
+            setblock(0,65,0,'create:hand_crank[facing='+facing+']')
+            # A live turn publishes generator speed. Reading an InUse NBT
+            # edit into an already initialized crank does not perform a turn.
+            for _ in range(12):
+                call('interact',X,65,0)
+                call('wait',3)
+            assert number(0,65,0,'Speed')==sign*32, text(0,65,0)
             rows=poses(log,[X,65,0]);base=[r for r in rows if r['model'].endswith('hand_crank/block')];handle=[r for r in rows if r['model'].endswith('hand_crank/handle')]
             assert abs(angular_velocity(base,axis)-sign*32)<.05,(facing,base[-2:])
             assert abs(angular_velocity(handle,axis)-sign*32)<.1,(facing,handle[-2:])
