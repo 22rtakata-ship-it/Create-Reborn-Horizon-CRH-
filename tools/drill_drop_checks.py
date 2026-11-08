@@ -32,6 +32,7 @@ CASES = {
     'drops_disabled': ('minecraft:stone', (), False, False),
     'drill_placed_last': ('minecraft:stone', ('minecraft:cobblestone',), True, True),
     'diamond_ore': ('minecraft:diamond_ore', ('minecraft:diamond',), True, False),
+    'ore_drops_disabled': ('minecraft:diamond_ore', (), False, False),
 }
 
 

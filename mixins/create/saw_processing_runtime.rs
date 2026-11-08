@@ -312,23 +312,42 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity, r
         }
         Action::Export => {
             let target = std::array::from_fn(|axis| pos[axis] + motion[axis]);
-            if game.native_block(target) == "create:depot" {
+            let target_block = game.native_block(target);
+            let depot = target_block == "create:depot";
+            if depot || target_block == "create:millstone" {
                 let from = Direction::from_vector(motion).expect("horizontal saw output");
                 let mut changed = false;
                 for slot in &mut entity.items {
                     let Some(stack) = slot else { continue };
-                    let item = Transported::new(
-                        belt::core_stack(game, stack.clone()),
-                        belt::angle(game, stack),
-                    );
-                    let moved = belt::insert_depot_from_side(game, target, &item, from);
-                    if moved != 0 {
-                        stack.count -= moved;
-                        if stack.count == 0 {
+                    let remaining = if depot {
+                        let item = Transported::new(
+                            belt::core_stack(game, stack.clone()),
+                            belt::angle(game, stack),
+                        );
+                        stack.count - belt::insert_depot_from_side(game, target, &item, from)
+                    } else {
+                        // The Millstone's default DirectBeltInputBehaviour
+                        // goes through its recipe-filtered item capability.
+                        game.native_insert_item(target, belt::world_direction(from), stack.clone())
+                            .map_or(0, |remainder| remainder.count)
+                    };
+                    if remaining != stack.count {
+                        if remaining == 0 {
                             *slot = None;
+                        } else {
+                            stack.count = remaining;
                         }
                         changed = true;
                     }
+                }
+                // The receiver may have already ticked this turn. Publish its
+                // canonical input before the next Millstone tick or a save.
+                if changed
+                    && !depot
+                    && game.native_with_mod_block_entity(target, super::create_port_millstone::data)
+                        == Some(true)
+                {
+                    game.native_block_entity_sync(target);
                 }
                 // Direct input retains the finished phase. Keep rejected
                 // stacks in their slots and try again on the next tick.

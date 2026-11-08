@@ -17,9 +17,9 @@ developer source build. The three changes are applied in a separate checkout.
   reverse rotation and coasting. Both fallback and locally imported models
   were inspected in the running client.
 - [Stationary Drill drops](tools/drill_drop_checks.py) match the breaking tick
-  in five chunk-edge fixtures. Wheat and seeds share a position, with zero
+  in six chunk-edge fixtures. Wheat and seeds share a position, with zero
   initial velocity and ten ticks of pickup delay. Ore spawns experience in the
-  same vanilla range and the block-drops rule suppresses loot.
+  same vanilla range. The block-drops rule suppresses both loot and ore experience.
 - [Cross-chunk transmission](tools/cross_chunk_kinetics_checks.py) matches 60 of
   64 action observations and all four Horizon reload checks. Direct shaft
   removal is the remaining difference. The far shaft stops immediately in Java
@@ -29,6 +29,10 @@ developer source build. The three changes are applied in a separate checkout.
   directions of rotation, backpressure from a held stack and from the output
   buffer, and partial delivery across native reloads. Another 22-tick trace
   confirms the default Saw takes one item from a dropped stack.
+- [Saw-to-Millstone transfer](tools/saw_millstone_checks.py) matches seven
+  block observations across 24 ticks. The cases include cross-column delivery,
+  rejection of an unsuitable item, partial insertion into a nearly full
+  Millstone, preserved components and a native restart.
 - Mixed colored cargo restores the same cells on a Mechanical Bearing after
   a real Horizon restart. The [separate swept-volume check](tools/bearing_chunk_sweep_checks.py)
   matches nine angles, neighboring-column item support and all 15 landing

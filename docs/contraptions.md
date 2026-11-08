@@ -70,7 +70,9 @@ stonecutting results. It also cuts Andesite Alloy into six shafts. Drop an
 item on the powered blade. The default Saw takes one input at a time and
 outputs in the direction set by the shaft and rotation. A neighboring Depot
 receives the stack directly. The Saw waits if the Depot holds a stack or
-has items in its output buffer. In open space the Saw ejects the result.
+has items in its output buffer. An adjacent Millstone takes suitable items
+through its normal input and leaves any remainder in the Saw. In open
+space the Saw ejects the result.
 The saved `RecipeIndex` and ordinary output filter select the next recipe in the pinned
 Java order. A Saw with no matching recipe passes the item through unchanged.
 

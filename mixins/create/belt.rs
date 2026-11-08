@@ -181,7 +181,7 @@ fn axis(game: &Game<'_>, pos: Pos) -> Axis {
         }
     }
 }
-fn world_direction(d: Direction) -> WorldDirection {
+pub(super) fn world_direction(d: Direction) -> WorldDirection {
     match d {
         Direction::Down => WorldDirection::Down,
         Direction::Up => WorldDirection::Up,

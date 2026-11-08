@@ -132,11 +132,13 @@ with the systems they depend on.
   full-fire tag and recipe priority; actual Java/native scenes and native restart.
 - [ ] General damage-selector/data-fixer equivalence across Minecraft versions.
 - [x] Stationary drill: breaking the block in front, drops, speed and stopping.
-- [x] Stationary Drill across a chunk boundary. Five Java and Horizon
+- [x] Stationary Drill across a chunk boundary. Six Java and Horizon
   cases cover placement order, breaking ticks, shared loot origin, pickup
   delay, the block-drops rule and ore experience.
 - [x] Upward Saw output to a neighboring Depot, including blocked and partial
   delivery across a chunk boundary, both output directions and native reloads.
+- [x] Upward Saw output to a neighboring Millstone, including input filtering,
+  components, backpressure and same-tick inventory publication after a restart.
 - [ ] Fan: players/mobs/other entities, ignition/damage/effects and exact particles/sound.
 - [ ] Full observable parity of already supported machines, including item animation.
 - [x] Bounded press over a bare belt: single-item processing, holding the remainder,
