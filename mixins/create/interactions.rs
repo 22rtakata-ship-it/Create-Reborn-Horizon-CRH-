@@ -71,6 +71,9 @@ pub(super) fn reacts(game: &Game<'_>, pos: [i32; 3]) -> bool {
     {
         return true;
     }
+    if encased_cog_target(&block, held).is_some() {
+        return game.may_build() && !game.native_sneaking();
+    }
     if bypass(game) {
         return false;
     }
@@ -146,6 +149,9 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3]) ->
         .held()
         .is_some_and(|s| s.item.as_ref() == "create:wrench");
     if wrench {
+        if encased_cog_size(&block).is_some() {
+            return wrench_cog(game, pos, face);
+        }
         if static_wrench_pickup(game, &block) {
             let drops = if game.creative {
                 Vec::new()
@@ -354,6 +360,9 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3]) ->
             return true;
         }
     }
+    if let Some(target) = encased_cog_target(&block, game.held().map(|s| s.item.as_ref())) {
+        return case_cog(game, pos, target);
+    }
     if let Some((result, consume)) = manual(game, pos) {
         if !game.may_build() {
             return true;
@@ -370,4 +379,138 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3]) ->
         return true;
     }
     false
+}
+
+pub(super) fn encased_cog_size(block: &str) -> Option<bool> {
+    match block {
+        "create:andesite_encased_cogwheel" | "create:brass_encased_cogwheel" => Some(false),
+        "create:andesite_encased_large_cogwheel" | "create:brass_encased_large_cogwheel" => {
+            Some(true)
+        }
+        _ => None,
+    }
+}
+
+fn encased_cog_target(block: &str, casing: Option<&str>) -> Option<&'static str> {
+    match (block, casing?) {
+        ("create:cogwheel", "create:andesite_casing") => Some("create:andesite_encased_cogwheel"),
+        ("create:large_cogwheel", "create:andesite_casing") => {
+            Some("create:andesite_encased_large_cogwheel")
+        }
+        ("create:cogwheel", "create:brass_casing") => Some("create:brass_encased_cogwheel"),
+        ("create:large_cogwheel", "create:brass_casing") => {
+            Some("create:brass_encased_large_cogwheel")
+        }
+        _ => None,
+    }
+}
+
+fn set_cog(
+    game: &mut Game<'_>,
+    pos: [i32; 3],
+    base: horizon_world::registry::BlockStateId,
+    axis: Axis,
+    ends: Option<[bool; 2]>,
+) -> bool {
+    let registry = game.pack.assets.registry;
+    let Some(mut state) = registry.state(base).cloned() else {
+        return false;
+    };
+    state.properties.insert("axis".into(), axis.name().into());
+    if let Some([top, bottom]) = ends {
+        state.properties.insert("top_shaft".into(), top.to_string());
+        state
+            .properties
+            .insert("bottom_shaft".into(), bottom.to_string());
+    }
+    let Some(state) = registry.id(&state) else {
+        return false;
+    };
+    let dimension = game.dim.id().to_owned();
+    if !game.native_set_block(
+        &dimension,
+        pos,
+        state,
+        horizon_world::level::flags::UPDATE_ALL,
+    ) {
+        return false;
+    }
+    super::create_port_kinetic_runtime::invalidate();
+    true
+}
+
+fn case_cog(game: &mut Game<'_>, pos: [i32; 3], target: &str) -> bool {
+    let Some(gear) = super::create_port::node(game, pos) else {
+        return false;
+    };
+    let positive = [Direction::East, Direction::Up, Direction::South][gear.axis.index()];
+    let ends = [positive, positive.opposite()].map(|side| {
+        let delta = side.vector();
+        super::create_port::node(game, std::array::from_fn(|i| pos[i] + delta[i]))
+            .is_some_and(|other| other.shaft_port(side.opposite().vector()))
+    });
+    if let Some(base) = game.pack.assets.registry.default_state(target)
+        && set_cog(game, pos, base, gear.axis, Some(ends))
+    {
+        super::create_port_sounds::cog_casing(game, pos);
+    }
+    true
+}
+
+fn wrench_cog(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3]) -> bool {
+    if !game.may_build() {
+        return false;
+    }
+    let Some(gear) = super::create_port::node(game, pos) else {
+        return false;
+    };
+    let create_engine::kinetics::Kind::EncasedCog {
+        large,
+        top_shaft,
+        bottom_shaft,
+    } = gear.kind
+    else {
+        return false;
+    };
+    let current = game.world.block(pos[0], pos[1], pos[2]);
+    if game.native_sneaking() {
+        let bare = if large {
+            "create:large_cogwheel"
+        } else {
+            "create:cogwheel"
+        };
+        if let Some(base) = game.pack.assets.registry.default_state(bare)
+            && set_cog(game, pos, base, gear.axis, None)
+        {
+            game.level_event_at(2001, pos, current.0 as i32);
+        }
+        return true;
+    }
+    let Some(face) = Direction::from_vector(face) else {
+        return false;
+    };
+    let (axis, ends) = if face.axis() == gear.axis {
+        let positive = face.vector()[gear.axis.index()] > 0;
+        (gear.axis, [top_shaft ^ positive, bottom_shaft ^ !positive])
+    } else {
+        let new_positive = [Direction::East, Direction::Up, Direction::South][gear.axis.index()]
+            .clockwise(face.axis());
+        let axis = new_positive.axis();
+        let registry = game.pack.assets.registry;
+        if !super::create_port_placement::cog_survives(pos, axis, large, |p| {
+            registry.state(game.world.block(p[0], p[1], p[2]))
+        }) {
+            return false;
+        }
+        let ends = if new_positive.vector()[axis.index()] < 0 {
+            [bottom_shaft, top_shaft]
+        } else {
+            [top_shaft, bottom_shaft]
+        };
+        (axis, ends)
+    };
+    if set_cog(game, pos, current, axis, Some(ends)) {
+        super::create_port_sounds::cog_wrench(game, pos);
+    }
+    true
 }

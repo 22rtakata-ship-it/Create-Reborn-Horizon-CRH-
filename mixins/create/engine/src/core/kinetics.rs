@@ -20,6 +20,14 @@ impl Axis {
             Self::Z => 2,
         }
     }
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::X => "x",
+            Self::Y => "y",
+            Self::Z => "z",
+        }
+    }
 }
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Kind {
@@ -51,6 +59,11 @@ pub enum Kind {
     },
     Cog {
         large: bool,
+    },
+    EncasedCog {
+        large: bool,
+        top_shaft: bool,
+        bottom_shaft: bool,
     },
     Press,
     LinearActuator,
@@ -95,6 +108,15 @@ impl Node {
             Kind::Mixer | Kind::Crafter => false,
             Kind::Belt { pulley: false, .. } => false,
             Kind::Gearbox => delta[self.axis.index()] == 0,
+            Kind::EncasedCog {
+                top_shaft,
+                bottom_shaft,
+                ..
+            } => match delta[self.axis.index()] {
+                1 => top_shaft,
+                -1 => bottom_shaft,
+                _ => false,
+            },
             _ => delta[self.axis.index()].abs() == 1,
         }
     }
@@ -131,7 +153,7 @@ impl Node {
     }
     fn cog(self) -> Option<bool> {
         match self.kind {
-            Kind::Cog { large } => Some(large),
+            Kind::Cog { large } | Kind::EncasedCog { large, .. } => Some(large),
             Kind::Millstone | Kind::Mixer | Kind::Crafter => Some(false),
             _ => None,
         }
@@ -197,10 +219,7 @@ pub fn ratio(from: Node, to: Node) -> Option<f32> {
     {
         return Some(1.0);
     }
-    if from.kind == (Kind::Cog { large: true })
-        && to.kind == (Kind::Cog { large: true })
-        && from.axis != to.axis
-    {
+    if from.cog() == Some(true) && to.cog() == Some(true) && from.axis != to.axis {
         let a = from.axis.index();
         let b = to.axis.index();
         if distance == 2 && delta[a].abs() == 1 && delta[b].abs() == 1 {
@@ -581,6 +600,54 @@ mod tests {
         };
         assert_eq!(ratio(chain, cog), None);
         assert_eq!(ratio(cog, chain), None);
+    }
+
+    #[test]
+    fn encased_cogs_gate_each_shaft_end_without_changing_tooth_ratios() {
+        for axis in [Axis::X, Axis::Y, Axis::Z] {
+            let axial = |value| std::array::from_fn(|i| if i == axis.index() { value } else { 0 });
+            let diagonal = std::array::from_fn(|i| i32::from(i != axis.index()));
+            for top_shaft in [false, true] {
+                for bottom_shaft in [false, true] {
+                    let gear = Node {
+                        axis,
+                        pos: [0; 3],
+                        kind: Kind::EncasedCog {
+                            large: true,
+                            top_shaft,
+                            bottom_shaft,
+                        },
+                    };
+                    for (step, open) in [(1, top_shaft), (-1, bottom_shaft)] {
+                        let shaft = Node {
+                            axis,
+                            pos: axial(step),
+                            kind: Kind::Shaft,
+                        };
+                        assert_eq!(ratio(gear, shaft), open.then_some(1.0));
+                        assert_eq!(ratio(shaft, gear), open.then_some(1.0));
+                    }
+                    let small = Node {
+                        axis,
+                        pos: diagonal,
+                        kind: Kind::Cog { large: false },
+                    };
+                    assert_eq!(ratio(gear, small), Some(-2.0));
+                    assert_eq!(ratio(small, gear), Some(-0.5));
+                    let perpendicular = Axis::Y;
+                    if axis != perpendicular {
+                        let other = Node {
+                            axis: perpendicular,
+                            pos: std::array::from_fn(|i| {
+                                i32::from(i == axis.index() || i == perpendicular.index())
+                            }),
+                            ..gear
+                        };
+                        assert_eq!(ratio(gear, other), Some(1.0));
+                    }
+                }
+            }
+        }
     }
 
     #[test]

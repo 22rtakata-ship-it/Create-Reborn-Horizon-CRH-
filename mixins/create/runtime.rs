@@ -153,7 +153,7 @@ pub(super) fn owns(block: &str) -> bool {
             | "create:mechanical_mixer"
             | "create:blaze_burner"
             | "create:belt"
-    )
+    ) || super::create_port_interactions::encased_cog_size(block).is_some()
 }
 
 pub(super) fn entity(block: &str, entity: &mut Option<(String, Compound)>) {
@@ -216,6 +216,13 @@ pub(super) fn entity(block: &str, entity: &mut Option<(String, Compound)>) {
             "create:andesite_encased_shaft"
             | "create:brass_encased_shaft"
             | "create:encased_chain_drive" => "create:encased_shaft",
+            block if let Some(large) = super::create_port_interactions::encased_cog_size(block) => {
+                if large {
+                    "create:encased_large_cogwheel"
+                } else {
+                    "create:encased_cogwheel"
+                }
+            }
             _ => block,
         };
         let mut nbt = Compound::new();
@@ -365,7 +372,9 @@ pub(super) fn placed(game: &mut Game<'_>, stack: &ItemStack, pos: [i32; 3]) {
         | "create:clutch"
         | "create:gearshift" => Some(placement::shaft(look, face, sneaking, ports)),
         "create:cogwheel" | "create:large_cogwheel" => {
-            let against = if game.native_block(clicked) == "create:cogwheel" {
+            let against = if super::create_port_placement::cog_size(&game.native_block(clicked))
+                == Some(false)
+            {
                 node(game, clicked).map(|n| n.axis)
             } else {
                 None
@@ -875,6 +884,14 @@ pub(super) fn node(game: &Game<'_>, pos: [i32; 3]) -> Option<Node> {
         }
         "create:cogwheel" => Kind::Cog { large: false },
         "create:large_cogwheel" => Kind::Cog { large: true },
+        block if let Some(large) = super::create_port_interactions::encased_cog_size(block) => {
+            Kind::EncasedCog {
+                large,
+                top_shaft: game.native_block_property(pos, "top_shaft").as_deref() == Some("true"),
+                bottom_shaft: game.native_block_property(pos, "bottom_shaft").as_deref()
+                    == Some("true"),
+            }
+        }
         "create:mechanical_press" => Kind::Press,
         _ => return None,
     };
@@ -1465,6 +1482,8 @@ pub(super) fn update_tag(entity: &ModBlockEntity, tag: &mut Option<Compound>) {
             "create:motor"
                 | "create:simple_kinetic"
                 | "create:encased_shaft"
+                | "create:encased_cogwheel"
+                | "create:encased_large_cogwheel"
                 | "create:drill"
                 | "create:saw"
                 | "create:blaze_heater"
@@ -1763,6 +1782,10 @@ pub(super) fn draw(
     let direction = game.native_block_property(pos, "facing");
     crate::game::create_port_presentation::hints(game, pos, draw);
     let time = draw.game_time as f64 + f64::from(draw.partial);
+    if let Kind::EncasedCog { large, .. } = node.kind {
+        draw_encased_cog(game, node, entity, draw, time, large);
+        return;
+    }
     if block == crusher::WHEEL {
         draw.push();
         orient(draw, node.axis);
@@ -1929,4 +1952,45 @@ pub(super) fn draw(
         crate::game::create_port_presentation::kinetic_tint(game, pos),
     );
     draw.pop();
+}
+
+fn draw_encased_cog(
+    game: &Game<'_>,
+    node: Node,
+    entity: &ModBlockEntity,
+    draw: &mut BlockEntityDraw,
+    time: f64,
+    large: bool,
+) {
+    use create_engine::visual::{angle, positive_axis, rotation_offset};
+    let rpm = number(&entity.nbt, "Speed");
+    let tint = super::create_port_presentation::kinetic_tint(game, node.pos);
+    draw.push();
+    orient(draw, node.axis);
+    draw.rotate_about(
+        [0.0, 1.0, 0.0],
+        angle(time, rpm, rotation_offset(node.pos, node.axis, large)),
+        [0.5; 3],
+    );
+    game.native_draw_model(
+        draw,
+        if large {
+            "create:block/large_cogwheel_shaftless"
+        } else {
+            "create:block/cogwheel_shaftless"
+        },
+        tint,
+    );
+    draw.pop();
+    let shaft_angle = angle(time, rpm, rotation_offset(node.pos, node.axis, false));
+    for direction in Direction::ALL {
+        if !node.shaft_port(direction.vector()) {
+            continue;
+        }
+        draw.push();
+        draw.rotate_about(positive_axis(node.axis), shaft_angle, [0.5; 3]);
+        face_south(draw, direction);
+        game.native_draw_model(draw, "create:block/shaft_half", tint);
+        draw.pop();
+    }
 }

@@ -4,6 +4,18 @@
 // Selected AllSoundEvents composite registrations. Their wrapped event gains
 // and pitches apply on top of each call's gain and pitch.
 use super::Game;
+use horizon_core::random::{LegacyRandom, RandomSource};
+use std::cell::RefCell;
+
+thread_local! {
+    // IWrenchable uses Create's own Random rather than consuming the level RNG.
+    static WRENCH_RANDOM: RefCell<LegacyRandom> = RefCell::new(LegacyRandom::new(
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |time| time.as_nanos() as i64)
+    ));
+}
+
 fn event(game: &mut Game<'_>, pos: [i32; 3], sound: &str, volume: f32, pitch: f32) {
     let at = pos.map(|v| f64::from(v) + 0.5);
     game.with_level(|_, level, _| {
@@ -50,6 +62,15 @@ pub(super) fn wrench_remove(game: &mut Game<'_>, pos: [i32; 3], pitch: f32) {
 
 pub(super) fn casing(game: &mut Game<'_>, pos: [i32; 3]) {
     event(game, pos, "minecraft:block.wood.place", 1.0, 0.8);
+}
+
+pub(super) fn cog_casing(game: &mut Game<'_>, pos: [i32; 3]) {
+    event(game, pos, "minecraft:block.stone.place", 1.0, 0.8);
+}
+
+pub(super) fn cog_wrench(game: &mut Game<'_>, pos: [i32; 3]) {
+    let pitch = WRENCH_RANDOM.with(|random| random.borrow_mut().next_float() + 0.5);
+    event(game, pos, "create:wrench_rotate", 0.25, pitch * 1.25);
 }
 
 pub(super) fn manual_application(game: &mut Game<'_>, pos: [i32; 3]) {

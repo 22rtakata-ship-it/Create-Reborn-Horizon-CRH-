@@ -8007,6 +8007,10 @@
         "create:large_cogwheel",
         "create:andesite_encased_shaft",
         "create:brass_encased_shaft",
+        "create:andesite_encased_cogwheel",
+        "create:brass_encased_cogwheel",
+        "create:andesite_encased_large_cogwheel",
+        "create:brass_encased_large_cogwheel",
         "create:gearbox",
         "create:clutch",
         "create:gearshift",
@@ -8073,6 +8077,10 @@
         "create:large_cogwheel",
         "create:andesite_encased_shaft",
         "create:brass_encased_shaft",
+        "create:andesite_encased_cogwheel",
+        "create:brass_encased_cogwheel",
+        "create:andesite_encased_large_cogwheel",
+        "create:brass_encased_large_cogwheel",
         "create:gearbox",
         "create:clutch",
         "create:gearshift",
@@ -8738,6 +8746,90 @@
         }
       ],
       "random_sequence": "create:blocks/sticker"
+    },
+    "create/loot_table/blocks/andesite_encased_cogwheel.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:cogwheel"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/andesite_encased_cogwheel"
+    },
+    "create/loot_table/blocks/andesite_encased_large_cogwheel.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:large_cogwheel"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/andesite_encased_large_cogwheel"
+    },
+    "create/loot_table/blocks/brass_encased_cogwheel.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:cogwheel"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/brass_encased_cogwheel"
+    },
+    "create/loot_table/blocks/brass_encased_large_cogwheel.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:large_cogwheel"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/brass_encased_large_cogwheel"
     },
     "create/loot_table/blocks/zinc_block.json": {
       "type": "minecraft:block",

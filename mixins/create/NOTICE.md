@@ -55,6 +55,9 @@ The following MIT code informed or was adapted into the Rust engine:
   `GearshiftBlockEntity`, `crank/HandCrankBlock[Entity]`, `motor/CreativeMotorBlockEntity`,
   `foundation/block/IWrenchable` and encasing behaviors: implemented transmission,
   placement, wrench, hand crank and motor controls.
+- `content/kinetics/simpleRelays/encased/EncasedCogwheelBlock`,
+  `EncasedCogRenderer` and `EncasedCogVisual` inform the independent shaft ends,
+  casing and wrench actions, and separate gear and shaft rotation offsets.
 - `base/KineticBlockEntityRenderer`, `KineticBlockEntityVisual`, `gearbox/GearboxRenderer`,
   `transmission/SplitShaftRenderer`, `crank/HandCrankRenderer`, `logistics/depot/DepotRenderer`:
   positive world-axis transforms, phase, crank interpolation and item piles.

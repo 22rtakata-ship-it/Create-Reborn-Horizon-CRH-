@@ -9,6 +9,7 @@ from crushing_content import CONTROLLER as CRUSHER_CONTROLLER, WHEEL as CRUSHER
 from crafter_content import CRAFTER, PARTS as CRAFTER_PARTS
 from item_drain_content import BLOCK as ITEM_DRAIN
 from sticker_content import STICKER
+from encased_cog_content import BLOCKS as ENCASED_COGS
 
 BASE_BLOCKS = ['creative_motor', 'shaft', 'cogwheel', 'large_cogwheel', 'mechanical_press', 'depot']
 TRANSMISSIONS = ['gearbox', 'clutch', 'gearshift', 'hand_crank', 'andesite_encased_shaft', 'brass_encased_shaft', 'encased_chain_drive', 'adjustable_chain_gearshift', 'flywheel']
@@ -31,13 +32,14 @@ INTERNAL_BLOCKS = ['water_wheel_structure', 'belt', 'lit_blaze_burner', 'mechani
 EXTRA_BLOCKSTATES = ['lit_blaze_burner', 'mechanical_piston_head', 'rope', 'pulley_magnet', CRUSHER_CONTROLLER] + COLORED_SAILS
 EXTRA_MODELS = ['entity/train_hat', 'entity/logistics_hat']
 BLOCKS = BASE_BLOCKS + TRANSMISSIONS + STATIC_BLOCKS + INSTRUMENTS + GENERATORS + PROCESSORS + PISTONS + GANTRY + ACTORS + SAIL_ITEMS + CHASSIS + [CHUTE, SMART_CHUTE, FUNNEL, BRASS_FUNNEL, CRUSHER, PSI, STICKER, *ZINC_BLOCKS] + PALETTE_BLOCKS
+BLOCKS += ENCASED_COGS
 ITEMS = ['iron_sheet', 'golden_sheet', 'copper_sheet', 'andesite_alloy', 'brass_ingot', 'brass_nugget', 'zinc_ingot', 'zinc_nugget', 'wrench', 'brass_sheet', 'vertical_gearbox', 'goggles', 'propeller', 'wheat_flour', 'dough', 'belt_connector', 'whisk', 'empty_blaze_burner', 'blaze_cake', 'creative_blaze_cake']
 ITEMS.append('super_glue')
 SANDPAPERS = ['sand_paper', 'red_sand_paper']
 ITEMS += ['rose_quartz', 'polished_rose_quartz', 'electron_tube', 'brass_hand'] + SANDPAPERS
 ITEMS.extend(['raw_zinc', 'crafter_slot_cover', 'incomplete_precision_mechanism',
               'precision_mechanism', 'crushed_raw_gold'])
-HIDDEN_CREATIVE_ITEMS = {'incomplete_precision_mechanism'}
+HIDDEN_CREATIVE_ITEMS = {'incomplete_precision_mechanism', *ENCASED_COGS}
 PARTS = ['shaft', 'shaft_half', 'cogwheel', 'large_cogwheel', 'creative_motor/block', 'creative_motor/block_vertical', 'mechanical_press/block', 'mechanical_press/head', 'depot/block', 'hand_crank/handle', 'hand_crank/block', 'gauge/dial', 'gauge/speedometer/head', 'gauge/stressometer/head', 'goggles', 'water_wheel/wheel', 'large_water_wheel/block', 'large_water_wheel/block_extension', 'millstone/block', 'millstone/inner', 'encased_fan/block', 'encased_fan/propeller', 'mechanical_drill/block', 'mechanical_drill/head']
 PARTS += ['belt_pulley', 'belt/particle'] + ['belt/' + part for part in
     ['start', 'middle', 'end', 'start_bottom', 'middle_bottom', 'end_bottom',
@@ -48,6 +50,7 @@ PARTS += [f'belt_cover/{material}_belt_cover_{axis}' for material in ('andesite'
           for axis in ('x', 'z')]
 PARTS += ['basin/block', 'basin/block_directional', 'mechanical_mixer/block',
           'mechanical_mixer/pole', 'mechanical_mixer/head', 'cogwheel_shaftless', 'flywheel/block', f'{CRUSHER}/block']
+PARTS += ['large_cogwheel_shaftless']
 PARTS += [f'{CRAFTER}/{part}' for part in CRAFTER_PARTS]
 PARTS += ['bearing/top', 'bearing/top_wooden']
 PARTS += ['rope_pulley/' + name for name in ('rope_coil', 'rope', 'pulley_magnet', 'rope_half', 'rope_half_magnet')]

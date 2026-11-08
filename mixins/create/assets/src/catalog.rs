@@ -76,6 +76,10 @@ pub const BLOCKS: &[&str] = &[
     "small_diorite_bricks",
     "industrial_iron_block",
     "weathered_iron_block",
+    "andesite_encased_cogwheel",
+    "andesite_encased_large_cogwheel",
+    "brass_encased_cogwheel",
+    "brass_encased_large_cogwheel",
 ];
 pub const EXTRA_BLOCKSTATES: &[&str] = &[
     "lit_blaze_burner",
@@ -194,6 +198,7 @@ pub const PARTS: &[&str] = &[
     "cogwheel_shaftless",
     "flywheel/block",
     "crushing_wheel/block",
+    "large_cogwheel_shaftless",
     "mechanical_crafter/block",
     "mechanical_crafter/item",
     "mechanical_crafter/arrow",

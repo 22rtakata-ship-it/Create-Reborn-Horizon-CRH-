@@ -49,6 +49,25 @@ pub(super) fn state(
     answer: &mut Option<Option<BlockStateId>>,
 ) {
     let block = game.native_state_block(state).unwrap_or("");
+    if let Some(large) = super::create_port_interactions::encased_cog_size(block) {
+        let pos = [ctx.pos.x, ctx.pos.y, ctx.pos.z];
+        let face = direction(ctx.face);
+        let [dx, dy, dz] = face.vector();
+        let read = |p: [i32; 3]| game.registry.state(game.world.block(p[0], p[1], p[2]));
+        let axis = read([pos[0] - dx, pos[1] - dy, pos[2] - dz])
+            .filter(|support| cog_size(&support.name) == Some(false))
+            .map(state_axis)
+            .unwrap_or_else(|| {
+                let look = super::create_port::nearest(ctx.yaw, ctx.pitch);
+                placement::shaft(look, face, ctx.sneaking, level_ports(game, pos))
+            });
+        *answer = Some(if cog_survives(pos, axis, large, read) {
+            game.native_state_with_property(state, "axis", axis.name())
+        } else {
+            None
+        });
+        return;
+    }
     if block == super::create_port_saw_processing::crafter::BLOCK {
         use create_engine::crafter::Pointing;
         let face = direction(ctx.face);
@@ -559,6 +578,41 @@ fn state_axis(state: &horizon_world::chunk::BlockState) -> Axis {
     }
 }
 
+pub(super) fn cog_size(block: &str) -> Option<bool> {
+    match block {
+        "create:large_cogwheel" => Some(true),
+        "create:cogwheel"
+        | "create:millstone"
+        | "create:mechanical_mixer"
+        | super::create_port_saw_processing::crafter::BLOCK => Some(false),
+        _ => super::create_port_interactions::encased_cog_size(block),
+    }
+}
+
+pub(super) fn cog_survives<'a>(
+    pos: [i32; 3],
+    axis: Axis,
+    large: bool,
+    mut read: impl FnMut([i32; 3]) -> Option<&'a horizon_world::chunk::BlockState>,
+) -> bool {
+    Direction::ALL.into_iter().all(|side| {
+        if side.axis() == axis {
+            return true;
+        }
+        let delta = side.vector();
+        read(std::array::from_fn(|i| pos[i] + delta[i])).is_none_or(|adjacent| {
+            adjacent
+                .properties
+                .get("axis")
+                .is_some_and(|axis| axis == side.axis().name())
+                || match cog_size(&adjacent.name) {
+                    Some(other_large) => !large && !other_large,
+                    None => true,
+                }
+        })
+    })
+}
+
 // IRotate.hasShaftTowards for implemented blocks. Ownership does not imply a shaft.
 fn state_shaft_port(state: &horizon_world::chunk::BlockState, face: Direction) -> bool {
     let facing = || {
@@ -569,6 +623,17 @@ fn state_shaft_port(state: &horizon_world::chunk::BlockState, face: Direction) -
         })
     };
     match state.name.as_str() {
+        block if super::create_port_interactions::encased_cog_size(block).is_some() => {
+            face.axis() == state_axis(state)
+                && state
+                    .properties
+                    .get(if face.vector()[face.axis().index()] > 0 {
+                        "top_shaft"
+                    } else {
+                        "bottom_shaft"
+                    })
+                    .is_some_and(|open| open == "true")
+        }
         "create:creative_motor" => facing() == Some(face),
         "create:hand_crank" | "create:encased_fan" | "create:mechanical_drill" => {
             facing() == Some(face.opposite())

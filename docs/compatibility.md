@@ -63,6 +63,8 @@ implementing each feature, and test save/reload inside Horizon.
 | `create:clutch`, `create:gearshift` | corresponding block ID | `axis`, `powered` |
 | `create:hand_crank` | `create:hand_crank` | `facing`, `waterlogged`; `InUse` int, `Backwards` byte |
 | `create:andesite_encased_shaft`, `create:brass_encased_shaft` | `create:encased_shaft` | `axis` |
+| `create:andesite_encased_cogwheel`, `create:brass_encased_cogwheel` | `create:encased_cogwheel` | `axis`, `top_shaft`, `bottom_shaft` |
+| `create:andesite_encased_large_cogwheel`, `create:brass_encased_large_cogwheel` | `create:encased_large_cogwheel` | Same state and common kinetic data |
 | `create:encased_chain_drive` | `create:encased_shaft` | `axis`, `axis_along_first`, `part` (`none`, `start`, `middle`, `end`) |
 | `create:adjustable_chain_gearshift` | `create:adjustable_chain_gearshift` | Same chain properties and `powered`. Integer `Signal` stores the analog redstone strength. |
 | `create:millstone` | `create:millstone` | no block-state properties; `Timer` int, `InputInventory`, `OutputInventory` |
@@ -77,6 +79,13 @@ implementing each feature, and test save/reload inside Horizon.
 
 Static casings/storage blocks and alloy/metal/wrench items retain their upstream
 `create:*` IDs. Encased shafts unwrap to and drop `create:shaft`.
+
+Apply either casing to a dry cogwheel without consuming the casing. A matching
+shaft neighbor opens its end at the time of encasing. Use a Wrench on an axial
+face to toggle that end, or on a tooth face to rotate the axis. Sneak-use the
+Wrench to restore the original cogwheel. The original casing models and moving
+parts load from the optional JAR. Neighbor-connected textures, face-sensitive
+pick-block and moving or schematic Encased Cogwheels remain pending.
 
 The building-blocks tab includes the cut, polished cut, cut bricks and small
 bricks variants of andesite, granite and diorite, plus layered andesite. Each

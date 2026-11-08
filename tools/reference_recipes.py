@@ -14,6 +14,7 @@ from sail_content import COLORED_SAILS, SAIL_ITEMS
 from portable_storage_content import PSI
 from chute_content import CHUTE
 from sticker_content import STICKER
+from encased_cog_content import BLOCKS as ENCASED_COGS
 
 
 VANILLA_LOG_FAMILIES = ['acacia', 'birch', 'cherry', 'dark_oak', 'jungle', 'mangrove', 'oak', 'spruce']
@@ -389,6 +390,7 @@ def main():
         f'create/loot_table/blocks/{CRAFTER}.json',
         f'create/loot_table/blocks/{ITEM_DRAIN}.json',
         f'create/loot_table/blocks/{STICKER}.json',
+        *[f'create/loot_table/blocks/{name}.json' for name in ENCASED_COGS],
         'create/loot_table/blocks/zinc_block.json',
         *[f'create/loot_table/blocks/{name}.json' for name in ZINC_BLOCKS],
         *[f'create/loot_table/blocks/{name}.json' for name in PALETTE_BLOCKS],

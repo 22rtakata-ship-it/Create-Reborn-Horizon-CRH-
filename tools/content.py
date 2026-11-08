@@ -19,6 +19,7 @@ from crushing_content import WHEEL as CRUSHER, crushing
 from crafter_content import CRAFTER, crafter
 from item_drain_content import BLOCK as ITEM_DRAIN, item_drain
 from sticker_content import STICKER, sticker
+from encased_cog_content import ENGLISH as ENCASED_COGS_EN, RUSSIAN as ENCASED_COGS_RU, encased_cogs
 
 CONTENT = ROOT / "content"
 BLOCKS = ["creative_motor", "shaft", "cogwheel", "large_cogwheel", "mechanical_press", "depot"]
@@ -815,6 +816,7 @@ def foundation():
     crafter(write, model)
     item_drain(write)
     sticker(write, model)
+    encased_cogs(write, model)
     deployer(write, model)
     contraption_actors()
     basin_mixer()
@@ -901,6 +903,7 @@ def foundation():
                          'secondary_linear_chassis': 'Secondary Linear Chassis',
                          'radial_chassis': 'Radial Chassis'})
     extra_blocks[STICKER] = 'Sticker'
+    extra_blocks.update(ENCASED_COGS_EN)
     extra_blocks.update(zip(IRON_PALETTE, ('Block of Industrial Iron', 'Block of Weathered Iron'), strict=True))
     extra_blocks.update(zip(ZINC_BLOCKS, ('Zinc Ore', 'Deepslate Zinc Ore', 'Block of Raw Zinc'), strict=True))
     extra_items['raw_zinc'] = 'Raw Zinc'
@@ -1011,6 +1014,7 @@ def foundation():
                          'item.create.crushed_raw_gold': 'Дроблёное рудное золото'})
             lang['block.create.' + ITEM_DRAIN] = 'Осушитель предметов'
             lang['block.create.' + STICKER] = 'Блок-липучка'
+            lang.update({f'block.create.{name}': text for name, text in ENCASED_COGS_RU.items()})
             lang.update({"block.create.mechanical_piston": "Механический поршень",
                          "block.create.sticky_mechanical_piston": "Липкий механический поршень",
                          "block.create.mechanical_piston_head": "Головка механического поршня",
