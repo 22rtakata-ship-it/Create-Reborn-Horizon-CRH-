@@ -13,6 +13,8 @@ use horizon_core::{
     position::BlockPos,
 };
 use horizon_world::{
+    collision_context::CollisionContext,
+    fluid::FluidState,
     level::{PlaceContext, PlaceOutcome, PlacementContext},
     registry::BlockStateId,
 };
@@ -46,9 +48,20 @@ pub(super) fn state(
     game: &GameLevel<'_>,
     mut state: BlockStateId,
     ctx: &PlacementContext,
+    fluid: FluidState,
     answer: &mut Option<Option<BlockStateId>>,
 ) {
     let block = game.native_state_block(state).unwrap_or("");
+    if block == "create:hand_crank" {
+        let pos = [ctx.pos.x, ctx.pos.y, ctx.pos.z];
+        let facing = placement::crank(direction(ctx.face), ctx.sneaking, level_ports(game, pos));
+        let waterlogged = if fluid == FluidState::WATER { "true" } else { "false" };
+        *answer = Some(
+            game.native_state_with_property(state, "facing", facing.name())
+                .and_then(|state| game.native_state_with_property(state, "waterlogged", waterlogged)),
+        );
+        return;
+    }
     if matches!(block, super::create_port_basin::pump::PIPE | super::create_port_basin::pump::PUMP | super::create_port_basin::pump::VALVE) {
         *answer = Some(super::create_port_basin::pump::placement(game, state, ctx, block));
         return;
@@ -411,6 +424,71 @@ pub(super) fn state(
         }
     }
     *answer = Some(Some(state));
+}
+
+fn crank_support(game: &GameLevel<'_>, state: BlockStateId) -> Option<Direction> {
+    let state = game.registry.state(state)?;
+    if state.name != "create:hand_crank" {
+        return None;
+    }
+    let facing = state.properties.get("facing")?;
+    Direction::ALL
+        .into_iter()
+        .find(|side| side.name() == facing)
+        .map(Direction::opposite)
+}
+
+fn has_collision(game: &GameLevel<'_>, pos: BlockPos) -> bool {
+    let mut scene = horizon_client::collisions::SceneCollisions {
+        world: game.world,
+        binding: game.collision,
+        subject: None,
+    };
+    game.collision
+        .collision_shape_with_context(
+            &mut scene,
+            game.world.block(pos.x, pos.y, pos.z),
+            pos,
+            &CollisionContext::empty(false),
+        )
+        .is_ok_and(|shape| !shape.is_empty())
+}
+
+pub(super) fn crank_can_survive(
+    game: &GameLevel<'_>,
+    pos: BlockPos,
+    state: BlockStateId,
+    survives: &mut Option<bool>,
+) {
+    if let Some(side) = crank_support(game, state) {
+        let [dx, dy, dz] = side.vector();
+        *survives = Some(has_collision(game, BlockPos::new(pos.x + dx, pos.y + dy, pos.z + dz)));
+    }
+}
+
+pub(super) fn crank_update_shape(
+    game: &GameLevel<'_>,
+    ticks: &mut horizon_world::level::Ticks,
+    pos: BlockPos,
+    state: BlockStateId,
+    changed: D,
+    neighbor_pos: BlockPos,
+    new: &mut Option<BlockStateId>,
+) {
+    let Some(support) = crank_support(game, state) else {
+        return;
+    };
+    if game.facts.get(state).waterlogged {
+        game.native_schedule_fluid_tick(ticks, [pos.x, pos.y, pos.z], "minecraft:water", 5);
+    }
+    // A shape prepass also runs for blocks that have yet to be placed.
+    if support == direction(changed)
+        && game.world.block(pos.x, pos.y, pos.z) == state
+        && !has_collision(game, neighbor_pos)
+    {
+        // updateOrDestroy drops the crank and retains its fluid, if any.
+        *new = Some(game.world.air);
+    }
 }
 
 pub(super) fn alias(game: &mut Game<'_>, stack: &ItemStack, pos: [i32; 3], face: [i32; 3]) -> bool {

@@ -23,7 +23,7 @@ def deployer(write, model):
                        'render_shape': 'MODEL', 'sounds': 'minecraft:andesite'},
         'state_properties': {'facing': {'type': 'enum', 'values': list(rotations)},
                              'axis_along_first': {'type': 'boolean'}},
-        'default_state': {'facing': 'down', 'axis_along_first': 'true'},
+        'default_state': {'facing': 'north', 'axis_along_first': 'true'},
         'shapes': {'property': 'facing', 'values': outline},
         'collision_shapes': {'property': 'facing', 'values': collision},
     })

@@ -356,15 +356,25 @@ public final class ReferenceBridge {
 
     private JsonObject block(JsonObject body) {
         MinecraftServer server = server(); ServerLevel level = player(server).serverLevel();
-        return blockAt(level, pos(body, "pos"));
+        BlockPos position = pos(body, "pos");
+        JsonObject result = blockAt(level, position);
+        if (flag(body, "default_state", false)) {
+            result.add("default_properties", properties(level.getBlockState(position).getBlock().defaultBlockState()));
+        }
+        return result;
+    }
+
+    private static JsonObject properties(BlockState state) {
+        JsonObject result = new JsonObject();
+        state.getValues().forEach((key, value) -> result.addProperty(key.getName(), value.toString()));
+        return result;
     }
 
     private static JsonObject blockAt(ServerLevel level, BlockPos pos) {
         BlockState state = level.getBlockState(pos);
         JsonObject result = object("id", BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString());
         result.add("pos", vector(pos.getX(), pos.getY(), pos.getZ()));
-        JsonObject properties = new JsonObject(); state.getValues().forEach((key, value) -> properties.addProperty(key.getName(), value.toString()));
-        result.add("properties", properties);
+        result.add("properties", properties(state));
         BlockEntity entity = level.getBlockEntity(pos);
         if (entity != null) result.addProperty("nbt", entity.saveWithFullMetadata(level.registryAccess()).toString());
         return result;

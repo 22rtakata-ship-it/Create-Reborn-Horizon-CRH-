@@ -140,8 +140,12 @@ pub const ITEMS: &[&str] = &[
     "crafter_slot_cover",
     "incomplete_precision_mechanism",
     "precision_mechanism",
+    "crushed_raw_copper",
     "crushed_raw_gold",
     "crushed_raw_iron",
+    "crushed_raw_zinc",
+    "copper_nugget",
+    "powdered_obsidian",
     "experience_nugget",
 ];
 pub const PARTS: &[&str] = &[

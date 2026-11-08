@@ -12,6 +12,19 @@
         "id": "minecraft:andesite"
       }
     },
+    "create/recipe/blasting/copper_ingot_from_crushed.json": {
+      "type": "minecraft:blasting",
+      "category": "misc",
+      "cookingtime": 100,
+      "experience": 0.1,
+      "ingredient": {
+        "item": "create:crushed_raw_copper"
+      },
+      "result": {
+        "count": 1,
+        "id": "minecraft:copper_ingot"
+      }
+    },
     "create/recipe/blasting/gold_ingot_from_crushed.json": {
       "type": "minecraft:blasting",
       "category": "misc",
@@ -36,6 +49,19 @@
       "result": {
         "count": 1,
         "id": "minecraft:iron_ingot"
+      }
+    },
+    "create/recipe/blasting/zinc_ingot_from_crushed.json": {
+      "type": "minecraft:blasting",
+      "category": "misc",
+      "cookingtime": 100,
+      "experience": 0.1,
+      "ingredient": {
+        "item": "create:crushed_raw_zinc"
+      },
+      "result": {
+        "count": 1,
+        "id": "create:zinc_ingot"
       }
     },
     "create/recipe/blasting/zinc_ingot_from_ore.json": {
@@ -1712,6 +1738,19 @@
         "id": "create:brass_nugget"
       }
     },
+    "create/recipe/crafting/materials/copper_nugget.json": {
+      "type": "minecraft:crafting_shapeless",
+      "category": "misc",
+      "ingredients": [
+        {
+          "tag": "c:ingots/copper"
+        }
+      ],
+      "result": {
+        "count": 9,
+        "id": "create:copper_nugget"
+      }
+    },
     "create/recipe/crafting/materials/electron_tube.json": {
       "type": "minecraft:crafting_shaped",
       "category": "misc",
@@ -1894,6 +1933,171 @@
         "id": "create:zinc_nugget"
       }
     },
+    "create/recipe/crushing/amethyst_block.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "item": "minecraft:amethyst_block"
+        }
+      ],
+      "processing_time": 150,
+      "results": [
+        {
+          "count": 3,
+          "id": "minecraft:amethyst_shard"
+        },
+        {
+          "chance": 0.5,
+          "id": "minecraft:amethyst_shard"
+        }
+      ]
+    },
+    "create/recipe/crushing/amethyst_cluster.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "item": "minecraft:amethyst_cluster"
+        }
+      ],
+      "processing_time": 150,
+      "results": [
+        {
+          "count": 7,
+          "id": "minecraft:amethyst_shard"
+        },
+        {
+          "chance": 0.5,
+          "id": "minecraft:amethyst_shard"
+        }
+      ]
+    },
+    "create/recipe/crushing/blaze_rod.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "item": "minecraft:blaze_rod"
+        }
+      ],
+      "processing_time": 100,
+      "results": [
+        {
+          "count": 3,
+          "id": "minecraft:blaze_powder"
+        },
+        {
+          "chance": 0.25,
+          "count": 3,
+          "id": "minecraft:blaze_powder"
+        }
+      ]
+    },
+    "create/recipe/crushing/coal_ore.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "item": "minecraft:coal_ore"
+        }
+      ],
+      "processing_time": 150,
+      "results": [
+        {
+          "id": "minecraft:coal"
+        },
+        {
+          "chance": 0.75,
+          "id": "minecraft:coal"
+        },
+        {
+          "chance": 0.75,
+          "id": "create:experience_nugget"
+        },
+        {
+          "chance": 0.125,
+          "id": "minecraft:cobblestone"
+        }
+      ]
+    },
+    "create/recipe/crushing/copper_ore.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "item": "minecraft:copper_ore"
+        }
+      ],
+      "processing_time": 250,
+      "results": [
+        {
+          "count": 5,
+          "id": "create:crushed_raw_copper"
+        },
+        {
+          "chance": 0.25,
+          "id": "create:crushed_raw_copper"
+        },
+        {
+          "chance": 0.75,
+          "id": "create:experience_nugget"
+        },
+        {
+          "chance": 0.125,
+          "id": "minecraft:cobblestone"
+        }
+      ]
+    },
+    "create/recipe/crushing/deepslate_coal_ore.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "item": "minecraft:deepslate_coal_ore"
+        }
+      ],
+      "processing_time": 300,
+      "results": [
+        {
+          "count": 2,
+          "id": "minecraft:coal"
+        },
+        {
+          "chance": 0.25,
+          "id": "minecraft:coal"
+        },
+        {
+          "chance": 0.75,
+          "id": "create:experience_nugget"
+        },
+        {
+          "chance": 0.125,
+          "id": "minecraft:cobbled_deepslate"
+        }
+      ]
+    },
+    "create/recipe/crushing/deepslate_copper_ore.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "item": "minecraft:deepslate_copper_ore"
+        }
+      ],
+      "processing_time": 350,
+      "results": [
+        {
+          "count": 7,
+          "id": "create:crushed_raw_copper"
+        },
+        {
+          "chance": 0.25,
+          "id": "create:crushed_raw_copper"
+        },
+        {
+          "chance": 0.75,
+          "id": "create:experience_nugget"
+        },
+        {
+          "chance": 0.125,
+          "id": "minecraft:cobbled_deepslate"
+        }
+      ]
+    },
     "create/recipe/crushing/deepslate_diamond_ore.json": {
       "type": "create:crushing",
       "ingredients": [
@@ -1913,6 +2117,61 @@
         },
         {
           "chance": 0.75,
+          "id": "create:experience_nugget"
+        },
+        {
+          "chance": 0.125,
+          "id": "minecraft:cobbled_deepslate"
+        }
+      ]
+    },
+    "create/recipe/crushing/deepslate_emerald_ore.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "item": "minecraft:deepslate_emerald_ore"
+        }
+      ],
+      "processing_time": 450,
+      "results": [
+        {
+          "count": 2,
+          "id": "minecraft:emerald"
+        },
+        {
+          "chance": 0.25,
+          "id": "minecraft:emerald"
+        },
+        {
+          "chance": 0.75,
+          "id": "create:experience_nugget"
+        },
+        {
+          "chance": 0.125,
+          "id": "minecraft:cobbled_deepslate"
+        }
+      ]
+    },
+    "create/recipe/crushing/deepslate_gold_ore.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "item": "minecraft:deepslate_gold_ore"
+        }
+      ],
+      "processing_time": 350,
+      "results": [
+        {
+          "count": 2,
+          "id": "create:crushed_raw_gold"
+        },
+        {
+          "chance": 0.25,
+          "id": "create:crushed_raw_gold"
+        },
+        {
+          "chance": 0.75,
+          "count": 2,
           "id": "create:experience_nugget"
         },
         {
@@ -1948,6 +2207,116 @@
         }
       ]
     },
+    "create/recipe/crushing/deepslate_lapis_ore.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "item": "minecraft:deepslate_lapis_ore"
+        }
+      ],
+      "processing_time": 350,
+      "results": [
+        {
+          "count": 12,
+          "id": "minecraft:lapis_lazuli"
+        },
+        {
+          "chance": 0.5,
+          "id": "minecraft:lapis_lazuli"
+        },
+        {
+          "chance": 0.75,
+          "id": "create:experience_nugget"
+        },
+        {
+          "chance": 0.125,
+          "id": "minecraft:cobbled_deepslate"
+        }
+      ]
+    },
+    "create/recipe/crushing/deepslate_redstone_ore.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "item": "minecraft:deepslate_redstone_ore"
+        }
+      ],
+      "processing_time": 350,
+      "results": [
+        {
+          "count": 7,
+          "id": "minecraft:redstone"
+        },
+        {
+          "chance": 0.5,
+          "id": "minecraft:redstone"
+        },
+        {
+          "chance": 0.75,
+          "id": "create:experience_nugget"
+        },
+        {
+          "chance": 0.125,
+          "id": "minecraft:cobbled_deepslate"
+        }
+      ]
+    },
+    "create/recipe/crushing/deepslate_zinc_ore.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "item": "create:deepslate_zinc_ore"
+        }
+      ],
+      "processing_time": 350,
+      "results": [
+        {
+          "count": 2,
+          "id": "create:crushed_raw_zinc"
+        },
+        {
+          "chance": 0.25,
+          "id": "create:crushed_raw_zinc"
+        },
+        {
+          "chance": 0.75,
+          "id": "create:experience_nugget"
+        },
+        {
+          "chance": 0.125,
+          "id": "minecraft:cobbled_deepslate"
+        }
+      ]
+    },
+    "create/recipe/crushing/diamond_horse_armor.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "item": "minecraft:diamond_horse_armor"
+        }
+      ],
+      "processing_time": 200,
+      "results": [
+        {
+          "id": "minecraft:diamond"
+        },
+        {
+          "chance": 0.5,
+          "count": 2,
+          "id": "minecraft:leather"
+        },
+        {
+          "chance": 0.1,
+          "count": 3,
+          "id": "minecraft:diamond"
+        },
+        {
+          "chance": 0.25,
+          "count": 2,
+          "id": "minecraft:string"
+        }
+      ]
+    },
     "create/recipe/crushing/diamond_ore.json": {
       "type": "create:crushing",
       "ingredients": [
@@ -1974,6 +2343,151 @@
         }
       ]
     },
+    "create/recipe/crushing/diorite_recycling.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "tag": "create:stone_types/diorite"
+        }
+      ],
+      "processing_time": 350,
+      "results": [
+        {
+          "chance": 0.25,
+          "id": "minecraft:quartz"
+        }
+      ]
+    },
+    "create/recipe/crushing/emerald_ore.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "item": "minecraft:emerald_ore"
+        }
+      ],
+      "processing_time": 350,
+      "results": [
+        {
+          "id": "minecraft:emerald"
+        },
+        {
+          "chance": 0.75,
+          "id": "minecraft:emerald"
+        },
+        {
+          "chance": 0.75,
+          "id": "create:experience_nugget"
+        },
+        {
+          "chance": 0.125,
+          "id": "minecraft:cobblestone"
+        }
+      ]
+    },
+    "create/recipe/crushing/gilded_blackstone.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "item": "minecraft:gilded_blackstone"
+        }
+      ],
+      "processing_time": 400,
+      "results": [
+        {
+          "count": 18,
+          "id": "minecraft:gold_nugget"
+        },
+        {
+          "chance": 0.75,
+          "id": "create:experience_nugget"
+        },
+        {
+          "chance": 0.125,
+          "id": "minecraft:blackstone"
+        }
+      ]
+    },
+    "create/recipe/crushing/glowstone.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "item": "minecraft:glowstone"
+        }
+      ],
+      "processing_time": 150,
+      "results": [
+        {
+          "count": 3,
+          "id": "minecraft:glowstone_dust"
+        },
+        {
+          "chance": 0.5,
+          "id": "minecraft:glowstone_dust"
+        }
+      ]
+    },
+    "create/recipe/crushing/gold_ore.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "item": "minecraft:gold_ore"
+        }
+      ],
+      "processing_time": 250,
+      "results": [
+        {
+          "id": "create:crushed_raw_gold"
+        },
+        {
+          "chance": 0.75,
+          "id": "create:crushed_raw_gold"
+        },
+        {
+          "chance": 0.75,
+          "count": 2,
+          "id": "create:experience_nugget"
+        },
+        {
+          "chance": 0.125,
+          "id": "minecraft:cobblestone"
+        }
+      ]
+    },
+    "create/recipe/crushing/golden_horse_armor.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "item": "minecraft:golden_horse_armor"
+        }
+      ],
+      "processing_time": 200,
+      "results": [
+        {
+          "count": 2,
+          "id": "minecraft:gold_ingot"
+        },
+        {
+          "chance": 0.5,
+          "count": 2,
+          "id": "minecraft:leather"
+        },
+        {
+          "chance": 0.5,
+          "count": 2,
+          "id": "minecraft:gold_ingot"
+        },
+        {
+          "chance": 0.25,
+          "count": 2,
+          "id": "minecraft:string"
+        },
+        {
+          "chance": 0.25,
+          "count": 8,
+          "id": "minecraft:gold_nugget"
+        }
+      ]
+    },
     "create/recipe/crushing/gravel.json": {
       "type": "create:crushing",
       "ingredients": [
@@ -1993,6 +2507,39 @@
         {
           "chance": 0.05,
           "id": "minecraft:clay_ball"
+        }
+      ]
+    },
+    "create/recipe/crushing/iron_horse_armor.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "item": "minecraft:iron_horse_armor"
+        }
+      ],
+      "processing_time": 200,
+      "results": [
+        {
+          "count": 2,
+          "id": "minecraft:iron_ingot"
+        },
+        {
+          "chance": 0.5,
+          "id": "minecraft:leather"
+        },
+        {
+          "chance": 0.5,
+          "id": "minecraft:iron_ingot"
+        },
+        {
+          "chance": 0.25,
+          "count": 2,
+          "id": "minecraft:string"
+        },
+        {
+          "chance": 0.25,
+          "count": 4,
+          "id": "minecraft:iron_nugget"
         }
       ]
     },
@@ -2019,6 +2566,237 @@
         {
           "chance": 0.125,
           "id": "minecraft:cobblestone"
+        }
+      ]
+    },
+    "create/recipe/crushing/lapis_ore.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "item": "minecraft:lapis_ore"
+        }
+      ],
+      "processing_time": 250,
+      "results": [
+        {
+          "count": 10,
+          "id": "minecraft:lapis_lazuli"
+        },
+        {
+          "chance": 0.5,
+          "id": "minecraft:lapis_lazuli"
+        },
+        {
+          "chance": 0.75,
+          "id": "create:experience_nugget"
+        },
+        {
+          "chance": 0.125,
+          "id": "minecraft:cobblestone"
+        }
+      ]
+    },
+    "create/recipe/crushing/leather_horse_armor.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "item": "minecraft:leather_horse_armor"
+        }
+      ],
+      "processing_time": 200,
+      "results": [
+        {
+          "count": 2,
+          "id": "minecraft:leather"
+        },
+        {
+          "chance": 0.5,
+          "count": 2,
+          "id": "minecraft:leather"
+        }
+      ]
+    },
+    "create/recipe/crushing/nether_gold_ore.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "item": "minecraft:nether_gold_ore"
+        }
+      ],
+      "processing_time": 350,
+      "results": [
+        {
+          "count": 18,
+          "id": "minecraft:gold_nugget"
+        },
+        {
+          "chance": 0.75,
+          "id": "create:experience_nugget"
+        },
+        {
+          "chance": 0.125,
+          "id": "minecraft:netherrack"
+        }
+      ]
+    },
+    "create/recipe/crushing/nether_quartz_ore.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "item": "minecraft:nether_quartz_ore"
+        }
+      ],
+      "processing_time": 350,
+      "results": [
+        {
+          "count": 2,
+          "id": "minecraft:quartz"
+        },
+        {
+          "chance": 0.25,
+          "id": "minecraft:quartz"
+        },
+        {
+          "chance": 0.75,
+          "id": "create:experience_nugget"
+        },
+        {
+          "chance": 0.125,
+          "id": "minecraft:netherrack"
+        }
+      ]
+    },
+    "create/recipe/crushing/nether_wart_block.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "item": "minecraft:nether_wart_block"
+        }
+      ],
+      "processing_time": 150,
+      "results": [
+        {
+          "chance": 0.25,
+          "id": "minecraft:nether_wart"
+        }
+      ]
+    },
+    "create/recipe/crushing/obsidian.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "item": "minecraft:obsidian"
+        }
+      ],
+      "processing_time": 500,
+      "results": [
+        {
+          "id": "create:powdered_obsidian"
+        },
+        {
+          "chance": 0.75,
+          "id": "minecraft:obsidian"
+        }
+      ]
+    },
+    "create/recipe/crushing/prismarine_crystals.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "item": "minecraft:prismarine_crystals"
+        }
+      ],
+      "processing_time": 150,
+      "results": [
+        {
+          "id": "minecraft:quartz"
+        },
+        {
+          "chance": 0.5,
+          "count": 2,
+          "id": "minecraft:quartz"
+        },
+        {
+          "chance": 0.1,
+          "count": 2,
+          "id": "minecraft:glowstone_dust"
+        }
+      ]
+    },
+    "create/recipe/crushing/raw_copper.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "tag": "c:raw_materials/copper"
+        }
+      ],
+      "processing_time": 400,
+      "results": [
+        {
+          "id": "create:crushed_raw_copper"
+        },
+        {
+          "chance": 0.75,
+          "id": "create:experience_nugget"
+        }
+      ]
+    },
+    "create/recipe/crushing/raw_copper_block.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "tag": "c:storage_blocks/raw_copper"
+        }
+      ],
+      "processing_time": 400,
+      "results": [
+        {
+          "count": 9,
+          "id": "create:crushed_raw_copper"
+        },
+        {
+          "chance": 0.75,
+          "count": 9,
+          "id": "create:experience_nugget"
+        }
+      ]
+    },
+    "create/recipe/crushing/raw_gold.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "tag": "c:raw_materials/gold"
+        }
+      ],
+      "processing_time": 400,
+      "results": [
+        {
+          "id": "create:crushed_raw_gold"
+        },
+        {
+          "chance": 0.75,
+          "count": 2,
+          "id": "create:experience_nugget"
+        }
+      ]
+    },
+    "create/recipe/crushing/raw_gold_block.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "tag": "c:storage_blocks/raw_gold"
+        }
+      ],
+      "processing_time": 400,
+      "results": [
+        {
+          "count": 9,
+          "id": "create:crushed_raw_gold"
+        },
+        {
+          "chance": 0.75,
+          "count": 18,
+          "id": "create:experience_nugget"
         }
       ]
     },
@@ -2057,6 +2835,178 @@
           "chance": 0.75,
           "count": 9,
           "id": "create:experience_nugget"
+        }
+      ]
+    },
+    "create/recipe/crushing/raw_zinc.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "tag": "c:raw_materials/zinc"
+        }
+      ],
+      "processing_time": 400,
+      "results": [
+        {
+          "id": "create:crushed_raw_zinc"
+        },
+        {
+          "chance": 0.75,
+          "id": "create:experience_nugget"
+        }
+      ]
+    },
+    "create/recipe/crushing/raw_zinc_block.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "tag": "c:storage_blocks/raw_zinc"
+        }
+      ],
+      "processing_time": 400,
+      "results": [
+        {
+          "count": 9,
+          "id": "create:crushed_raw_zinc"
+        },
+        {
+          "chance": 0.75,
+          "count": 9,
+          "id": "create:experience_nugget"
+        }
+      ]
+    },
+    "create/recipe/crushing/redstone_ore.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "item": "minecraft:redstone_ore"
+        }
+      ],
+      "processing_time": 250,
+      "results": [
+        {
+          "count": 6,
+          "id": "minecraft:redstone"
+        },
+        {
+          "chance": 0.5,
+          "id": "minecraft:redstone"
+        },
+        {
+          "chance": 0.75,
+          "id": "create:experience_nugget"
+        },
+        {
+          "chance": 0.125,
+          "id": "minecraft:cobblestone"
+        }
+      ]
+    },
+    "create/recipe/crushing/tuff.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "item": "minecraft:tuff"
+        }
+      ],
+      "processing_time": 350,
+      "results": [
+        {
+          "chance": 0.25,
+          "id": "minecraft:flint"
+        },
+        {
+          "chance": 0.1,
+          "id": "minecraft:gold_nugget"
+        },
+        {
+          "chance": 0.1,
+          "id": "create:copper_nugget"
+        },
+        {
+          "chance": 0.1,
+          "id": "create:zinc_nugget"
+        },
+        {
+          "chance": 0.1,
+          "id": "minecraft:iron_nugget"
+        }
+      ]
+    },
+    "create/recipe/crushing/tuff_recycling.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "tag": "create:stone_types/tuff"
+        }
+      ],
+      "processing_time": 350,
+      "results": [
+        {
+          "chance": 0.25,
+          "id": "minecraft:flint"
+        },
+        {
+          "chance": 0.1,
+          "id": "minecraft:gold_nugget"
+        },
+        {
+          "chance": 0.1,
+          "id": "create:copper_nugget"
+        },
+        {
+          "chance": 0.1,
+          "id": "create:zinc_nugget"
+        },
+        {
+          "chance": 0.1,
+          "id": "minecraft:iron_nugget"
+        }
+      ]
+    },
+    "create/recipe/crushing/wool.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "tag": "minecraft:wool"
+        }
+      ],
+      "processing_time": 100,
+      "results": [
+        {
+          "count": 2,
+          "id": "minecraft:string"
+        },
+        {
+          "chance": 0.5,
+          "id": "minecraft:string"
+        }
+      ]
+    },
+    "create/recipe/crushing/zinc_ore.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "item": "create:zinc_ore"
+        }
+      ],
+      "processing_time": 250,
+      "results": [
+        {
+          "id": "create:crushed_raw_zinc"
+        },
+        {
+          "chance": 0.75,
+          "id": "create:crushed_raw_zinc"
+        },
+        {
+          "chance": 0.75,
+          "id": "create:experience_nugget"
+        },
+        {
+          "chance": 0.125,
+          "id": "minecraft:cobblestone"
         }
       ]
     },
@@ -5479,6 +6429,19 @@
         "id": "minecraft:bread"
       }
     },
+    "create/recipe/smelting/copper_ingot_from_crushed.json": {
+      "type": "minecraft:smelting",
+      "category": "misc",
+      "cookingtime": 200,
+      "experience": 0.1,
+      "ingredient": {
+        "item": "create:crushed_raw_copper"
+      },
+      "result": {
+        "count": 1,
+        "id": "minecraft:copper_ingot"
+      }
+    },
     "create/recipe/smelting/gold_ingot_from_crushed.json": {
       "type": "minecraft:smelting",
       "category": "misc",
@@ -5503,6 +6466,19 @@
       "result": {
         "count": 1,
         "id": "minecraft:iron_ingot"
+      }
+    },
+    "create/recipe/smelting/zinc_ingot_from_crushed.json": {
+      "type": "minecraft:smelting",
+      "category": "misc",
+      "cookingtime": 200,
+      "experience": 0.1,
+      "ingredient": {
+        "item": "create:crushed_raw_zinc"
+      },
+      "result": {
+        "count": 1,
+        "id": "create:zinc_ingot"
       }
     },
     "create/recipe/smelting/zinc_ingot_from_ore.json": {
@@ -5544,6 +6520,24 @@
         "id": "minecraft:bread"
       }
     },
+    "create/recipe/splashing/crushed_raw_copper.json": {
+      "type": "create:splashing",
+      "ingredients": [
+        {
+          "item": "create:crushed_raw_copper"
+        }
+      ],
+      "results": [
+        {
+          "count": 9,
+          "id": "create:copper_nugget"
+        },
+        {
+          "chance": 0.5,
+          "id": "minecraft:clay_ball"
+        }
+      ]
+    },
     "create/recipe/splashing/crushed_raw_gold.json": {
       "type": "create:splashing",
       "ingredients": [
@@ -5577,6 +6571,24 @@
         {
           "chance": 0.75,
           "id": "minecraft:redstone"
+        }
+      ]
+    },
+    "create/recipe/splashing/crushed_raw_zinc.json": {
+      "type": "create:splashing",
+      "ingredients": [
+        {
+          "item": "create:crushed_raw_zinc"
+        }
+      ],
+      "results": [
+        {
+          "count": 9,
+          "id": "create:zinc_nugget"
+        },
+        {
+          "chance": 0.25,
+          "id": "minecraft:gunpowder"
         }
       ]
     },
@@ -8093,6 +9105,30 @@
         "minecraft:cobbled_deepslate"
       ]
     },
+    "create/tags/item/stone_types/tuff.json": {
+      "values": [
+        "create:cut_tuff",
+        "create:cut_tuff_stairs",
+        "create:cut_tuff_wall",
+        "create:polished_cut_tuff",
+        "create:polished_cut_tuff_stairs",
+        "create:polished_cut_tuff_wall",
+        "create:cut_tuff_bricks",
+        "create:cut_tuff_brick_stairs",
+        "create:cut_tuff_brick_wall",
+        "create:small_tuff_bricks",
+        "create:small_tuff_brick_stairs",
+        "create:small_tuff_brick_wall",
+        "create:layered_tuff",
+        "create:tuff_pillar",
+        "minecraft:tuff"
+      ]
+    },
+    "c/tags/item/storage_blocks/raw_zinc.json": {
+      "values": [
+        "create:raw_zinc_block"
+      ]
+    },
     "c/tags/item/storage_blocks/raw_iron.json": {
       "values": [
         "minecraft:raw_iron_block"
@@ -8101,6 +9137,26 @@
     "c/tags/item/raw_materials/iron.json": {
       "values": [
         "minecraft:raw_iron"
+      ]
+    },
+    "c/tags/item/storage_blocks/raw_gold.json": {
+      "values": [
+        "minecraft:raw_gold_block"
+      ]
+    },
+    "c/tags/item/raw_materials/gold.json": {
+      "values": [
+        "minecraft:raw_gold"
+      ]
+    },
+    "c/tags/item/storage_blocks/raw_copper.json": {
+      "values": [
+        "minecraft:raw_copper_block"
+      ]
+    },
+    "c/tags/item/raw_materials/copper.json": {
+      "values": [
+        "minecraft:raw_copper"
       ]
     },
     "c/tags/item/storage_blocks/zinc.json": {

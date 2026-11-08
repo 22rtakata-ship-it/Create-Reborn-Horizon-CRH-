@@ -39,7 +39,7 @@ def fluid_pipes(write, model, axial_boxes):
         'template': 'minecraft:glass', 'item': True,
         'properties': {**physical, 'map_color': 11},
         'state_properties': {'facing': {'type': 'enum', 'values': FACES}, 'waterlogged': {'type': 'boolean'}},
-        'default_state': {'facing': 'down', 'waterlogged': 'false'},
+        'default_state': {'facing': 'north', 'waterlogged': 'false'},
         'shapes': pump_shape, 'collision_shapes': pump_shape,
     })
     shape_values, body_variants = {}, {}
@@ -58,7 +58,7 @@ def fluid_pipes(write, model, axial_boxes):
         'properties': {**physical, 'map_color': 15},
         'state_properties': {'facing': {'type': 'enum', 'values': FACES},
                              **{p: {'type': 'boolean'} for p in ('axis_along_first', 'enabled', 'waterlogged')}},
-        'default_state': dict(facing='down', axis_along_first='false', enabled='false', waterlogged='false'),
+        'default_state': dict(facing='north', axis_along_first='true', enabled='false', waterlogged='false'),
         'shapes': valve_shape, 'collision_shapes': valve_shape,
     })
     model(f'{VALVE}/fallback_body', [([5, 0, 5], [11, 16, 11]), ([3, 4, 3], [13, 12, 13])],

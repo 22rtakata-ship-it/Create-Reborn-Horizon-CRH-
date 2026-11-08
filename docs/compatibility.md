@@ -74,8 +74,8 @@ implementing each feature, and test save/reload inside Horizon.
 | `create:brass_funnel` | `create:funnel` | Dry vertical placement; `extracting`, `powered`, `waterlogged`, plain `Filter`, `FilterAmount`, `UpTo` and `TransferCooldown` |
 | `create:item_drain` | `create:item_drain` | 1500 mB `Tanks`, transported `HeldItem` and `ProcessingTicks` |
 | `create:mechanical_crafter` | `create:mechanical_crafter` | Horizontal `facing`, `pointing`, `Inventory`, `ConnectedInput`, `GroupedItems.Grid`, `Phase` and `CountDown`; 2 SU/RPM |
-| `create:encased_fan` | `create:encased_fan` | six-way `facing`, original default `down`; common kinetic `Speed` |
-| `create:mechanical_drill` | `create:drill` | six-way `facing`, `waterlogged`; defaults `down`, false; `Progress`, `NextTick`, `Breaking` |
+| `create:encased_fan` | `create:encased_fan` | six-way `facing`, default `north`; common kinetic `Speed` |
+| `create:mechanical_drill` | `create:drill` | six-way `facing`, `waterlogged`; defaults `north`, false; `Progress`, `NextTick`, `Breaking` |
 
 Static casings/storage blocks and alloy/metal/wrench items retain their upstream
 `create:*` IDs. Encased shafts unwrap to and drop `create:shaft`.
@@ -105,9 +105,10 @@ can be packed into its original storage block.
 
 The downward Crushing Wheel pair takes supported inputs from a dry Chute
 or catches falling stacks. It looks up Crushing recipes before Milling
-recipes. The catalog includes diamond ores, iron ores, raw iron and raw
-iron blocks. The wheels eject into open space or transfer onto a Depot,
-where the top stack and output buffer control backpressure. Unported items
+recipes. The 45 bundled crushing recipes include supported raw metals and
+their storage blocks, ores, Obsidian, Wool and Tuff. The wheels eject into
+open space or transfer onto a Depot, where the top stack and output buffer
+control backpressure. Unported items
 stay in the Chute. The controller retains its original inventory and cycle
 fields through a restart, and loose outputs retain the original bypass
 data. The Experience Nugget currently drops as an item. Consuming it,

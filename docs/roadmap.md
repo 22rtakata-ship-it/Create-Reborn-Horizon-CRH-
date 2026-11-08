@@ -83,6 +83,9 @@ with the systems they depend on.
 - [x] Shafts, small/large cogwheels, basic gear ratios and speed limit.
 - [x] Gearbox, Clutch, Gearshift, original directions and rotating parts.
 - [x] Hand Crank, motor, small and large water wheels: basic mechanics and persistence.
+- [x] Hand Crank mounting on partial collision shapes, waterlogging, drops
+  on support loss, and ordinary Wrench activation. See the
+  [paired fixture](../tools/crank_support_checks.py).
 - [x] Wrench, rotation/removal, encased shafts; basic Speedometer/Stressometer.
 - [x] Dry Andesite and Brass Encased Cogwheels in both sizes, with independent
   shaft ends, Wrench interactions and source casing/rotating models from the

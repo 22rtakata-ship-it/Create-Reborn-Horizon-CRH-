@@ -427,7 +427,6 @@ pub(super) fn placed(game: &mut Game<'_>, stack: &ItemStack, pos: [i32; 3]) {
     } else {
         let facing = match stack.item.as_ref() {
             "create:creative_motor" => Some(placement::motor(look, sneaking, ports)),
-            "create:hand_crank" => Some(placement::crank(face, sneaking, ports)),
             "create:mechanical_press" => Some(
                 [
                     Direction::North,

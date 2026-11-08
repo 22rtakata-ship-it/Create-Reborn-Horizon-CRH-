@@ -471,7 +471,7 @@ fn bundled_processors_have_source_states_collision_and_real_processing_recipes()
     assert_eq!(millstone["shapes"], millstone["collision_shapes"]);
     let fan = read("data/create/horizon/block/encased_fan.json");
     assert_eq!(fan["state_properties"].as_object().unwrap().len(), 1);
-    assert_eq!(fan["default_state"], json!({"facing":"down"}));
+    assert_eq!(fan["default_state"], json!({"facing":"north"}));
     assert_eq!(
         fan["state_properties"]["facing"]["values"],
         json!(["down", "up", "north", "south", "west", "east"])
@@ -480,7 +480,7 @@ fn bundled_processors_have_source_states_collision_and_real_processing_recipes()
     let drill = read("data/create/horizon/block/mechanical_drill.json");
     assert_eq!(
         drill["default_state"],
-        json!({"facing":"down","waterlogged":"false"})
+        json!({"facing":"north","waterlogged":"false"})
     );
     assert_eq!(drill["shapes"], drill["collision_shapes"]);
     assert_eq!(drill["collision_shapes"]["property"], "facing");

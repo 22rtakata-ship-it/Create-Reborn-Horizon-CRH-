@@ -148,7 +148,9 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3]) ->
     let wrench = game
         .held()
         .is_some_and(|s| s.item.as_ref() == "create:wrench");
-    if wrench {
+    // Ordinary use is consumed by HandCrankBlock.useItemOn before the item.
+    // Sneaking with a wrench still takes the pickup path.
+    if wrench && (block != "create:hand_crank" || secondary(game)) {
         if block == super::create_port_saw_processing::crafter::BLOCK && !game.native_sneaking() {
             return false;
         }

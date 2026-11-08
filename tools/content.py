@@ -88,9 +88,7 @@ def processors():
         "properties": {"hardness": 1.5, "explosion_resistance": 6, "requires_tool": True, "map_color": 34,
                        "render_shape": "MODEL", "sounds": "minecraft:andesite"},
         "state_properties": {"facing": {"type": "enum", "values": ["down", "up", "north", "south", "west", "east"]}},
-        # 1.21.1 DirectionProperty's implicit first value is DOWN. The source
-        # fan does not override it; placement supplies its actual direction.
-        "default_state": {"facing": "down"}, "shapes": full, "collision_shapes": full,
+        "default_state": {"facing": "north"}, "shapes": full, "collision_shapes": full,
     })
     drill_shapes = {"property": "facing", "values": {
         "up": [[0, 0, 0, 1, .75, 1]], "down": [[0, .25, 0, 1, 1, 1]],
@@ -103,7 +101,7 @@ def processors():
                        "map_color": 34, "render_shape": "MODEL", "sounds": "minecraft:andesite"},
         "state_properties": {"facing": {"type": "enum", "values": ["down", "up", "north", "south", "west", "east"]},
                              "waterlogged": {"type": "boolean"}},
-        "default_state": {"facing": "down", "waterlogged": "false"},
+        "default_state": {"facing": "north", "waterlogged": "false"},
         "shapes": drill_shapes, "collision_shapes": drill_shapes,
     })
     model("millstone/block", [([0, 0, 0], [16, 5, 16]),
@@ -147,7 +145,7 @@ def bearings():
             "properties": {"hardness": 1.5, "explosion_resistance": 6, "requires_tool": True,
                            "render_shape": "MODEL", "sounds": "minecraft:andesite"},
             "state_properties": {"facing": {"type": "enum", "values": list(rotations)}},
-            "default_state": {"facing": "down"},
+            "default_state": {"facing": "north"},
         })
         casing = "minecraft:block/copper_block" if name == "clockwork_bearing" else "minecraft:block/andesite"
         model(name, [([0, 0, 0], [16, 13, 16])], casing)
@@ -304,7 +302,7 @@ def contraption_actors():
         "template": "minecraft:glass", "item": True, "properties": properties,
         "state_properties": {"facing": {"type": "enum", "values": list(FACING_AXES)},
                              "axis_along_first": {"type": "boolean"}, "flipped": {"type": "boolean"}},
-        "default_state": {"facing": "down", "axis_along_first": "true", "flipped": "true"},
+        "default_state": {"facing": "north", "axis_along_first": "true", "flipped": "true"},
         "shapes": {"property": "facing", "values": {
             side: axial_boxes(side, [(0, 0, 12)]) for side in FACING_AXES
         }},
@@ -736,22 +734,30 @@ def foundation():
                 declaration["default_state"]["powered"] = "false"
         if block in INSTRUMENTS:
             declaration['state_properties']={'facing':{'type':'enum','values':['down','up','north','south','west','east']},'axis_along_first':{'type':'boolean'}}
-            declaration['default_state']={'facing':'north','axis_along_first':'false'}
+            declaration['default_state']={'facing':'north','axis_along_first':'true'}
         if block in GENERATORS:
             declaration['properties']['render_shape']='ENTITYBLOCK_ANIMATED' if block=='large_water_wheel' else 'MODEL'
             declaration['properties']['sounds']='minecraft:stripped_spruce_wood'
             key='axis' if block=='large_water_wheel' else 'facing'
             values=['x','y','z'] if key=='axis' else ['down','up','north','south','west','east']
             declaration['state_properties']={key:{'type':'enum','values':values}}
-            declaration['default_state']={key:'x' if key=='axis' else 'east'}
+            declaration['default_state']={key:'y' if key=='axis' else 'north'}
             if key=='axis':
                 declaration['state_properties']['extension']={'type':'boolean'}
                 declaration['default_state']['extension']='false'
         if block == "hand_crank":
+            # Inherit real water and bucket behavior, including the source
+            # restored by the engine when a waterlogged crank breaks.
+            declaration["template"] = "minecraft:mangrove_roots"
             declaration["properties"]["sounds"] = "minecraft:stripped_spruce_wood"
             declaration["properties"]["render_shape"] = "ENTITYBLOCK_ANIMATED"
-            declaration["state_properties"] = {"facing": {"type": "enum", "values": ["up", "down", "north", "south", "west", "east"]}, "waterlogged": {"type": "boolean"}}
-            declaration["default_state"] = {"facing": "up", "waterlogged": "false"}
+            declaration["properties"]["occludes"] = False
+            declaration["state_properties"] = {"facing": {"type": "enum", "values": list(FACING_AXES)}}
+            declaration["default_state"] = {"facing": "north", "waterlogged": "false"}
+            shape = {"property": "facing", "values": {
+                facing: axial_boxes(facing, [(5, 0, 6), (1, 3, 8)]) for facing in FACING_AXES
+            }}
+            declaration["shapes"] = declaration["collision_shapes"] = shape
         if block in ("andesite_casing", "brass_casing"):
             declaration["properties"]["sounds"] = "minecraft:oak_planks"
         if block == "copper_casing":
@@ -795,8 +801,10 @@ def foundation():
                   "sand_paper": "paper", "red_sand_paper": "paper",
                   "electron_tube": "redstone_torch", "brass_hand": "gold_ingot",
                   "crafter_slot_cover": "gold_nugget", "incomplete_precision_mechanism": "iron_nugget",
-                  "precision_mechanism": "clock", "crushed_raw_gold": "raw_gold",
-                  "crushed_raw_iron": "raw_iron", "experience_nugget": "emerald"}.get(item, "iron_ingot")
+                  "precision_mechanism": "clock", "crushed_raw_copper": "raw_copper",
+                  "crushed_raw_gold": "raw_gold", "crushed_raw_iron": "raw_iron",
+                  "crushed_raw_zinc": "raw_iron", "copper_nugget": "copper_ingot",
+                  "powdered_obsidian": "gunpowder", "experience_nugget": "emerald"}.get(item, "iron_ingot")
         write("assets/create/models/item/" + item + ".json", {"parent": "minecraft:item/generated", "textures": {"layer0": "minecraft:item/" + sprite}})
         write("assets/create/items/" + item + ".json", {"model": {"type": "minecraft:model", "model": "create:item/" + item}})
         if item=='goggles':
@@ -883,8 +891,12 @@ def foundation():
     extra_items.update({'crafter_slot_cover': 'Crafter Slot Cover',
                         'incomplete_precision_mechanism': 'Incomplete Precision Mechanism',
                         'precision_mechanism': 'Precision Mechanism',
+                        'crushed_raw_copper': 'Crushed Raw Copper',
                         'crushed_raw_gold': 'Crushed Raw Gold',
                         'crushed_raw_iron': 'Crushed Raw Iron',
+                        'crushed_raw_zinc': 'Crushed Raw Zinc',
+                        'copper_nugget': 'Copper Nugget',
+                        'powdered_obsidian': 'Powdered Obsidian',
                         'experience_nugget': 'Nugget of Experience'})
     extra_blocks.update({'basin': 'Basin', 'mechanical_mixer': 'Mechanical Mixer'})
     extra_blocks.update({'blaze_burner': 'Blaze Burner', 'lit_blaze_burner': 'Lit Blaze Burner'})
@@ -1034,8 +1046,12 @@ def foundation():
             lang.update({'item.create.crafter_slot_cover': 'Заглушка слота сборщика',
                          'item.create.incomplete_precision_mechanism': 'Незаконченный механизм точности',
                          'item.create.precision_mechanism': 'Механизм точности',
+                         'item.create.crushed_raw_copper': 'Дроблёная рудная медь',
                          'item.create.crushed_raw_gold': 'Дроблёное рудное золото',
                          'item.create.crushed_raw_iron': 'Дроблёное рудное железо',
+                         'item.create.crushed_raw_zinc': 'Дроблёный рудный цинк',
+                         'item.create.copper_nugget': 'Кусочек меди',
+                         'item.create.powdered_obsidian': 'Обсидиановый порошок',
                          'item.create.experience_nugget': 'Кусочек опыта'})
             lang['block.create.' + ITEM_DRAIN] = 'Осушитель предметов'
             lang['block.create.' + FLUID_TANK] = 'Жидкостный бак'
@@ -1104,7 +1120,7 @@ capabilities = ["registries"]
             values = ["north", "south", "east", "west"]
             if block == "creative_motor": values += ["up", "down"]
             declaration["state_properties"] = {"facing": {"type": "enum", "values": values}}
-            declaration["default_state"] = {"facing": "east"}
+            declaration["default_state"] = {"facing": "north"}
             if block == "creative_motor":
                 # AllShapes.MOTOR_BLOCK: box(3,0,3,13,14,13), forDirectional(UP).
                 # Selection and collision must share the original shape: the

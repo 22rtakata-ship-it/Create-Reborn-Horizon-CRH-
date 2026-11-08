@@ -97,8 +97,12 @@
     "create:raw_zinc",
     "create:crafter_slot_cover",
     "create:precision_mechanism",
+    "create:crushed_raw_copper",
     "create:crushed_raw_gold",
     "create:crushed_raw_iron",
+    "create:crushed_raw_zinc",
+    "create:copper_nugget",
+    "create:powdered_obsidian",
     "create:experience_nugget"
   ]
 }

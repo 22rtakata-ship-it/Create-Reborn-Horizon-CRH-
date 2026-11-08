@@ -46,7 +46,7 @@ def sails(write, model):
             'properties': {'hardness': 2, 'explosion_resistance': 3, 'requires_tool': False,
                            'occludes': False, 'render_shape': 'MODEL', 'sounds': 'minecraft:scaffolding'},
             'state_properties': {'facing': {'type': 'enum', 'values': list(ROTATIONS)}},
-            'default_state': {'facing': 'down'},
+            'default_state': {'facing': 'north'},
             'shapes': selectable, 'collision_shapes': shape(frame_ring) if frame else selectable,
         })
         fallback = f'sail/{name}_fallback'

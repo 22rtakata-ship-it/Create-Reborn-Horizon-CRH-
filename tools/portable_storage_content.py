@@ -12,7 +12,7 @@ def portable_storage(write, model, axial_boxes):
         'properties': {'hardness': 1.5, 'explosion_resistance': 6, 'occludes': False,
                        'requires_tool': True, 'sounds': 'minecraft:andesite'},
         'state_properties': {'facing': {'type': 'enum', 'values': list(turns)}},
-        'default_state': {'facing': 'down'},
+        'default_state': {'facing': 'north'},
         'shapes': {'property': 'facing', 'values': {
             face: axial_boxes(face, [(0, 0, 14)]) for face in turns
         }},

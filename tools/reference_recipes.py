@@ -184,16 +184,10 @@ def main():
     }
     palette_recipes.update(base + f'create/recipe/{name}_from_ingots_iron_stonecutting.json'
                            for name in IRON_PALETTE)
-    crushing = {base + f'create/recipe/crushing/{item}.json' for item in (
-        'gravel', 'diamond_ore', 'deepslate_diamond_ore', 'raw_iron', 'raw_iron_block',
-        'iron_ore', 'deepslate_iron_ore',
-    )}
     for name in names:
         if not name.startswith(base + 'create/recipe/') or not name.endswith('.json'): continue
         r = read(name)
         kind = r.get('type', '')
-        if kind == 'create:crushing' and name not in crushing:
-            continue
         if kind == 'create:sequenced_assembly' and name != base + 'create/recipe/sequenced_assembly/precision_mechanism.json':
             continue
         if kind == 'create:deploying':
@@ -240,8 +234,9 @@ def main():
         conventional['c:storage_blocks/' + metal] = ['minecraft:' + metal + '_block']
     for metal in ['iron', 'gold']:
         conventional['c:nuggets/' + metal] = ['minecraft:' + metal + '_nugget']
-    conventional['c:raw_materials/iron'] = ['minecraft:raw_iron']
-    conventional['c:storage_blocks/raw_iron'] = ['minecraft:raw_iron_block']
+    for metal in ['iron', 'gold', 'copper']:
+        conventional['c:raw_materials/' + metal] = [f'minecraft:raw_{metal}']
+        conventional['c:storage_blocks/raw_' + metal] = [f'minecraft:raw_{metal}_block']
     conventional['c:rods/wooden'] = ['minecraft:stick']
     conventional['c:dusts/redstone'] = ['minecraft:redstone']
     conventional['c:strings'] = ['minecraft:string']

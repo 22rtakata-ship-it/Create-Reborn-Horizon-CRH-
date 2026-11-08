@@ -14,7 +14,7 @@ def gantry(write, model):
     for name in ('gantry_shaft', 'gantry_carriage'):
         rail = name == 'gantry_shaft'
         properties = {'facing': facing}
-        default = {'facing': 'down'}
+        default = {'facing': 'north'}
         if rail:
             properties.update(part={'type': 'enum', 'values': parts}, powered={'type': 'boolean'})
             default.update(part='single', powered='false')

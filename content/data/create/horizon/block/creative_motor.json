@@ -20,7 +20,7 @@
     }
   },
   "default_state": {
-    "facing": "east"
+    "facing": "north"
   },
   "shapes": {
     "property": "facing",

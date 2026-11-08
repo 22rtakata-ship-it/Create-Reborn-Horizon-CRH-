@@ -97,16 +97,26 @@ def run(call,graphics,log,scratch):
             setblock(2,64,3,'minecraft:smooth_stone')
             tp(2.5,65,3.5)
             setblock(0,65,0,'create:hand_crank[facing='+facing+']')
+            call('look-at', X + .5, 65.5, .5)
             call('wait', 4)  # Let the visible block catch up with the server write.
             # A live turn publishes generator speed. Reading an InUse NBT
             # edit into an already initialized crank does not perform a turn.
+            for _ in range(8):
+                call('interact',X,65,0)
+                call('wait',3)
+            start = log.stat().st_size
             for _ in range(12):
                 call('interact',X,65,0)
                 call('wait',3)
             assert number(0,65,0,'Speed')==sign*32, text(0,65,0)
-            rows=poses(log,[X,65,0]);base=[r for r in rows if r['model'].endswith('hand_crank/block')];handle=[r for r in rows if r['model'].endswith('hand_crank/handle')]
-            assert abs(angular_velocity(base,axis)-sign*32)<.05,(facing,base[-2:])
-            assert abs(angular_velocity(handle,axis)-sign*32)<.1,(facing,handle[-2:])
+            rows = poses(log, [X,65,0], start)
+            for model, tolerance in [('block', .05), ('handle', .1)]:
+                part = [row for row in rows if row['model'].endswith(f'hand_crank/{model}')]
+                # A 20-tick gap at 32 RPM wraps past 180 degrees and aliases.
+                pairs = [(a, b) for a, b in zip(part, part[1:]) if 0 < b['time'] - a['time'] < 18]
+                assert pairs, (facing, model, part)
+                actual = angular_velocity(pairs[-1], axis)
+                assert abs(actual - sign * 32) < tolerance, (facing, model, actual, pairs[-1])
         print('Engineering: actual crank base and smoothed handle poses agree on all six facings',flush=True)
 
     # Brass default pressing is one item per stroke and returns all outputs.
@@ -164,7 +174,11 @@ def run(call,graphics,log,scratch):
         ])
     return fixture
 
-def poses(log,pos):return [json.loads(s.split('Create pose: ',1)[1]) for s in log.read_text().splitlines() if 'Create pose: ' in s and json.loads(s.split('Create pose: ',1)[1])['pos']==pos]
+def poses(log, pos, start=0):
+    with log.open() as stream:
+        stream.seek(start)
+        rows = (json.loads(line.split('Create pose: ', 1)[1]) for line in stream if 'Create pose: ' in line)
+        return [row for row in rows if row['pos'] == pos]
 
 def angular_velocity(rows,axis):
     # Pose columns normalized: Q=M2*M1^T removes static model orientation.

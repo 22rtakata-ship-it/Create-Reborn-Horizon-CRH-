@@ -26,7 +26,7 @@
     }
   },
   "default_state": {
-    "facing": "down",
+    "facing": "north",
     "axis_along_first": "true"
   }
 }

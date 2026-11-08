@@ -1,5 +1,44 @@
 # Checks and evidence
 
+## Public block and processing audit
+
+- The [block catalog check](tools/block_catalog_checks.py) loaded all 84
+  public blocks in each client, compared placed properties and block entity
+  IDs, and checked the raw defaults separately. All identities and block
+  entity types matched. After correcting 21 defaults, 83 blocks also
+  matched all properties. Fluid Pipe remains the one difference. Its Java
+  default has six open sides and an isolated command placement normalizes
+  to east and west. The native standalone command state has no open sides.
+- The [crushing recipe check](tools/crusher_recipe_checks.py) feeds one
+  item through a Chute into a working pair of wheels. It compares 1,320
+  tick samples from 44 distinct inputs, checking intake, countdown,
+  application and release. Each run checks mandatory and possible output
+  counts against the recipe because the clients have independent RNG
+  streams. The bundle includes 45 crushing recipes. Tuff recycling shares
+  its only currently registered input with the primary Tuff recipe and
+  is not exercised as a separate case. The remaining eight unconditional
+  crushing recipes use decorative stones that are outside the current catalog.
+  A local JAR import supplies the models and textures for all four new
+  materials. An instance with the previous import cache rebuilds it once.
+- This pass also rechecked the Fluid Pump, standalone Fluid Tank, Basin
+  filter, adjustable chain drive, Clutch, Gearshift, Clockwork Bearing,
+  Saw and Drill actor timing, mounted Barrels, sail placement and dyeing,
+  Gantry travel and obstructed restart, piston hand actions and the
+  standard Mechanical Crafter. Portable Storage Interface also matched the
+  natural and redstone-triggered docking traces and passed the native
+  refusal and cold restart checks. Loose Crusher input and material
+  particles passed their separate comparisons. The moving Harvester,
+  Plough, stationary Deployer copper interactions, and Smart Chute amount
+  settings passed their paired fixtures.
+- The [Hand Crank fixture](tools/crank_support_checks.py) matches six
+  support-loss directions, with unrelated neighbor changes leaving the
+  crank in place. It checks the dropped item and retained water source,
+  dry and submerged hand placement on a slab, and the ordinary Wrench
+  click that starts the crank without reorienting it. An older native world
+  reloads the same crank ID and wet state in the updated client. The [engineering
+  check](tools/engineering_checks.py) compares the submitted crank base
+  and handle poses with live speed on all six facings.
+
 ## Vertical Funnel audit
 
 - [Brass Funnel](tools/brass_funnel_checks.py) checks real short and long
