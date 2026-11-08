@@ -815,6 +815,32 @@ fn save_controller(game: &mut Game<'_>, controller: Pos, inventory: &mut Content
     });
     game.native_block_entity_sync(controller);
 }
+
+pub(super) fn insert_belt_from_side(
+    game: &mut Game<'_>,
+    target: Pos,
+    item: &Moving,
+    from: Direction,
+    from_previous_belt: bool,
+) -> bool {
+    let Some((controller, index)) = node_data(game, target) else {
+        return false;
+    };
+    let Some(mut contents) = controller_inventory(game, controller) else {
+        return false;
+    };
+    let [x, y, z] = controller;
+    let Some(BlockEntity::Mod(entity)) = game.world.block_entities.get(&(x, y, z)) else {
+        return false;
+    };
+    let target_belt = belt(game, controller, entity, number(&entity.nbt, "Speed"));
+    if !contents.insert_direct(target_belt, index, item, from, from_previous_belt, false) {
+        return false;
+    }
+    save_controller(game, controller, &mut contents);
+    true
+}
+
 fn stage_processing(game: &mut Game<'_>, controller: Pos, inventory: Contents) {
     // Canonical NBT is always save-safe. Its flushed clone is also what an
     // outbound tag must show, without exposing queued outputs to another
@@ -1286,23 +1312,7 @@ impl Hooks<ItemStack> for WorldHooks<'_, '_> {
         let stack = &item.stack;
         let target = self.target();
         if self.game.native_block(target) == ID {
-            let Some((controller, index)) = node_data(self.game, target) else {
-                return stack.clone();
-            };
-            let Some(mut contents) = controller_inventory(self.game, controller) else {
-                return stack.clone();
-            };
-            let Some(BlockEntity::Mod(e)) =
-                self.game
-                    .world
-                    .block_entities
-                    .get(&(controller[0], controller[1], controller[2]))
-            else {
-                return stack.clone();
-            };
-            let b = belt(self.game, controller, e, number(&e.nbt, "Speed"));
-            if contents.insert_direct(b, index, item, from, true, false) {
-                save_controller(self.game, controller, &mut contents);
+            if insert_belt_from_side(self.game, target, item, from, true) {
                 return Stack {
                     count: 0,
                     ..stack.clone()

@@ -4,7 +4,7 @@ import json
 import math
 import subprocess
 from common import CREATE, PINS, ROOT
-from catalog import ANDESITE_PALETTE, BLOCKS, ITEMS, INTERNAL_BLOCKS
+from catalog import BLOCKS, INTERNAL_BLOCKS, ITEMS, PALETTE_BLOCKS, STONE_PALETTES
 from sail_content import COLORED_SAILS, SAIL_ITEMS
 from portable_storage_content import PSI
 from chute_content import CHUTE
@@ -169,12 +169,16 @@ def main():
     processing = {'create:milling', 'create:splashing', 'create:haunting', 'create:mixing', 'create:compacting',
                   'create:sandpaper_polishing', 'create:cutting'}
     cooking = {'minecraft:smelting', 'minecraft:smoking', 'minecraft:blasting'}
+    palette_recipes = {
+        base + f'create/recipe/{name}_from_stone_types_{stone}_stonecutting.json'
+        for stone, variants in STONE_PALETTES.items()
+        for name in [*variants, stone]
+    }
     for name in names:
         if not name.startswith(base + 'create/recipe/') or not name.endswith('.json'): continue
         r = read(name)
         kind = r.get('type', '')
-        palette_cut = (kind == 'minecraft:stonecutting'
-                       and r.get('ingredient') == {'tag': 'create:stone_types/andesite'})
+        palette_cut = kind == 'minecraft:stonecutting' and name in palette_recipes
         if not palette_cut and kind not in {'minecraft:crafting_shaped', 'minecraft:crafting_shapeless', 'create:pressing', 'create:item_application'} | processing | cooking: continue
         if kind == 'create:mixing' and not (dry_mixing(r) or heated_mixing(r)):
             # These two actual source flows are the bounded first native fluid
@@ -195,7 +199,7 @@ def main():
         # real vanilla cooking recipes for supported Create ingredients (dough).
         if (output not in known and kind not in processing
                 and not (kind in cooking and any(d in known for d in deps))
-                and not (palette_cut and output == 'minecraft:andesite')): continue
+                and not palette_cut): continue
         recipes[name[len(base):]] = r
     recipes.update(runtime_wood_cutting())
     # Retain upstream tag contents. Horizon's loader drops unregistered entries,
@@ -348,7 +352,7 @@ def main():
         f'create/loot_table/blocks/{PSI}.json',
         f'create/loot_table/blocks/{CHUTE}.json',
         f'create/loot_table/blocks/{STICKER}.json',
-        *[f'create/loot_table/blocks/{name}.json' for name in ANDESITE_PALETTE],
+        *[f'create/loot_table/blocks/{name}.json' for name in PALETTE_BLOCKS],
         *[f'create/loot_table/blocks/{name}.json' for name in SAIL_ITEMS + COLORED_SAILS],
     ]}
     result = {'reference': PINS['create_revision'], 'license': 'MIT recipe/data-map/loot data; original definitions of vanilla convention tags', 'recipes': recipes, 'tags': tags, 'data_maps':maps, 'loot_tables':loot}

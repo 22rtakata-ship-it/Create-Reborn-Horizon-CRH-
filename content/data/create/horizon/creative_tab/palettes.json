@@ -6,6 +6,14 @@
     "create:polished_cut_andesite",
     "create:cut_andesite_bricks",
     "create:small_andesite_bricks",
-    "create:layered_andesite"
+    "create:layered_andesite",
+    "create:cut_granite",
+    "create:polished_cut_granite",
+    "create:cut_granite_bricks",
+    "create:small_granite_bricks",
+    "create:cut_diorite",
+    "create:polished_cut_diorite",
+    "create:cut_diorite_bricks",
+    "create:small_diorite_bricks"
   ]
 }

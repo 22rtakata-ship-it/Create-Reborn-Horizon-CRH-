@@ -33,6 +33,10 @@ developer source build. The three changes are applied in a separate checkout.
   block observations across 24 ticks. The cases include cross-column delivery,
   rejection of an unsuitable item, partial insertion into a nearly full
   Millstone, preserved components and a native restart.
+- [Saw-to-belt transfer](tools/saw_belt_checks.py) matches all 263 block
+  observations across five layouts. They cover inline and side entry, item
+  position and interpolation, rejected reversed, stopped and occupied
+  entries, and saved cargo after a native restart.
 - Mixed colored cargo restores the same cells on a Mechanical Bearing after
   a real Horizon restart. The [separate swept-volume check](tools/bearing_chunk_sweep_checks.py)
   matches nine angles, neighboring-column item support and all 15 landing
@@ -68,6 +72,9 @@ developer source build. The three changes are applied in a separate checkout.
   client starts verified built-in models and original models from the JAR,
   with byte-for-byte matches for 21 original files. Layered andesite still
   lacks connected textures.
+- The same fixture verifies eight more solid blocks across granite and
+  diorite, ten original recipes and one drop per block. The combined local
+  import check covers 40 original files across the three families.
 
 ## 0.8.0-alpha.5 chassis, saw and Deployer crafting
 

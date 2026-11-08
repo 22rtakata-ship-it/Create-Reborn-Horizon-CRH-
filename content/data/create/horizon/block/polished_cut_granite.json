@@ -1,0 +1,7 @@
+{
+  "template": "minecraft:granite",
+  "item": true,
+  "properties": {
+    "requires_tool": true
+  }
+}

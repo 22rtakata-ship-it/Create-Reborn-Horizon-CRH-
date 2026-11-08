@@ -1610,6 +1610,46 @@
         "id": "create:cut_andesite"
       }
     },
+    "create/recipe/cut_diorite_bricks_from_stone_types_diorite_stonecutting.json": {
+      "type": "minecraft:stonecutting",
+      "ingredient": {
+        "tag": "create:stone_types/diorite"
+      },
+      "result": {
+        "count": 1,
+        "id": "create:cut_diorite_bricks"
+      }
+    },
+    "create/recipe/cut_diorite_from_stone_types_diorite_stonecutting.json": {
+      "type": "minecraft:stonecutting",
+      "ingredient": {
+        "tag": "create:stone_types/diorite"
+      },
+      "result": {
+        "count": 1,
+        "id": "create:cut_diorite"
+      }
+    },
+    "create/recipe/cut_granite_bricks_from_stone_types_granite_stonecutting.json": {
+      "type": "minecraft:stonecutting",
+      "ingredient": {
+        "tag": "create:stone_types/granite"
+      },
+      "result": {
+        "count": 1,
+        "id": "create:cut_granite_bricks"
+      }
+    },
+    "create/recipe/cut_granite_from_stone_types_granite_stonecutting.json": {
+      "type": "minecraft:stonecutting",
+      "ingredient": {
+        "tag": "create:stone_types/granite"
+      },
+      "result": {
+        "count": 1,
+        "id": "create:cut_granite"
+      }
+    },
     "create/recipe/cutting/andesite_alloy.json": {
       "type": "create:cutting",
       "ingredients": [
@@ -1638,6 +1678,26 @@
           "id": "minecraft:bamboo_mosaic"
         }
       ]
+    },
+    "create/recipe/diorite_from_stone_types_diorite_stonecutting.json": {
+      "type": "minecraft:stonecutting",
+      "ingredient": {
+        "tag": "create:stone_types/diorite"
+      },
+      "result": {
+        "count": 1,
+        "id": "minecraft:diorite"
+      }
+    },
+    "create/recipe/granite_from_stone_types_granite_stonecutting.json": {
+      "type": "minecraft:stonecutting",
+      "ingredient": {
+        "tag": "create:stone_types/granite"
+      },
+      "result": {
+        "count": 1,
+        "id": "minecraft:granite"
+      }
     },
     "create/recipe/haunting/blackstone.json": {
       "type": "create:haunting",
@@ -2972,6 +3032,26 @@
         "id": "create:polished_cut_andesite"
       }
     },
+    "create/recipe/polished_cut_diorite_from_stone_types_diorite_stonecutting.json": {
+      "type": "minecraft:stonecutting",
+      "ingredient": {
+        "tag": "create:stone_types/diorite"
+      },
+      "result": {
+        "count": 1,
+        "id": "create:polished_cut_diorite"
+      }
+    },
+    "create/recipe/polished_cut_granite_from_stone_types_granite_stonecutting.json": {
+      "type": "minecraft:stonecutting",
+      "ingredient": {
+        "tag": "create:stone_types/granite"
+      },
+      "result": {
+        "count": 1,
+        "id": "create:polished_cut_granite"
+      }
+    },
     "create/recipe/pressing/brass_ingot.json": {
       "type": "create:pressing",
       "ingredients": [
@@ -3045,6 +3125,26 @@
       "result": {
         "count": 1,
         "id": "create:small_andesite_bricks"
+      }
+    },
+    "create/recipe/small_diorite_bricks_from_stone_types_diorite_stonecutting.json": {
+      "type": "minecraft:stonecutting",
+      "ingredient": {
+        "tag": "create:stone_types/diorite"
+      },
+      "result": {
+        "count": 1,
+        "id": "create:small_diorite_bricks"
+      }
+    },
+    "create/recipe/small_granite_bricks_from_stone_types_granite_stonecutting.json": {
+      "type": "minecraft:stonecutting",
+      "ingredient": {
+        "tag": "create:stone_types/granite"
+      },
+      "result": {
+        "count": 1,
+        "id": "create:small_granite_bricks"
       }
     },
     "create/recipe/smelting/bread.json": {
@@ -5404,6 +5504,44 @@
         "minecraft:black_stained_glass"
       ]
     },
+    "create/tags/item/stone_types/granite.json": {
+      "values": [
+        "create:cut_granite",
+        "create:cut_granite_stairs",
+        "create:cut_granite_wall",
+        "create:polished_cut_granite",
+        "create:polished_cut_granite_stairs",
+        "create:polished_cut_granite_wall",
+        "create:cut_granite_bricks",
+        "create:cut_granite_brick_stairs",
+        "create:cut_granite_brick_wall",
+        "create:small_granite_bricks",
+        "create:small_granite_brick_stairs",
+        "create:small_granite_brick_wall",
+        "create:layered_granite",
+        "create:granite_pillar",
+        "minecraft:granite"
+      ]
+    },
+    "create/tags/item/stone_types/diorite.json": {
+      "values": [
+        "create:cut_diorite",
+        "create:cut_diorite_stairs",
+        "create:cut_diorite_wall",
+        "create:polished_cut_diorite",
+        "create:polished_cut_diorite_stairs",
+        "create:polished_cut_diorite_wall",
+        "create:cut_diorite_bricks",
+        "create:cut_diorite_brick_stairs",
+        "create:cut_diorite_brick_wall",
+        "create:small_diorite_bricks",
+        "create:small_diorite_brick_stairs",
+        "create:small_diorite_brick_wall",
+        "create:layered_diorite",
+        "create:diorite_pillar",
+        "minecraft:diorite"
+      ]
+    },
     "create/tags/item/stone_types/andesite.json": {
       "values": [
         "create:cut_andesite",
@@ -5823,6 +5961,14 @@
         "create:zinc_block",
         "create:andesite_alloy_block",
         "create:brass_block",
+        "create:cut_granite",
+        "create:polished_cut_granite",
+        "create:cut_granite_bricks",
+        "create:small_granite_bricks",
+        "create:cut_diorite",
+        "create:polished_cut_diorite",
+        "create:cut_diorite_bricks",
+        "create:small_diorite_bricks",
         "create:cut_andesite",
         "create:polished_cut_andesite",
         "create:cut_andesite_bricks",
@@ -6380,6 +6526,174 @@
         }
       ],
       "random_sequence": "create:blocks/layered_andesite"
+    },
+    "create/loot_table/blocks/cut_granite.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:cut_granite"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/cut_granite"
+    },
+    "create/loot_table/blocks/polished_cut_granite.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:polished_cut_granite"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/polished_cut_granite"
+    },
+    "create/loot_table/blocks/cut_granite_bricks.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:cut_granite_bricks"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/cut_granite_bricks"
+    },
+    "create/loot_table/blocks/small_granite_bricks.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:small_granite_bricks"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/small_granite_bricks"
+    },
+    "create/loot_table/blocks/cut_diorite.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:cut_diorite"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/cut_diorite"
+    },
+    "create/loot_table/blocks/polished_cut_diorite.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:polished_cut_diorite"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/polished_cut_diorite"
+    },
+    "create/loot_table/blocks/cut_diorite_bricks.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:cut_diorite_bricks"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/cut_diorite_bricks"
+    },
+    "create/loot_table/blocks/small_diorite_bricks.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:small_diorite_bricks"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/small_diorite_bricks"
     },
     "create/loot_table/blocks/sail_frame.json": {
       "type": "minecraft:block",

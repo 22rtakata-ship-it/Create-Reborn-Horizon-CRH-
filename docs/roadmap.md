@@ -139,6 +139,8 @@ with the systems they depend on.
   delivery across a chunk boundary, both output directions and native reloads.
 - [x] Upward Saw output to a neighboring Millstone, including input filtering,
   components, backpressure and same-tick inventory publication after a restart.
+- [x] Upward Saw output onto a bare horizontal Belt, including inline and
+  side entry, rejected insertion, position traces and a native restart.
 - [ ] Fan: players/mobs/other entities, ignition/damage/effects and exact particles/sound.
 - [ ] Full observable parity of already supported machines, including item animation.
 - [x] Bounded press over a bare belt: single-item processing, holding the remainder,
@@ -317,7 +319,7 @@ with the systems they depend on.
 
 ## 5. Fluids, railways and other content
 
-- [x] Five solid andesite variants with the original stonecutting recipes,
+- [x] Thirteen solid andesite, granite and diorite variants with the original stonecutting recipes,
   drops, local models and a building-blocks tab. Layered connected textures remain open.
 - [ ] Pipes/pumps/valves, connectivity and flow direction.
 - [ ] Fluid Tanks, Hose Pulley, Item Drain/Spout, displays and fluid levels.

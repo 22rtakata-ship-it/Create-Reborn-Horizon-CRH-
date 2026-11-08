@@ -57,6 +57,14 @@ pub const BLOCKS: &[&str] = &[
     "cut_andesite_bricks",
     "small_andesite_bricks",
     "layered_andesite",
+    "cut_granite",
+    "polished_cut_granite",
+    "cut_granite_bricks",
+    "small_granite_bricks",
+    "cut_diorite",
+    "polished_cut_diorite",
+    "cut_diorite_bricks",
+    "small_diorite_bricks",
 ];
 pub const EXTRA_BLOCKSTATES: &[&str] = &[
     "lit_blaze_burner",

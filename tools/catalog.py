@@ -8,8 +8,12 @@ from sticker_content import STICKER
 BASE_BLOCKS = ['creative_motor', 'shaft', 'cogwheel', 'large_cogwheel', 'mechanical_press', 'depot']
 TRANSMISSIONS = ['gearbox', 'clutch', 'gearshift', 'hand_crank', 'andesite_encased_shaft', 'brass_encased_shaft', 'encased_chain_drive', 'adjustable_chain_gearshift', 'flywheel']
 STATIC_BLOCKS = ['andesite_casing', 'brass_casing', 'copper_casing', 'andesite_alloy_block', 'brass_block', 'zinc_block']
-ANDESITE_PALETTE = ['cut_andesite', 'polished_cut_andesite', 'cut_andesite_bricks',
-                    'small_andesite_bricks', 'layered_andesite']
+STONE_PALETTES = {
+    stone: [f'cut_{stone}', f'polished_cut_{stone}', f'cut_{stone}_bricks', f'small_{stone}_bricks']
+    for stone in ('andesite', 'granite', 'diorite')
+}
+STONE_PALETTES['andesite'].append('layered_andesite')
+PALETTE_BLOCKS = [name for variants in STONE_PALETTES.values() for name in variants]
 INSTRUMENTS = ['speedometer', 'stressometer']
 GENERATORS = ['water_wheel', 'large_water_wheel']
 PROCESSORS = ['millstone', 'encased_fan', 'mechanical_drill', 'basin', 'mechanical_mixer', 'blaze_burner', 'mechanical_bearing', 'windmill_bearing', 'clockwork_bearing', 'rope_pulley']
@@ -19,7 +23,7 @@ ACTORS = ['mechanical_harvester', 'mechanical_saw', 'mechanical_plough', 'deploy
 INTERNAL_BLOCKS = ['water_wheel_structure', 'belt', 'lit_blaze_burner', 'mechanical_piston_head', 'rope', 'pulley_magnet'] + COLORED_SAILS
 EXTRA_BLOCKSTATES = ['lit_blaze_burner', 'mechanical_piston_head', 'rope', 'pulley_magnet'] + COLORED_SAILS
 EXTRA_MODELS = ['entity/train_hat', 'entity/logistics_hat']
-BLOCKS = BASE_BLOCKS + TRANSMISSIONS + STATIC_BLOCKS + INSTRUMENTS + GENERATORS + PROCESSORS + PISTONS + GANTRY + ACTORS + SAIL_ITEMS + CHASSIS + [CHUTE, PSI, STICKER] + ANDESITE_PALETTE
+BLOCKS = BASE_BLOCKS + TRANSMISSIONS + STATIC_BLOCKS + INSTRUMENTS + GENERATORS + PROCESSORS + PISTONS + GANTRY + ACTORS + SAIL_ITEMS + CHASSIS + [CHUTE, PSI, STICKER] + PALETTE_BLOCKS
 ITEMS = ['iron_sheet', 'golden_sheet', 'copper_sheet', 'andesite_alloy', 'brass_ingot', 'brass_nugget', 'zinc_ingot', 'zinc_nugget', 'wrench', 'brass_sheet', 'vertical_gearbox', 'goggles', 'propeller', 'wheat_flour', 'dough', 'belt_connector', 'whisk', 'empty_blaze_burner', 'blaze_cake', 'creative_blaze_cake']
 ITEMS.append('super_glue')
 SANDPAPERS = ['sand_paper', 'red_sand_paper']

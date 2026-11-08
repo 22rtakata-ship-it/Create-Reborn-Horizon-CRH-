@@ -72,12 +72,13 @@ implementing each feature, and test save/reload inside Horizon.
 Static casings/storage blocks and alloy/metal/wrench items retain their upstream
 `create:*` IDs. Encased shafts unwrap to and drop `create:shaft`.
 
-The building-blocks tab includes cut andesite, polished cut andesite, cut
-andesite bricks, small andesite bricks, and layered andesite. Each has its
-original stonecutting recipe, and any of the five can be cut back into vanilla
-andesite. The local Create JAR supplies their base models and textures. Layered
-andesite uses its ordinary cube model while connected textures are pending.
-The tab uses cut andesite as its icon until the ornate iron window is available.
+The building-blocks tab includes the cut, polished cut, cut bricks and small
+bricks variants of andesite, granite and diorite, plus layered andesite. Each
+has its original stonecutting recipe and can be cut back into the corresponding
+vanilla stone. The local Create JAR supplies their base models and textures.
+Layered andesite uses its ordinary cube model while connected textures are
+pending. The tab uses cut andesite as its icon until the ornate iron window is
+available.
 
 The four sheet items retain `create:iron_sheet`, `create:golden_sheet` and
 `create:copper_sheet` and `create:brass_sheet`. Kinetic entities retain `Speed` as a float. Depot data
