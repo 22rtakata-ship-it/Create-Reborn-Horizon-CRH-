@@ -4,7 +4,7 @@
 // Create 6.0.10 BeltConnectorItem/BeltBlock/BeltBlockEntity/BeltInventory adapter.
 // The portable transport module owns geometry and movement. This adapter owns
 // normal world writes, component-preserving NBT, controller lifetime and drawing.
-// Casings/dyes and passengers remain separate integrations. Processor callbacks
+// Casings and passengers remain separate integrations. Processor callbacks
 // use the portable transport result/queue contract.
 use super::create_port_block_entity_revision::EntityRevision as _;
 use super::{Game, create_port_basin_recipes::item_drain, native_block_entity_draw::BlockEntityDraw};
@@ -111,6 +111,73 @@ fn number(nbt: &Compound, key: &str) -> f32 {
 fn boolean(nbt: &Compound, key: &str) -> bool {
     int(nbt, key) != 0
 }
+fn dye_name(nbt: &Compound) -> Option<&'static str> {
+    let Tag::String(value) = nbt.get(&"Dye".into())? else {
+        return None;
+    };
+    create_assets::BELT_DYES.iter().copied().find(|dye| {
+        dye.bytes()
+            .map(|byte| u16::from(byte.to_ascii_uppercase()))
+            .eq(value.0.iter().copied())
+    })
+}
+
+pub(super) fn dye_update(entity: &ModBlockEntity, tag: &mut Compound) {
+    if entity.id == ID {
+        // The client merges partial tags. An explicit non-colour clears old
+        // rendering while the source saved form has no Dye tag at all.
+        tag.entry("Dye".into()).or_insert(Tag::Byte(0));
+    }
+}
+
+fn washes_belt(game: &Game<'_>, stack: &ItemStack) -> bool {
+    game.native_item_fluid(stack)
+        .is_some_and(|item| item.amount > 0 && item.fluid.as_deref() == Some("minecraft:water"))
+        || (stack.item.as_ref() == "minecraft:potion"
+            && stack.potion() == Some("minecraft:water")
+            && stack.custom_potion_effects().is_empty())
+}
+
+// Some(None) is a valid wash. None lets the normal item-use path continue.
+fn dye_change(game: &Game<'_>, pos: Pos, stack: &ItemStack) -> Option<Option<&'static str>> {
+    if stack.count == 0 || !game.may_build() || game.native_sneaking() {
+        return None;
+    }
+    let Some(BlockEntity::Mod(clicked)) = game.world.block_entities.get(&(pos[0], pos[1], pos[2]))
+    else {
+        return None;
+    };
+    if clicked.id != ID {
+        return None;
+    }
+    let dye = stack.item.strip_prefix("minecraft:")
+        .and_then(|item| item.strip_suffix("_dye"))
+        .and_then(|name| create_assets::BELT_DYES.iter().copied().find(|&dye| dye == name));
+    (dye_name(&clicked.nbt) != dye && (dye.is_some() || washes_belt(game, stack))).then_some(dye)
+}
+
+pub(super) fn predicts_dye(game: &Game<'_>, pos: Pos) -> bool {
+    game.native_on("create") && game.held().is_some_and(|stack| dye_change(game, pos, stack).is_some())
+}
+
+fn dye_belt(game: &mut Game<'_>, pos: Pos, dye: Option<&'static str>) -> bool {
+    let Some((_, chain)) = restored_chain(game, pos) else {
+        return false;
+    };
+    let value = dye.map(|dye| Tag::String(dye.to_ascii_uppercase().as_str().into()));
+    for segment in chain.chain.segments {
+        game.native_with_mod_block_entity(segment.pos, |entity| {
+            if let Some(value) = &value {
+                entity.nbt.insert("Dye".into(), value.clone());
+            } else {
+                entity.nbt.remove(&"Dye".into());
+            }
+        });
+        game.native_block_entity_sync(segment.pos);
+    }
+    true
+}
+
 fn pos_tag(nbt: &Compound, key: &str) -> Option<Pos> {
     match nbt.get(&key.into()) {
         Some(Tag::IntArray(v)) if v.len() == 3 => Some([v[0], v[1], v[2]]),
@@ -761,7 +828,10 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: Pos, _face: Pos) -> bool {
     if game.native_block(pos) != ID || sneaking {
         return false;
     }
-    if held.is_none() {
+    if let Some(dye) = held.as_ref().and_then(|stack| dye_change(game, pos, stack)) {
+        return dye_belt(game, pos, dye);
+    }
+    if held.is_none() && game.hand == crate::game::Hand::Main {
         let Some((controller, index)) = node_data(game, pos) else {
             return true;
         };
@@ -1534,23 +1604,46 @@ fn moving_model(
     scroll: f32,
     diagonal: bool,
     moving: bool,
+    dye: Option<&str>,
 ) {
-    if !moving || !super::create_port::original_assets() {
+    let original = super::create_port::original_assets();
+    if dye.is_none() && !(moving && original) {
         game.native_draw_model(draw, model, 0xFFFFFF);
         return;
     }
     let Some(baked) = game.pack.render.model_catalog.standalone(model) else {
         return;
     };
-    let target = if diagonal {
-        "create:block/belt_diagonal_scroll"
+    let variant;
+    let (target, tint) = if original {
+        let target = match (dye, diagonal) {
+            (Some(dye), _) => {
+                let suffix = if diagonal { "diagonal_scroll" } else { "scroll" };
+                variant = format!("create:block/belt/{dye}_{suffix}");
+                variant.as_str()
+            }
+            (None, true) => "create:block/belt_diagonal_scroll",
+            (None, false) => "create:block/belt_scroll",
+        };
+        (target, 0xFFFFFF)
     } else {
-        "create:block/belt_scroll"
+        use horizon_client::mobs::render::{DYE, DYE_NAMES};
+        let tint = dye.and_then(|name| DYE_NAMES.iter().position(|&dye| dye == name))
+            .map_or(0xFFFFFF, |index| DYE[index]);
+        // The fallback belt's ordinary black wool is too dark to dye directly.
+        ("block/white_wool", tint)
     };
+    if !game.gui.atlas.sprites.contains_key(target) {
+        game.native_draw_model(draw, model, tint);
+        return;
+    }
     for face in &baked.faces {
-        let uv = face.quad.uv.map(|[u, v]| [u, v * 0.5 + scroll]);
+        let mut uv = face.quad.uv;
+        if original {
+            uv = uv.map(|[u, v]| [u, v * 0.5 + scroll]);
+        }
         if let Some((corners, uv)) = rectangle(face.quad.positions, uv) {
-            game.native_draw_quad(draw, target, corners, uv, 0xFFFFFF);
+            game.native_draw_quad(draw, target, corners, uv, tint);
         }
     }
 }
@@ -1616,6 +1709,7 @@ pub(super) fn draw(
         std::mem::swap(&mut start, &mut end);
     }
     let rpm = number(&entity.nbt, "Speed");
+    let dye = dye_name(&entity.nbt);
     let time = draw.game_time as f32 + draw.partial;
     draw.push();
     let yaw = render_yaw(facing);
@@ -1671,6 +1765,7 @@ pub(super) fn draw(
             scroll,
             diagonal,
             rpm != 0.0,
+            dye,
         );
         if diagonal {
             break;

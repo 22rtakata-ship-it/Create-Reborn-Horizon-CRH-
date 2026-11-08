@@ -442,6 +442,7 @@ pub(super) fn predicts_use(game: &Game<'_>, pos: [i32; 3], face: [i32; 3]) -> bo
         && (crate::game::create_port_burner::reacts(game, pos)
             || crate::game::create_port_basin::reacts(game, pos)
             || item_drain::predicts_use(game, pos)
+            || super::create_port_belt::predicts_dye(game, pos)
             || crate::game::create_port_millstone::reacts(game, pos)
             || crate::game::create_port_chute::predicts_use(game, pos)
             || super::create_port_chute::funnel::predicts_use(game, pos, face)
@@ -1476,6 +1477,7 @@ pub(super) fn update_tag(entity: &ModBlockEntity, tag: &mut Option<Compound>) {
         && tag.is_none()
     {
         let mut snapshot = entity.nbt.clone();
+        super::create_port_belt::dye_update(entity, &mut snapshot);
         if entity.id == "create:depot"
             && inventory_supported(entity)
             && entity.items.first().is_none_or(Option::is_none)

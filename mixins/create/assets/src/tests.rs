@@ -70,6 +70,14 @@ fn fixture(change: impl FnOnce(&mut BTreeMap<String, Vec<u8>>)) -> Vec<u8> {
             b"\x89PNG\r\n\x1a\nsynthetic fixture".to_vec(),
         );
     }
+    for dye in BELT_DYES {
+        for suffix in ["scroll", "diagonal_scroll"] {
+            files.insert(
+                format!("assets/create/textures/block/belt/{dye}_{suffix}.png"),
+                b"\x89PNG\r\n\x1a\nsynthetic fixture".to_vec(),
+            );
+        }
+    }
     files.insert(
         "assets/create/sounds/fixture.ogg".into(),
         b"OggSsynthetic fixture".to_vec(),
@@ -150,6 +158,8 @@ fn processor_parts_and_ingredients_are_required_without_accepting_java_loaders()
         "assets/create/textures/gui/icons.png",
         "assets/create/textures/block/belt_scroll.png",
         "assets/create/textures/block/belt_diagonal_scroll.png",
+        "assets/create/textures/block/belt/light_blue_scroll.png",
+        "assets/create/textures/block/belt/black_diagonal_scroll.png",
         "assets/create/models/block/belt/diagonal_middle.json",
         "assets/create/models/block/belt_pulley.json",
         "assets/create/models/item/belt_connector.json",

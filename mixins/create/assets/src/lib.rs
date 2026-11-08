@@ -16,7 +16,7 @@ pub const CREATE_VERSION: &str = "6.0.10+mc1.21.1 (NeoForge)";
 pub const JAR_SHA256: &str = "ef87fe5709f1ba1f5b8bb20a2925b5afb4669e178fd6d8bf10c167759eefe37a";
 // Bump whenever the import catalog changes: the cache key pins the JAR, not
 // BLOCKS/ITEMS/PARTS, so an older valid cache lacks newly required resources.
-const SCHEMA: u32 = 36;
+const SCHEMA: u32 = 37;
 const MAX_JAR: u64 = 128 << 20;
 const MAX_FILE: u64 = 16 << 20;
 const MAX_TOTAL: usize = 64 << 20;
@@ -27,6 +27,10 @@ pub use catalog::{BLOCKS, EXTRA_BLOCKSTATES, EXTRA_MODELS, ITEMS, PARTS};
 pub const WOODS: &[&str] = &[
     "oak", "spruce", "birch", "jungle", "acacia", "dark_oak", "mangrove", "cherry", "bamboo",
     "crimson", "warped", "pale_oak",
+];
+pub const BELT_DYES: &[&str] = &[
+    "white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray", "light_gray",
+    "cyan", "purple", "blue", "brown", "green", "red", "black",
 ];
 /// Standalone blade overlays used with imported assets. Built-in models
 /// already include simple blade geometry and need no overlay.
@@ -608,6 +612,10 @@ fn collect(bytes: Vec<u8>) -> io::Result<BTreeMap<String, Vec<u8>>> {
     reader.texture("create:gui/icons")?;
     reader.texture("create:block/belt_scroll")?;
     reader.texture("create:block/belt_diagonal_scroll")?;
+    for dye in BELT_DYES {
+        reader.texture(&format!("create:block/belt/{dye}_scroll"))?;
+        reader.texture(&format!("create:block/belt/{dye}_diagonal_scroll"))?;
+    }
     reader.texture("create:block/blaze_burner_flame_scroll")?;
     reader.texture("create:block/blaze_burner_flame_superheated_scroll")?;
     for particle in ["rotation_indicator", "air_flow"] {
