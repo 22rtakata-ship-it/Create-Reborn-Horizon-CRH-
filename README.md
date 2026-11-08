@@ -11,7 +11,7 @@ Build small factories with gears, water wheels, belts and presses. Create for Ho
 - Mix recipes in a Basin, heat it with a Blaze Burner or mine a block with a stationary Mechanical Drill. Engineer’s Goggles show speed and stress. Apply a copper ingot to stripped wood to make Copper Casing.
 
 Development builds add Mechanical Crafters, standalone Fluid Tanks and straight
-pump lines. Bearings, pistons, Gantry Carriages and Rope Pulleys can move small
+pump lines with Fluid Valves. Bearings, pistons, Gantry Carriages and Rope Pulleys can move small
 farms with a shared chest and a portable dock. [Feature roadmap](docs/roadmap.md)
 
 | Press workshop | Gantry harvester |

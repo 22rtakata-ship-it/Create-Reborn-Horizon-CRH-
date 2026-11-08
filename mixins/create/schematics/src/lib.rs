@@ -516,6 +516,17 @@ fn resolve(resolver: &impl Resolver, state: &BlockState) -> Result<BlockSchema, 
             return Err("a Chute requires explicit dry facing and a supported shape".into());
         }
     }
+    if state.name == "create:fluid_tank" {
+        let property = |key| state.properties.get(key).map(String::as_str);
+        if property("top") != Some("true")
+            || property("bottom") != Some("true")
+            || !matches!(property("shape"), Some("plain" | "window"))
+        {
+            return Err(
+                "a schematic Fluid Tank must be a standalone plain or windowed tank".into(),
+            );
+        }
+    }
     if state.name == "create:deployer"
         && ["facing", "axis_along_first"]
             .iter()
@@ -604,6 +615,7 @@ fn transform_state(
             Some("facing"),
         ),
         "create:chute" => (&["facing", "shape", "waterlogged"], Some("facing")),
+        "create:fluid_tank" => (&["top", "bottom", "shape"], None),
         "create:depot" => (&["waterlogged"], None),
         "minecraft:air"
         | "minecraft:cave_air"
@@ -840,6 +852,23 @@ fn validate_chute_source(raw: &Compound) -> Result<(), String> {
     );
     if !empty || !still || !position {
         return Err("only empty Chute data without airflow is supported".into());
+    }
+    Ok(())
+}
+
+fn validate_tank_source(state: &BlockState, raw: &Compound) -> Result<(), String> {
+    let window = i8::from(state.properties["shape"] == "window");
+    if raw.get("Window") != Some(&Tag::Byte(window))
+        || raw.get("Size") != Some(&Tag::Int(1))
+        || raw.get("Height") != Some(&Tag::Int(1))
+        || raw.contains_key("Controller")
+        || raw
+            .get("TankContent")
+            .is_some_and(|tag| !matches!(tag, Tag::Compound(values) if values.is_empty()))
+    {
+        return Err(
+            "only empty standalone Fluid Tank data matching its window state is supported".into(),
+        );
     }
     Ok(())
 }
@@ -1194,6 +1223,12 @@ pub fn preflight(
                 fail(format!("{path}.nbt"), Some(pos), message);
                 continue;
             }
+            if prepared.state.name == "create:fluid_tank"
+                && let Err(message) = validate_tank_source(&prepared.state, raw)
+            {
+                fail(format!("{path}.nbt"), Some(pos), message);
+                continue;
+            }
             if raw.get("id").and_then(Tag::as_str) != Some(be_schema.id.as_str()) {
                 fail(
                     format!("{path}.nbt.id"),
@@ -1252,6 +1287,7 @@ pub fn preflight(
                         (prepared.state.name.as_str(), key.as_str()),
                         ("create:creative_motor", "ScrollValue")
                             | ("create:mechanical_crafter", "ConnectedInput")
+                            | ("create:fluid_tank", "Window" | "Size" | "Height")
                             | (
                                 "create:deployer",
                                 "Mode" | "Filter" | "FilterAmount" | "UpTo"
@@ -1301,6 +1337,23 @@ pub fn preflight(
             Some(pos),
             "a diagonal Chute requires its downhill Chute in the schematic".into(),
         );
+    }
+    let tanks: BTreeSet<_> = blocks
+        .iter()
+        .filter(|(_, block)| block.state.name == "create:fluid_tank")
+        .map(|(_, block)| block.relative_pos)
+        .collect();
+    for &[x, y, z] in &tanks {
+        if [[x + 1, y, z], [x, y + 1, z], [x, y, z + 1]]
+            .into_iter()
+            .any(|neighbor| tanks.contains(&neighbor))
+        {
+            fail(
+                "blocks".into(),
+                Some([x, y, z]),
+                "schematic Fluid Tanks must not touch".into(),
+            );
+        }
     }
     if !issues.is_empty() {
         return Err(issues);

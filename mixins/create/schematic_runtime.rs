@@ -324,6 +324,14 @@ impl Resolver for Registry<'_, '_> {
                         .map(str::to_owned),
                     );
                 }
+                super::create_port_basin::tank::BLOCK => {
+                    schema.safe_fields.extend([
+                        ("Window".into(), TagKind::Byte),
+                        ("Size".into(), TagKind::Int),
+                        ("Height".into(), TagKind::Int),
+                    ]);
+                    schema.discarded_fields.insert("TankContent".into());
+                }
                 "create:mechanical_drill" => {
                     schema
                         .discarded_fields
@@ -664,6 +672,20 @@ fn destination(game: &Game<'_>, plan: &Plan, origin: [i32; 3]) -> Result<Vec<Wri
                 "message":"cannot replace an occupied or active Deployer"}));
             continue;
         }
+        if block.state.name == super::create_port_basin::tank::BLOCK {
+            let blocked = horizon_core::geometry::Direction::ALL
+                .into_iter()
+                .any(|side| {
+                    let delta = side.normal();
+                    let [x, y, z] = std::array::from_fn(|axis| pos[axis] + delta[axis]);
+                    !game.world.loaded(x, z) || game.native_block([x, y, z]) == block.state.name
+                });
+            if blocked || (old != state && game.native_block(pos) == block.state.name) {
+                issues.push(json!({"path":"destination","pos":pos,
+                    "message":"a schematic Fluid Tank requires loaded neighbors and space apart from other tanks"}));
+                continue;
+            }
+        }
         if old != state
             && block.state.name == super::create_port_chute::BLOCK
             && super::create_port_chute::is_chute(&game.native_block(pos))
@@ -687,6 +709,14 @@ fn destination(game: &Game<'_>, plan: &Plan, origin: [i32; 3]) -> Result<Vec<Wri
                     data
                 }
                 super::create_port_chute::BLOCK => super::create_port_chute::default_nbt(),
+                super::create_port_basin::tank::BLOCK => {
+                    let mut data = super::create_port_basin::tank::default_nbt();
+                    data.insert(
+                        "Window".into(),
+                        WorldTag::Byte(i8::from(block.state.properties["shape"] == "window")),
+                    );
+                    data
+                }
                 _ => WorldCompound::new(),
             };
             data.extend(world_compound(&be.data));

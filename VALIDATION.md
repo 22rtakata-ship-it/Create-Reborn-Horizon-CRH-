@@ -226,6 +226,10 @@ developer source build. The three changes are applied in a separate checkout.
   state and empty block-entity observations using the same `.nbt` bytes
   in 12 rotations and mirrors. Disconnected and loaded templates are rejected
   before any destination block is changed.
+- [Fluid Tank schematics](tools/schematic_tank_checks.py) match 48
+  authoritative samples in 12 rotations and mirrors. Both window states stay
+  intact and the first tick records the new position. Touching tanks and
+  templates containing saved fluid are refused before any blocks are written.
 - [Straight Pump lines](tools/fluid_pump_native_checks.py) match 115 ticks in
   each of six [Java cases](tools/fluid_pump_java_checks.py), including both
   fluids, both RPM signs and both placement orders. The fixture also checks
