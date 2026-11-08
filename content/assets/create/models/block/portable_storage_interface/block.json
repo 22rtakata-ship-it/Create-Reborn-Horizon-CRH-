@@ -1,7 +1,7 @@
 {
   "textures": {
-    "all": "minecraft:block/polished_andesite",
-    "particle": "minecraft:block/polished_andesite"
+    "all": "create:block/fallback/cargo_dock",
+    "particle": "create:block/fallback/cargo_dock"
   },
   "elements": [
     {

@@ -1,7 +1,7 @@
 {
   "parent": "create:block/large_water_wheel/block",
   "textures": {
-    "all": "minecraft:block/crimson_planks",
-    "particle": "minecraft:block/crimson_planks"
+    "all": "create:block/fallback/crimson_paddles",
+    "particle": "create:block/fallback/crimson_paddles"
   }
 }

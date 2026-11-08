@@ -1,12 +1,12 @@
 {
   "parent": "minecraft:block/cube",
   "textures": {
-    "particle": "minecraft:block/stripped_oak_log",
-    "west": "minecraft:block/oak_planks",
-    "east": "minecraft:block/oak_planks",
-    "down": "minecraft:block/stripped_oak_log",
-    "up": "minecraft:block/stripped_oak_log",
-    "north": "minecraft:block/stripped_oak_log",
-    "south": "minecraft:block/stripped_oak_log"
+    "particle": "create:block/fallback/chassis_end",
+    "west": "create:block/fallback/chassis",
+    "east": "create:block/fallback/chassis",
+    "down": "create:block/fallback/chassis_end",
+    "up": "create:block/fallback/chassis_end",
+    "north": "create:block/fallback/chassis_end",
+    "south": "create:block/fallback/chassis_end"
   }
 }

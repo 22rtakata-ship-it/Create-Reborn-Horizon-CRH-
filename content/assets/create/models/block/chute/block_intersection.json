@@ -1,7 +1,7 @@
 {
   "textures": {
-    "all": "minecraft:block/polished_andesite",
-    "particle": "minecraft:block/polished_andesite"
+    "all": "create:block/fallback/chute",
+    "particle": "create:block/fallback/chute"
   },
   "elements": [
     {

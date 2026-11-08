@@ -1,7 +1,7 @@
 {
   "textures": {
-    "all": "minecraft:block/oak_planks",
-    "particle": "minecraft:block/oak_planks"
+    "all": "create:block/fallback/oak_cog",
+    "particle": "create:block/fallback/oak_cog"
   },
   "elements": [
     {

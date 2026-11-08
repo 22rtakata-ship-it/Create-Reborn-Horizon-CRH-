@@ -1,7 +1,7 @@
 {
   "parent": "create:block/large_water_wheel/block",
   "textures": {
-    "all": "minecraft:block/bamboo_planks",
-    "particle": "minecraft:block/bamboo_planks"
+    "all": "create:block/fallback/bamboo_paddles",
+    "particle": "create:block/fallback/bamboo_paddles"
   }
 }

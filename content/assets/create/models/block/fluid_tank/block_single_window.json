@@ -1,7 +1,7 @@
 {
   "textures": {
-    "frame": "minecraft:block/copper_block",
-    "glass": "minecraft:block/glass",
+    "frame": "create:block/fallback/fluid_tank",
+    "glass": "create:block/fallback/tank_glass",
     "particle": "#frame"
   },
   "elements": [

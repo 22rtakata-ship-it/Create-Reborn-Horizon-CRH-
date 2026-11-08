@@ -1,7 +1,7 @@
 {
   "textures": {
-    "all": "minecraft:block/brown_wool",
-    "particle": "minecraft:block/brown_wool"
+    "all": "create:block/fallback/rope",
+    "particle": "create:block/fallback/rope"
   },
   "elements": [
     {

@@ -1,7 +1,7 @@
 {
   "textures": {
-    "all": "minecraft:block/black_wool",
-    "particle": "minecraft:block/black_wool"
+    "all": "create:block/fallback/belt_rubber",
+    "particle": "create:block/fallback/belt_rubber"
   },
   "elements": [
     {

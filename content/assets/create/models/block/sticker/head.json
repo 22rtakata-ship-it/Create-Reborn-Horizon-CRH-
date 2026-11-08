@@ -1,7 +1,7 @@
 {
   "textures": {
-    "all": "minecraft:block/slime_block",
-    "particle": "minecraft:block/slime_block"
+    "all": "create:block/fallback/sticker",
+    "particle": "create:block/fallback/sticker"
   },
   "elements": [
     {

@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:block/cube_all",
   "textures": {
-    "all": "minecraft:block/deepslate_iron_ore"
+    "all": "create:block/fallback/deepslate_zinc_ore"
   }
 }

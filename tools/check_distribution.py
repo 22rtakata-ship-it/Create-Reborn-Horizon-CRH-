@@ -2,7 +2,9 @@
 """Check contracts required for installing this source as one native mod."""
 import json
 import re
+from zipfile import ZipFile
 from common import ROOT, NATIVE, PINS
+from fallback_textures import texture_path
 from catalog import (
     BLOCKS, EXTRA_MODELS, HIDDEN_CREATIVE_ITEMS, INTERNAL_BLOCKS, ITEMS,
     PALETTE_BLOCKS, PARTS, rust_catalog,
@@ -28,10 +30,22 @@ def main():
     required.update(model_prefix + name + ".json" for name in EXTRA_MODELS)
     missing_models = required - actual.keys()
     assert not missing_models, "Missing built-in models: " + ", ".join(sorted(missing_models))
+    textures = set()
     for name, text in actual.items():
         if name.startswith(model_prefix) and name.endswith(".json"):
             for texture in json.loads(text).get("textures", {}).values():
-                assert texture.startswith(("minecraft:", "#")), (name, texture)
+                if texture.startswith(("create:block/fallback/", "create:item/fallback/")):
+                    textures.add(texture_path(texture).as_posix())
+                else:
+                    assert texture.startswith("#") or texture == "minecraft:block/fire_0", (name, texture)
+    texture_root = content / "assets/create/textures"
+    assert textures == {p.relative_to(content).as_posix() for p in texture_root.rglob("*.png")}
+    with ZipFile(NATIVE / "data/textures.zip") as archive:
+        assert len(archive.namelist()) == len(textures) and set(archive.namelist()) == textures
+        for path in sorted(textures):
+            png = (content / path).read_bytes()
+            assert png.startswith(b"\x89PNG\r\n\x1a\n\0\0\0\x0dIHDR\0\0\0\x10\0\0\0\x10"), path
+            assert archive.read(path) == png, path
     reference=json.loads((ROOT / "tools/data/recipes.json").read_text())
     assert reference["reference"] == PINS["create_revision"]
     assert (NATIVE / "assets/src/catalog.rs").read_text() == rust_catalog(), "Importer catalog is stale"
@@ -54,10 +68,12 @@ def main():
         assert json.loads((content / 'data' / path).read_text()) == value, 'Source loot policy changed: ' + path
     for path in [*NATIVE.rglob("*"), *content.rglob("*")]:
         assert not path.is_symlink(), "Source bundles must not contain links: " + str(path)
+        if path.is_relative_to(content) and path.relative_to(content).as_posix() in textures:
+            continue
         assert path.suffix.lower() not in {".jar", ".class", ".png", ".ogg"}, str(path)
     assert (NATIVE / "LICENSE").read_bytes() == (ROOT / "LICENSE").read_bytes()
     assert (NATIVE / "NOTICE.md").read_bytes() == (ROOT / "THIRD_PARTY_NOTICES.md").read_bytes()
-    print("Source-install contracts passed: pins, bundled content, notices and no upstream asset files.")
+    print(f"Source-install contracts passed: pins, content, {len(textures)} fallback textures and notices.")
 
 
 if __name__ == "__main__":

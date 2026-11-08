@@ -1,7 +1,7 @@
 {
   "textures": {
-    "all": "minecraft:block/lime_wool",
-    "particle": "minecraft:block/lime_wool"
+    "all": "create:block/fallback/lime_canvas",
+    "particle": "create:block/fallback/lime_canvas"
   },
   "elements": [
     {

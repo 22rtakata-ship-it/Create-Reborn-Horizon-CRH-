@@ -1,7 +1,7 @@
 {
   "textures": {
-    "all": "minecraft:block/spruce_planks",
-    "particle": "minecraft:block/spruce_planks"
+    "all": "create:block/fallback/chassis",
+    "particle": "create:block/fallback/chassis"
   },
   "elements": [
     {

@@ -1,7 +1,7 @@
 {
   "textures": {
-    "all": "minecraft:block/piston_side",
-    "particle": "minecraft:block/piston_side"
+    "all": "create:block/fallback/sticker",
+    "particle": "create:block/fallback/sticker"
   },
   "elements": [
     {

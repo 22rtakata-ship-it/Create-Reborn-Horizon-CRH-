@@ -1,7 +1,7 @@
 {
   "textures": {
-    "all": "minecraft:block/copper_block",
-    "particle": "minecraft:block/copper_block"
+    "all": "create:block/fallback/fluid_tank",
+    "particle": "create:block/fallback/fluid_tank"
   },
   "elements": [
     {

@@ -1,6 +1,6 @@
 {
   "textures": {
-    "particle": "minecraft:block/slime_block"
+    "particle": "create:block/fallback/sticker"
   },
   "elements": [
     {

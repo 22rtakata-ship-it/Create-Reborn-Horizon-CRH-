@@ -1,7 +1,7 @@
 {
   "textures": {
-    "all": "minecraft:block/moss_block",
-    "particle": "minecraft:block/moss_block"
+    "all": "create:block/fallback/sticky_piston",
+    "particle": "create:block/fallback/sticky_piston"
   },
   "elements": [
     {

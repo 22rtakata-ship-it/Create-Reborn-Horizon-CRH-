@@ -1,7 +1,7 @@
 {
   "textures": {
-    "all": "minecraft:block/iron_block",
-    "particle": "minecraft:block/iron_block"
+    "all": "create:block/fallback/speedometer",
+    "particle": "create:block/fallback/speedometer"
   },
   "elements": [
     {

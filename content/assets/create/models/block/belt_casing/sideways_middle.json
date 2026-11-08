@@ -1,7 +1,7 @@
 {
   "textures": {
-    "all": "minecraft:block/cut_copper",
-    "particle": "minecraft:block/cut_copper"
+    "all": "create:block/fallback/brass_casing",
+    "particle": "create:block/fallback/brass_casing"
   },
   "elements": [
     {

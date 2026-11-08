@@ -1,7 +1,7 @@
 {
   "textures": {
-    "all": "minecraft:block/yellow_wool",
-    "particle": "minecraft:block/yellow_wool"
+    "all": "create:block/fallback/yellow_canvas",
+    "particle": "create:block/fallback/yellow_canvas"
   },
   "elements": [
     {

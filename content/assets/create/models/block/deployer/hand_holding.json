@@ -1,7 +1,7 @@
 {
   "textures": {
-    "all": "minecraft:block/raw_gold_block",
-    "particle": "minecraft:block/raw_gold_block"
+    "all": "create:block/fallback/deployer",
+    "particle": "create:block/fallback/deployer"
   },
   "elements": [
     {

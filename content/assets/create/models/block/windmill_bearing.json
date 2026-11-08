@@ -1,7 +1,7 @@
 {
   "textures": {
-    "all": "minecraft:block/andesite",
-    "particle": "minecraft:block/andesite"
+    "all": "create:block/fallback/windmill",
+    "particle": "create:block/fallback/windmill"
   },
   "elements": [
     {

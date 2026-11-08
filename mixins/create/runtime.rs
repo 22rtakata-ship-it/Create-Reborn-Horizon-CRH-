@@ -36,6 +36,7 @@ pub(super) fn prepare_content(enabled: &std::collections::BTreeSet<String>) {
         match create_assets::bundled_content(
             &Game::game_dir(),
             horizon_client::native_data!("create", "content.json"),
+            horizon_client::native_data!("create", "textures.zip"),
         ) {
             Ok(path) => {
                 log::info!("Create: bundled content enabled in {}", path.display());

@@ -1,7 +1,7 @@
 {
   "textures": {
-    "all": "minecraft:block/red_terracotta",
-    "particle": "minecraft:block/red_terracotta"
+    "all": "create:block/fallback/clutch",
+    "particle": "create:block/fallback/clutch"
   },
   "elements": [
     {

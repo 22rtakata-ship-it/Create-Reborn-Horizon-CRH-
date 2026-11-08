@@ -1,7 +1,7 @@
 {
   "textures": {
-    "body": "minecraft:block/copper_block",
-    "outlet": "minecraft:block/exposed_copper",
+    "body": "create:block/fallback/pump",
+    "outlet": "create:block/fallback/steel_axle",
     "particle": "#body"
   },
   "elements": [

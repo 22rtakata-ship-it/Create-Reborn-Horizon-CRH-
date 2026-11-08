@@ -1,7 +1,7 @@
 {
   "parent": "minecraft:block/cube_column",
   "textures": {
-    "end": "minecraft:block/smooth_stone",
-    "side": "minecraft:block/smooth_stone_slab_side"
+    "end": "create:block/fallback/layered_andesite",
+    "side": "create:block/fallback/layered_andesite"
   }
 }

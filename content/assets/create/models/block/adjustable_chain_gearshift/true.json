@@ -1,7 +1,7 @@
 {
   "textures": {
-    "all": "minecraft:block/redstone_block",
-    "particle": "minecraft:block/redstone_block"
+    "all": "create:block/fallback/gearshift",
+    "particle": "create:block/fallback/gearshift"
   },
   "elements": [
     {

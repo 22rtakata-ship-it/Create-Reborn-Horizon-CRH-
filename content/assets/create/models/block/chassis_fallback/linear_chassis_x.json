@@ -1,12 +1,12 @@
 {
   "parent": "minecraft:block/cube",
   "textures": {
-    "particle": "minecraft:block/stripped_spruce_log",
-    "west": "minecraft:block/spruce_planks",
-    "east": "minecraft:block/spruce_planks",
-    "down": "minecraft:block/stripped_spruce_log",
-    "up": "minecraft:block/stripped_spruce_log",
-    "north": "minecraft:block/stripped_spruce_log",
-    "south": "minecraft:block/stripped_spruce_log"
+    "particle": "create:block/fallback/chassis_end",
+    "west": "create:block/fallback/chassis",
+    "east": "create:block/fallback/chassis",
+    "down": "create:block/fallback/chassis_end",
+    "up": "create:block/fallback/chassis_end",
+    "north": "create:block/fallback/chassis_end",
+    "south": "create:block/fallback/chassis_end"
   }
 }

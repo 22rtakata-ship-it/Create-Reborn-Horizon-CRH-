@@ -1,7 +1,7 @@
 {
   "textures": {
-    "all": "minecraft:block/blue_wool",
-    "particle": "minecraft:block/blue_wool"
+    "all": "create:block/fallback/blue_canvas",
+    "particle": "create:block/fallback/blue_canvas"
   },
   "elements": [
     {

@@ -1,7 +1,7 @@
 {
   "textures": {
-    "all": "minecraft:block/yellow_terracotta",
-    "particle": "minecraft:block/yellow_terracotta"
+    "all": "create:block/fallback/belt_rubber",
+    "particle": "create:block/fallback/belt_rubber"
   },
   "elements": [
     {

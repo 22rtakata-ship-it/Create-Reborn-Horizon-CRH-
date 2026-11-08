@@ -1,7 +1,8 @@
 # Models and textures
 
-Create for Horizon includes simple models that use standard Minecraft textures.
-It uses those resources whenever the original Create JAR is absent.
+Create for Horizon includes simple models and independently drawn pixel textures.
+The bundled artwork is distributed under the repository's MIT license.
+Horizon uses it whenever the original Create JAR is absent. [Texture register](fallback-textures.md)
 
 ## Use the original look
 

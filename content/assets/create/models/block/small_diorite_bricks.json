@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:block/cube_all",
   "textures": {
-    "all": "minecraft:block/calcite"
+    "all": "create:block/fallback/small_diorite_bricks"
   }
 }

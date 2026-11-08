@@ -1,7 +1,7 @@
 {
   "textures": {
-    "all": "minecraft:block/smooth_stone",
-    "particle": "minecraft:block/smooth_stone"
+    "all": "create:block/fallback/speedometer",
+    "particle": "create:block/fallback/speedometer"
   },
   "elements": [
     {

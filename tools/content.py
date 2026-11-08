@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Generate mod content with simple built-in models.
 
-Models reference vanilla textures by ID and contain no upstream texture bytes.
+Models reference independent fallback art. The original artwork stays in the local JAR.
 """
 import json
+import zipfile
+from fallback_textures import retarget
 from common import ROOT, NATIVE
 from catalog import HIDDEN_CREATIVE_ITEMS, IRON_PALETTE, PALETTE_BLOCKS, STONE_PALETTES, ZINC_BLOCKS
 from pulley_content import rope_pulley
@@ -35,6 +37,7 @@ STONE_APPEARANCE = {
 
 
 def write(path, value):
+    retarget(path, value)
     target = CONTENT / path
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(json.dumps(value, indent=2, ensure_ascii=False) + "\n")
@@ -1193,6 +1196,12 @@ capabilities = ["registries"]
     bundled = NATIVE / "data/content.json"
     bundled.parent.mkdir(parents=True, exist_ok=True)
     bundled.write_text(json.dumps(files, indent=2, ensure_ascii=False) + "\n")
+    with zipfile.ZipFile(bundled.with_name("textures.zip"), "w", zipfile.ZIP_DEFLATED) as archive:
+        for texture in sorted((CONTENT / "assets/create/textures").glob("*/fallback/*.png")):
+            entry = zipfile.ZipInfo(texture.relative_to(CONTENT).as_posix())
+            entry.compress_type = zipfile.ZIP_DEFLATED
+            entry.external_attr = 0o100644 << 16
+            archive.writestr(entry, texture.read_bytes())
     from catalog import BLOCKS as all_blocks, ITEMS
     print(f"Generated {len(all_blocks)} blocks, {len(ITEMS)} standalone items and bundled foundation content.")
 

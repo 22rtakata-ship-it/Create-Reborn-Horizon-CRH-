@@ -1,5 +1,16 @@
 # Checks and evidence
 
+## Fallback artwork gallery
+
+- [The texture register](docs/fallback-textures.md) covers 152 independent
+  16 × 16 textures. The distribution check validates every referenced PNG
+  and compares the native archive's bytes with the content mod.
+- [The gallery fixture](tools/texture_gallery.py) verifies 84 public
+  blocks, 27 additional displays and all 38 standalone items. In the
+  same Horizon world, the native build displays the bundled artwork,
+  switches to the player-supplied JAR after restart and returns to
+  bundled artwork after the JAR is removed.
+
 ## Public block and processing audit
 
 - The [block catalog check](tools/block_catalog_checks.py) loaded all 84

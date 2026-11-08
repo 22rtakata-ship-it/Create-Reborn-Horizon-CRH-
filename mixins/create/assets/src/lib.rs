@@ -134,7 +134,7 @@ pub struct Imported {
 
 /// Materialize this native mod's public content in an owned folder discoverable
 /// by Horizon's content loader. Other mod files and enable settings are untouched.
-pub fn bundled_content(game_dir: &Path, bytes: &[u8]) -> io::Result<PathBuf> {
+pub fn bundled_content(game_dir: &Path, bytes: &[u8], textures: &[u8]) -> io::Result<PathBuf> {
     let files: BTreeMap<String, String> = serde_json::from_slice(bytes)?;
     if !files.contains_key("horizon-mod.toml")
         || files.len() > MAX_BUNDLED_FILES
@@ -163,6 +163,13 @@ pub fn bundled_content(game_dir: &Path, bytes: &[u8]) -> io::Result<PathBuf> {
     {
         return Err(invalid("Invalid bundled Create content"));
     }
+    let mut files: BTreeMap<_, _> = files
+        .into_iter()
+        .map(|(name, text)| (name, text.into_bytes()))
+        .collect();
+    if !textures.is_empty() {
+        read_fallback_textures(textures, &mut files)?;
+    }
     let cache = game_dir.join(".horizon-cache/create-content");
     fs::create_dir_all(&cache)?;
     let mods = game_dir.join("horizon-mods");
@@ -172,7 +179,7 @@ pub fn bundled_content(game_dir: &Path, bytes: &[u8]) -> io::Result<PathBuf> {
         files.iter().all(|(name, expected)| {
             let path = target.join(name);
             fs::symlink_metadata(&path).is_ok_and(|m| m.is_file())
-                && fs::read(&path).is_ok_and(|actual| actual == expected.as_bytes())
+                && fs::read(&path).is_ok_and(|actual| actual == *expected)
         })
     };
     if valid() {
@@ -198,6 +205,46 @@ pub fn bundled_content(game_dir: &Path, bytes: &[u8]) -> io::Result<PathBuf> {
         fs::rename(&stage.0, &target)?;
     }
     Ok(target)
+}
+
+fn read_fallback_textures(
+    textures: &[u8],
+    files: &mut BTreeMap<String, Vec<u8>>,
+) -> io::Result<()> {
+    let mut archive = ZipArchive::new(Cursor::new(textures)).map_err(|e| invalid(e.to_string()))?;
+    if archive.len() > MAX_BUNDLED_FILES - files.len() {
+        return Err(invalid("Too many bundled Create textures"));
+    }
+    for i in 0..archive.len() {
+        let mut entry = archive.by_index(i).map_err(|e| invalid(e.to_string()))?;
+        let name = entry
+            .name()
+            .map_err(|e| invalid(e.to_string()))?
+            .into_owned();
+        let stem = name
+            .strip_prefix("assets/create/textures/block/fallback/")
+            .or_else(|| name.strip_prefix("assets/create/textures/item/fallback/"))
+            .and_then(|name| name.strip_suffix(".png"));
+        if !entry.is_file()
+            || entry.size() > 16 * 1024
+            || !stem.is_some_and(|name| {
+                !name.is_empty()
+                    && name
+                        .bytes()
+                        .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_')
+            })
+        {
+            return Err(invalid("Invalid bundled Create texture path or size"));
+        }
+        let mut image = Vec::new();
+        entry.read_to_end(&mut image)?;
+        if !image.starts_with(b"\x89PNG\r\n\x1a\n\0\0\0\x0dIHDR\0\0\0\x10\0\0\0\x10")
+            || files.insert(name, image).is_some()
+        {
+            return Err(invalid("Invalid or duplicate bundled Create texture"));
+        }
+    }
+    Ok(())
 }
 
 fn invalid(message: impl Into<String>) -> io::Error {

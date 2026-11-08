@@ -1,7 +1,7 @@
 {
   "textures": {
-    "all": "minecraft:block/red_concrete",
-    "particle": "minecraft:block/red_concrete"
+    "all": "create:block/fallback/gauge_needle",
+    "particle": "create:block/fallback/gauge_needle"
   },
   "elements": [
     {

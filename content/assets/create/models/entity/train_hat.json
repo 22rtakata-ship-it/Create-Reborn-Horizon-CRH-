@@ -1,7 +1,7 @@
 {
   "parent": "minecraft:block/block",
   "textures": {
-    "all": "minecraft:block/black_wool"
+    "all": "create:block/fallback/belt_rubber"
   },
   "elements": [
     {

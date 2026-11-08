@@ -1,7 +1,7 @@
 {
   "textures": {
-    "all": "minecraft:block/andesite",
-    "particle": "minecraft:block/andesite"
+    "all": "create:block/fallback/chain_drive",
+    "particle": "create:block/fallback/chain_drive"
   },
   "elements": [
     {

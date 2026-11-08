@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:block/cube_all",
   "textures": {
-    "all": "minecraft:block/mud_bricks"
+    "all": "create:block/fallback/cut_granite_bricks"
   }
 }

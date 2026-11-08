@@ -1,7 +1,7 @@
 {
   "textures": {
-    "all": "minecraft:block/anvil",
-    "particle": "minecraft:block/anvil"
+    "all": "create:block/fallback/plough",
+    "particle": "create:block/fallback/plough"
   },
   "elements": [
     {

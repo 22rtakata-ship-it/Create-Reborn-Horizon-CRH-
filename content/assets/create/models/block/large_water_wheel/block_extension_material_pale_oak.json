@@ -1,7 +1,7 @@
 {
   "parent": "create:block/large_water_wheel/block_extension",
   "textures": {
-    "all": "minecraft:block/pale_oak_planks",
-    "particle": "minecraft:block/pale_oak_planks"
+    "all": "create:block/fallback/pale_oak_paddles",
+    "particle": "create:block/fallback/pale_oak_paddles"
   }
 }

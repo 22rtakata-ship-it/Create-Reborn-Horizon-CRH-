@@ -1,7 +1,7 @@
 {
   "textures": {
-    "all": "minecraft:block/gold_block",
-    "particle": "minecraft:block/gold_block"
+    "all": "create:block/fallback/cranial_goggles",
+    "particle": "create:block/fallback/cranial_goggles"
   },
   "elements": [
     {

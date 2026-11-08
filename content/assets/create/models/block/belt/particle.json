@@ -1,6 +1,6 @@
 {
   "textures": {
-    "particle": "minecraft:block/black_wool"
+    "particle": "create:block/fallback/belt_rubber"
   },
   "elements": []
 }

@@ -1,7 +1,7 @@
 {
   "textures": {
-    "all": "minecraft:block/gray_wool",
-    "particle": "minecraft:block/gray_wool"
+    "all": "create:block/fallback/gray_canvas",
+    "particle": "create:block/fallback/gray_canvas"
   },
   "elements": [
     {

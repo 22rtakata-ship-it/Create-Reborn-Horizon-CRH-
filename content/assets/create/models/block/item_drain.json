@@ -1,7 +1,7 @@
 {
   "textures": {
-    "body": "minecraft:block/copper_block",
-    "grate": "minecraft:block/iron_block",
+    "body": "create:block/fallback/pipe_copper",
+    "grate": "create:block/fallback/drain",
     "particle": "#body"
   },
   "elements": [

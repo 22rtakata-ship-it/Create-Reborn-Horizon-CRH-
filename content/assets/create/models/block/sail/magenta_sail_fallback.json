@@ -1,7 +1,7 @@
 {
   "textures": {
-    "all": "minecraft:block/magenta_wool",
-    "particle": "minecraft:block/magenta_wool"
+    "all": "create:block/fallback/magenta_canvas",
+    "particle": "create:block/fallback/magenta_canvas"
   },
   "elements": [
     {

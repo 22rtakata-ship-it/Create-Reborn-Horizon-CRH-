@@ -806,10 +806,10 @@ fn bundled_content_repairs_itself_without_changing_other_mods_or_settings() {
         "assets/create/items/shaft.json": "{\"model\": {}}"
     }))
     .unwrap();
-    let path = bundled_content(&home, &bytes).unwrap();
+    let path = bundled_content(&home, &bytes, &[]).unwrap();
     fs::write(path.join("assets/create/items/shaft.json"), "damaged").unwrap();
     fs::write(path.join("stale-file"), "old release").unwrap();
-    assert_eq!(bundled_content(&home, &bytes).unwrap(), path);
+    assert_eq!(bundled_content(&home, &bytes, &[]).unwrap(), path);
     assert_eq!(
         fs::read_to_string(path.join("assets/create/items/shaft.json")).unwrap(),
         "{\"model\": {}}"
@@ -819,7 +819,7 @@ fn bundled_content_repairs_itself_without_changing_other_mods_or_settings() {
         .unwrap()
         .modified()
         .unwrap();
-    bundled_content(&home, &bytes).unwrap();
+    bundled_content(&home, &bytes, &[]).unwrap();
     assert_eq!(
         fs::metadata(path.join("horizon-mod.toml"))
             .unwrap()
@@ -841,7 +841,12 @@ fn bundled_content_repairs_itself_without_changing_other_mods_or_settings() {
 #[test]
 fn generated_distribution_passes_the_native_content_allowlist() {
     let home = Stage::new(&std::env::temp_dir()).unwrap();
-    let path = bundled_content(&home.0, include_bytes!("../../data/content.json")).unwrap();
+    let path = bundled_content(
+        &home.0,
+        include_bytes!("../../data/content.json"),
+        include_bytes!("../../data/textures.zip"),
+    )
+    .unwrap();
     let atlas: serde_json::Value = serde_json::from_slice(
         &fs::read(path.join("assets/minecraft/atlases/blocks.json")).unwrap(),
     )
@@ -854,6 +859,8 @@ fn generated_distribution_passes_the_native_content_allowlist() {
         ])
     );
     for name in [
+        "assets/create/textures/block/fallback/creative_motor.png",
+        "assets/create/textures/item/fallback/wrench.png",
         "data/create/horizon/block/gantry_shaft.json",
         "data/create/horizon/block/rope_pulley.json",
         "data/create/horizon/block/rope.json",
@@ -881,7 +888,7 @@ fn bundled_content_rejects_paths_outside_its_namespace_before_writing() {
             (name, "invalid"),
         ]))
         .unwrap();
-        assert!(bundled_content(&home, &bytes).is_err());
+        assert!(bundled_content(&home, &bytes, &[]).is_err());
     }
     assert!(!home.exists());
 }

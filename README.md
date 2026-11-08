@@ -30,7 +30,7 @@ These screenshots were captured in Horizon 26.3 with the mod's built-in models.
 
 ## Original models and textures
 
-The mod works on its own with simple models and standard Minecraft textures. **For Create's original models and textures, you need the original Create 6.0.10 JAR for Minecraft 1.21.1 (NeoForge).** Put one copy in the instance's `horizon-mods/create-resources/` folder and restart Horizon. The mod reads the resources locally. [Download the supported JAR](https://modrinth.com/mod/create/version/UjX6dr61) · [Resource setup](docs/assets.md)
+The mod includes simple models with its own pixel textures. **For Create's original models and textures, you need the original Create 6.0.10 JAR for Minecraft 1.21.1 (NeoForge).** Put one copy in the instance's `horizon-mods/create-resources/` folder and restart Horizon. The mod reads the resources locally. [Download the supported JAR](https://modrinth.com/mod/create/version/UjX6dr61) · [Resource setup](docs/assets.md)
 
 ## Development
 

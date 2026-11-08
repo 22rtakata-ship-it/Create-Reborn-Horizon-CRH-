@@ -1,7 +1,7 @@
 {
   "textures": {
-    "all": "minecraft:block/copper_block",
-    "particle": "minecraft:block/copper_block"
+    "all": "create:block/fallback/brass_funnel_active",
+    "particle": "create:block/fallback/brass_funnel_active"
   },
   "elements": [
     {

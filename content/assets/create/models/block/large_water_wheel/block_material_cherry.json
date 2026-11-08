@@ -1,7 +1,7 @@
 {
   "parent": "create:block/large_water_wheel/block",
   "textures": {
-    "all": "minecraft:block/cherry_planks",
-    "particle": "minecraft:block/cherry_planks"
+    "all": "create:block/fallback/cherry_paddles",
+    "particle": "create:block/fallback/cherry_paddles"
   }
 }

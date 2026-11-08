@@ -1,7 +1,7 @@
 {
   "textures": {
-    "all": "minecraft:block/iron_block",
-    "particle": "minecraft:block/iron_block"
+    "all": "create:block/fallback/gantry",
+    "particle": "create:block/fallback/gantry"
   },
   "elements": [
     {

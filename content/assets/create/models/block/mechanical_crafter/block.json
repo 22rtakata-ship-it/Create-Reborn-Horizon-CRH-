@@ -1,8 +1,8 @@
 {
   "textures": {
-    "case": "minecraft:block/yellow_terracotta",
-    "frame": "minecraft:block/gold_block",
-    "slot": "minecraft:block/stripped_dark_oak_log_top",
+    "case": "create:block/fallback/crafter",
+    "frame": "create:block/fallback/brass_casing",
+    "slot": "create:block/fallback/chassis",
     "particle": "#case"
   },
   "elements": [
