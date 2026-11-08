@@ -31,6 +31,9 @@ pub mod waterwheel;
 #[path = "core/milling.rs"]
 pub mod milling;
 
+#[path = "core/crushing.rs"]
+pub mod crushing;
+
 #[path = "core/fan.rs"]
 pub mod fan;
 

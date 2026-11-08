@@ -1667,6 +1667,28 @@
         "id": "create:zinc_nugget"
       }
     },
+    "create/recipe/crushing/gravel.json": {
+      "type": "create:crushing",
+      "ingredients": [
+        {
+          "item": "minecraft:gravel"
+        }
+      ],
+      "processing_time": 250,
+      "results": [
+        {
+          "id": "minecraft:sand"
+        },
+        {
+          "chance": 0.1,
+          "id": "minecraft:flint"
+        },
+        {
+          "chance": 0.05,
+          "id": "minecraft:clay_ball"
+        }
+      ]
+    },
     "create/recipe/cut_andesite_bricks_from_stone_types_andesite_stonecutting.json": {
       "type": "minecraft:stonecutting",
       "ingredient": {
@@ -6072,6 +6094,7 @@
         "create:encased_fan",
         "create:hand_crank",
         "create:millstone",
+        "create:crushing_wheel",
         "create:mechanical_press",
         "create:mechanical_mixer",
         "create:basin",
@@ -6593,6 +6616,27 @@
         }
       ],
       "random_sequence": "create:blocks/andesite_funnel"
+    },
+    "create/loot_table/blocks/crushing_wheel.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:crushing_wheel"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/crushing_wheel"
     },
     "create/loot_table/blocks/sticker.json": {
       "type": "minecraft:block",

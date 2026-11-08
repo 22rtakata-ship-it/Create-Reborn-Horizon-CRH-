@@ -53,6 +53,7 @@
     "create:radial_chassis",
     "create:chute",
     "create:andesite_funnel",
+    "create:crushing_wheel",
     "create:portable_storage_interface",
     "create:sticker",
     "create:zinc_ore",

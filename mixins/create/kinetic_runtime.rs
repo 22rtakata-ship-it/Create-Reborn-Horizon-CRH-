@@ -300,9 +300,13 @@ pub(super) fn publish(game: &mut Game<'_>, network: &Network, current: Pos) {
         {
             continue;
         }
-        game.native_with_mod_block_entity(pos, |entity| {
+        let speed = game.native_with_mod_block_entity(pos, |entity| {
             super::create_port::apply_network(entity, network, other.as_deref(), pos);
+            super::create_port::number(&entity.nbt, "Speed")
         });
+        if matches!(node.kind, Kind::CrushingWheel) && let Some(speed) = speed {
+            super::create_port_saw_processing::crushing::wheel_updated(game, pos, node.axis, speed);
+        }
         game.native_block_entity_sync(pos);
     }
 }

@@ -24,6 +24,362 @@ use horizon_world::nbt::{Compound, Tag};
 const SLOTS: usize = 32;
 const INVENTORY: &str = "Inventory";
 
+pub(super) mod crushing {
+    use super::{
+        BlockEntity, Compound, Game, INVENTORY, ItemStack, ModBlockEntity, Pos, SLOTS, Tag, create,
+        processing_inventory, roll_count,
+    };
+    use create_engine::{
+        crushing::{Action, Cycle, direction},
+        kinetics::Axis,
+        placement::Direction,
+    };
+    use horizon_core::random::RandomSource;
+    use horizon_world::{chunk::BlockState, level::flags, registry::BlockStateId};
+    use std::collections::BTreeMap;
+
+    pub(in crate::game) const WHEEL: &str = "create:crushing_wheel";
+    pub(in crate::game) const CONTROLLER: &str = "create:crushing_wheel_controller";
+
+    const GAPS: [Direction; 2] = [Direction::East, Direction::South];
+
+    fn offset(pos: Pos, side: Direction) -> Pos {
+        let normal = side.vector();
+        std::array::from_fn(|axis| pos[axis] + normal[axis])
+    }
+
+    fn axis(game: &Game<'_>, pos: Pos) -> Option<Axis> {
+        if game.native_block(pos) != WHEEL {
+            return None;
+        }
+        match game.native_block_property(pos, "axis").as_deref() {
+            Some("x") => Some(Axis::X),
+            Some("z") => Some(Axis::Z),
+            _ => None,
+        }
+    }
+
+    fn pair(game: &Game<'_>, center: Pos) -> Option<(Direction, Axis)> {
+        let mut matches = GAPS.into_iter().filter_map(|side| {
+            let a = offset(center, side.opposite());
+            let b = offset(center, side);
+            let axis = axis(game, a)?;
+            (axis != side.axis() && self::axis(game, b) == Some(axis)).then_some((side, axis))
+        });
+        let pair = matches.next()?;
+        matches.next().is_none().then_some(pair)
+    }
+
+    fn rpm(game: &Game<'_>, pos: Pos, update: (Pos, f32)) -> f32 {
+        if pos == update.0 {
+            return update.1;
+        }
+        match game.world.block_entities.get(&(pos[0], pos[1], pos[2])) {
+            Some(BlockEntity::Mod(entity)) if entity.id == WHEEL => {
+                create::number(&entity.nbt, "Speed")
+            }
+            _ => 0.0,
+        }
+    }
+
+    fn state(facing: Direction, valid: bool, game: &Game<'_>) -> Option<BlockStateId> {
+        game.pack.assets.registry.id(&BlockState {
+            name: CONTROLLER.into(),
+            properties: BTreeMap::from([
+                ("facing".to_owned(), facing.name().into()),
+                ("valid".to_owned(), valid.to_string()),
+            ])
+            .into(),
+        })
+    }
+
+    pub(in crate::game) fn wheel_updated(game: &mut Game<'_>, pos: Pos, axis: Axis, rpm: f32) {
+        if axis == Axis::Y {
+            return;
+        }
+        let sides = if axis == Axis::X {
+            [Direction::North, Direction::South]
+        } else {
+            [Direction::West, Direction::East]
+        };
+        for side in sides {
+            let center = offset(pos, side);
+            let Some((gap, wheel_axis)) = pair(game, center) else {
+                continue;
+            };
+            let current = game.world.block(center[0], center[1], center[2]);
+            if !game.res.behaviours().is_air(current) && game.native_block(center) != CONTROLLER {
+                continue;
+            }
+            // Iterate.directions sees the negative Z/X side before the positive side.
+            let speed = self::rpm(game, offset(center, gap.opposite()), (pos, rpm));
+            let other = self::rpm(game, offset(center, gap), (pos, rpm));
+            let facing = direction(wheel_axis, gap, speed, other);
+            let Some(target) = state(facing.unwrap_or(Direction::Down), facing.is_some(), game)
+            else {
+                continue;
+            };
+            if current != target {
+                let dim = game.dim.id().to_owned();
+                if !game.native_set_block(&dim, center, target, flags::UPDATE_ALL) {
+                    continue;
+                }
+            }
+            let speed = if facing.is_some() {
+                (speed / 50.0).abs()
+            } else {
+                0.0
+            };
+            if game.native_with_mod_block_entity(center, |entity| {
+                let changed = create::number(&entity.nbt, "Speed") != speed;
+                if changed {
+                    entity
+                        .nbt
+                        .insert("Speed".into(), Tag::Float(speed.to_bits()));
+                }
+                changed
+            }) == Some(true)
+            {
+                game.native_block_entity_sync(center);
+            }
+        }
+    }
+
+    fn save(entity: &mut ModBlockEntity, cycle: Cycle) {
+        let inventory = processing_inventory(
+            &entity.items,
+            cycle.remaining,
+            cycle.recipe_time,
+            cycle.applied,
+        );
+        entity.nbt.insert(INVENTORY.into(), inventory);
+    }
+
+    pub(in crate::game) fn default_nbt() -> Compound {
+        Compound::from([
+            (INVENTORY.into(), processing_inventory(&[], 0.0, 0.0, false)),
+            ("Speed".into(), Tag::Float(0)),
+        ])
+    }
+
+    fn cycle(entity: &ModBlockEntity) -> Option<Cycle> {
+        let Tag::Compound(saved) = entity.nbt.get(&INVENTORY.into())? else {
+            return None;
+        };
+        let remaining = create::number(saved, "ProcessingTime");
+        let recipe_time = create::number(saved, "RecipeTime");
+        (create::integer(saved, "Size") == SLOTS as i32
+            && entity.items.len() == SLOTS
+            && remaining.is_finite()
+            && remaining >= 0.0
+            && recipe_time.is_finite()
+            && recipe_time >= 0.0)
+            .then_some(Cycle {
+                remaining,
+                recipe_time,
+                applied: create::integer(saved, "AppliedRecipe") != 0,
+            })
+    }
+
+    fn down(game: &Game<'_>, pos: Pos) -> bool {
+        game.native_block_property(pos, "facing").as_deref() == Some("down")
+    }
+
+    fn recipe(game: &Game<'_>, stack: &ItemStack) -> Option<(i32, Vec<(ItemStack, f32)>)> {
+        let kind = match stack.item.as_ref() {
+            "minecraft:cobblestone" => "create:milling",
+            "minecraft:gravel" => "create:crushing",
+            _ => return None,
+        };
+        for recipe in game.native_recipes_of_type(kind) {
+            let json = &recipe.json;
+            let Some(input) = json["ingredients"]
+                .as_array()
+                .filter(|list| list.len() == 1)
+                .and_then(|list| create::ingredient(&list[0]))
+                .and_then(|value| game.native_recipe_ingredient(&value))
+            else {
+                continue;
+            };
+            if !input.test(stack) {
+                continue;
+            }
+            let duration = i32::try_from(json["processing_time"].as_i64()?).ok()?;
+            let results = json["results"]
+                .as_array()?
+                .iter()
+                .map(|row| {
+                    let id = row["id"].as_str()?;
+                    let count = row["count"].as_u64().unwrap_or(1);
+                    let chance = row["chance"].as_f64().unwrap_or(1.0);
+                    (count > 0 && count <= 64 && (0.0..=1.0).contains(&chance))
+                        .then(|| (ItemStack::new(id, count as u32), chance as f32))
+                })
+                .collect::<Option<Vec<_>>>()?;
+            return (duration > 0 && !results.is_empty() && results.len() < SLOTS)
+                .then_some((duration, results));
+        }
+        None
+    }
+
+    pub(in crate::game) fn insert(
+        game: &mut Game<'_>,
+        pos: Pos,
+        stack: &ItemStack,
+        simulate: bool,
+    ) -> u32 {
+        if !down(game, pos) || pair(game, pos).is_none() {
+            return 0;
+        }
+        let Some(BlockEntity::Mod(entity)) =
+            game.world.block_entities.get(&(pos[0], pos[1], pos[2]))
+        else {
+            return 0;
+        };
+        if entity.id != CONTROLLER
+            || cycle(entity).is_none()
+            || entity.items.iter().any(Option::is_some)
+        {
+            return 0;
+        }
+        let Some((duration, _)) = recipe(game, stack) else {
+            return 0;
+        };
+        let moved = stack.count.min(create::stack_maximum(game, stack));
+        if moved == 0 || simulate {
+            return moved;
+        }
+        let accepted = game.native_with_mod_block_entity(pos, |entity| {
+            let mut stack = stack.clone();
+            stack.count = moved;
+            entity.items[0] = Some(stack);
+            let mut cycle = Cycle::default();
+            cycle.start(duration);
+            save(entity, cycle);
+        });
+        if accepted.is_some() {
+            game.native_block_entity_sync(pos);
+            moved
+        } else {
+            0
+        }
+    }
+
+    fn eject(game: &mut Game<'_>, pos: Pos, stack: ItemStack) {
+        let center = pos.map(|value| f64::from(value) + 0.5);
+        let location = [center[0], center[1] - f64::from(0.55_f32), center[2]];
+        let id = game.next_entity + 1;
+        game.spawn_item(stack, location, [0.0; 3], 0);
+        if !game.dropped.iter().rev().any(|item| item.id == id) {
+            return;
+        }
+        let root = game
+            .persist
+            .raw
+            .entry(id)
+            .or_insert_with(|| Tag::Compound(Compound::new()));
+        if let Tag::Compound(root) = root
+            && let Tag::Compound(data) = root
+                .entry("NeoForgeData".into())
+                .or_insert_with(|| Tag::Compound(Compound::new()))
+        {
+            data.insert("BypassCrushingWheel".into(), Tag::IntArray(pos.to_vec()));
+        }
+    }
+
+    pub(in crate::game) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity) {
+        let Some(mut cycle) = cycle(entity) else {
+            return;
+        };
+        let resident = |at| crate::game::create_port_contraption::resident(game, at);
+        if GAPS
+            .into_iter()
+            .any(|side| !resident(offset(pos, side)) || !resident(offset(pos, side.opposite())))
+        {
+            return;
+        }
+        if pair(game, pos).is_none() {
+            let dim = game.dim.id().to_owned();
+            if let Some(air) = game.pack.assets.registry.default_state("minecraft:air")
+                && game.native_set_block(&dim, pos, air, flags::UPDATE_ALL)
+            {
+                for stack in entity.items.iter_mut().filter_map(Option::take) {
+                    game.pop_resource(pos, stack);
+                }
+            }
+            return;
+        }
+        let speed = create::running_speed(game, &entity.nbt);
+        if !down(game, pos)
+            || speed <= 0.0
+            || !speed.is_finite()
+            || entity.items.iter().all(Option::is_none)
+        {
+            return;
+        }
+        let count = entity.items[0].as_ref().map_or(0, |stack| stack.count);
+        if !cycle.applied && count == 0 {
+            return;
+        }
+        match cycle.tick(speed, count) {
+            Action::Idle => {
+                if let Some(Tag::Compound(saved)) = entity.nbt.get_mut(&INVENTORY.into()) {
+                    saved.insert(
+                        "ProcessingTime".into(),
+                        Tag::Float(cycle.remaining.to_bits()),
+                    );
+                }
+            }
+            Action::Apply => {
+                let Some((_, results)) = entity.items[0]
+                    .as_ref()
+                    .and_then(|stack| recipe(game, stack))
+                else {
+                    // A data reload can remove a recipe while it is in progress.
+                    return;
+                };
+                let outputs = results
+                    .into_iter()
+                    .map(|(stack, chance)| {
+                        let limit = create::stack_maximum(game, &stack);
+                        (stack, chance, limit)
+                    })
+                    .collect::<Vec<_>>();
+                entity.items.fill(None);
+                for _ in 0..count {
+                    for (stack, chance, limit) in &outputs {
+                        let count =
+                            roll_count(stack.count, *chance, || game.world.random.next_float());
+                        if count != 0 {
+                            let mut output = stack.clone();
+                            output.count = count;
+                            super::super::create_port_inventory::insert(
+                                &mut entity.items[1..],
+                                output,
+                                *limit,
+                            );
+                        }
+                    }
+                }
+                save(entity, cycle);
+                game.native_block_entity_sync(pos);
+            }
+            Action::Eject => {
+                let below = offset(pos, Direction::Down);
+                let state = game.world.block(below[0], below[1], below[2]);
+                if !game.res.behaviours().is_air(state) {
+                    return;
+                }
+                for stack in entity.items.iter_mut().filter_map(Option::take) {
+                    eject(game, pos, stack);
+                }
+                save(entity, Cycle::default());
+                game.native_block_entity_sync(pos);
+            }
+        }
+    }
+}
+
 pub(super) fn container() -> ModContainer {
     ModContainer {
         slots: SLOTS,
@@ -58,8 +414,25 @@ fn cycle(entity: &ModBlockEntity) -> Option<CuttingCycle> {
 }
 
 fn save(entity: &mut ModBlockEntity, cycle: CuttingCycle) {
-    let items = entity
-        .items
+    let inventory = processing_inventory(
+        &entity.items,
+        cycle.remaining,
+        cycle.duration,
+        cycle.applied,
+    );
+    entity.nbt.insert(INVENTORY.into(), inventory);
+    entity
+        .nbt
+        .insert("RecipeIndex".into(), Tag::Int(cycle.recipe_index as i32));
+}
+
+fn processing_inventory(
+    items: &[Option<ItemStack>],
+    remaining: f32,
+    duration: f32,
+    applied: bool,
+) -> Tag {
+    let items = items
         .iter()
         .enumerate()
         .filter_map(|(slot, stack)| {
@@ -71,22 +444,13 @@ fn save(entity: &mut ModBlockEntity, cycle: CuttingCycle) {
             Some(Tag::Compound(item))
         })
         .collect();
-    entity.nbt.insert(
-        INVENTORY.into(),
-        Tag::Compound(Compound::from([
-            ("Size".into(), Tag::Int(SLOTS as i32)),
-            ("Items".into(), Tag::List(items)),
-            (
-                "ProcessingTime".into(),
-                Tag::Float(cycle.remaining.to_bits()),
-            ),
-            ("RecipeTime".into(), Tag::Float(cycle.duration.to_bits())),
-            ("AppliedRecipe".into(), Tag::Byte(i8::from(cycle.applied))),
-        ])),
-    );
-    entity
-        .nbt
-        .insert("RecipeIndex".into(), Tag::Int(cycle.recipe_index as i32));
+    Tag::Compound(Compound::from([
+        ("Size".into(), Tag::Int(SLOTS as i32)),
+        ("Items".into(), Tag::List(items)),
+        ("ProcessingTime".into(), Tag::Float(remaining.to_bits())),
+        ("RecipeTime".into(), Tag::Float(duration.to_bits())),
+        ("AppliedRecipe".into(), Tag::Byte(i8::from(applied))),
+    ]))
 }
 
 struct CuttingRecipe {

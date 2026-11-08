@@ -48,6 +48,13 @@ developer source build. The three changes are applied in a separate checkout.
   The canonical input is visible on the transfer tick even if the
   Millstone already ticked. A restart at that point preserves the accepted
   items and components. The Saw-to-Millstone test also passed again.
+- [Chute-fed Crushing Wheels](tools/crushing_wheel_checks.py) match 357
+  active lane observations for downward wheel pairs, including unequal RPM,
+  both ticker orders, stop/resume, Milling fallback and Crushing recipe
+  priority. Both clients preserve the inventory and timer before and after
+  recipe application through real restarts. The downward output position,
+  initial velocity, pickup delay and bypass tag match. Unported inputs stay
+  in the Horizon Chute, and independent random results are checked by range.
 - Mixed colored cargo restores the same cells on a Mechanical Bearing after
   a real Horizon restart. The [separate swept-volume check](tools/bearing_chunk_sweep_checks.py)
   matches nine angles, neighboring-column item support and all 15 landing

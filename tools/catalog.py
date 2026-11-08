@@ -4,6 +4,7 @@ from chassis_content import CHASSIS
 from portable_storage_content import PSI
 from chute_content import CHUTE
 from funnel_content import BLOCK as FUNNEL
+from crushing_content import CONTROLLER as CRUSHER_CONTROLLER, WHEEL as CRUSHER
 from sticker_content import STICKER
 
 BASE_BLOCKS = ['creative_motor', 'shaft', 'cogwheel', 'large_cogwheel', 'mechanical_press', 'depot']
@@ -23,10 +24,10 @@ PROCESSORS = ['millstone', 'encased_fan', 'mechanical_drill', 'basin', 'mechanic
 PISTONS = ['mechanical_piston', 'sticky_mechanical_piston', 'piston_extension_pole']
 GANTRY = ['gantry_shaft', 'gantry_carriage']
 ACTORS = ['mechanical_harvester', 'mechanical_saw', 'mechanical_plough', 'deployer']
-INTERNAL_BLOCKS = ['water_wheel_structure', 'belt', 'lit_blaze_burner', 'mechanical_piston_head', 'rope', 'pulley_magnet'] + COLORED_SAILS
-EXTRA_BLOCKSTATES = ['lit_blaze_burner', 'mechanical_piston_head', 'rope', 'pulley_magnet'] + COLORED_SAILS
+INTERNAL_BLOCKS = ['water_wheel_structure', 'belt', 'lit_blaze_burner', 'mechanical_piston_head', 'rope', 'pulley_magnet', CRUSHER_CONTROLLER] + COLORED_SAILS
+EXTRA_BLOCKSTATES = ['lit_blaze_burner', 'mechanical_piston_head', 'rope', 'pulley_magnet', CRUSHER_CONTROLLER] + COLORED_SAILS
 EXTRA_MODELS = ['entity/train_hat', 'entity/logistics_hat']
-BLOCKS = BASE_BLOCKS + TRANSMISSIONS + STATIC_BLOCKS + INSTRUMENTS + GENERATORS + PROCESSORS + PISTONS + GANTRY + ACTORS + SAIL_ITEMS + CHASSIS + [CHUTE, FUNNEL, PSI, STICKER, *ZINC_BLOCKS] + PALETTE_BLOCKS
+BLOCKS = BASE_BLOCKS + TRANSMISSIONS + STATIC_BLOCKS + INSTRUMENTS + GENERATORS + PROCESSORS + PISTONS + GANTRY + ACTORS + SAIL_ITEMS + CHASSIS + [CHUTE, FUNNEL, CRUSHER, PSI, STICKER, *ZINC_BLOCKS] + PALETTE_BLOCKS
 ITEMS = ['iron_sheet', 'golden_sheet', 'copper_sheet', 'andesite_alloy', 'brass_ingot', 'brass_nugget', 'zinc_ingot', 'zinc_nugget', 'wrench', 'brass_sheet', 'vertical_gearbox', 'goggles', 'propeller', 'wheat_flour', 'dough', 'belt_connector', 'whisk', 'empty_blaze_burner', 'blaze_cake', 'creative_blaze_cake']
 ITEMS.append('super_glue')
 SANDPAPERS = ['sand_paper', 'red_sand_paper']
@@ -37,7 +38,7 @@ PARTS += ['belt_pulley', 'belt/particle'] + ['belt/' + part for part in
     ['start', 'middle', 'end', 'start_bottom', 'middle_bottom', 'end_bottom',
      'diagonal_start', 'diagonal_middle', 'diagonal_end']]
 PARTS += ['basin/block', 'basin/block_directional', 'mechanical_mixer/block',
-          'mechanical_mixer/pole', 'mechanical_mixer/head', 'cogwheel_shaftless', 'flywheel/block']
+          'mechanical_mixer/pole', 'mechanical_mixer/head', 'cogwheel_shaftless', 'flywheel/block', f'{CRUSHER}/block']
 PARTS += ['bearing/top', 'bearing/top_wooden']
 PARTS += ['rope_pulley/' + name for name in ('rope_coil', 'rope', 'pulley_magnet', 'rope_half', 'rope_half_magnet')]
 PARTS += ['mechanical_harvester/blade'] + [

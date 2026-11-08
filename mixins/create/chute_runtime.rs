@@ -185,6 +185,7 @@ enum Route {
     Chute,
     Container,
     PortableStorage,
+    Crusher,
     Drop,
 }
 
@@ -203,6 +204,13 @@ fn route(game: &mut Game<'_>, pos: Pos, below: Pos, stack: &ItemStack) -> Route 
         let moved = super::create_port_portable_storage::push_chute(game, below, pos, stack, true);
         return if moved != 0 {
             Route::PortableStorage
+        } else {
+            Route::Blocked
+        };
+    }
+    if game.native_block(below) == super::create_port_saw_processing::crushing::CONTROLLER {
+        return if super::create_port_saw_processing::crushing::insert(game, below, stack, true) > 0 {
+            Route::Crusher
         } else {
             Route::Blocked
         };
@@ -282,12 +290,14 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity) {
             let stack = stack.clone();
             match output {
                 Route::Chute if enter(game, below, stack.clone()) => set_item(entity, None, ENTRY),
-                Route::Container | Route::PortableStorage => {
+                Route::Container | Route::PortableStorage | Route::Crusher => {
                     let mut rest = stack;
                     let moved = if matches!(output, Route::PortableStorage) {
                         super::create_port_portable_storage::push_chute(
                             game, below, pos, &rest, false,
                         )
+                    } else if matches!(output, Route::Crusher) {
+                        super::create_port_saw_processing::crushing::insert(game, below, &rest, false)
                     } else {
                         game.chute_insert((below[0], below[1], below[2]), &rest, false)
                             .unwrap_or(0)

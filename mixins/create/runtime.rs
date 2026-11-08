@@ -1,7 +1,7 @@
 // Copyright (c) 2026 create-horizon contributors
 // SPDX-License-Identifier: MIT
 // Game-side adapter. The engine crate contains the portable algorithms.
-use super::{Game, native_block_entity_draw::BlockEntityDraw};
+use super::{Game, create_port_saw_processing::crushing as crusher, native_block_entity_draw::BlockEntityDraw};
 use crate::{
     containers::{BlockEntity, ModBlockEntity, ModContainer},
     items::ItemStack,
@@ -111,6 +111,7 @@ pub(super) fn owns(block: &str) -> bool {
         "create:creative_motor"
             | "create:shaft"
             | FLYWHEEL
+            | crusher::WHEEL
             | "create:cogwheel"
             | "create:large_cogwheel"
             | super::create_port_contraption::BLOCK
@@ -150,6 +151,10 @@ pub(super) fn owns(block: &str) -> bool {
 }
 
 pub(super) fn entity(block: &str, entity: &mut Option<(String, Compound)>) {
+    if block == crusher::CONTROLLER && entity.is_none() {
+        *entity = Some((block.into(), crusher::default_nbt()));
+        return;
+    }
     if block == super::create_port_sticker::BLOCK && entity.is_none() {
         *entity = Some((block.into(), super::create_port_sticker::default_nbt()));
         return;
@@ -209,6 +214,7 @@ pub(super) fn ticks(block: &str, ticks: &mut bool) {
         || block == super::create_port_portable_storage::BLOCK
         || block == super::create_port_chute::BLOCK
         || block == super::create_port_chute::funnel::BLOCK
+        || block == crusher::CONTROLLER
     {
         *ticks = true;
     }
@@ -330,6 +336,7 @@ pub(super) fn placed(game: &mut Game<'_>, stack: &ItemStack, pos: [i32; 3]) {
     let axis = match stack.item.as_ref() {
         "create:shaft"
         | FLYWHEEL
+        | crusher::WHEEL
         | "create:andesite_encased_shaft"
         | "create:brass_encased_shaft"
         | "create:clutch"
@@ -392,6 +399,7 @@ pub(super) fn inventory_supported(entity: &ModBlockEntity) -> bool {
         "create:depot" => &[("OutputBuffer", 8)],
         "create:basin" => &[("InputItems", 9), ("OutputItems", 9)],
         "create:millstone" => &[("InputInventory", 1), ("OutputInventory", 9)],
+        crusher::CONTROLLER => &[("Inventory", 32)],
         _ => return true,
     };
     inventories.iter().all(|&(key, count)| {
@@ -776,6 +784,7 @@ pub(super) fn node(game: &Game<'_>, pos: [i32; 3]) -> Option<Node> {
         | FLYWHEEL
         | "create:andesite_encased_shaft"
         | "create:brass_encased_shaft" => Kind::Shaft,
+        crusher::WHEEL => Kind::CrushingWheel,
         super::create_port_gantry::SHAFT => Kind::GantryShaft {
             facing: Direction::from_vector(direction)?,
             powered: game.native_block_property(pos, "powered").as_deref() == Some("true"),
@@ -1046,6 +1055,10 @@ pub(super) fn apply_network(
 
 pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEntity) {
     let block = game.native_block(pos);
+    if block == crusher::CONTROLLER && entity.id == crusher::CONTROLLER {
+        crusher::tick(game, pos, entity);
+        return;
+    }
     if block == super::create_port_chute::BLOCK {
         super::create_port_chute::tick(game, pos, entity);
         return;
@@ -1172,6 +1185,7 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
     );
     let blocked_attachment = blocked_attachment && !publish_source;
     let old_rpm = number(&entity.nbt, "Speed");
+    let first_wheel_tick = block == crusher::WHEEL && !entity.nbt.contains_key(&"Speed".into());
     let old_running_rpm = running_speed(game, &entity.nbt);
     let rpm = if blocked_attachment {
         0.0
@@ -1190,6 +1204,11 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
         if let Some(other) = &other_half {
             crate::game::create_port_kinetic_runtime::publish(game, other, pos);
         }
+    }
+    if block == crusher::WHEEL
+        && (first_wheel_tick || old_rpm != rpm || game.world.game_time.rem_euclid(20) == 0)
+    {
+        crusher::wheel_updated(game, pos, start.axis, rpm);
     }
     let generated = match start.kind {
         Kind::Motor { rpm, .. } | Kind::WaterWheel { rpm, .. } => Some(rpm),
@@ -1440,7 +1459,7 @@ pub(super) fn container(block: &str, container: &mut Option<ModContainer>) {
     if block == super::create_port_chute::BLOCK && container.is_none() {
         *container = Some(super::create_port_chute::container());
     }
-    if block == super::create_port_drill::SAW && container.is_none() {
+    if matches!(block, super::create_port_drill::SAW | crusher::CONTROLLER) && container.is_none() {
         *container = Some(super::create_port_saw_processing::container());
     }
     if block == super::create_port_deployer::BLOCK && container.is_none() {
@@ -1681,6 +1700,19 @@ pub(super) fn draw(
     let direction = game.native_block_property(pos, "facing");
     crate::game::create_port_presentation::hints(game, pos, draw);
     let time = draw.game_time as f64 + f64::from(draw.partial);
+    if block == crusher::WHEEL {
+        draw.push();
+        orient(draw, node.axis);
+        let angle = create_engine::visual::angle(
+            time,
+            number(&entity.nbt, "Speed"),
+            create_engine::visual::rotation_offset(pos, node.axis, false),
+        );
+        draw.rotate_about([0.0, 1.0, 0.0], angle, [0.5; 3]);
+        game.native_draw_model(draw, "create:block/crushing_wheel/block", 0xFFFFFF);
+        draw.pop();
+        return;
+    }
     if block == FLYWHEEL {
         draw.push();
         orient(draw, node.axis);

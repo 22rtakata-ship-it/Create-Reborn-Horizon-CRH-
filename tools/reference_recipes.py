@@ -6,6 +6,7 @@ import subprocess
 from common import CREATE, PINS, ROOT
 from catalog import BLOCKS, INTERNAL_BLOCKS, IRON_PALETTE, ITEMS, PALETTE_BLOCKS, STONE_PALETTES, ZINC_BLOCKS
 from funnel_content import BLOCK as FUNNEL
+from crushing_content import WHEEL as CRUSHER
 from sail_content import COLORED_SAILS, SAIL_ITEMS
 from portable_storage_content import PSI
 from chute_content import CHUTE
@@ -167,7 +168,7 @@ def main():
         elif isinstance(value, list):
             for child in value: yield from dependencies(child)
     recipes = {}
-    processing = {'create:milling', 'create:splashing', 'create:haunting', 'create:mixing', 'create:compacting',
+    processing = {'create:milling', 'create:crushing', 'create:splashing', 'create:haunting', 'create:mixing', 'create:compacting',
                   'create:sandpaper_polishing', 'create:cutting'}
     cooking = {'minecraft:smelting', 'minecraft:smoking', 'minecraft:blasting'}
     palette_recipes = {
@@ -181,6 +182,8 @@ def main():
         if not name.startswith(base + 'create/recipe/') or not name.endswith('.json'): continue
         r = read(name)
         kind = r.get('type', '')
+        if kind == 'create:crushing' and name != base + 'create/recipe/crushing/gravel.json':
+            continue
         palette_cut = kind == 'minecraft:stonecutting' and name in palette_recipes
         if not palette_cut and kind not in {'minecraft:crafting_shaped', 'minecraft:crafting_shapeless', 'create:pressing', 'create:item_application'} | processing | cooking: continue
         if kind == 'create:mixing' and not (dry_mixing(r) or heated_mixing(r)):
@@ -362,6 +365,7 @@ def main():
         f'create/loot_table/blocks/{PSI}.json',
         f'create/loot_table/blocks/{CHUTE}.json',
         f'create/loot_table/blocks/{FUNNEL}.json',
+        f'create/loot_table/blocks/{CRUSHER}.json',
         f'create/loot_table/blocks/{STICKER}.json',
         'create/loot_table/blocks/zinc_block.json',
         *[f'create/loot_table/blocks/{name}.json' for name in ZINC_BLOCKS],

@@ -14,6 +14,7 @@ from deployer_content import deployer
 from portable_storage_content import PSI, portable_storage
 from chute_content import CHUTE, chute
 from funnel_content import BLOCK as FUNNEL, funnel
+from crushing_content import WHEEL as CRUSHER, crushing
 from sticker_content import STICKER, sticker
 
 CONTENT = ROOT / "content"
@@ -782,6 +783,7 @@ def foundation():
     portable_storage(write, model, axial_boxes)
     chute(write, model)
     funnel(write, model)
+    crushing(write, model)
     sticker(write, model)
     deployer(write, model)
     contraption_actors()
@@ -849,6 +851,7 @@ def foundation():
     extra_blocks[PSI] = 'Portable Storage Interface'
     extra_blocks[CHUTE] = 'Chute'
     extra_blocks[FUNNEL] = 'Andesite Funnel'
+    extra_blocks[CRUSHER] = 'Crushing Wheel'
     extra_blocks.update({'linear_chassis': 'Linear Chassis',
                          'secondary_linear_chassis': 'Secondary Linear Chassis',
                          'radial_chassis': 'Radial Chassis'})
@@ -935,6 +938,7 @@ def foundation():
             lang['block.create.' + PSI] = 'Портативный интерфейс хранения'
             lang['block.create.' + CHUTE] = 'Жёлоб'
             lang['block.create.' + FUNNEL] = 'Андезитовый шлюз'
+            lang['block.create.' + CRUSHER] = 'Дробильное колесо'
             lang['block.create.' + STICKER] = 'Блок-липучка'
             lang.update({"block.create.mechanical_piston": "Механический поршень",
                          "block.create.sticky_mechanical_piston": "Липкий механический поршень",

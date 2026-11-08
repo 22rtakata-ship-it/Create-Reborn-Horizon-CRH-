@@ -33,6 +33,7 @@ pub enum Kind {
         capacity: f32,
     },
     Shaft,
+    CrushingWheel,
     GantryShaft {
         facing: crate::placement::Direction,
         powered: bool,
@@ -119,7 +120,7 @@ impl Node {
     }
     fn impact(self) -> f32 {
         match self.kind {
-            Kind::Press => 8.0,
+            Kind::Press | Kind::CrushingWheel => 8.0,
             Kind::Millstone | Kind::Mixer | Kind::LinearActuator => 4.0,
             Kind::Consumer { impact, .. } => impact,
             _ => 0.0,

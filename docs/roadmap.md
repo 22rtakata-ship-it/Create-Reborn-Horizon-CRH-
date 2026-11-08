@@ -203,7 +203,13 @@ with the systems they depend on.
   item-particle order checked by oracles and actual Game tests.
 - [ ] Complete Basin/Mixer: filters, side outputs, other compacting recipes,
   other fluids/heated recipes and network scenarios.
-- [ ] Crushing Wheels, Mechanical Saw, Deployer, Spout, Item Drain, Mechanical Crafter and Sand Paper.
+- [x] Downward Crushing Wheels with direct Chute feed, cobblestone and gravel,
+  original processing state and cold restart comparisons.
+- [ ] Crushing Wheels for free-falling items, entities and other directions.
+  Expand the recipe catalog, output adapters, presentation and the original
+  Mechanical Crafter recipe.
+- [ ] Remaining Mechanical Saw, Deployer, Spout, Item Drain, Mechanical Crafter
+  and Sand Paper behavior.
 - [ ] Sequenced Assembly, tools/components of incomplete items and random results.
 - [ ] Smart Observer, Stockpile Switch, Packager, packages and factory logistics.
 

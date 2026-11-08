@@ -49,6 +49,33 @@ pub(super) fn state(
     answer: &mut Option<Option<BlockStateId>>,
 ) {
     let block = game.native_state_block(state).unwrap_or("");
+    if block == super::create_port_saw_processing::crushing::WHEEL {
+        use super::create_port_saw_processing::crushing::{CONTROLLER, WHEEL};
+        let pos = [ctx.pos.x, ctx.pos.y, ctx.pos.z];
+        let face = direction(ctx.face);
+        let look = super::create_port::nearest(ctx.yaw, ctx.pitch);
+        let axis = placement::shaft(look, face, ctx.sneaking, level_ports(game, pos));
+        let survives = Direction::ALL.into_iter().all(|side| {
+            let [x, y, z] = side.vector();
+            game.registry
+                .state(game.world.block(pos[0] + x, pos[1] + y, pos[2] + z))
+                .is_none_or(|adjacent| match adjacent.name.as_str() {
+                    CONTROLLER => side.axis() == axis,
+                    WHEEL => side.axis() == axis && state_axis(adjacent) == axis,
+                    _ => true,
+                })
+        });
+        *answer = Some(if survives {
+            game.native_state_with_property(state, "axis", match axis {
+                Axis::X => "x",
+                Axis::Y => "y",
+                Axis::Z => "z",
+            })
+        } else {
+            None
+        });
+        return;
+    }
     if block == super::create_port_chute::funnel::BLOCK {
         *answer = Some(super::create_port_chute::funnel::placement(
             game,
@@ -537,6 +564,7 @@ fn state_shaft_port(state: &horizon_world::chunk::BlockState, face: Direction) -
         }
         "create:shaft"
         | super::create_port::FLYWHEEL
+        | super::create_port_saw_processing::crushing::WHEEL
         | "create:andesite_encased_shaft"
         | "create:brass_encased_shaft"
         | "create:encased_chain_drive"
