@@ -8,12 +8,14 @@ import json
 from pathlib import Path
 import shutil
 import tempfile
+import time
 
 from burner_heat_java_checks import field, items, number
 from chain_drive_checks import Native, Original, xyz
 from common import PINS, ROOT
 from funnel_checks import block, click, put, step
 from native_check_session import NativeCheckSession, wait_loaded
+import reference_java
 
 
 CHUTE = 'create:chute'
@@ -46,7 +48,8 @@ def probe(host, positions):
         row = block(host, pos)
         data_key = 'Item' if index else 'Items'
         nbt = row.get('nbt', '')
-        payload = items(nbt, data_key) if data_key + ':' in nbt else {}
+        content = items(nbt, data_key) if data_key + ':' in nbt else {}
+        payload = {CARGO: content[CARGO]} if CARGO in content else {}
         marker = int(number({'nbt': field(nbt, data_key)}, 'diagonal_chute')) if payload else None
         properties = {key: value.lower() for key, value in row['properties'].items()}
         result.append(dict(id=row['id'], properties=properties, stack=payload, marker=marker,
@@ -54,7 +57,33 @@ def probe(host, positions):
     return result
 
 
-def scenario(host, work):
+def seed(host, pos, stack, height=1):
+    live = f',Items:[{{Slot:0b,{stack}}}]' if isinstance(host, Native) else ''
+    host.command(f'data merge block {xyz(pos)} {{Item:{{{stack}}},ItemPosition:{height}f{live}}}')
+
+
+def restart(host, positions):
+    if isinstance(host, Native):
+        host.session.restart()
+        wait_loaded(host.session.call, positions)
+        host.command('tick freeze')
+        return
+    host.call('quit', {})
+    deadline = time.monotonic() + 60
+    while reference_java.process_alive(reference_java.BASE):
+        if time.monotonic() >= deadline:
+            raise RuntimeError('Java Create did not quit')
+        time.sleep(.2)
+    assert reference_java.launch(reference_java.BASE)['ready']
+    host.call('tick', {'frozen': True})
+    for _ in range(10):
+        if all(block(host, pos)['id'] != 'minecraft:air' for pos in positions):
+            return
+        step(host, 5, *positions)
+    raise RuntimeError('Saved diagonal Chutes did not reload')
+
+
+def scenario(host, work, *, cold=False):
     host.command('gamemode creative')
     host.command(f'fill {AREA} minecraft:air')
     results = {}
@@ -73,8 +102,7 @@ def scenario(host, work):
             ('down', 'intersection'), (face, 'normal'), (face, 'intersection')], initial
 
         stack = f'id:"{CARGO}",count:7,components:{{"minecraft:custom_data":{{diagonal_chute:{index}}}}}'
-        live = f',Items:[{{Slot:0b,{stack}}}]' if isinstance(host, Native) else ''
-        host.command(f'data merge block {xyz(upper)} {{Item:{{{stack}}},ItemPosition:1f{live}}}')
+        seed(host, upper, stack)
         rows = []
         for _ in range(23):
             step(host, 1, *positions)
@@ -86,12 +114,33 @@ def scenario(host, work):
             assert [block['marker'] for block in row if block['stack']] == [index], row
         assert rows[-1][0]['stack'] == {CARGO: 7}, rows[-1]
 
+        saved = None
+        if cold and face == 'east':
+            full = ','.join(f'{{Slot:{slot}b,id:"minecraft:diamond",count:64}}' for slot in range(27))
+            host.command(f'data merge block {xyz(chest)} {{Items:[{full}]}}')
+            seed(host, lower, 'id:"minecraft:diamond",count:1', 0.5)
+            seed(host, upper, stack)
+            step(host, 18, *positions)
+            parked = probe(host, positions)
+            assert parked[2]['stack'] == {CARGO: 7} and parked[2]['position'] == 0.5, parked
+            restart(host, positions)
+            reloaded = probe(host, positions)
+            assert reloaded == parked, (reloaded, parked)
+            host.command(f'data merge block {xyz(chest)} {{Items:[]}}')
+            step(host, 18, *positions)
+            released = probe(host, positions)
+            assert released[0]['stack'] == {CARGO: 7}, released
+            assert all(not row['stack'] for row in released[1:]), released
+            saved = dict(parked=parked, reloaded=reloaded, released=released)
+
         put(host.command, lower, 'minecraft:air')
         step(host, 5, middle, upper)
         disconnected = probe(host, positions)[2:]
         assert [(row['properties']['facing'], row['properties']['shape']) for row in disconnected] == [
             ('down', 'normal'), (face, 'intersection')], disconnected
         results[face] = dict(initial=initial, ticks=rows, disconnected=disconnected)
+        if saved is not None:
+            results[face]['cold'] = saved
     return results
 
 
@@ -99,6 +148,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for arg in ('game', 'resources', 'ctl', 'reference', 'create-jar'):
         parser.add_argument('--' + arg, type=Path)
+    parser.add_argument('--cold', action='store_true', help='Restart during the first transfer')
     args = parser.parse_args()
     if args.game:
         if not all((args.resources, args.ctl, args.reference)):
@@ -125,7 +175,7 @@ def main():
         else:
             host.call('tick', {'frozen': True})
             step(host, 30, (2522, 157, 1351))
-        lanes = scenario(host, work)
+        lanes = scenario(host, work, cold=args.cold)
     finally:
         if args.game:
             session.stop()
