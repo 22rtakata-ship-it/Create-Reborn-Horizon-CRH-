@@ -398,6 +398,7 @@ pub(super) fn predicts_use(game: &Game<'_>, pos: [i32; 3], face: [i32; 3]) -> bo
         && (crate::game::create_port_burner::reacts(game, pos)
             || crate::game::create_port_basin::reacts(game, pos)
             || crate::game::create_port_millstone::reacts(game, pos)
+            || crate::game::create_port_chute::predicts_use(game, pos)
             || crate::game::create_port_interactions::reacts(game, pos)
             || depot_reacts(game, pos, face))
 }

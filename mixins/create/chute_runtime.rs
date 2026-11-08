@@ -19,6 +19,7 @@ use horizon_world::{
 };
 
 pub(super) const BLOCK: &str = "create:chute";
+const CASING: &str = "create:industrial_iron_block";
 
 const PREVIOUS: AttachmentType<f32> = AttachmentType {
     namespace: "create",
@@ -344,27 +345,63 @@ pub(super) fn landed(game: &mut Game<'_>, pos: Pos, stack: &mut ItemStack) -> bo
     true
 }
 
+fn shape_change(game: &Game<'_>, pos: Pos, item: &ItemStack) -> Option<(String, &'static str)> {
+    if game.spectator() || game.native_sneaking() {
+        return None;
+    }
+    let shape = game.native_block_property(pos, "shape")?;
+    let next = if item.item.as_ref() == CASING {
+        match shape.as_str() {
+            "normal" | "window" => "encased",
+            _ => return None,
+        }
+    } else {
+        if !super::create_port_chassis::wrench(game, item) || !game.may_build() {
+            return None;
+        }
+        match shape.as_str() {
+            "normal" => "window",
+            "window" | "encased" => "normal",
+            _ => return None,
+        }
+    };
+    Some((shape, next))
+}
+
+pub(super) fn predicts_use(game: &Game<'_>, pos: Pos) -> bool {
+    game.native_on("create")
+        && dry(game, pos)
+        && game
+            .held()
+            .is_some_and(|item| shape_change(game, pos, item).is_some())
+}
+
 pub(super) fn right_click(game: &mut Game<'_>, pos: Pos) -> bool {
     if !game.native_on("create") || !dry(game, pos) {
         return false;
     }
     if let Some(item) = game.held() {
-        if !super::create_port_chassis::wrench(game, item)
-            || game.keys.contains(&winit::keyboard::KeyCode::ShiftLeft)
-            || !game.may_build()
-        {
+        let Some((shape, next)) = shape_change(game, pos, item) else {
+            return false;
+        };
+        if !game.native_set_block_property(pos, "shape", next) {
             return false;
         }
-        let shape = match game.native_block_property(pos, "shape").as_deref() {
-            Some("normal") => "window",
-            Some("window") => "normal",
-            _ => return false,
-        };
-        if game.native_set_block_property(pos, "shape", shape) {
-            super::create_port_sounds::wrench(game, pos, false);
-            return true;
+        if next == "encased" {
+            let center = pos.map(|v| f64::from(v) + 0.5);
+            game.native_play_sound_in_place(
+                "minecraft:block.netherite_block.hit",
+                center,
+                4,
+                0.5,
+                1.05,
+            );
+        } else if shape == "encased"
+            && let Some(state) = game.pack.assets.registry.default_state(CASING)
+        {
+            game.level_event_at(2001, pos, state.0 as i32);
         }
-        return false;
+        return true;
     }
     let item = game
         .native_with_mod_block_entity(pos, |entity| {
