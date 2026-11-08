@@ -554,6 +554,10 @@ fn route_below(
     }
     let block = game.native_block(below);
     if is_chute(&block) {
+        // The source can tick before the receiving Smart Chute refreshes its state.
+        if block == SMART && refresh_power(game, below) {
+            return Route::Blocked;
+        }
         return if (vertical || block == SMART) && can_enter(game, below, stack) {
             Route::Chute {
                 target: below,

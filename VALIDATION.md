@@ -55,6 +55,10 @@ developer source build. The three changes are applied in a separate checkout.
 - [Chute-to-Depot input](tools/chute_depot_checks.py) matches 48 lane-tick
   observations. A held item or occupied output buffer blocks delivery.
   The marked stack enters with the original vertical pose after release.
+- [Stacked Smart Chutes](tools/stacked_chute_power_checks.py) match 19 ticks
+  in both placement orders. An adjacent signal holds the marked stack in
+  the upper Chute before its next handoff. Removing the signal releases
+  the same stack into the barrel below.
 - [Belt-to-Millstone transfer](tools/belt_millstone_checks.py) matches
   full and partial acceptance, recipe rejection and a full receiver.
   The canonical input is visible on the transfer tick even if the
