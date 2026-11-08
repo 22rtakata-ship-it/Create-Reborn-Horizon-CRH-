@@ -1655,30 +1655,46 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity, r
             activation_sound(game, pos, &input);
         }
         Action::Export => {
+            use super::create_port_chute as chute;
+
             let target = std::array::from_fn(|axis| pos[axis] + motion[axis]);
             let target_block = game.native_block(target);
             let millstone = target_block == "create:millstone";
-            if millstone || matches!(target_block.as_str(), "create:depot" | "create:belt") {
+            if millstone
+                || chute::is_chute(&target_block)
+                || matches!(target_block.as_str(), "create:depot" | "create:belt")
+            {
                 let from = Direction::from_vector(motion).expect("horizontal saw output");
                 let mut changed = false;
                 for slot in &mut entity.items {
                     let Some(stack) = slot else { continue };
-                    let remaining = if millstone {
-                        // The Millstone's default DirectBeltInputBehaviour
-                        // goes through its recipe-filtered item capability.
-                        game.native_insert_item(target, belt::world_direction(from), stack.clone())
+                    let remaining = match target_block.as_str() {
+                        "create:millstone" => {
+                            // The source uses the Millstone's recipe-filtered capability.
+                            game.native_insert_item(
+                                target,
+                                belt::world_direction(from),
+                                stack.clone(),
+                            )
                             .map_or(0, |remainder| remainder.count)
-                    } else {
-                        let item = Transported::new(
-                            belt::core_stack(game, stack.clone()),
-                            belt::angle(game, stack),
-                        );
-                        if target_block == "create:depot" {
-                            stack.count - belt::insert_depot_from_side(game, target, &item, from)
-                        } else if belt::insert_belt_from_side(game, target, &item, from, false) {
-                            0
-                        } else {
-                            stack.count
+                        }
+                        chute::BLOCK | chute::SMART => {
+                            stack.count - chute::insert_from_transport(game, target, stack)
+                        }
+                        _ => {
+                            let item = Transported::new(
+                                belt::core_stack(game, stack.clone()),
+                                belt::angle(game, stack),
+                            );
+                            if target_block == "create:depot" {
+                                stack.count
+                                    - belt::insert_depot_from_side(game, target, &item, from)
+                            } else if belt::insert_belt_from_side(game, target, &item, from, false)
+                            {
+                                0
+                            } else {
+                                stack.count
+                            }
                         }
                     };
                     if remaining != stack.count {

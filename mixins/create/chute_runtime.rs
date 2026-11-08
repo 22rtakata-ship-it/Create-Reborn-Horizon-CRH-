@@ -441,14 +441,19 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity) {
     }
 }
 
-pub(super) fn landed(game: &mut Game<'_>, pos: Pos, stack: &mut ItemStack) -> bool {
+pub(super) fn insert_from_transport(game: &mut Game<'_>, pos: Pos, stack: &ItemStack) -> u32 {
     let above = [pos[0], pos[1] + 1, pos[2]];
     if !game.native_on("create")
         || !dry(game, pos)
         || is_chute(&game.native_block(above))
         || stack.count == 0
     {
-        return false;
+        return 0;
+    }
+    // Direct input can run before the Chute's block-entity tick. Observe
+    // the current neighbor signal just as SmartChuteBlock does on change.
+    if game.native_block(pos) == SMART && refresh_power(game, pos) {
+        return 0;
     }
     let count = stack
         .count
@@ -463,10 +468,15 @@ pub(super) fn landed(game: &mut Game<'_>, pos: Pos, stack: &mut ItemStack) -> bo
             },
         )
     {
-        return false;
+        return 0;
     }
-    stack.count -= count;
-    true
+    count
+}
+
+pub(super) fn landed(game: &mut Game<'_>, pos: Pos, stack: &mut ItemStack) -> bool {
+    let moved = insert_from_transport(game, pos, stack);
+    stack.count -= moved;
+    moved > 0
 }
 
 fn powered(game: &Game<'_>, pos: Pos) -> bool {

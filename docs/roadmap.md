@@ -156,6 +156,8 @@ with the systems they depend on.
   components, backpressure and same-tick inventory publication after a restart.
 - [x] Upward Saw output onto a bare horizontal Belt, including inline and
   side entry, rejected insertion, position traces and a native restart.
+- [x] Upward Saw output into a dry Chute or Smart Chute across a chunk boundary.
+  Preserve the full stack through filtering, redstone changes and restart.
 - [x] Bare Belt output to a Millstone. Match accepted, partial and refused
   insertion and preserve accepted items when the world closes on the transfer tick.
 - [x] Fan push, pull and smoking damage on a player in normal simulation.

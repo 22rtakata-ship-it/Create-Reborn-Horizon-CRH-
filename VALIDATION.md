@@ -43,6 +43,10 @@ developer source build. The three changes are applied in a separate checkout.
   observations across five layouts. They cover inline and side entry, item
   position and interpolation, rejected reversed, stopped and occupied
   entries, and saved cargo after a native restart.
+- [Saw-to-Chute transfer](tools/saw_chute_checks.py) matches 48 ticks in
+  four cross-column lanes. Plain and matching Smart Chutes receive marked
+  stacks. The Saw holds rejected cargo through a native restart and publishes
+  on the same tick after changing the filter or removing redstone power.
 - [Belt-to-Millstone transfer](tools/belt_millstone_checks.py) matches
   full and partial acceptance, recipe rejection and a full receiver.
   The canonical input is visible on the transfer tick even if the
