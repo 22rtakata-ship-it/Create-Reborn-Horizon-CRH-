@@ -38,6 +38,29 @@ impl Resolver for Registry {
                 );
                 be = Some(schema);
             }
+            "create:belt" => {
+                defaults.extend([
+                    ("facing", "north"),
+                    ("slope", "horizontal"),
+                    ("part", "start"),
+                    ("casing", "false"),
+                    ("waterlogged", "false"),
+                ]);
+                let mut schema = BlockEntitySchema::new("create:belt");
+                schema.discarded_fields.extend(
+                    [
+                        "Controller",
+                        "Length",
+                        "Index",
+                        "IsController",
+                        "Inventory",
+                        "Casing",
+                        "Covered",
+                    ]
+                    .map(str::to_owned),
+                );
+                be = Some(schema);
+            }
             "minecraft:piston" => {
                 defaults.insert("extended", "false");
             }
@@ -54,6 +77,8 @@ impl Resolver for Registry {
                     ["north", "south", "east", "west", "up", "down"].contains(&value.as_str())
                 }
                 "pointing" => ["up", "left", "down", "right"].contains(&value.as_str()),
+                "slope" => value == "horizontal",
+                "part" => ["start", "middle", "pulley", "end"].contains(&value.as_str()),
                 _ => ["false", "true"].contains(&value.as_str()),
             };
             if !valid {
@@ -405,6 +430,128 @@ fn crafter_links_and_live_fields_are_rejected_before_any_plan() {
             .as_mut()
             .unwrap()
             .insert(field.into(), value);
+        let issues = preflight(&schematic, &Registry, &Options::default()).unwrap_err();
+        assert!(
+            issues.iter().any(|issue| issue.message.contains(message)),
+            "{issues:?}"
+        );
+    }
+}
+
+fn belt_fixture() -> Schematic {
+    let parts = ["start", "middle", "pulley", "end"];
+    let palette = parts.map(|part| {
+        state(
+            "create:belt",
+            &[
+                ("facing", "east"),
+                ("slope", "horizontal"),
+                ("part", part),
+                ("casing", "false"),
+                ("waterlogged", "false"),
+            ],
+        )
+    });
+    Schematic {
+        data_version: SOURCE_DATA_VERSION,
+        size: [4, 1, 1],
+        palettes: vec![palette.into()],
+        blocks: (0..parts.len())
+            .map(|index| Block {
+                relative_pos: [index as i32, 0, 0],
+                state_index: index,
+                block_entity: Some(Compound::from([
+                    ("id".into(), Tag::String("create:belt".into())),
+                    ("Controller".into(), Tag::IntArray(vec![7, 80, -9])),
+                    ("Length".into(), Tag::Int(4)),
+                    ("Index".into(), Tag::Int(index as i32)),
+                    ("IsController".into(), Tag::Byte(i8::from(index == 0))),
+                ])),
+            })
+            .collect(),
+        entities: Vec::new(),
+    }
+}
+
+#[test]
+fn complete_horizontal_belt_pastes_without_old_world_metadata() {
+    let schematic = belt_fixture();
+    for (mirror, turns, facing) in [
+        (Mirror::None, 0, "east"),
+        (Mirror::None, 1, "south"),
+        (Mirror::FrontBack, 1, "north"),
+        (Mirror::LeftRight, 2, "west"),
+    ] {
+        let result = preflight(
+            &schematic,
+            &Registry,
+            &Options {
+                mirror,
+                quarter_turns: turns,
+                ..Options::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(result.blocks.len(), 4);
+        let start = result
+            .blocks
+            .iter()
+            .find(|b| b.state.properties["part"] == "start")
+            .unwrap();
+        let step = horizontal_belt_step(&start.state).unwrap();
+        for (i, part) in ["start", "middle", "pulley", "end"].into_iter().enumerate() {
+            let pos = step.map(|d| d * i as i32);
+            let block = result
+                .blocks
+                .iter()
+                .find(|b| b.relative_pos == pos)
+                .unwrap();
+            assert_eq!(block.state.properties["facing"], facing);
+            assert_eq!(block.state.properties["part"], part);
+            assert!(block.block_entity.as_ref().unwrap().data.is_empty());
+        }
+    }
+}
+
+#[test]
+fn partial_mismatched_or_occupied_belts_never_return_a_plan() {
+    for invalid in 0..5 {
+        let mut schematic = belt_fixture();
+        let message = match invalid {
+            0 => {
+                schematic.blocks.remove(1);
+                "complete horizontal chain"
+            }
+            1 => {
+                schematic.palettes[0][1]
+                    .properties
+                    .insert("facing".into(), "north".into());
+                "complete horizontal chain"
+            }
+            2 => {
+                schematic.palettes[0][1]
+                    .properties
+                    .insert("waterlogged".into(), "true".into());
+                "dry uncased"
+            }
+            3 => {
+                schematic.blocks[0].block_entity.as_mut().unwrap().insert(
+                    "Inventory".into(),
+                    Tag::Compound(Compound::from([
+                        ("PositiveOrder".into(), Tag::Byte(1)),
+                        (
+                            "Items".into(),
+                            Tag::list(TagKind::Compound, vec![Tag::Compound(Compound::new())]),
+                        ),
+                    ])),
+                );
+                "empty Belt Inventory"
+            }
+            _ => {
+                schematic.blocks.pop();
+                "complete horizontal chain"
+            }
+        };
         let issues = preflight(&schematic, &Registry, &Options::default()).unwrap_err();
         assert!(
             issues.iter().any(|issue| issue.message.contains(message)),

@@ -240,7 +240,11 @@ fn metadata(e: &mut ModBlockEntity, controller: Pos, length: usize, index: usize
     e.nbt.entry("Covered".into()).or_insert(Tag::Byte(0));
 }
 pub(super) fn node_data(game: &Game<'_>, pos: Pos) -> Option<(Pos, i32)> {
-    if let Some(BlockEntity::Mod(e)) = game.world.block_entities.get(&(pos[0], pos[1], pos[2])) {
+    // The ticker leaves an empty placeholder at its own position. Use the
+    // initialized chain instead of treating that placeholder as a controller.
+    if let Some(BlockEntity::Mod(e)) = game.world.block_entities.get(&(pos[0], pos[1], pos[2]))
+        && e.id == ID
+    {
         return Some((
             pos_tag(&e.nbt, "Controller").unwrap_or(pos),
             int(&e.nbt, "Index"),

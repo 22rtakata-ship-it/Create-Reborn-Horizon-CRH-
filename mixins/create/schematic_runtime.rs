@@ -10,7 +10,7 @@ use crate::{
 };
 use create_schematics::{
     BlockEntitySchema, BlockSchema, BlockState, Compound, Limits, Mirror, Options, Plan, Resolver,
-    Tag, TagKind,
+    Tag, TagKind, horizontal_belt_step,
 };
 use horizon_world::{
     nbt::{Compound as WorldCompound, Tag as WorldTag},
@@ -163,9 +163,6 @@ impl Registry<'_, '_> {
 }
 impl Resolver for Registry<'_, '_> {
     fn block_schema(&self, state: &BlockState) -> Result<BlockSchema, String> {
-        if state.name == "create:belt" {
-            return Err("mechanical belt schematic chains have not passed native fixture validation; create chains with create:belt_connector instead".into());
-        }
         if state.name == "create:basin"
             && state.properties.get("facing").is_some_and(|v| v != "down")
         {
@@ -278,6 +275,22 @@ impl Resolver for Registry<'_, '_> {
                     schema.discarded_fields.extend(
                         ["Inventory", "GroupedItems", "Phase", "CountDown", "Cover"]
                             .map(str::to_owned),
+                    );
+                }
+                "create:belt" => {
+                    // Java clears kinetic/chain data on paste. Complete
+                    // chains regenerate controller, index and empty inventory.
+                    schema.discarded_fields.extend(
+                        [
+                            "Controller",
+                            "IsController",
+                            "Length",
+                            "Index",
+                            "Casing",
+                            "Covered",
+                            "Inventory",
+                        ]
+                        .map(str::to_owned),
                     );
                 }
                 "create:mechanical_drill" => {
@@ -500,11 +513,44 @@ struct Write {
     old: BlockStateId,
     old_entity: Option<BlockEntity>,
 }
+fn belt_destination(game: &Game<'_>, block: &BlockState, pos: [i32; 3]) -> Option<&'static str> {
+    let step = horizontal_belt_step(block)?;
+    let part = block.properties["part"].as_str();
+    if !game
+        .res
+        .behaviours()
+        .is_air(game.world.block(pos[0], pos[1], pos[2]))
+    {
+        return Some("new schematic Belt segments require air at the destination");
+    }
+    let at = |sign| std::array::from_fn(|axis| pos[axis] + sign * step[axis]);
+    let column = |[x, _, z]: [i32; 3]| (x.div_euclid(16), z.div_euclid(16));
+    if part != "end" && column(at(1)) != column(pos) {
+        return Some("complete schematic Belt chain must fit within one destination column");
+    }
+    let outside = match part {
+        "start" => at(-1),
+        "end" => at(1),
+        _ => return None,
+    };
+    if !game.world.loaded(outside[0], outside[2]) {
+        return Some("schematic Belt endpoint neighbor column is not loaded");
+    }
+    if game.native_block(outside) == "create:belt" {
+        return Some("schematic Belt endpoint touches an existing Belt chain");
+    }
+    None
+}
+
 fn destination(game: &Game<'_>, plan: &Plan, origin: [i32; 3]) -> Result<Vec<Write>, Value> {
     let registry = Registry { game };
     let (min_y, height) = game.native_world_height();
     let mut writes = Vec::new();
     let mut issues = Vec::new();
+    let contains_belt = plan
+        .blocks
+        .iter()
+        .any(|block| block.state.name == "create:belt");
     for block in &plan.blocks {
         let mut pos = [0; 3];
         let mut overflow = false;
@@ -536,8 +582,10 @@ fn destination(game: &Game<'_>, plan: &Plan, origin: [i32; 3]) -> Result<Vec<Wri
             < 0.0
         {
             Some("source creative placement cannot replace an unbreakable destination")
+        } else if contains_belt && game.native_block(pos) == "create:belt" {
+            Some("a Belt schematic cannot overwrite an existing Belt chain")
         } else {
-            None
+            belt_destination(game, &block.state, pos)
         };
         if let Some(reason) = reason {
             issues.push(json!({"path":"destination","pos":pos,"message":reason}));

@@ -486,6 +486,9 @@ fn valid_id(id: &str) -> bool {
             .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || b"/_.-".contains(&c))
 }
 fn resolve(resolver: &impl Resolver, state: &BlockState) -> Result<BlockSchema, String> {
+    if state.name == "create:belt" && horizontal_belt_step(state).is_none() {
+        return Err("only explicit dry uncased horizontal Belt states are supported".into());
+    }
     if !valid_id(&state.name) {
         return Err(format!("invalid namespaced block ID {:?}", state.name));
     }
@@ -552,6 +555,10 @@ fn transform_state(
         "create:flywheel" => (&["axis"], Some("axis")),
         "create:creative_motor" | "create:mechanical_press" => (&["facing"], Some("facing")),
         "create:mechanical_crafter" => (&["facing", "pointing"], Some("facing")),
+        "create:belt" => (
+            &["facing", "slope", "part", "casing", "waterlogged"],
+            Some("facing"),
+        ),
         "create:depot" => (&["waterlogged"], None),
         "minecraft:air"
         | "minecraft:cave_air"
@@ -684,6 +691,104 @@ fn validate_crafter_source(raw: &Compound) -> Result<(), String> {
         }
     }
     Ok(())
+}
+
+/// The horizontal direction of a supported, explicit source Belt state.
+pub fn horizontal_belt_step(state: &BlockState) -> Option<[i32; 3]> {
+    let property = |key| state.properties.get(key).map(String::as_str);
+    if state.name != "create:belt"
+        || property("slope") != Some("horizontal")
+        || property("casing") != Some("false")
+        || property("waterlogged") != Some("false")
+        || !matches!(
+            property("part"),
+            Some("start" | "middle" | "pulley" | "end")
+        )
+    {
+        return None;
+    }
+    match property("facing")? {
+        "north" => Some([0, 0, -1]),
+        "south" => Some([0, 0, 1]),
+        "west" => Some([-1, 0, 0]),
+        "east" => Some([1, 0, 0]),
+        _ => None,
+    }
+}
+
+fn validate_belt_source(raw: &Compound) -> Result<(), String> {
+    let empty_inventory = raw.get("Inventory").is_none_or(|tag| {
+        tag.as_compound().is_some_and(|inventory| {
+            inventory.len() == 2
+                && matches!(inventory.get("Items"), Some(Tag::List { values, .. }) if values.is_empty())
+                && matches!(inventory.get("PositiveOrder"), Some(Tag::Byte(0 | 1)))
+        })
+    });
+    let old_controller = raw
+        .get("Controller")
+        .is_none_or(|tag| matches!(tag, Tag::IntArray(pos) if pos.len() == 3));
+    let old_index = ["Length", "Index"].iter().all(|key| {
+        raw.get(*key)
+            .is_none_or(|tag| matches!(tag, Tag::Int(0..=1000)))
+    });
+    let old_flag = raw
+        .get("IsController")
+        .is_none_or(|tag| matches!(tag, Tag::Byte(0 | 1)));
+    let bare = raw
+        .get("Casing")
+        .is_none_or(|tag| tag.as_str() == Some("NONE"))
+        && raw.get("Covered").is_none_or(|tag| *tag == Tag::Byte(0))
+        && !raw.contains_key("Dye");
+    if !empty_inventory {
+        return Err("only an empty Belt Inventory is supported".into());
+    }
+    if !bare {
+        return Err("dyed, covered or cased Belt data is unsupported".into());
+    }
+    if !old_controller || !old_index || !old_flag {
+        return Err("invalid source Belt controller metadata".into());
+    }
+    Ok(())
+}
+
+fn incomplete_belt_segments(blocks: &[(bool, PlannedBlock)]) -> BTreeSet<[i32; 3]> {
+    let belts: BTreeMap<_, _> = blocks
+        .iter()
+        .filter(|(_, block)| block.state.name == "create:belt")
+        .map(|(_, block)| (block.relative_pos, &block.state))
+        .collect();
+    let mut visited = BTreeSet::new();
+    let mut invalid = BTreeSet::new();
+    for (&start, state) in &belts {
+        if state.properties["part"] != "start" {
+            continue;
+        }
+        let Some(step) = horizontal_belt_step(state) else {
+            invalid.insert(start);
+            continue;
+        };
+        let mut pos = start;
+        loop {
+            let Some(segment) = belts.get(&pos) else {
+                invalid.insert(start);
+                break;
+            };
+            let part = segment.properties["part"].as_str();
+            if !visited.insert(pos)
+                || horizontal_belt_step(segment) != Some(step)
+                || (pos != start && part == "start")
+            {
+                invalid.insert(start);
+                break;
+            }
+            if part == "end" {
+                break;
+            }
+            pos = std::array::from_fn(|axis| pos[axis] + step[axis]);
+        }
+    }
+    invalid.extend(belts.into_keys().filter(|pos| !visited.contains(pos)));
+    invalid
 }
 
 /// Validate the complete schematic before returning a world-independent plan.
@@ -895,6 +1000,12 @@ pub fn preflight(
                 fail(format!("{path}.nbt"), Some(pos), message);
                 continue;
             }
+            if prepared.state.name == "create:belt"
+                && let Err(message) = validate_belt_source(raw)
+            {
+                fail(format!("{path}.nbt"), Some(pos), message);
+                continue;
+            }
             if raw.get("id").and_then(Tag::as_str) != Some(be_schema.id.as_str()) {
                 fail(
                     format!("{path}.nbt.id"),
@@ -984,6 +1095,13 @@ pub fn preflight(
                 block_entity: planned_be,
             },
         ));
+    }
+    for pos in incomplete_belt_segments(&blocks) {
+        fail(
+            "blocks".into(),
+            Some(pos),
+            "Belt segments must form a complete horizontal chain from start to end".into(),
+        );
     }
     if !issues.is_empty() {
         return Err(issues);
