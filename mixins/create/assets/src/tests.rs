@@ -21,9 +21,14 @@ fn fixture(change: impl FnOnce(&mut BTreeMap<String, Vec<u8>>)) -> Vec<u8> {
         );
     }
     for part in PARTS {
+        let mut model = json!({"parent": "create:block/shared"});
+        if part.starts_with("belt_casing/") {
+            model["textures"] = json!({"side": "create:block/belt/brass_belt_casing",
+                                       "particle": "create:block/brass_casing"});
+        }
         json_file(
             format!("assets/create/models/block/{part}.json"),
-            json!({"parent": "create:block/shared"}),
+            model,
         );
     }
     for model in EXTRA_MODELS {
@@ -62,6 +67,10 @@ fn fixture(change: impl FnOnce(&mut BTreeMap<String, Vec<u8>>)) -> Vec<u8> {
         "gui/icons",
         "block/belt_scroll",
         "block/belt_diagonal_scroll",
+        "block/belt/andesite_belt_casing",
+        "block/belt/brass_belt_casing",
+        "block/andesite_casing",
+        "block/brass_casing",
         "block/blaze_burner_flame_scroll",
         "block/blaze_burner_flame_superheated_scroll",
     ] {
@@ -161,6 +170,9 @@ fn processor_parts_and_ingredients_are_required_without_accepting_java_loaders()
         "assets/create/textures/block/belt/light_blue_scroll.png",
         "assets/create/textures/block/belt/black_diagonal_scroll.png",
         "assets/create/models/block/belt/diagonal_middle.json",
+        "assets/create/models/block/belt_casing/diagonal_pulley.json",
+        "assets/create/models/block/belt_cover/brass_belt_cover_z.json",
+        "assets/create/textures/block/belt/andesite_belt_casing.png",
         "assets/create/models/block/belt_pulley.json",
         "assets/create/models/item/belt_connector.json",
         "assets/create/blockstates/millstone.json",

@@ -1,7 +1,5 @@
 """MIT BeltShapes.java geometry, south-facing before Catnip quarter turns.
 
-Only bare belts are currently available through the native connector. Casing
-interactions and entity-specific passenger collision are separate pending work.
 Coordinates below are original voxel units; content uses block units.
 """
 from itertools import product
@@ -41,6 +39,7 @@ def geometry():
     ending = [[1, 4, 0, 15, 12, 16], [1, 3, 1, 15, 13, 15]]
     side = [[3, 1, 0, 13, 15, 16]]
     side_end = [[4, 1, 0, 12, 15, 16], [3, 1, 1, 13, 15, 15]]
+    opposite = {'north': 'south', 'south': 'north', 'east': 'west', 'west': 'east'}
     shapes, collisions = {}, {}
     for face, slope, part in product(('north', 'south', 'west', 'east'),
                                      ('horizontal', 'upward', 'downward', 'vertical', 'sideways'),
@@ -55,9 +54,21 @@ def geometry():
             south, north = (end, base) if part == 'end' else (base, end)
             boxes = clip(south, [0, -5, 8], [16, 21, 16]) + clip(north, [0, -5, 0], [16, 21, 8])
         boxes = transform(boxes, face, slope == 'vertical')
-        key = ','.join((face, slope, part))
-        shapes[key] = boxes
-        collisions[key] = clip(boxes, [0, 0, 0], [1, 19 / 16, 1])
-    properties = ['facing', 'slope', 'part']
+        if slope == 'horizontal' or (slope, part) in (('upward', 'start'), ('downward', 'end')):
+            casing = [[0, 0, 0, 1, 11 / 16, 1]]
+        elif slope in ('upward', 'downward'):
+            casing = transform([[0, 0, 5, 16, 11, 16]], face if slope == 'upward' else opposite[face])
+        else:
+            casing = []
+        # Each declared native shape holds at most sixteen boxes. The
+        # diagonal casing already contains one entire step of the belt.
+        cased_boxes = [box for box in boxes if not any(
+            all(shell[i] <= box[i] and shell[i + 3] >= box[i + 3] for i in range(3))
+            for shell in casing)] + casing
+        for cased, outline in (('false', boxes), ('true', cased_boxes)):
+            key = ','.join((face, slope, part, cased))
+            shapes[key] = outline
+            collisions[key] = clip(outline, [0, 0, 0], [1, 19 / 16, 1])
+    properties = ['facing', 'slope', 'part', 'casing']
     return ({'properties': properties, 'values': shapes},
             {'properties': properties, 'values': collisions})

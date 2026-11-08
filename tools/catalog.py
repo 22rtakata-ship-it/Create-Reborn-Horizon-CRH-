@@ -42,6 +42,10 @@ PARTS = ['shaft', 'shaft_half', 'cogwheel', 'large_cogwheel', 'creative_motor/bl
 PARTS += ['belt_pulley', 'belt/particle'] + ['belt/' + part for part in
     ['start', 'middle', 'end', 'start_bottom', 'middle_bottom', 'end_bottom',
      'diagonal_start', 'diagonal_middle', 'diagonal_end']]
+PARTS += [f'belt_casing/{slope}_{part}' for slope in ('horizontal', 'diagonal', 'sideways')
+          for part in ('start', 'middle', 'end', 'pulley')]
+PARTS += [f'belt_cover/{material}_belt_cover_{axis}' for material in ('andesite', 'brass')
+          for axis in ('x', 'z')]
 PARTS += ['basin/block', 'basin/block_directional', 'mechanical_mixer/block',
           'mechanical_mixer/pole', 'mechanical_mixer/head', 'cogwheel_shaftless', 'flywheel/block', f'{CRUSHER}/block']
 PARTS += [f'{CRAFTER}/{part}' for part in CRAFTER_PARTS]

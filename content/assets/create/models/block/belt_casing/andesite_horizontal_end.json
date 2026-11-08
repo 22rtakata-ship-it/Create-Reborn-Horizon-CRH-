@@ -1,0 +1,7 @@
+{
+  "parent": "create:block/belt_casing/horizontal_end",
+  "textures": {
+    "all": "minecraft:block/andesite",
+    "particle": "minecraft:block/andesite"
+  }
+}

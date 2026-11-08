@@ -41,8 +41,8 @@ public class BeltShapeOracle {
   static final Property<BeltPart> PART=new Property<>();
   static final Property<Boolean> CASING=new Property<>();
  }
- record BlockState(Direction direction,BeltSlope slope,BeltPart part) {
-  @SuppressWarnings("unchecked") <T>T getValue(Property<T> p){return (T)(p==BeltBlock.HORIZONTAL_FACING?direction:p==BeltBlock.SLOPE?slope:p==BeltBlock.PART?part:Boolean.FALSE);}
+ record BlockState(Direction direction,BeltSlope slope,BeltPart part,boolean casing) {
+  @SuppressWarnings("unchecked") <T>T getValue(Property<T> p){return (T)(p==BeltBlock.HORIZONTAL_FACING?direction:p==BeltBlock.SLOPE?slope:p==BeltBlock.PART?part:casing);}
  }
  record Vec3(double x,double y,double z){}
  record Bounds(double x,double y,double z,double X,double Y,double Z) {
@@ -74,15 +74,16 @@ public class BeltShapeOracle {
  static class AllShapes {
   static final VoxelShape BELT_COLLISION_MASK=box(0,0,0,16,19,16);
   static final VoxelShaper CASING_11PX=VoxelShaper.forHorizontal(box(0,0,0,16,11,16),Direction.SOUTH);
+  static {CASING_11PX.shapes.put(Direction.UP,box(0,0,0,16,11,16));}
  }
  @@SOURCE@@
  static String occupancy(VoxelShape s){byte[] bits=new byte[16*26*16/8];int k=0;for(int y=-5;y<21;y++)for(int z=0;z<16;z++)for(int x=0;x<16;x++,k++){double a=(x+.5)/16,b=(y+.5)/16,c=(z+.5)/16;for(var box:s.boxes)if(box.contains(a,b,c)){bits[k/8]|=(byte)(1<<(k%8));break;}}return HexFormat.of().formatHex(bits);}
- public static void main(String[] args){for(var d:Direction.Plane.HORIZONTAL)for(var s:BeltSlope.values())for(var p:BeltPart.values()){var state=new BlockState(d,s,p);System.out.println(d.name().toLowerCase()+","+s.name().toLowerCase()+","+p.name().toLowerCase()+" "+occupancy(BeltShapes.getShape(state))+" "+occupancy(BeltShapes.getCollisionShape(state)));}}
+ public static void main(String[] args){for(var d:Direction.Plane.HORIZONTAL)for(var s:BeltSlope.values())for(var p:BeltPart.values())for(boolean c:new boolean[]{false,true}){var state=new BlockState(d,s,p,c);System.out.println(d.name().toLowerCase()+","+s.name().toLowerCase()+","+p.name().toLowerCase()+","+c+" "+occupancy(BeltShapes.getShape(state))+" "+occupancy(BeltShapes.getCollisionShape(state)));}}
 }'''
 
 
 def shape_checks():
-    """All bare source state volumes, independent of content's Python generator."""
+    """All bare and cased source state volumes, independent of the Python generator."""
     import belt_shapes
     work = ROOT / '.local/belt-shape-oracle'
     work.mkdir(parents=True, exist_ok=True)
@@ -110,12 +111,13 @@ def shape_checks():
 
     for line in expected:
         key, outline, passive = line.split()
+        assert max(len(geometry['values'][key]), len(collision['values'][key])) <= 16, key
         assert occupancy(geometry['values'][key]) == outline, ('outline', key)
         assert occupancy(collision['values'][key]) == passive, ('collision', key)
-    assert len(expected) == len(geometry['values']) == 80
-    result = {'passed': True, 'states': 80, 'shape_volumes': 160,
-              'occupancy_cells': 80 * 2 * 16 * 26 * 16, 'reference': PINS['create_revision'],
-              'scope': 'unchanged BeltShapes Java, bare blocks; explicit independent quarter-turn/shape algebra context; no entity passengers or game launched'}
+    assert len(expected) == len(geometry['values']) == 160
+    result = {'passed': True, 'states': 160, 'shape_volumes': 320,
+              'occupancy_cells': 160 * 2 * 16 * 26 * 16, 'reference': PINS['create_revision'],
+              'scope': 'unchanged BeltShapes Java, bare and cased blocks; explicit independent shape algebra context'}
     (work / 'result.json').write_text(json.dumps(result, indent=2) + '\n')
     return result
 

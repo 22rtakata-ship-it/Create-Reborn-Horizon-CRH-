@@ -502,6 +502,25 @@ def belts():
                   {'parent': f'create:block/belt/{prefix}middle{suffix}'})
     model('belt_pulley', [([2, 6, 2], [14, 10, 14]), ([5, 0, 5], [11, 16, 11])],
           'minecraft:block/iron_block')
+    # Simple fallback cases and cover. Original variants come from the local JAR.
+    for slope, box in [('horizontal', ([0, 0, 0], [16, 11, 16])),
+                       ('diagonal', ([0, 2, -3.314], [16, 11, 19.314])),
+                       ('sideways', ([5, 0, 0], [11, 16, 16]))]:
+        rotation = {'origin': [8, 8, 8], 'axis': 'x', 'angle': 45} if slope == 'diagonal' else None
+        name = f'belt_casing/{slope}_middle'
+        model(name, [box], 'minecraft:block/cut_copper', rotation=rotation)
+        for part in ('start', 'end', 'pulley'):
+            write(f'assets/create/models/block/belt_casing/{slope}_{part}.json',
+                  {'parent': 'create:block/' + name})
+        for part in ('start', 'middle', 'end', 'pulley'):
+            write(f'assets/create/models/block/belt_casing/andesite_{slope}_{part}.json', {
+                'parent': f'create:block/belt_casing/{slope}_{part}',
+                'textures': {'all': 'minecraft:block/andesite', 'particle': 'minecraft:block/andesite'},
+            })
+    for material, texture in [('andesite', 'polished_andesite'), ('brass', 'cut_copper')]:
+        name = f'belt_cover/{material}_belt_cover'
+        model(name + '_x', [([0, 11, 0], [16, 16, 16])], 'minecraft:block/' + texture)
+        write(f'assets/create/models/block/{name}_z.json', {'parent': 'create:block/' + name + '_x'})
     write('data/create/loot_table/blocks/belt.json', {'type': 'minecraft:block', 'pools': [
         {'rolls': 1, 'entries': [{'type': 'minecraft:item', 'name': 'create:belt_connector'}]},
         {'rolls': 1, 'conditions': [{'type': 'minecraft:inverted', 'term': {
@@ -730,6 +749,8 @@ def foundation():
             declaration["properties"]["render_shape"] = "ENTITYBLOCK_ANIMATED"
             declaration["state_properties"] = {"facing": {"type": "enum", "values": ["up", "down", "north", "south", "west", "east"]}, "waterlogged": {"type": "boolean"}}
             declaration["default_state"] = {"facing": "up", "waterlogged": "false"}
+        if block in ("andesite_casing", "brass_casing"):
+            declaration["properties"]["sounds"] = "minecraft:oak_planks"
         if block == "copper_casing":
             declaration = {"template": "minecraft:andesite", "item": True,
                            "properties": {"map_color": 44, "sounds": "minecraft:oak_planks"}}

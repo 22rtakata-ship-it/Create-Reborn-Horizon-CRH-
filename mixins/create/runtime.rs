@@ -443,6 +443,7 @@ pub(super) fn predicts_use(game: &Game<'_>, pos: [i32; 3], face: [i32; 3]) -> bo
             || crate::game::create_port_basin::reacts(game, pos)
             || item_drain::predicts_use(game, pos)
             || super::create_port_belt::predicts_dye(game, pos)
+            || super::create_port_belt::predicts_casing(game, pos, face)
             || crate::game::create_port_millstone::reacts(game, pos)
             || crate::game::create_port_chute::predicts_use(game, pos)
             || super::create_port_chute::funnel::predicts_use(game, pos, face)

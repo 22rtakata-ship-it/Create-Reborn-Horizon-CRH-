@@ -4,13 +4,13 @@
 // Create 6.0.10 BeltConnectorItem/BeltBlock/BeltBlockEntity/BeltInventory adapter.
 // The portable transport module owns geometry and movement. This adapter owns
 // normal world writes, component-preserving NBT, controller lifetime and drawing.
-// Casings and passengers remain separate integrations. Processor callbacks
-// use the portable transport result/queue contract.
+// Processor callbacks use the portable transport result/queue contract.
 use super::create_port_block_entity_revision::EntityRevision as _;
 use super::{Game, create_port_basin_recipes::item_drain, native_block_entity_draw::BlockEntityDraw};
 use crate::{
     containers::{BlockEntity, ModBlockEntity, ModRevision},
     items::ItemStack,
+    mod_api::{NativeModelMaterial, NativeModelRenderOptions},
     particles::{ParticleOptions, ParticleType},
 };
 use create_engine::{
@@ -24,9 +24,11 @@ use create_engine::{
 use horizon_assets::item_model::DisplayContext;
 use horizon_core::{
     geometry::Direction as WorldDirection,
+    position::BlockPos,
     random::{LegacyRandom, RandomSource},
 };
 use horizon_world::{
+    level::{LevelAccess, LevelEvent},
     nbt::{Compound, Tag},
     registry::BlockStateId,
 };
@@ -175,6 +177,138 @@ fn dye_belt(game: &mut Game<'_>, pos: Pos, dye: Option<&'static str>) -> bool {
         });
         game.native_block_entity_sync(segment.pos);
     }
+    true
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Casing {
+    None,
+    Andesite,
+    Brass,
+}
+
+impl Casing {
+    fn read(nbt: &Compound) -> Self {
+        match nbt.get(&"Casing".into()) {
+            Some(Tag::String(value)) if value == &"ANDESITE".into() => Self::Andesite,
+            Some(Tag::String(value)) if value == &"BRASS".into() => Self::Brass,
+            _ => Self::None,
+        }
+    }
+
+    fn tag(self) -> Tag {
+        Tag::String(match self {
+            Self::None => "NONE",
+            Self::Andesite => "ANDESITE",
+            Self::Brass => "BRASS",
+        }.into())
+    }
+
+    fn material(self) -> Option<&'static str> {
+        match self {
+            Self::None => None,
+            Self::Andesite => Some("andesite"),
+            Self::Brass => Some("brass"),
+        }
+    }
+}
+
+fn cased(game: &Game<'_>, pos: Pos) -> bool {
+    game.native_block_property(pos, "casing").as_deref() == Some("true")
+}
+
+fn casing_interaction(game: &Game<'_>, pos: Pos, face: Pos, stack: &ItemStack) -> Option<Casing> {
+    if game.native_block(pos) != ID || !game.may_build() || game.native_sneaking() {
+        return None;
+    }
+    match stack.item.as_ref() {
+        "create:andesite_casing" => Some(Casing::Andesite),
+        "create:brass_casing" => Some(Casing::Brass),
+        // Top clicks go through BeltSlicer, which is a separate operation.
+        "create:wrench" if face[1] != 1 && cased(game, pos) => Some(Casing::None),
+        _ => None,
+    }
+}
+
+pub(super) fn predicts_casing(game: &Game<'_>, pos: Pos, face: Pos) -> bool {
+    game.native_on("create") && game.held().is_some_and(|stack| {
+        casing_interaction(game, pos, face, stack).is_some()
+    })
+}
+
+fn covered(game: &Game<'_>, pos: Pos) -> bool {
+    let above = [pos[0], pos[1] + 1, pos[2]];
+    match game.native_block(above).as_str() {
+        "create:crushing_wheel_controller" | "create:andesite_belt_tunnel" | "create:brass_belt_tunnel"
+        | "create:andesite_belt_funnel" | "create:brass_belt_funnel" => return false,
+        "create:andesite_funnel" | "create:brass_funnel"
+            if game.native_block_property(above, "facing").as_deref() != Some("up") => return false,
+        _ => {}
+    }
+    let mut bounds = [f64::INFINITY, f64::INFINITY, f64::INFINITY, f64::NEG_INFINITY,
+                      f64::NEG_INFINITY, f64::NEG_INFINITY];
+    for box_ in game.native_block_collision(above) {
+        for i in 0..3 {
+            bounds[i] = bounds[i].min(box_[i]);
+            bounds[i + 3] = bounds[i + 3].max(box_[i + 3]);
+        }
+    }
+    bounds[1] <= 0.0 && bounds[3] - bounds[0] >= 0.5 && bounds[5] - bounds[2] >= 0.5
+}
+
+fn update_cover(entity: &mut ModBlockEntity, cover: bool) -> bool {
+    if boolean(&entity.nbt, "Covered") == cover {
+        return false;
+    }
+    entity.nbt.insert("Covered".into(), Tag::Byte(i8::from(cover)));
+    true
+}
+
+fn change_casing(game: &mut Game<'_>, pos: Pos, next: Casing) -> bool {
+    let Some(BlockEntity::Mod(entity)) = game.world.block_entities.get(&(pos[0], pos[1], pos[2])) else {
+        return false;
+    };
+    if entity.id != ID {
+        return false;
+    }
+    if !simulates(game) {
+        return true;
+    }
+    let previous = Casing::read(&entity.nbt);
+    let has_casing = next != Casing::None;
+    if has_casing != cased(game, pos)
+        && !game.native_set_block_property(pos, "casing", if has_casing { "true" } else { "false" })
+    {
+        return false;
+    }
+    let cover = (has_casing && slope(game, pos) == Slope::Horizontal).then(|| covered(game, pos));
+    if game.native_with_mod_block_entity(pos, |entity| {
+        entity.nbt.insert("Casing".into(), next.tag());
+        if let Some(cover) = cover {
+            update_cover(entity, cover);
+        }
+    }).is_none() {
+        return false;
+    }
+    if previous != next
+        && let Some(material) = previous.material()
+        && let Some(state) = game.pack.assets.registry.default_state(&format!("create:{material}_casing"))
+    {
+        game.with_level(|_, level, _| {
+            level.emit(LevelEvent::LevelEvent {
+                id: 2001,
+                pos: BlockPos::new(pos[0], pos[1], pos[2]),
+                data: state.0 as i32,
+            });
+        });
+    }
+    if has_casing {
+        let center = pos.map(|coordinate| f64::from(coordinate) + 0.5);
+        game.with_level(|_, level, _| {
+            level.native_play_sound("minecraft:block.wood.place", center, 4, 1.0, 0.8);
+        });
+    }
+    game.native_block_entity_sync(pos);
     true
 }
 
@@ -734,7 +868,7 @@ fn change_pulley(game: &mut Game<'_>, pos: Pos, previous: Part, next: Part) -> b
     true
 }
 
-pub(super) fn right_click(game: &mut Game<'_>, pos: Pos, _face: Pos) -> bool {
+pub(super) fn right_click(game: &mut Game<'_>, pos: Pos, face: Pos) -> bool {
     if !game.native_on("create") {
         return false;
     }
@@ -831,6 +965,9 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: Pos, _face: Pos) -> bool {
     if let Some(dye) = held.as_ref().and_then(|stack| dye_change(game, pos, stack)) {
         return dye_belt(game, pos, dye);
     }
+    if let Some(casing) = held.as_ref().and_then(|stack| casing_interaction(game, pos, face, stack)) {
+        return change_casing(game, pos, casing);
+    }
     if held.is_none() && game.hand == crate::game::Hand::Main {
         let Some((controller, index)) = node_data(game, pos) else {
             return true;
@@ -873,7 +1010,8 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: Pos, _face: Pos) -> bool {
         .as_ref()
         .is_some_and(|s| s.item.as_ref() == "create:wrench")
     {
-        if part(game, pos) == Part::Pulley
+        if !cased(game, pos)
+            && part(game, pos) == Part::Pulley
             && change_pulley(game, pos, Part::Pulley, Part::Middle)
             && !game.creative
         {
@@ -1544,8 +1682,10 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity, r
     if entity.id != ID {
         return false;
     }
+    let cover_changed = cased(game, pos) && slope(game, pos) == Slope::Horizontal
+        && update_cover(entity, covered(game, pos));
     if !boolean(&entity.nbt, "IsController") || int(&entity.nbt, "Length") < 2 {
-        return false;
+        return cover_changed;
     }
     let old_inventory = entity.nbt.get(&"Inventory".into()).cloned();
     let belt = belt(game, pos, entity, rpm);
@@ -1584,7 +1724,7 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity, r
     if changed {
         game.native_block_entity_sync(pos);
     }
-    changed
+    changed || cover_changed
 }
 
 pub(super) fn models(models: &mut Vec<String>) {
@@ -1601,6 +1741,18 @@ pub(super) fn models(models: &mut Vec<String>) {
         "belt/diagonal_end",
     ] {
         models.push(format!("create:block/{part}"));
+    }
+    for shape in ["horizontal", "diagonal", "sideways"] {
+        for part in ["start", "middle", "end", "pulley"] {
+            for prefix in ["", "andesite_"] {
+                models.push(format!("create:block/belt_casing/{prefix}{shape}_{part}"));
+            }
+        }
+    }
+    for material in ["andesite", "brass"] {
+        for axis in ["x", "z"] {
+            models.push(format!("create:block/belt_cover/{material}_belt_cover_{axis}"));
+        }
     }
 }
 /// A rotated cuboid face remains a rectangle in UV space. Reorder its corners
@@ -1721,6 +1873,74 @@ fn render_yaw(facing: Direction) -> f32 {
     }
 }
 
+fn draw_casing(
+    game: &Game<'_>,
+    draw: &mut BlockEntityDraw,
+    entity: &ModBlockEntity,
+    facing: Direction,
+    slope: Slope,
+    mut part: Part,
+) {
+    let casing = Casing::read(&entity.nbt);
+    let Some(material) = casing.material() else { return };
+    let negative = matches!(facing, Direction::North | Direction::West);
+    if slope == Slope::Downward || matches!(slope, Slope::Vertical | Slope::Sideways) && negative {
+        part = match part {
+            Part::Start => Part::End,
+            Part::End => Part::Start,
+            _ => part,
+        };
+    }
+    let shape = match slope {
+        Slope::Horizontal => "horizontal",
+        Slope::Upward | Slope::Downward => "diagonal",
+        Slope::Vertical | Slope::Sideways => "sideways",
+    };
+    let yaw = match slope {
+        Slope::Upward => -180.0,
+        Slope::Vertical => -90.0,
+        _ => 0.0,
+    };
+    let pitch = match slope {
+        Slope::Vertical => -90.0,
+        Slope::Sideways if negative => -180.0,
+        _ => 0.0,
+    };
+    draw.push();
+    // BeltGenerator's block-state model rotations apply X, then Y.
+    let vanilla_yaw = match facing {
+        Direction::West => -90.0,
+        Direction::East => -270.0,
+        Direction::North => -180.0,
+        _ => 0.0,
+    };
+    draw.rotate_about([0.0, 1.0, 0.0], vanilla_yaw + yaw, [0.5; 3]);
+    if pitch != 0.0 {
+        draw.rotate_about([1.0, 0.0, 0.0], pitch, [0.5; 3]);
+    }
+    let prefix = if casing == Casing::Andesite { "andesite_" } else { "" };
+    game.native_draw_terrain_model(
+        draw,
+        &format!("create:block/belt_casing/{prefix}{shape}_{}", part_name(part)),
+        NativeModelRenderOptions {
+            material: NativeModelMaterial::CutoutMipped,
+            ..Default::default()
+        },
+    );
+    draw.pop();
+    if boolean(&entity.nbt, "Covered") {
+        let axis = if facing.axis() == Axis::X { "x" } else { "z" };
+        game.native_draw_terrain_model(
+            draw,
+            &format!("create:block/belt_cover/{material}_belt_cover_{axis}"),
+            NativeModelRenderOptions {
+                material: NativeModelMaterial::CutoutMipped,
+                ..Default::default()
+            },
+        );
+    }
+}
+
 pub(super) fn draw(
     game: &Game<'_>,
     pos: Pos,
@@ -1733,6 +1953,9 @@ pub(super) fn draw(
     let slope = slope(game, pos);
     let facing = facing(game, pos);
     let part = part(game, pos);
+    if cased(game, pos) {
+        draw_casing(game, draw, entity, facing, slope, part);
+    }
     let diagonal = matches!(slope, Slope::Upward | Slope::Downward);
     let downward = slope == Slope::Downward;
     let sideways = slope == Slope::Sideways;

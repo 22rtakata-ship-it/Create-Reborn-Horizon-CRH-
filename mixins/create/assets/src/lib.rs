@@ -16,7 +16,7 @@ pub const CREATE_VERSION: &str = "6.0.10+mc1.21.1 (NeoForge)";
 pub const JAR_SHA256: &str = "ef87fe5709f1ba1f5b8bb20a2925b5afb4669e178fd6d8bf10c167759eefe37a";
 // Bump whenever the import catalog changes: the cache key pins the JAR, not
 // BLOCKS/ITEMS/PARTS, so an older valid cache lacks newly required resources.
-const SCHEMA: u32 = 38;
+const SCHEMA: u32 = 39;
 const MAX_JAR: u64 = 128 << 20;
 const MAX_FILE: u64 = 16 << 20;
 const MAX_TOTAL: usize = 64 << 20;
@@ -312,6 +312,9 @@ fn valid_cache(target: &Path, hash: &str, format: (i64, i64)) -> Option<usize> {
         || !PARTS
             .iter()
             .all(|part| files.contains_key(&format!("assets/create/models/block/{part}.json")))
+        || !PARTS.iter().filter_map(|part| part.strip_prefix("belt_casing/")).all(|part| {
+            files.contains_key(&format!("assets/create/models/block/belt_casing/andesite_{part}.json"))
+        })
     {
         return None;
     }
@@ -568,6 +571,31 @@ fn collect(bytes: Vec<u8>) -> io::Result<BTreeMap<String, Vec<u8>>> {
     }
     for part in PARTS {
         reader.model(&format!("create:block/{part}"))?;
+        if let Some(variant) = part.strip_prefix("belt_casing/") {
+            // BeltModel remaps the brass sprite for Andesite. A local parent
+            // override keeps the original faces/UVs and registers the target
+            // texture in Horizon's terrain array when it bakes the model.
+            let model = reader.json(&format!("assets/create/models/block/{part}.json"))?;
+            let textures = model["textures"].as_object().ok_or_else(|| invalid("Belt casing has no textures"))?;
+            let replacements: BTreeMap<_, _> = textures.iter().filter_map(|(key, value)| {
+                let replacement = match value.as_str()? {
+                    "create:block/belt/brass_belt_casing" => "create:block/belt/andesite_belt_casing",
+                    "create:block/brass_casing" if key == "particle" => "create:block/andesite_casing",
+                    _ => return None,
+                };
+                Some((key, replacement))
+            }).collect();
+            if !replacements.values().any(|&value| value == "create:block/belt/andesite_belt_casing") {
+                return Err(invalid("Belt casing lacks the original sprite"));
+            }
+            for texture in replacements.values() {
+                reader.texture(texture)?;
+            }
+            reader.files.insert(
+                format!("assets/create/models/block/belt_casing/andesite_{variant}.json"),
+                serde_json::to_vec(&json!({"parent": format!("create:block/{part}"), "textures": replacements}))?,
+            );
+        }
     }
     for model in EXTRA_MODELS {
         reader.model(&format!("create:{model}"))?;

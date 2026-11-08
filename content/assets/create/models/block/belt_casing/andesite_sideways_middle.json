@@ -1,0 +1,7 @@
+{
+  "parent": "create:block/belt_casing/sideways_middle",
+  "textures": {
+    "all": "minecraft:block/andesite",
+    "particle": "minecraft:block/andesite"
+  }
+}
