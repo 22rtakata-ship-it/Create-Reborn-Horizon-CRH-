@@ -167,6 +167,12 @@ developer source build. The three changes are applied in a separate checkout.
   native restart after step seven. An independent Survival pickup and
   re-deposit advances from step one to step two with the same component.
   Independent random worlds are checked against the source pool.
+- [Lava Item Drain](tools/item_drain_checks.py) matches 65 samples across
+  three lanes, including an incompatible 500 mB water tank and a real restart.
+  [Hand interaction](tools/item_drain_hand_checks.py) matches Survival,
+  Creative, full-tank refusal and marked cargo retrieval. The
+  [Drain-to-Belt run](tools/item_drain_belt_checks.py) matches 38 warm and
+  12 resumed ticks across a column boundary, including the entry pose.
 
 The [offscreen engineering run](tools/engineering_checks.py) used ordinary
 crank clicks on all six facings and measured the rendered base and handle

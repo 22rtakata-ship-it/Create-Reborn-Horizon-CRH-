@@ -38,11 +38,24 @@ pub(super) mod item_drain {
     const EXCHANGE: i32 = 5;
     const STEP: f32 = 0.125;
     const POSE_NUDGE: f32 = (0.5 / 8.0 - 0.5) * 0.004;
-    const WATER_BUCKET: &str = "minecraft:water_bucket";
     type Cargo = Transported<ItemStack>;
 
     fn float(value: f32) -> Tag {
         Tag::Float(value.to_bits())
+    }
+
+    fn bucket_fluid(item: &str) -> Option<&'static str> {
+        match item {
+            "minecraft:water_bucket" => Some("minecraft:water"),
+            "minecraft:lava_bucket" => Some("minecraft:lava"),
+            _ => None,
+        }
+    }
+
+    fn drain_bucket(game: &Game<'_>, stack: &ItemStack) -> Option<(&'static str, i32, ItemStack)> {
+        let expected = bucket_fluid(&stack.item)?;
+        let (fluid, amount, container) = game.native_item_fluid_drain(stack, 1000)?;
+        (fluid == expected && amount == 1000).then_some((expected, amount, container))
     }
 
     pub(in crate::game) fn default_nbt() -> Compound {
@@ -70,11 +83,12 @@ pub(super) mod item_drain {
     }
 
     impl Tank {
-        fn accepts_water(&self, amount: i32) -> bool {
-            self.fluid == "minecraft:water" && CAPACITY - self.amount >= amount
+        fn accepts(&self, fluid: &str, amount: i32) -> bool {
+            (self.amount == 0 || self.fluid == fluid) && CAPACITY - self.amount >= amount
         }
 
-        fn add_water(&mut self, amount: i32) {
+        fn fill(&mut self, fluid: &'static str, amount: i32) {
+            self.fluid = fluid;
             self.amount += amount;
             self.level.target = self.amount as f32 / CAPACITY as f32;
             self.level.speed = 0.25;
@@ -195,7 +209,7 @@ pub(super) mod item_drain {
             && !secondary_with_item
             && game
                 .held()
-                .is_none_or(|stack| stack.count == 0 || stack.item.as_ref() == WATER_BUCKET)
+                .is_none_or(|stack| stack.count == 0 || bucket_fluid(&stack.item).is_some())
     }
 
     pub(in crate::game) fn right_click(game: &mut Game<'_>, pos: Pos) -> bool {
@@ -204,18 +218,18 @@ pub(super) mod item_drain {
         }
         if let Some(held) = game.held().filter(|stack| stack.count > 0) {
             let count = held.count;
-            let Some((_, amount, bucket)) = game.native_item_fluid_drain(held, 1000) else {
+            let Some((fluid, amount, bucket)) = drain_bucket(game, held) else {
                 return true;
             };
             let poured = game.native_with_mod_block_entity(pos, |entity| {
                 if entity.id != BLOCK {
                     return false;
                 }
-                let Some(mut tank) = read_tank(entity).filter(|tank| tank.accepts_water(amount))
+                let Some(mut tank) = read_tank(entity).filter(|tank| tank.accepts(fluid, amount))
                 else {
                     return false;
                 };
-                tank.add_water(amount);
+                tank.fill(fluid, amount);
                 save_tank(entity, &tank, true);
                 true
             }) == Some(true);
@@ -259,7 +273,7 @@ pub(super) mod item_drain {
     ) -> u32 {
         if from.axis() == Axis::Y
             || incoming.stack.count == 0
-            || incoming.stack.payload.item.as_ref() != WATER_BUCKET
+            || bucket_fluid(&incoming.stack.payload.item).is_none()
         {
             return 0;
         }
@@ -295,6 +309,13 @@ pub(super) mod item_drain {
         }
         match game.native_block(target).as_str() {
             "create:depot" => belt::insert_depot_from_side(game, target, cargo, direction),
+            "create:belt" => {
+                if belt::insert_belt_from_side(game, target, cargo, direction, false) {
+                    cargo.stack.count
+                } else {
+                    0
+                }
+            }
             "minecraft:air" => {
                 let at = [
                     f64::from(pos[0]) + 0.5 + f64::from(delta[0]) * 0.75,
@@ -345,14 +366,12 @@ pub(super) mod item_drain {
             ticks -= 1;
             if ticks >= EXCHANGE {
                 let stack = belt::game_stack(&cargo.stack);
-                if let Some((fluid, amount, bucket)) = game.native_item_fluid_drain(&stack, 1000)
-                    && fluid == "minecraft:water"
-                {
-                    if !tank.accepts_water(amount) {
+                if let Some((fluid, amount, bucket)) = drain_bucket(game, &stack) {
+                    if !tank.accepts(fluid, amount) {
                         ticks = FILLING_TIME;
                     } else if ticks == EXCHANGE {
                         cargo.stack = belt::core_stack(game, bucket);
-                        tank.add_water(amount);
+                        tank.fill(fluid, amount);
                         save_tank(entity, &tank, true);
                     }
                 } else {
@@ -368,7 +387,7 @@ pub(super) mod item_drain {
                 cargo.stack.count -= output(game, pos, &cargo);
             } else if cargo.previous_position < 0.5
                 && cargo.position >= 0.5
-                && cargo.stack.payload.item.as_ref() == WATER_BUCKET
+                && bucket_fluid(&cargo.stack.payload.item).is_some()
             {
                 cargo.position = 0.5;
                 ticks = FILLING_TIME;

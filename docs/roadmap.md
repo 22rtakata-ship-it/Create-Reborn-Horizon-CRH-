@@ -398,6 +398,9 @@ with the systems they depend on.
   refused pour and empty-hand cargo recovery, including item components.
 - [x] Item Drain comparator directly adjacent or behind a solid conductor.
   Match signal strength and timing after a conveyor or hand pour.
+- [x] Lava buckets through a Belt or by hand. Keep incompatible fluids separate.
+- [x] Item Drain output to a horizontal Belt across a chunk boundary, with a
+  stopped outlet and actual restart before release.
 - [ ] Other Drain containers and pipes. Fluid Tanks, Hose
   Pulley, Spout, displays and fluid levels.
 - [ ] Trains: tracks, signals, stations, assembly, controls, schedules and persistence.

@@ -145,17 +145,17 @@ sample. Hold use to open the amount board, then release to confirm the
 selection. The same controls use a simpler panel without the optional
 Create JAR. Special filter items and Belt Funnel variants remain open.
 
-An Item Drain accepts a water bucket from a bare horizontal Belt, stores
-1000 mB of water and hands the empty bucket to a neighboring Depot. With an
-incompatible or full tank, it waits at the pour position. With a blocked
-Depot, it holds the bucket at the exit. The three flows match the pinned Java
-tick traces and survive a restart. Right-click with a water bucket to pour
-directly into the tank. Survival returns an empty bucket, Creative keeps the
-full bucket, and a refused pour keeps the bucket and its components. An empty
-hand retrieves an item waiting on the Drain. These four interactions were
-checked in both clients. A comparator reads the tank's fill level, including
-through one solid conductor. Java and Horizon match the two-tick delay
-after a conveyor or hand pour. Other hand-held containers and pipe
+An Item Drain accepts water or lava buckets from a bare horizontal Belt,
+stores 1000 mB and sends the empty bucket to a neighboring Depot or Belt.
+With an incompatible or full tank, it waits at the pour position. With a
+blocked Depot or stopped outgoing Belt, it holds the bucket at the exit.
+The checked flows match the pinned Java tick traces and survive a restart.
+Right-click with either full bucket to pour directly into the tank. Survival
+returns an empty bucket, Creative keeps the full bucket, and a refused pour
+keeps the bucket and its components. An empty hand retrieves an item waiting
+on the Drain. A comparator reads the tank's fill level, including through one
+solid conductor. Java and Horizon match the two-tick delay after the checked
+conveyor or hand pour. Other containers and pipe
 connections are pending. The original JAR supplies the body model.
 The bucket's highlight and its overlap with the stream still differ slightly.
 
