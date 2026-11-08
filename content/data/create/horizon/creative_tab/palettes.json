@@ -1,0 +1,11 @@
+{
+  "title": "itemGroup.create.palettes",
+  "icon": "create:cut_andesite",
+  "items": [
+    "create:cut_andesite",
+    "create:polished_cut_andesite",
+    "create:cut_andesite_bricks",
+    "create:small_andesite_bricks",
+    "create:layered_andesite"
+  ]
+}

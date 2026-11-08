@@ -4,7 +4,7 @@ import json
 import math
 import subprocess
 from common import CREATE, PINS, ROOT
-from catalog import BLOCKS, ITEMS, INTERNAL_BLOCKS
+from catalog import ANDESITE_PALETTE, BLOCKS, ITEMS, INTERNAL_BLOCKS
 from sail_content import COLORED_SAILS, SAIL_ITEMS
 from portable_storage_content import PSI
 from chute_content import CHUTE
@@ -173,7 +173,9 @@ def main():
         if not name.startswith(base + 'create/recipe/') or not name.endswith('.json'): continue
         r = read(name)
         kind = r.get('type', '')
-        if kind not in {'minecraft:crafting_shaped', 'minecraft:crafting_shapeless', 'create:pressing', 'create:item_application'} | processing | cooking: continue
+        palette_cut = (kind == 'minecraft:stonecutting'
+                       and r.get('ingredient') == {'tag': 'create:stone_types/andesite'})
+        if not palette_cut and kind not in {'minecraft:crafting_shaped', 'minecraft:crafting_shapeless', 'create:pressing', 'create:item_application'} | processing | cooking: continue
         if kind == 'create:mixing' and not (dry_mixing(r) or heated_mixing(r)):
             # These two actual source flows are the bounded first native fluid
             # integration. Other fluid/heat/component recipe codecs stay out.
@@ -191,7 +193,9 @@ def main():
         if any(not (d.startswith('minecraft:') or d in known) for d in deps): continue
         # Processing recipes legitimately return vanilla items. Also retain the
         # real vanilla cooking recipes for supported Create ingredients (dough).
-        if output not in known and kind not in processing and not (kind in cooking and any(d in known for d in deps)): continue
+        if (output not in known and kind not in processing
+                and not (kind in cooking and any(d in known for d in deps))
+                and not (palette_cut and output == 'minecraft:andesite')): continue
         recipes[name[len(base):]] = r
     recipes.update(runtime_wood_cutting())
     # Retain upstream tag contents. Horizon's loader drops unregistered entries,
@@ -344,6 +348,7 @@ def main():
         f'create/loot_table/blocks/{PSI}.json',
         f'create/loot_table/blocks/{CHUTE}.json',
         f'create/loot_table/blocks/{STICKER}.json',
+        *[f'create/loot_table/blocks/{name}.json' for name in ANDESITE_PALETTE],
         *[f'create/loot_table/blocks/{name}.json' for name in SAIL_ITEMS + COLORED_SAILS],
     ]}
     result = {'reference': PINS['create_revision'], 'license': 'MIT recipe/data-map/loot data; original definitions of vanilla convention tags', 'recipes': recipes, 'tags': tags, 'data_maps':maps, 'loot_tables':loot}

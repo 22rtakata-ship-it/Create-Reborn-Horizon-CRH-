@@ -53,6 +53,11 @@
     "create:flywheel",
     "create:zinc_block",
     "create:andesite_alloy_block",
-    "create:brass_block"
+    "create:brass_block",
+    "create:cut_andesite",
+    "create:polished_cut_andesite",
+    "create:cut_andesite_bricks",
+    "create:small_andesite_bricks",
+    "create:layered_andesite"
   ]
 }

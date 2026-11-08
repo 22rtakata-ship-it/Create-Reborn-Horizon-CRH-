@@ -16,11 +16,12 @@ pub const CREATE_VERSION: &str = "6.0.10+mc1.21.1 (NeoForge)";
 pub const JAR_SHA256: &str = "ef87fe5709f1ba1f5b8bb20a2925b5afb4669e178fd6d8bf10c167759eefe37a";
 // Bump whenever the import catalog changes: the cache key pins the JAR, not
 // BLOCKS/ITEMS/PARTS, so an older valid cache lacks newly required resources.
-const SCHEMA: u32 = 26;
+const SCHEMA: u32 = 27;
 const MAX_JAR: u64 = 128 << 20;
 const MAX_FILE: u64 = 16 << 20;
 const MAX_TOTAL: usize = 64 << 20;
 const MAX_ENTRIES: usize = 65_536;
+const MAX_BUNDLED_FILES: usize = 2048;
 mod catalog;
 pub use catalog::{BLOCKS, EXTRA_BLOCKSTATES, EXTRA_MODELS, ITEMS, PARTS};
 pub const WOODS: &[&str] = &[
@@ -78,7 +79,7 @@ pub struct Imported {
 pub fn bundled_content(game_dir: &Path, bytes: &[u8]) -> io::Result<PathBuf> {
     let files: BTreeMap<String, String> = serde_json::from_slice(bytes)?;
     if !files.contains_key("horizon-mod.toml")
-        || files.len() > 1024
+        || files.len() > MAX_BUNDLED_FILES
         || files.iter().any(|(name, value)| {
             !safe_path(name)
                 || !(name == "horizon-mod.toml"

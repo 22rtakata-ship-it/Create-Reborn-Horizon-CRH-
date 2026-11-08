@@ -315,6 +315,8 @@ with the systems they depend on.
 
 ## 5. Fluids, railways and other content
 
+- [x] Five solid andesite variants with the original stonecutting recipes,
+  drops, local models and a building-blocks tab. Layered connected textures remain open.
 - [ ] Pipes/pumps/valves, connectivity and flow direction.
 - [ ] Fluid Tanks, Hose Pulley, Item Drain/Spout, displays and fluid levels.
 - [ ] Trains: tracks, signals, stations, assembly, controls, schedules and persistence.

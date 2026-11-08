@@ -52,6 +52,11 @@ pub const BLOCKS: &[&str] = &[
     "chute",
     "portable_storage_interface",
     "sticker",
+    "cut_andesite",
+    "polished_cut_andesite",
+    "cut_andesite_bricks",
+    "small_andesite_bricks",
+    "layered_andesite",
 ];
 pub const EXTRA_BLOCKSTATES: &[&str] = &[
     "lit_blaze_burner",

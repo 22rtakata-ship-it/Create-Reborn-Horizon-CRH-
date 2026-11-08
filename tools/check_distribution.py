@@ -3,7 +3,7 @@
 import json
 import re
 from common import ROOT, NATIVE, PINS
-from catalog import BLOCKS, EXTRA_MODELS, INTERNAL_BLOCKS, ITEMS, PARTS, rust_catalog
+from catalog import ANDESITE_PALETTE, BLOCKS, EXTRA_MODELS, INTERNAL_BLOCKS, ITEMS, PARTS, rust_catalog
 
 
 def main():
@@ -35,8 +35,13 @@ def main():
     declared_blocks={p.stem for p in (content / "data/create/horizon/block").glob("*.json")}
     declared_items={p.stem for p in (content / "data/create/horizon/item").glob("*.json")}
     assert declared_blocks == set(BLOCKS+INTERNAL_BLOCKS) and declared_items == set(ITEMS)
-    tab=json.loads((content / "data/create/horizon/creative_tab/kinetics.json").read_text())
-    assert tab["items"] == ["create:"+name for name in BLOCKS+ITEMS]
+    tabs = {path.stem: json.loads(path.read_text())
+            for path in (content / "data/create/horizon/creative_tab").glob("*.json")}
+    assert set(tabs) == {"kinetics", "palettes"}
+    assert tabs["kinetics"]["title"] == "itemGroup.create.base"
+    assert tabs["kinetics"]["items"] == ["create:" + name for name in BLOCKS + ITEMS if name not in ANDESITE_PALETTE]
+    assert tabs["palettes"]["title"] == "itemGroup.create.palettes"
+    assert tabs["palettes"]["items"] == ["create:" + name for name in ANDESITE_PALETTE]
     assert len(list((content / "data/create/recipe").rglob("*.json"))) == len(reference["recipes"])
     for path, value in reference.get('loot_tables', {}).items():
         assert json.loads((content / 'data' / path).read_text()) == value, 'Source loot policy changed: ' + path

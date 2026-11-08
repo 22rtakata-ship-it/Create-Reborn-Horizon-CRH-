@@ -5,6 +5,7 @@ Models reference vanilla textures by ID and contain no upstream texture bytes.
 """
 import json
 from common import ROOT, NATIVE
+from catalog import ANDESITE_PALETTE
 from pulley_content import rope_pulley
 from gantry_content import gantry
 from sail_content import COLORED_SAILS, sails
@@ -626,6 +627,40 @@ def flywheel():
     })
 
 
+def andesite_palette():
+    # PalettesVariantEntry copies the vanilla andesite properties and adds the
+    # pickaxe requirement. These five PaletteBlockPatterns have no state.
+    fallback = {
+        "cut_andesite": "andesite",
+        "polished_cut_andesite": "polished_andesite",
+        "cut_andesite_bricks": "stone_bricks",
+        "small_andesite_bricks": "tuff_bricks",
+    }
+    for name in ANDESITE_PALETTE:
+        write(f"data/create/horizon/block/{name}.json", {
+            "template": "minecraft:andesite", "item": True, "properties": {"requires_tool": True},
+        })
+        block_model = f"create:block/{name}"
+        write(f"assets/create/blockstates/{name}.json", {"variants": {"": {"model": block_model}}})
+        if name == "layered_andesite":
+            model_data = {"parent": "minecraft:block/cube_column", "textures": {
+                "end": "minecraft:block/smooth_stone", "side": "minecraft:block/smooth_stone_slab_side",
+            }}
+        else:
+            model_data = {"parent": "minecraft:block/cube_all", "textures": {
+                "all": f"minecraft:block/{fallback[name]}",
+            }}
+        write(f"assets/create/models/block/{name}.json", model_data)
+        write(f"assets/create/models/item/{name}.json", {"parent": block_model})
+        write(f"assets/create/items/{name}.json", {
+            "model": {"type": "minecraft:model", "model": f"create:item/{name}"},
+        })
+    write("data/create/horizon/creative_tab/palettes.json", {
+        "title": "itemGroup.create.palettes", "icon": "create:cut_andesite",
+        "items": [f"create:{name}" for name in ANDESITE_PALETTE],
+    })
+
+
 def foundation():
     from catalog import BLOCKS as all_blocks, ITEMS, TRANSMISSIONS, STATIC_BLOCKS, INSTRUMENTS, GENERATORS, INTERNAL_BLOCKS, SANDPAPERS, rust_catalog
     for block in TRANSMISSIONS + STATIC_BLOCKS + INSTRUMENTS + GENERATORS:
@@ -716,6 +751,7 @@ def foundation():
     belts()
     chain_drives()
     fallback_instruments_and_wheels()
+    andesite_palette()
     (CONTENT / 'assets/create/models/block/port_hint.json').unlink(missing_ok=True)
     # Only MIT recipe/tag data is distributed; original assets stay in the JAR.
     reference = json.loads((ROOT / "tools/data/recipes.json").read_text())
@@ -747,7 +783,7 @@ def foundation():
         write("data/minecraft/tags/damage_type/" + tag + ".json", {
             "values": ["create:fan_fire", "create:fan_lava"],
         })
-    write("data/create/horizon/creative_tab/kinetics.json", {"title": "itemGroup.create.base", "icon": "create:cogwheel", "items": ["create:" + name for name in all_blocks + ITEMS]})
+    write("data/create/horizon/creative_tab/kinetics.json", {"title": "itemGroup.create.base", "icon": "create:cogwheel", "items": ["create:" + name for name in all_blocks + ITEMS if name not in ANDESITE_PALETTE]})
     write('data/minecraft/tags/item/enchantable/durability.json', {'values': ['create:super_glue']})
     # These fallback labels are ours; the JAR replaces them with all upstream locales.
     extra_blocks = {"gearbox":"Gearbox","clutch":"Clutch","gearshift":"Gearshift","hand_crank":"Hand Crank","andesite_encased_shaft":"Andesite Encased Shaft","brass_encased_shaft":"Brass Encased Shaft","andesite_casing":"Andesite Casing","brass_casing":"Brass Casing","andesite_alloy_block":"Block of Andesite Alloy","brass_block":"Block of Brass","zinc_block":"Block of Zinc","speedometer":"Speedometer","stressometer":"Stressometer","water_wheel":"Water Wheel","large_water_wheel":"Large Water Wheel","millstone":"Millstone","encased_fan":"Encased Fan","mechanical_drill":"Mechanical Drill"}
@@ -776,6 +812,9 @@ def foundation():
                          "mechanical_piston_head": "Mechanical Piston Head", "piston_extension_pole": "Piston Extension Pole"})
     extra_blocks.update({"mechanical_harvester": "Mechanical Harvester",
                          "mechanical_plough": "Mechanical Plough", "mechanical_saw": "Mechanical Saw"})
+    extra_blocks.update({"cut_andesite": "Cut Andesite", "polished_cut_andesite": "Polished Cut Andesite",
+                         "cut_andesite_bricks": "Cut Andesite Bricks", "small_andesite_bricks": "Small Andesite Bricks",
+                         "layered_andesite": "Layered Andesite"})
     extra_items.update({'whisk': 'Whisk', 'super_glue': 'Super Glue'})
     extra_items.update({'rose_quartz': 'Rose Quartz', 'polished_rose_quartz': 'Polished Rose Quartz',
                         'sand_paper': 'Sand Paper', 'red_sand_paper': 'Red Sand Paper',
@@ -786,6 +825,7 @@ def foundation():
         lang=json.loads(path.read_text())
         lang.update({"block.create."+k:v for k,v in extra_blocks.items()})
         lang.update({"item.create."+k:v for k,v in extra_items.items()})
+        lang["itemGroup.create.palettes"] = "Create's Building Blocks"
         glue_status = {
             'first_pos': ('First corner selected', 'Первый угол выбран'),
             'abort': ('Selection cleared', 'Выделение сброшено'),
@@ -815,6 +855,12 @@ def foundation():
                          'item.create.brass_hand': 'Латунная рука'})
             lang['block.create.adjustable_chain_gearshift'] = 'Регулируемая цепная коробка передач'
             lang['block.create.flywheel'] = 'Маховик'
+            lang.update({"block.create.cut_andesite": "Резной андезит",
+                         "block.create.polished_cut_andesite": "Полированный резной андезит",
+                         "block.create.cut_andesite_bricks": "Резные андезитовые кирпичи",
+                         "block.create.small_andesite_bricks": "Мелкие андезитовые кирпичи",
+                         "block.create.layered_andesite": "Слоистый андезит",
+                         "itemGroup.create.palettes": "Create: Строительные блоки"})
             lang['block.create.copper_casing'] = 'Медный корпус'
             lang['block.create.mechanical_bearing'] = 'Механический вращатель'
             lang['block.create.windmill_bearing'] = 'Вращатель ветряной мельницы'

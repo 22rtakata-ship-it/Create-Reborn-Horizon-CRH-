@@ -57,6 +57,13 @@ developer source build. The three changes are applied in a separate checkout.
   preserves the lower slab's foot height in both clients. The maximum
   measured player position difference at matched angles was 0.17 blocks.
   Dropped-item carry remains a separate case.
+- [Andesite building blocks](tools/andesite_palette_checks.py) use six
+  stonecutting recipes checked against the pinned source. Horizon's real
+  Stonecutter makes all five variants and converts them back through the
+  original family tag. Placing and mining each returns one block. Two
+  client starts verified built-in models and original models from the JAR,
+  with byte-for-byte matches for 21 original files. Layered andesite still
+  lacks connected textures.
 
 ## 0.8.0-alpha.5 chassis, saw and Deployer crafting
 

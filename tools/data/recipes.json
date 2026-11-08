@@ -2,6 +2,16 @@
   "reference": "ac0c444d9828da3453ae8cc65338e8de063286fb",
   "license": "MIT recipe/data-map/loot data; original definitions of vanilla convention tags",
   "recipes": {
+    "create/recipe/andesite_from_stone_types_andesite_stonecutting.json": {
+      "type": "minecraft:stonecutting",
+      "ingredient": {
+        "tag": "create:stone_types/andesite"
+      },
+      "result": {
+        "count": 1,
+        "id": "minecraft:andesite"
+      }
+    },
     "create/recipe/compacting/andesite_from_flint.json": {
       "type": "create:compacting",
       "ingredients": [
@@ -1580,6 +1590,26 @@
         "id": "create:zinc_nugget"
       }
     },
+    "create/recipe/cut_andesite_bricks_from_stone_types_andesite_stonecutting.json": {
+      "type": "minecraft:stonecutting",
+      "ingredient": {
+        "tag": "create:stone_types/andesite"
+      },
+      "result": {
+        "count": 1,
+        "id": "create:cut_andesite_bricks"
+      }
+    },
+    "create/recipe/cut_andesite_from_stone_types_andesite_stonecutting.json": {
+      "type": "minecraft:stonecutting",
+      "ingredient": {
+        "tag": "create:stone_types/andesite"
+      },
+      "result": {
+        "count": 1,
+        "id": "create:cut_andesite"
+      }
+    },
     "create/recipe/cutting/andesite_alloy.json": {
       "type": "create:cutting",
       "ingredients": [
@@ -1956,6 +1986,16 @@
           "id": "create:copper_casing"
         }
       ]
+    },
+    "create/recipe/layered_andesite_from_stone_types_andesite_stonecutting.json": {
+      "type": "minecraft:stonecutting",
+      "ingredient": {
+        "tag": "create:stone_types/andesite"
+      },
+      "result": {
+        "count": 1,
+        "id": "create:layered_andesite"
+      }
     },
     "create/recipe/milling/allium.json": {
       "type": "create:milling",
@@ -2922,6 +2962,16 @@
         }
       ]
     },
+    "create/recipe/polished_cut_andesite_from_stone_types_andesite_stonecutting.json": {
+      "type": "minecraft:stonecutting",
+      "ingredient": {
+        "tag": "create:stone_types/andesite"
+      },
+      "result": {
+        "count": 1,
+        "id": "create:polished_cut_andesite"
+      }
+    },
     "create/recipe/pressing/brass_ingot.json": {
       "type": "create:pressing",
       "ingredients": [
@@ -2986,6 +3036,16 @@
           "id": "create:polished_rose_quartz"
         }
       ]
+    },
+    "create/recipe/small_andesite_bricks_from_stone_types_andesite_stonecutting.json": {
+      "type": "minecraft:stonecutting",
+      "ingredient": {
+        "tag": "create:stone_types/andesite"
+      },
+      "result": {
+        "count": 1,
+        "id": "create:small_andesite_bricks"
+      }
     },
     "create/recipe/smelting/bread.json": {
       "type": "minecraft:smelting",
@@ -5344,6 +5404,25 @@
         "minecraft:black_stained_glass"
       ]
     },
+    "create/tags/item/stone_types/andesite.json": {
+      "values": [
+        "create:cut_andesite",
+        "create:cut_andesite_stairs",
+        "create:cut_andesite_wall",
+        "create:polished_cut_andesite",
+        "create:polished_cut_andesite_stairs",
+        "create:polished_cut_andesite_wall",
+        "create:cut_andesite_bricks",
+        "create:cut_andesite_brick_stairs",
+        "create:cut_andesite_brick_wall",
+        "create:small_andesite_bricks",
+        "create:small_andesite_brick_stairs",
+        "create:small_andesite_brick_wall",
+        "create:layered_andesite",
+        "create:andesite_pillar",
+        "minecraft:andesite"
+      ]
+    },
     "c/tags/item/ingots/iron.json": {
       "values": [
         "minecraft:iron_ingot"
@@ -5743,7 +5822,12 @@
         "create:flywheel",
         "create:zinc_block",
         "create:andesite_alloy_block",
-        "create:brass_block"
+        "create:brass_block",
+        "create:cut_andesite",
+        "create:polished_cut_andesite",
+        "create:cut_andesite_bricks",
+        "create:small_andesite_bricks",
+        "create:layered_andesite"
       ]
     },
     "create/tags/block/casing.json": {
@@ -6191,6 +6275,111 @@
         }
       ],
       "random_sequence": "create:blocks/sticker"
+    },
+    "create/loot_table/blocks/cut_andesite.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:cut_andesite"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/cut_andesite"
+    },
+    "create/loot_table/blocks/polished_cut_andesite.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:polished_cut_andesite"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/polished_cut_andesite"
+    },
+    "create/loot_table/blocks/cut_andesite_bricks.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:cut_andesite_bricks"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/cut_andesite_bricks"
+    },
+    "create/loot_table/blocks/small_andesite_bricks.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:small_andesite_bricks"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/small_andesite_bricks"
+    },
+    "create/loot_table/blocks/layered_andesite.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:layered_andesite"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/layered_andesite"
     },
     "create/loot_table/blocks/sail_frame.json": {
       "type": "minecraft:block",
