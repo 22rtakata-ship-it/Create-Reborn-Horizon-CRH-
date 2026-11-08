@@ -56,6 +56,7 @@ def main():
     fixture = work / 'belt_render_game_test.rs'
     shutil.copy2(ROOT / 'tools/rust/belt_render_game_test.rs', fixture)
     env = environment()
+    env.pop('HORIZON_STILL', None)
     env.update(CARGO_TARGET_DIR=str(target), CARGO_BUILD_JOBS='2',
                HORIZON_TEST_RESOURCES=str(resources), CREATE_BELT_RENDER_PROBE=str(work),
                HORIZON_NO_AUDIO='1', HORIZON_LAUNCHER_NO_SELF_UPDATE='1',

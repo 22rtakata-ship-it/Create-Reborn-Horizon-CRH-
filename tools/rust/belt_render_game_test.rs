@@ -67,6 +67,9 @@ fn belt_render_actual_game_mesh() {
         }
     }
     game.world = World::new(game.res.facts().air, 1);
+    game.ticks = 10;
+    game.world.game_time = 80_010;
+    assert_eq!(game.visual_ticks(), 10);
     game.world
         .chunks
         .insert((0, 0), Arc::new(Chunk::empty(0, 0)));
@@ -118,7 +121,7 @@ fn belt_render_actual_game_mesh() {
         let revision = entity.revision();
         let mut output = BlockEntityDraw::posed(
             0.125,
-            10,
+            game.world.game_time,
             0xf0f0,
             pos,
             glam::Mat4::IDENTITY,

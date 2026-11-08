@@ -387,14 +387,30 @@ pub(super) fn draw_moving(
     };
     let point = sample(record.angle);
     let previous = sample(record.previous_angle);
+    let render_time = super::create_port_particles::animation_time(draw.partial);
+    // Centered actors and disabled movement modes are outside the mounted
+    // Deployer adapter's capture scope. A saw, drill or dock can still stall
+    // the whole bearing, which drives the hand and pole's source oscillation.
     let extension = create_engine::deployer::moving_extension(
         Some(point.to_array()),
         (point - previous).to_array(),
+        record.stalled,
         false,
-        false,
-        draw.game_time as f32 + draw.partial,
+        render_time,
         draw.partial,
     );
+    static TRACE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    if *TRACE.get_or_init(|| std::env::var_os("CREATE_TRACE_CONTRAPTION_FRAMES").is_some()) {
+        log::info!(
+            "Create deployer actor frame: {}",
+            serde_json::json!({
+                "controller":record.controller, "local":local, "time":draw.game_time,
+                "partial":draw.partial, "render_time":render_time, "stalled":record.stalled,
+                "extension":extension, "position":point.to_array(),
+                "motion":(point - previous).to_array(),
+            })
+        );
+    }
     let first = state
         .properties
         .get("axis_along_first")

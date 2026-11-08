@@ -22,6 +22,7 @@ fn create_depot_prediction(
         || crate::game::create_port_chassis::predicts(game, hit.pos, hit.face, held)
         || crate::game::create_port_super_glue::predicts(game, held)
         || crate::game::create_port_saw_filter::predicts(game, hit, held)
+        || crate::game::create_port_basin_filter::predicts(game, hit, held)
     {
         let bypass = game.keys.contains(&winit::keyboard::KeyCode::ShiftLeft)
             && (game

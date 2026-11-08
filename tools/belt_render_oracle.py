@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""Original Create BeltRenderer AST versus unchanged native draw selection/poses.
+"""Compare the pinned Create BeltVisual and scrolling shader with native draw().
 
-Executes original Catnip AngleHelper from the private reference classpath and
-unchanged Java renderSafe/getBeltPartial bodies. Own recording contexts isolate
-uncolored surfaces, UV scrolling and poses. Also compares the original motor
-isSideActive AST with the native side predicate. Original assets stay private;
-actual native meshes, client synchronization and pixels are separate checks.
+Execute the original BeltVisual setup, the fallback BeltRenderer, and the
+original motor isSideActive predicate. Record surface selection, poses and UV
+phase with a separate render clock. The game mesh check consumes this output.
+Original assets stay private.
 """
 import argparse
 import hashlib
@@ -22,6 +21,8 @@ from common import CREATE, PINS, ROOT
 from fan_entity_checks import EXPORTER
 
 BELT_SOURCE = 'src/main/java/com/simibubi/create/content/kinetics/belt/BeltRenderer.java'
+VISUAL_SOURCE = 'src/main/java/com/simibubi/create/content/kinetics/belt/BeltVisual.java'
+SCROLL_SHADER = 'src/main/resources/assets/create/flywheel/instance/scrolling.vert'
 MOTOR_SOURCE = 'src/main/java/com/simibubi/create/content/kinetics/motor/CreativeMotorBlockEntity.java'
 DIRECTIONS = ['north', 'south', 'west', 'east']
 SLOPES = ['horizontal', 'upward', 'downward', 'vertical', 'sideways']
@@ -115,15 +116,25 @@ def run(output):
         check=True,
     )
     belt_source = original(BELT_SOURCE)
+    visual_source = original(VISUAL_SOURCE)
+    scroll_shader = original(SCROLL_SHADER)
+    assert b'fract(instance.speed * flw_renderTicks + instance.offset) * instance.scale' in scroll_shader
     motor_source = original(MOTOR_SOURCE)
     belt_path = output / 'BeltRenderer.java'
+    visual_path = output / 'BeltVisual.java'
     motor_path = output / 'CreativeMotorBlockEntity.java'
     belt_path.write_bytes(belt_source)
+    visual_path.write_bytes(visual_source)
     motor_path.write_bytes(motor_source)
     template = (ROOT / 'tools/java/BeltRenderOracle.java.in').read_text()
+    constants = [line.strip() for line in visual_source.decode().splitlines()
+                 if line.strip().startswith('public static final float ')]
+    assert len(constants) == 5
+    template = template.replace('@@VISUAL_CONSTANTS@@', '\n  '.join(constants))
     for marker, path, owner, method in [
         ('RENDER', belt_path, 'BeltRenderer', 'renderSafe'),
         ('PARTIAL', belt_path, 'BeltRenderer', 'getBeltPartial'),
+        ('VISUAL_SETUP', visual_path, 'BeltVisual', 'setup'),
         ('MOTOR_SIDE', motor_path, 'MotorValueBox', 'isSideActive'),
     ]:
         template = template.replace(
@@ -153,7 +164,7 @@ def run(output):
     cases = [
         [*row, clock, partial]
         for row in itertools.product(range(4), range(5), range(4), [-256, -32, 0, 32, 256])
-        for clock, partial in [(-121, .25), (0, 0), (10, .125), (10000, .875)]
+        for clock, partial in [(0, 0), (10, .125), (10000, .875), (120000, .25)]
     ]
     payload = ''.join(' '.join(map(str, row)) + '\n' for row in cases)
     (output / 'cases.txt').write_text(payload)
@@ -168,9 +179,23 @@ def run(output):
     assert len(want) == len(got) == len(cases)
     maximum = max(compare_case(case, a, b) for case, a, b in zip(cases, want, got))
 
-    # This was the observed production defect, retained as a negative control.
-    wrong_yaw = rust.replace('Direction::West => -90.0', 'Direction::West => 90.0')
-    wrong_yaw = wrong_yaw.replace('Direction::East => -270.0', 'Direction::East => 270.0')
+    fallback = parse_frames(subprocess.check_output(
+        java_command + ['fallback'], input=payload, text=True,
+    ))
+    assert len(fallback) == len(want)
+    stopped_cases = 0
+    for case, visual, old in zip(cases, want, fallback):
+        if case[3] != 0:
+            continue
+        assert all(frame['shifted'] for frame in visual), (case, visual)
+        assert all(not frame['shifted'] for frame in old), (case, old)
+        expected = [0.1875] if case[1] in (1, 2) else [0.25, 0.0]
+        assert [frame['scroll'] for frame in visual] == expected, (case, visual)
+        stopped_cases += 1
+
+    # Using the old fallback yaw with the new instance rotations must fail.
+    wrong_yaw = rust.replace('Direction::West => 90.0', 'Direction::West => -90.0')
+    wrong_yaw = wrong_yaw.replace('Direction::East => 270.0', 'Direction::East => -270.0')
     assert wrong_yaw != rust
     negative_probe = output / 'old-yaw-probe'
     compile_rust(wrong_yaw, negative_probe)
@@ -201,8 +226,11 @@ def run(output):
         'passed': True, 'cases': len(cases),
         'surface_frames': sum(map(len, got)), 'maximum_absolute_difference': maximum,
         'old_yaw_rejected_cases': rejected, 'motor_side_cases': len(motor_got),
+        'stopped_cases_with_flywheel_scroll': stopped_cases,
         'create_revision': PINS['create_revision'],
-        'source_sha256': hashlib.sha256(belt_source).hexdigest(),
+        'visual_sha256': hashlib.sha256(visual_source).hexdigest(),
+        'fallback_sha256': hashlib.sha256(belt_source).hexdigest(),
+        'shader_sha256': hashlib.sha256(scroll_shader).hexdigest(),
         'adapter_sha256': hashlib.sha256(adapter.encode()).hexdigest(), 'scope': __doc__,
     }
     (output / 'result.json').write_text(json.dumps(result, indent=2) + '\n')

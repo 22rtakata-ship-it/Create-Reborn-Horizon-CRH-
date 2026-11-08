@@ -1845,6 +1845,22 @@ pub(super) fn default_nbt() -> Compound {
     ])
 }
 
+/// These fields are recreated by the ordinary idle Saw factory after landing.
+/// Non-default recipes, filters, or inventory data still require cargo storage.
+pub(super) fn idle_capture_field(key: &str, tag: &Tag) -> bool {
+    match key {
+        INVENTORY => {
+            let idle = CuttingCycle::default();
+            *tag == processing_inventory(&[], idle.remaining, idle.duration, idle.applied)
+        }
+        "RecipeIndex" => *tag == Tag::Int(0),
+        "Filter" => matches!(tag, Tag::Compound(filter) if filter.is_empty()),
+        "FilterAmount" => *tag == Tag::Int(64),
+        "UpTo" => *tag == Tag::Byte(1),
+        _ => false,
+    }
+}
+
 fn cycle(entity: &ModBlockEntity) -> Option<CuttingCycle> {
     let Some(saved) = entity.nbt.get(&INVENTORY.into()) else {
         return Some(CuttingCycle::default());

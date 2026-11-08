@@ -4,8 +4,7 @@
 """Compare clutch and gearshift transitions across two loaded chunk columns.
 
 Redstone transitions and shaft cuts are sampled before and after normal ticks.
-The native replay includes a process restart. The port's one-tick detach delay
-after a command removes the boundary shaft is reported separately.
+The native replay includes a process restart.
 """
 import argparse
 import hashlib
@@ -152,21 +151,6 @@ def run_native(session, *, restart=False):
     return rows
 
 
-def compare(native, java):
-    mismatches, detach_delay = [], []
-    for got, expected in zip(native, java, strict=True):
-        if got == expected:
-            continue
-        difference = dict(native=got, java=expected)
-        rpm = expected['rpm']
-        if (expected['phase'] == 'cut:0' and rpm == [rpm[0], rpm[0], 0]
-                and rpm[0] != 0 and got == dict(expected, rpm=[rpm[0]] * 3)):
-            detach_delay.append(difference)
-        else:
-            mismatches.append(difference)
-    return mismatches, detach_delay
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--java', action='store_true')
@@ -200,14 +184,17 @@ def main():
         finally:
             session.control_temp.cleanup()
         expected_restarts = [row for row in reference['rows'] if row['phase'] == 'settled_powered']
-        report['mismatches'], report['known_detach_delay'] = compare(
-            report['rows'] + report['restarted'], reference['rows'] + expected_restarts)
+        report['mismatches'] = [
+            dict(native=got, java=expected)
+            for got, expected in zip(report['rows'] + report['restarted'],
+                                     reference['rows'] + expected_restarts, strict=True)
+            if got != expected
+        ]
     report['passed'] = not report.get('mismatches')
     path = work / 'result.json'
     path.write_text(json.dumps(report, indent=2) + '\n')
     print(json.dumps(dict(result=str(path), samples=len(report['rows']),
                           restart_samples=len(report.get('restarted', [])),
-                          known_detach_delay=len(report.get('known_detach_delay', [])),
                           mismatches=len(report.get('mismatches', [])))), flush=True)
     assert report['passed'], report['mismatches']
 

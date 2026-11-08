@@ -659,12 +659,14 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
                 }
             }
         }
-        for (p, kind) in &current.handlers {
-            match game.native_block(*p).as_str() {
-                "create:belt" => process_belt(game, *p, *kind),
-                "create:depot" => process_depot(game, *p, *kind),
-                _ => {}
-            }
+    }
+    // AirCurrent's minimum distance only empties the entity bounds. It still
+    // processes handlers reached by a short current, such as a wet Depot above.
+    for (p, kind) in &current.handlers {
+        match game.native_block(*p).as_str() {
+            "create:belt" => process_belt(game, *p, *kind),
+            "create:depot" => process_depot(game, *p, *kind),
+            _ => {}
         }
     }
     super::create_port_fan_entities::server_tick(

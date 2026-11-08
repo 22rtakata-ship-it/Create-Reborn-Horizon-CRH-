@@ -1,5 +1,37 @@
 # Checks and evidence
 
+## November 8 follow-up
+
+- [Belt surface phase](tools/belt_render_oracle.py) compares 1,600 configurations
+  against the pinned Flywheel visual and shader. The [native mesh check](tools/belt_render_game_checks.py)
+  verifies 60 submitted meshes across four facings and five slopes. The east-facing live lane
+  shows opposite motion on the upper and return surfaces in both clients.
+  Both surfaces stop and reverse, and the stopped texture phase matches.
+  The compared native crops are about four to five gray levels brighter.
+  The separate six-lane transport fixture still matches 16 of 18 phases.
+  In the south-facing horizontal lane, the first two Java segments name
+  each other as kinetic sources and retain 32 RPM after disconnecting. The
+  same result is recorded with imported and bundled assets.
+- [Rope Pulley coil](tools/pulley_coil_visual_checks.py) uses the original
+  16×32 strip from the local JAR. Both clients show scrolling and reversal
+  at three matched offsets during lowering and retraction. Screenshot
+  readback can span a simulation tick, so frame-exact phase is unmeasured.
+- [Moving Deployer hand](tools/deployer_actor_visual_checks.py) records the
+  hand extension passed to each client's renderer before, during and after
+  the same bearing stalls against a log. The source wave matched 157 Java
+  and 292 Horizon stall frames. The accompanying [actor check](tools/bearing_actor_phase_checks.py)
+  matches all 140 Saw and Drill angle/target observations and checks that an
+  unsupported filtered Saw remains in the world with its filter.
+  The two-Deployer farm still passes its crop, tree and cold-resume cases,
+  and the 2,048-block rotor advances across 143 rendered frames.
+- [Basin recipe filter](tools/basin_output_filter_checks.py) matches five
+  observations of ordinary clicks, recipe rejection and a mid-cycle filter
+  change. The running batch finishes and the next batch waits until the
+  filter is cleared. A Horizon restart retains the selected sample and
+  input stacks. The four existing Press/Basin traces and native restart
+  controls still pass, as do 16 physical item-contact scenes and the
+  existing Fluid Valve and Crafter comparisons.
+
 ## November 8 development checkpoint
 
 The local client build uses official Nightly `2ebf00a` with the published
@@ -80,10 +112,15 @@ developer source build. The three changes are applied in a separate checkout.
   without a collector and the block-drops rule match. Both clients restore
   the saved state after a cold restart and deliver the first resumed item on
   tick seven. The second arrives on Java tick 19 and Horizon tick 20.
-- [Cross-chunk transmission](tools/cross_chunk_kinetics_checks.py) matches 60 of
-  64 action observations and all four Horizon reload checks. Direct shaft
-  removal is the remaining difference. The far shaft stops immediately in Java
-  and on the next tick in Horizon.
+- [Cross-chunk transmission](tools/cross_chunk_kinetics_checks.py) matches all
+  64 action observations and all four Horizon reload checks. Cutting the
+  boundary shaft stops the disconnected branch during the same action and the
+  driven branch keeps rotating. The event path requires a fully loaded idle
+  component with no split transmission.
+- [Short-range Fan and Depot](tools/fan_depot_range_checks.py) matches all 12
+  Java observations. An upward fan beneath a waterlogged Depot starts washing
+  flour on tick one and yields one Dough on tick 153. The matching dry Depot
+  keeps the flour throughout.
 - [Saw-to-Depot transfer](tools/saw_depot_checks.py) matches the inventories,
   direction and cycle state of six blocks over 39 ticks. The cases cover both
   directions of rotation, backpressure from a held stack and from the output

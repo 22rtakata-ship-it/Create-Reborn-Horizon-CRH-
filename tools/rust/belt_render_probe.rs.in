@@ -55,6 +55,7 @@ struct Game<'a> {
     facing: Direction,
     slope: Slope,
     part: Part,
+    ticks: u64,
     marker: std::marker::PhantomData<&'a ()>,
 }
 struct ModBlockEntity {
@@ -176,6 +177,9 @@ impl BlockEntityDraw {
 }
 impl Game<'_> {
     fn native_draw_model(&self, _: &mut BlockEntityDraw, _: &str, _: u32) {}
+    fn visual_ticks(&self) -> u64 {
+        self.ticks
+    }
 }
 fn moving_model(
     _: &Game<'_>,
@@ -183,15 +187,9 @@ fn moving_model(
     model: &str,
     scroll: f32,
     _: bool,
-    moving: bool,
     _: Option<&str>,
 ) {
-    print!(
-        "{} {} {}",
-        model.strip_prefix("create:block/belt/").unwrap(),
-        u8::from(moving),
-        if moving { scroll } else { 0. }
-    );
+    print!("{} 1 {scroll}", model.strip_prefix("create:block/belt/").unwrap());
     for v in draw.poses.last().unwrap() {
         print!(" {v}");
     }
@@ -243,6 +241,7 @@ fn main() {
             ][v[1].parse::<usize>().unwrap()],
             part: [Part::Start, Part::Middle, Part::End, Part::Pulley]
                 [v[2].parse::<usize>().unwrap()],
+            ticks: v[4].parse().unwrap(),
             marker: std::marker::PhantomData,
         };
         let e = ModBlockEntity {
@@ -250,7 +249,7 @@ fn main() {
             nbt: v[3].parse().unwrap(),
         };
         let mut d = BlockEntityDraw {
-            game_time: v[4].parse().unwrap(),
+            game_time: g.ticks as i64 + 80_000,
             partial: v[5].parse().unwrap(),
             poses: vec![identity()],
         };

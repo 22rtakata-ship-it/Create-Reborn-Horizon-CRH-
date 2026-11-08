@@ -1959,11 +1959,10 @@ fn moving_model(
     model: &str,
     scroll: f32,
     diagonal: bool,
-    moving: bool,
     dye: Option<&str>,
 ) {
     let original = super::create_port::original_assets();
-    if dye.is_none() && !(moving && original) {
+    if dye.is_none() && !original {
         game.native_draw_model(draw, model, 0xFFFFFF);
         return;
     }
@@ -2029,15 +2028,13 @@ pub(super) fn render_bounds(
     }
 }
 
-// BeltRenderer uses Catnip AngleHelper.horizontalAngle, which negates the
-// vanilla Y angle on the X axis. Using Direction.toYRot here reverses the
-// slope of east/west partials and separates adjacent diagonal segments.
+// BeltVisual combines the vanilla yaw with its own XYZ rotations.
 fn render_yaw(facing: Direction) -> f32 {
     match facing {
         Direction::South => 0.0,
-        Direction::West => -90.0,
+        Direction::West => 90.0,
         Direction::North => 180.0,
-        Direction::East => -270.0,
+        Direction::East => 270.0,
         _ => 0.0,
     }
 }
@@ -2127,30 +2124,43 @@ pub(super) fn draw(
     }
     let diagonal = matches!(slope, Slope::Upward | Slope::Downward);
     let downward = slope == Slope::Downward;
+    let upward = slope == Slope::Upward;
     let sideways = slope == Slope::Sideways;
+    let vertical = slope == Slope::Vertical;
     let along_x = facing.axis() == Axis::X;
+    let along_z = facing.axis() == Axis::Z;
     let negative = facing.vector().iter().any(|v| *v < 0);
-    let mut start = part == Part::Start;
-    let mut end = part == Part::End;
-    if downward || slope == Slope::Vertical && !negative {
-        std::mem::swap(&mut start, &mut end);
-    }
+    let start = part == Part::Start;
+    let end = part == Part::End;
     let rpm = number(&entity.nbt, "Speed");
     let dye = dye_name(&entity.nbt);
     let time = draw.game_time as f32 + draw.partial;
+    let belt_time = game.visual_ticks() as f32 + draw.partial;
+    let mut speed = rpm;
+    if (negative ^ upward) ^ ((along_x && !diagonal) || (along_z && diagonal)) {
+        speed = -speed;
+    }
+    if (sideways && matches!(facing, Direction::South | Direction::West))
+        || (vertical && facing == Direction::East)
+    {
+        speed = -speed;
+    }
+    let scroll_speed = speed * (1.0 / (31.5 * 16.0));
+    let scroll_scale = if diagonal { 3.0 / 8.0 } else { 0.5 };
+    let rot_x = if !diagonal && slope != Slope::Horizontal { 90.0 } else { 0.0 }
+        + if downward { 180.0 } else { 0.0 }
+        + if sideways { 90.0 } else { 0.0 }
+        + if vertical && along_z { 180.0 } else { 0.0 };
+    let rot_y = render_yaw(facing)
+        + if (diagonal ^ along_x) && !downward { 180.0 } else { 0.0 }
+        + if sideways && along_z { 180.0 } else { 0.0 }
+        + if vertical && along_x { 90.0 } else { 0.0 };
+    let rot_z = if sideways { 90.0 } else { 0.0 }
+        + if vertical && along_x { 90.0 } else { 0.0 };
     draw.push();
-    let yaw = render_yaw(facing);
-    draw.rotate_about(
-        [0.0, 1.0, 0.0],
-        yaw + if slope == Slope::Upward { 180.0 } else { 0.0 } + if sideways { 270.0 } else { 0.0 },
-        [0.5; 3],
-    );
-    if sideways {
-        draw.rotate_about([0.0, 0.0, 1.0], 90.0, [0.5; 3]);
-    }
-    if !diagonal && slope != Slope::Horizontal {
-        draw.rotate_about([1.0, 0.0, 0.0], 90.0, [0.5; 3]);
-    }
+    draw.rotate_about([1.0, 0.0, 0.0], rot_x, [0.5; 3]);
+    draw.rotate_about([0.0, 1.0, 0.0], rot_y, [0.5; 3]);
+    draw.rotate_about([0.0, 0.0, 1.0], rot_z, [0.5; 3]);
     for bottom in [true, false] {
         let model = if diagonal {
             if start {
@@ -2175,23 +2185,15 @@ pub(super) fn draw(
         } else {
             "middle"
         };
-        let mut speed = rpm;
-        if diagonal && (downward ^ along_x)
-            || !sideways && !diagonal && along_x
-            || sideways && negative
-        {
-            speed = -speed;
-        }
-        let scroll = f64::from(speed * (time * if negative { -1.0 } else { 1.0 })) / (31.5 * 16.0)
-            + if bottom { 0.5 } else { 0.0 };
-        let scroll = (scroll - scroll.floor()) as f32 * if diagonal { 3.0 / 8.0 } else { 0.5 };
+        // The Flywheel shader samples the scrolling strip even at zero speed.
+        let scroll = scroll_speed * belt_time + if bottom { 0.5 } else { 0.0 };
+        let scroll = (scroll - scroll.floor()) * scroll_scale;
         moving_model(
             game,
             draw,
             &format!("create:block/belt/{model}"),
             scroll,
             diagonal,
-            rpm != 0.0,
             dye,
         );
         if diagonal {

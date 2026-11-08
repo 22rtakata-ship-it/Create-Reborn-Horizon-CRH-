@@ -48,6 +48,7 @@ integrated server thread. Captures use Minecraft's original framebuffer API.
 | `observe_ticks` | `{"ticks":180,"positions":[[0,64,0],[0,66,0]],"commands":["summon ..."]}` | Requires frozen, playing world; runs normal unfrozen simulation, records block/NBT state after each actual server tick, then freezes again. At most400 ticks,32 positions and16 bounded setup commands |
 | `capture` | `{"name":"x.png","frames":8}` | Original framebuffer PNG after frames; paths bounded to the isolated captures directory |
 | `ui` | `{}` | Actual Screen/widgets, original tooltip-provider components and font widths, motor board labels/value coordinates; live Outliner value-box entries, expiry, icon texels and original block-local pose matrices |
+| `deployer_actor_frames` | `{}` | Drain the bounded frame observations for the private moving Deployer fixture, including the actual Flywheel hand extension and actor context |
 | `particles` | `{"limit":128,"class_contains":"AirFlow","partial":1}` | Live engine counts; instance IDs; original positions, velocity, color, alpha, age/lifetime, sprite/UV, quad size and light; Catnip client/level animation ticks and render time |
 | `damage` | `{"ids":["create:fan_fire","create:fan_lava"]}` | Loaded original damage registry definitions and resolved tags |
 | `input` | `{"key":"use","down":true}` | Hold/release normal key mappings; use, attack, shift, inventory, jump, forward, back |

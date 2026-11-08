@@ -16,7 +16,7 @@ pub const CREATE_VERSION: &str = "6.0.10+mc1.21.1 (NeoForge)";
 pub const JAR_SHA256: &str = "ef87fe5709f1ba1f5b8bb20a2925b5afb4669e178fd6d8bf10c167759eefe37a";
 // Bump whenever the import catalog changes: the cache key pins the JAR, not
 // BLOCKS/ITEMS/PARTS, so an older valid cache lacks newly required resources.
-const SCHEMA: u32 = 47;
+const SCHEMA: u32 = 48;
 const MAX_JAR: u64 = 128 << 20;
 const MAX_FILE: u64 = 16 << 20;
 const MAX_TOTAL: usize = 64 << 20;
@@ -734,6 +734,7 @@ fn collect(bytes: Vec<u8>) -> io::Result<BTreeMap<String, Vec<u8>>> {
     reader.texture("create:gui/icons")?;
     reader.scrolling_block_texture("belt_scroll")?;
     reader.scrolling_block_texture("belt_diagonal_scroll")?;
+    reader.scrolling_block_texture("rope_pulley_coil_scroll")?;
     for dye in BELT_DYES {
         reader.scrolling_block_texture(&format!("belt/{dye}_scroll"))?;
         reader.scrolling_block_texture(&format!("belt/{dye}_diagonal_scroll"))?;

@@ -1,19 +1,24 @@
 // Copyright (c) The Create Team / The Creators of Create
 // Copyright (c) 2026 create-horizon contributors
 // SPDX-License-Identifier: MIT
-// Source AST bodies run unchanged. Recording contexts isolate uncolored belt
-// surfaces; pulley/item rendering and world lighting are separate checks.
+// Source AST bodies run unchanged. Recording contexts isolate belt surfaces.
 import java.io.*;
 import java.util.*;
 import java.util.function.Supplier;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
 import net.minecraft.core.Direction.AxisDirection;
+import net.minecraft.core.Vec3i;
+import net.minecraft.util.Mth;
 import net.createmod.catnip.math.AngleHelper;
 import org.joml.Matrix4f;
+import org.joml.Quaternionf;
 
 public class BeltRenderOracle {
- enum BeltSlope {HORIZONTAL, UPWARD, DOWNWARD, VERTICAL, SIDEWAYS}
+ enum BeltSlope {
+  HORIZONTAL, UPWARD, DOWNWARD, VERTICAL, SIDEWAYS;
+  boolean isDiagonal() {return this==UPWARD || this==DOWNWARD;}
+ }
  enum BeltPart {START, MIDDLE, END, PULLEY}
  enum DyeColor {WHITE}
  record Key<T>() {}
@@ -74,9 +79,53 @@ public class BeltRenderOracle {
  }
  static class KineticBlockEntityRenderer {static SuperByteBuffer standardKineticRotationTransform(SuperByteBuffer b,BeltBlockEntity e,int light){return b;}}
  static SpriteShiftEntry getSpriteShiftEntry(DyeColor color,boolean diagonal,boolean bottom){return new SpriteShiftEntry();}
+ static class ScrollInstance {
+  final Quaternionf rotation=new Quaternionf();
+  float speed,offset,scale;
+  ScrollInstance setSpriteShift(SpriteShiftEntry sprite, float u, float v){
+   scale=(sprite.getTarget().getV1()-sprite.getTarget().getV0())*v;return this;
+  }
+  ScrollInstance position(Vec3i ignored){return this;}
+  ScrollInstance rotation(Quaternionf q){rotation.set(q);return this;}
+  ScrollInstance speed(float u,float v){speed=v;return this;}
+  ScrollInstance offset(float u,float v){offset=v;return this;}
+  ScrollInstance colorRgb(int ignored){return this;}
+  ScrollInstance setChanged(){return this;}
+  void render(PartialModel model,float ticks){
+   // Scalar V component of Create's scrolling.vert, using its captured instance.
+   float phase=speed*ticks+offset;
+   float scroll=(phase-(float)Math.floor(phase))*scale;
+   var pose=new PoseStack();
+   pose.pose.translate(.5f,.5f,.5f).rotate(rotation).translate(-.5f,-.5f,-.5f);
+   var output=new SuperByteBuffer(model);
+   output.shiftUVScrolling(null,scroll).transform(pose).renderInto(new PoseStack(),new VertexConsumer());
+  }
+ }
+ static class RotatingInstance {static int colorFromBE(BeltBlockEntity ignored){return 0;}}
+ static class BeltVisual {
+  @@VISUAL_CONSTANTS@@
+  final BlockState blockState;
+  final BeltBlockEntity blockEntity;
+  BeltVisual(BeltBlockEntity be){blockEntity=be;blockState=be.getBlockState();}
+  Vec3i getVisualPosition(){return Vec3i.ZERO;}
+  ScrollInstance setup(ScrollInstance key,boolean bottom,SpriteShiftEntry spriteShift) @@VISUAL_SETUP@@
+  void render(float ticks){
+   boolean diagonal=blockState.slope.isDiagonal();
+   for(boolean bottom : Iterate.trueAndFalse){
+    var partial=BeltRenderer.getBeltPartial(diagonal,blockState.part==BeltPart.START,blockState.part==BeltPart.END,bottom);
+    var sprite=BeltRenderer.getSpriteShiftEntry(blockEntity.color.orElse(null),diagonal,bottom);
+    setup(new ScrollInstance(),bottom,sprite).render(partial,ticks);
+    if(diagonal)break;
+   }
+  }
+ }
+ static class BeltRenderer {
+  static SpriteShiftEntry getSpriteShiftEntry(DyeColor color,boolean diagonal,boolean bottom){return BeltRenderOracle.getSpriteShiftEntry(color,diagonal,bottom);}
+  static PartialModel getBeltPartial(boolean diagonal,boolean start,boolean end,boolean bottom) @@PARTIAL@@
+ }
  void renderItems(BeltBlockEntity e,float partial,PoseStack pose,MultiBufferSource out,int light,int overlay){}
  void renderSafe(BeltBlockEntity be,float partialTicks,PoseStack ms,MultiBufferSource buffer,int light,int overlay) @@RENDER@@
- static PartialModel getBeltPartial(boolean diagonal,boolean start,boolean end,boolean bottom) @@PARTIAL@@
+ static PartialModel getBeltPartial(boolean diagonal,boolean start,boolean end,boolean bottom){return BeltRenderer.getBeltPartial(diagonal,start,end,bottom);}
  static boolean motorSideActive(BlockState state,Direction direction) @@MOTOR_SIDE@@
  public static void main(String[] args)throws Exception {
   var reader=new BufferedReader(new InputStreamReader(System.in));var renderer=new BeltRenderOracle();
@@ -92,7 +141,10 @@ public class BeltRenderOracle {
    var v=line.split(" ");var be=new BeltBlockEntity();be.state=new BlockState();
    be.state.direction=directions[Integer.parseInt(v[0])];be.state.slope=BeltSlope.values()[Integer.parseInt(v[1])];be.state.part=BeltPart.values()[Integer.parseInt(v[2])];
    be.speed=Float.parseFloat(v[3]);AnimationTickHolder.time=Long.parseLong(v[4])+Float.parseFloat(v[5]);
-   renderer.renderSafe(be,Float.parseFloat(v[5]),new PoseStack(),new MultiBufferSource(),0,0);
+   if(args.length>0 && args[0].equals("fallback"))
+    renderer.renderSafe(be,Float.parseFloat(v[5]),new PoseStack(),new MultiBufferSource(),0,0);
+   else
+    new BeltVisual(be).render(AnimationTickHolder.time);
    System.out.println(";");
   }
  }

@@ -9,7 +9,7 @@ use super::create_port_block_entity_revision::EntityRevision as _;
 use super::Game;
 use crate::containers::{BlockEntity, ModBlockEntity, ModRevision};
 use create_engine::{
-    kinetics::{self, Kind, Network, Node, Pos},
+    kinetics::{self, Axis, Kind, Network, Node, Pos, Status},
     transport::SessionCache,
 };
 use std::{
@@ -87,6 +87,7 @@ const MAX_PENDING_TRANSMISSIONS: usize = 2048;
 struct Pending {
     positions: BTreeSet<Pos>,
     scan_loaded: bool,
+    shaft_cuts: BTreeMap<Pos, Axis>,
 }
 thread_local! {
     static CACHE: RefCell<Cache> = RefCell::new(Cache::default());
@@ -358,6 +359,17 @@ pub(super) fn transmission_changed(dimension: &str, pos: Pos) {
     });
 }
 
+pub(super) fn shaft_cut(dimension: &str, pos: Pos, axis: Axis) {
+    CHANGED.with(|cell| {
+        let mut changes = cell.borrow_mut();
+        let cuts = &mut changes.entry(dimension.to_owned()).or_default().shaft_cuts;
+        // The regular kinetic turn still handles bulk changes above the event budget.
+        if cuts.len() < MAX_PENDING_TRANSMISSIONS {
+            cuts.insert(pos, axis);
+        }
+    });
+}
+
 pub(super) fn transmission_block(block: &str) -> bool {
     matches!(
         block,
@@ -402,6 +414,60 @@ fn publish_transmission(game: &mut Game<'_>, pos: Pos) {
         publish(game, &other, pos);
     }
     game.native_block_entity_sync(pos);
+}
+
+fn complete_idle_component(game: &Game<'_>, network: &Network) -> bool {
+    network.status == Status::Idle
+        && network.vertices.iter().all(|&([x, y, z], _)| {
+            let Some(BlockEntity::Mod(entity)) = game.world.block_entities.get(&(x, y, z)) else {
+                return false;
+            };
+            // An open clutch can still carry an independent drive on the
+            // other half. Its shared BE cannot be updated from this graph.
+            !entity.id.is_empty()
+                && !(transmission_block(&entity.id)
+                    && matches!(
+                        super::create_port::node(game, [x, y, z]),
+                        Some(Node {
+                            kind: Kind::Clutch { powered: true },
+                            ..
+                        })
+                    ))
+                && game.world.loaded(x - 1, z - 1)
+                && game.world.loaded(x - 1, z + 1)
+                && game.world.loaded(x + 1, z - 1)
+                && game.world.loaded(x + 1, z + 1)
+        })
+}
+
+fn refresh_shaft_cuts(game: &mut Game<'_>, cuts: BTreeMap<Pos, Axis>) {
+    for (pos, axis) in cuts {
+        if game.native_block(pos) != "minecraft:air" {
+            continue;
+        }
+        for sign in [-1, 1] {
+            let mut face = [0; 3];
+            face[axis.index()] = sign;
+            let next = std::array::from_fn(|i| pos[i] + face[i]);
+            let Some(node) = super::create_port::node(game, next) else {
+                continue;
+            };
+            if !node.shaft_port(face.map(|delta| -delta))
+                || matches!(node.kind, Kind::Clutch { powered: true })
+                || !matches!(game.world.block_entities.get(&(next[0], next[1], next[2])),
+                    Some(BlockEntity::Mod(entity)) if !entity.id.is_empty() && theoretical(entity) != 0.0)
+            {
+                continue;
+            }
+            let network = network(game, node, 0);
+            // RotationPropagator.handleRemoved clears the dependent branch in
+            // this action. The loaded solver can prove loss of drive when the
+            // whole branch and its connection frontier are resident.
+            if complete_idle_component(game, &network) {
+                publish(game, &network, pos);
+            }
+        }
+    }
 }
 
 pub(super) fn refresh_transmissions(game: &mut Game<'_>) {
@@ -460,6 +526,7 @@ pub(super) fn refresh_transmissions(game: &mut Game<'_>) {
         invalidate();
         publish_transmission(game, pos);
     }
+    refresh_shaft_cuts(game, pending.shaft_cuts);
 }
 
 pub(super) fn begin_transmission_tick(game: &mut Game<'_>) {

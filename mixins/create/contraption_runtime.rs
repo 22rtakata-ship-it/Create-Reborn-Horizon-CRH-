@@ -522,9 +522,8 @@ impl CaptureView for Capture<'_, '_> {
             if !empty_tool
                 || entity.items.iter().any(Option::is_some)
                 || super::create_port::integer(&entity.nbt, "Progress") != 0
-                || entity.nbt.keys().any(|key| {
-                    !matches!(
-                        key.to_string().as_deref(),
+                || entity.nbt.iter().any(|(key, tag)| {
+                    match key.to_string().as_deref() {
                         Ok("Progress"
                             | "NextTick"
                             | "Breaking"
@@ -532,8 +531,12 @@ impl CaptureView for Capture<'_, '_> {
                             | "Capacity"
                             | "Stress"
                             | "NetworkStatus"
-                            | "create_horizon")
-                    )
+                            | "create_horizon") => false,
+                        Ok(key) if state.name == "create:mechanical_saw" => {
+                            !super::create_port_saw_processing::idle_capture_field(key, tag)
+                        }
+                        _ => true,
+                    }
                 })
             {
                 return None;

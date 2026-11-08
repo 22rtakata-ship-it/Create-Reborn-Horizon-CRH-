@@ -2,8 +2,8 @@
 // Copyright (c) 2026 create-horizon contributors
 // SPDX-License-Identifier: MIT
 // Create 6.0.10 BasinBlockEntity/BasinInventory/BasinRenderer adapter.
-// Heat-aware, unfiltered, downward basin; two canonical water/lava tank halves.
-// Unknown tanks, filters and spouts remain unsupported; never discard them.
+// Heat-aware downward basin; two canonical water/lava tank halves.
+// Unknown tank data, complex filters and side spouts remain opaque.
 use super::create_port_block_entity_revision::EntityRevision as _;
 use super::{
     Game, GameLevel, create_port_basin_recipes::item_drain, create_port_fluid_codec as fluids,
@@ -22,7 +22,7 @@ use horizon_core::random::{LegacyRandom, RandomSource};
 use horizon_world::nbt::{Compound, Tag};
 use std::{cell::RefCell, collections::BTreeMap};
 
-const ID: &str = "create:basin";
+pub(super) const ID: &str = "create:basin";
 type Pos = [i32; 3];
 
 #[derive(Clone, Debug)]
@@ -237,8 +237,8 @@ pub(super) fn unsupported(
     if game.native_block_property(pos, "facing").as_deref() != Some("down") {
         return Some("basin side spouts are not implemented");
     }
-    if nonempty(entity.nbt.get(&"Filter".into())) {
-        return Some("basin recipe filters are not implemented");
+    if super::create_port_basin_filter::read(game, entity).is_none() {
+        return Some("basin recipe filter data is not supported");
     }
     for key in ["InputTanks", "OutputTanks"] {
         if let Err(fluids::Unsupported(reason)) = read_tanks(entity, key) {
@@ -2597,6 +2597,7 @@ pub(super) fn draw(
     if entity.id != ID {
         return false;
     }
+    super::create_port_basin_filter::draw(game, pos, entity, draw);
     // Retained motion belongs to this live BE, including ordinary NBT changes.
     MOTION.with(|cache| {
         let mut cache = cache.borrow_mut();

@@ -13,7 +13,7 @@ use super::{
     native_block_entity_draw::BlockEntityDraw,
     native_world_draw::NativeWorldDraw,
 };
-use crate::containers::ModBlockEntity;
+use crate::containers::{BlockEntity, ModBlockEntity};
 use create_engine::{
     contraption::{
         CaptureView, Cell as PayloadCell,
@@ -25,7 +25,7 @@ use create_engine::{
 };
 use glam::DVec3;
 use horizon_client_render::create_contraption_scene::{
-    MAX_BLOCKS, MAX_RECORDS, Record, Stroke, StrokeKind,
+    MAX_BLOCKS, MAX_RECORDS, Record, Stroke, StrokeKind, read,
 };
 use horizon_world::{chunk::BlockState, nbt::Tag, registry::BlockStateId};
 use std::collections::BTreeSet;
@@ -36,6 +36,9 @@ const MAGNET: &str = "create:pulley_magnet";
 const RUNNING: &str = "Running";
 const LAST_SPEED: &str = "create_horizon:PulleyPower";
 const REQUEST: &str = "AssembleNextTick";
+const COIL_MODEL: &str = "create:block/rope_pulley/rope_coil";
+const COIL_SPRITE: &str = "create:block/rope_pulley_coil";
+const COIL_SCROLL_SPRITE: &str = "create:gui/scrolling/rope_pulley_coil_scroll";
 
 fn segment(block: &BlockState) -> Option<Segment> {
     let part = match block.name.as_str() {
@@ -427,13 +430,72 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity, r
     false
 }
 
+fn coil_scroll(offset: f32, strip_height: f32) -> f32 {
+    // RopePulleyVisual uses ScrollInstance's half-height scale with offsetV=-offset.
+    let winding = -offset;
+    (winding - winding.floor()) * (strip_height * 0.5)
+}
+
+fn draw_coil(game: &Game<'_>, pos: Pos, draw: &mut BlockEntityDraw, offset: f32) {
+    draw.push();
+    if game.native_block_property(pos, "axis").as_deref() == Some("x") {
+        draw.rotate_about([0.0, 1.0, 0.0], 90.0, [0.5; 3]);
+    }
+    let start = draw.vertices_mut().len();
+    game.native_draw_model(draw, COIL_MODEL, 0xFFFFFF);
+    let sprites = &game.gui.atlas.sprites;
+    if offset.is_finite()
+        && let (Some(original), Some(strip)) =
+            (sprites.get(COIL_SPRITE), sprites.get(COIL_SCROLL_SPRITE))
+    {
+        let scroll = coil_scroll(offset, strip.v1 - strip.v0);
+        // Shift the original atlas UVs without rebaking the rotated model faces.
+        for quad in draw.vertices_mut()[start..].chunks_exact_mut(4) {
+            if quad.iter().all(|vertex| {
+                (original.u0..=original.u1).contains(&vertex.uv[0])
+                    && (original.v0..=original.v1).contains(&vertex.uv[1])
+            }) {
+                for vertex in quad {
+                    vertex.uv[0] = strip.u0 + (vertex.uv[0] - original.u0);
+                    vertex.uv[1] = strip.v0 + (vertex.uv[1] - original.v0) + scroll;
+                }
+            }
+        }
+    }
+    draw.pop();
+}
+
+fn draw_at(
+    game: &Game<'_>,
+    draw: &mut NativeWorldDraw,
+    [x, y, z]: Pos,
+    distance: f32,
+    render: impl FnOnce(&mut BlockEntityDraw),
+) {
+    use horizon_client::block_entity_render::vertex_light;
+    let position = [
+        f64::from(x),
+        f64::from(y) - f64::from(distance),
+        f64::from(z),
+    ];
+    if DVec3::from_array(position).distance_squared(DVec3::from_array(draw.camera)) > 64.0 * 64.0 {
+        return;
+    }
+    let light = draw.light;
+    draw.light = vertex_light(game.world.light(x, y.saturating_sub(distance as i32), z));
+    draw.push();
+    draw.translate_world(position);
+    render(draw);
+    draw.pop();
+    draw.light = light;
+}
+
 pub(super) fn draw_line(
     game: &Game<'_>,
     draw: &mut NativeWorldDraw,
     record: &Record,
     payload_offset: f32,
 ) {
-    use horizon_client::block_entity_render::vertex_light;
     let Some(stroke) = record.stroke.filter(|s| s.kind == StrokeKind::RopePulley) else {
         return;
     };
@@ -444,25 +506,20 @@ pub(super) fn draw_line(
         payload_offset
     };
     let [x, y, z] = record.controller;
-    let camera = DVec3::from_array(draw.camera);
-    let mut draw_at = |distance: f32, model: &str| {
-        let position = [
-            f64::from(x),
-            f64::from(y) - f64::from(distance),
-            f64::from(z),
-        ];
-        if DVec3::from_array(position).distance_squared(camera) > 64.0 * 64.0 {
-            return;
-        }
-        let light = draw.light;
-        draw.light = vertex_light(game.world.light(x, y.saturating_sub(distance as i32), z));
-        draw.push();
-        draw.translate_world(position);
-        game.native_draw_model(draw, model, 0xFFFFFF);
-        draw.pop();
-        draw.light = light;
+    if super::create_port::original_assets()
+        && matches!(game.world.block_entities.get(&(x, y, z)), Some(BlockEntity::Mod(entity))
+            if entity.nbt.get(&RUNNING.into()) == Some(&Tag::Byte(1)))
+    {
+        draw_at(game, draw, record.controller, 0.0, |draw| {
+            draw_coil(game, record.controller, draw, offset);
+        });
+    }
+    let mut draw_part = |distance: f32, model: &str| {
+        draw_at(game, draw, record.controller, distance, |draw| {
+            game.native_draw_model(draw, model, 0xFFFFFF);
+        });
     };
-    draw_at(
+    draw_part(
         offset,
         if offset > 0.25 {
             "create:block/rope_pulley/pulley_magnet"
@@ -472,7 +529,7 @@ pub(super) fn draw_line(
     );
     let fraction = offset.fract();
     if offset > 0.75 && !(0.25..=0.75).contains(&fraction) {
-        draw_at(
+        draw_part(
             if fraction > 0.75 {
                 fraction - 1.0
             } else {
@@ -482,7 +539,7 @@ pub(super) fn draw_line(
         );
     }
     for segment in 0..(offset - 1.25).ceil().max(0.0) as u32 {
-        draw_at(
+        draw_part(
             offset - segment as f32 - 1.0,
             "create:block/rope_pulley/rope",
         );
@@ -495,14 +552,22 @@ pub(super) fn draw_controller(
     entity: &ModBlockEntity,
     draw: &mut BlockEntityDraw,
 ) {
-    draw.push();
-    if game.native_block_property(pos, "axis").as_deref() == Some("x") {
-        draw.rotate_about([0.0, 1.0, 0.0], 90.0, [0.5; 3]);
+    let running = entity.nbt.get(&RUNNING.into()) == Some(&Tag::Byte(1));
+    let offset = super::create_port::number(&entity.nbt, "Offset");
+    let [x, z] = column(pos);
+    let draws_with_line = running
+        && super::create_port::original_assets()
+        && game.world.chunks.get(&(x, z)).is_some_and(|chunk| {
+            read(chunk).is_ok_and(|records| {
+                records.iter().any(|record| {
+                    record.controller == pos && record.stroke_kind() == Some(StrokeKind::RopePulley)
+                })
+            })
+        });
+    if !draws_with_line {
+        draw_coil(game, pos, draw, offset);
     }
-    game.native_draw_model(draw, "create:block/rope_pulley/rope_coil", 0xFFFFFF);
-    draw.pop();
-    if entity.nbt.get(&RUNNING.into()) != Some(&Tag::Byte(1)) {
-        let offset = super::create_port::number(&entity.nbt, "Offset");
+    if !running {
         if offset == 0.0 {
             game.native_draw_model(draw, "create:block/rope_pulley/rope_half_magnet", 0xFFFFFF);
         } else if offset > 0.75 && !(0.25..=0.75).contains(&offset.fract()) {
@@ -517,5 +582,25 @@ pub(super) fn draw_controller(
             game.native_draw_model(draw, "create:block/rope_pulley/rope_half", 0xFFFFFF);
             draw.pop();
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::coil_scroll;
+
+    #[test]
+    fn flywheel_coil_scroll_wraps_in_half_the_strip() {
+        for (offset, rows) in [
+            (0.0, 0.0),
+            (0.25, 12.0),
+            (0.5, 8.0),
+            (0.75, 4.0),
+            (1.0, 0.0),
+        ] {
+            assert_eq!(coil_scroll(offset, 32.0), rows);
+            assert_eq!(coil_scroll(offset + 127.0, 32.0), rows);
+        }
+        assert_eq!(coil_scroll(-0.25, 32.0), 4.0);
     }
 }

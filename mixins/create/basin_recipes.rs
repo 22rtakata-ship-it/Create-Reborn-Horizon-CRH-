@@ -845,6 +845,25 @@ pub(super) fn matching(
     basin: &mut basin::Basin,
     recipe: &Recipe,
 ) -> bool {
+    let Some(filter) = super::create_port_basin_filter::current(game, pos) else {
+        return false;
+    };
+    if let Some(filter) = filter {
+        // BasinRecipe.match checks the declared first item, or the first
+        // fluid for a fluid-only recipe, before simulation rolls any results.
+        let accepted = if let Some(result) = recipe.core.outputs.first() {
+            filter.item == result.stack.key.0.item
+        } else if let Some(result) = recipe.core.fluid_outputs.first() {
+            result.key.components.is_empty()
+                && game.native_item_fluid_drain(&filter, 1000)
+                    .is_some_and(|(fluid, _, _)| fluid == result.key.id)
+        } else {
+            false
+        };
+        if !accepted {
+            return false;
+        }
+    }
     if recipe.core.kind == rules::RecipeKind::Basin {
         basin.heat = basin::heat(game, pos);
     }

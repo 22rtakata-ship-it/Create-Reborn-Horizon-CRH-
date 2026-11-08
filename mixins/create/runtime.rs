@@ -506,6 +506,7 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3], ca
     }
     if crafter::right_click(game, pos, face)
         || super::create_port_saw_filter::right_click(game, pos)
+        || super::create_port_basin_filter::right_click(game, pos)
         || super::create_port_chute::funnel::right_click(game, pos, face)
         || super::create_port_contraption::right_click(game, pos)
         || super::create_port_piston::right_click(game, pos, face)

@@ -192,6 +192,7 @@ public final class ReferenceBridge {
             case "/state" -> state();
             case "/ui" -> await(client(Observations::ui));
             case "/burner_models" -> await(client(BurnerRenderObservation::models));
+            case "/deployer_actor_frames" -> DeployerActorObservation.snapshot();
             case "/particles" -> await(client(() -> Observations.particles(body)));
             case "/damage" -> await(server().submit(() -> Observations.damage(server(), body)));
             case "/entities" -> await(server().submit(() -> Observations.entities(player(server()).serverLevel(), body)));

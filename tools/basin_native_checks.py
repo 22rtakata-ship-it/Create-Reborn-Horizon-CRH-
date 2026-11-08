@@ -50,7 +50,7 @@ def run(call, graphics=False, log=None, scratch=None, *, start_at=None):
     assert call('state')['world'] == 'CreateParity06', 'Only the harness disposable world is authorized'
     x, y, z = 384, 64, 16
     report = {'passed': False, 'checks': [], 'images': [], 'source': PINS['create_revision'],
-              'unsupported': ['unknown/malformed fluid tanks', 'heated recipes', 'filters', 'side spouts',
+              'unsupported': ['unknown/malformed fluid tanks', 'heated recipes', 'complex filters', 'side spouts',
                               'falling-item intake until entity-sensitive contact hook is connected']}
     report['start_at'] = start_at
     report['timing_scope'] = 'bounded live integration; exact normal-tick timing is checked separately by basin_timing_checks.py'
@@ -261,7 +261,8 @@ def run(call, graphics=False, log=None, scratch=None, *, start_at=None):
     passed('source shapeless dough recipe consumes bucket/flour units and emits dough then one ordinary bucket remainder in source order')
 
     for name, patch, retained in [
-        ('filter', '{Filter:{id:"minecraft:andesite",count:1}}', r'Filter:\s*\{(?=[^{}]*\bid:\s*"minecraft:andesite")(?=[^{}]*\bcount:\s*1\b)[^{}]*\}'),
+        ('filter', '{Filter:{id:"minecraft:andesite",count:1,Unported:1b}}',
+         r'Filter:\s*\{(?=[^{}]*\bid:\s*"minecraft:andesite")(?=[^{}]*\bUnported:\s*1b)[^{}]*\}'),
         ('tank', '{InputTanks:[{TankContent:{id:"minecraft:water",amount:1000}},{TankContent:{}}]}', r'\bamount:\s*1000\b'),
         ('spout', '{DisabledSpoutput:["north"]}', r'DisabledSpoutput:\s*\["north"\]'),
     ]:

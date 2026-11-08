@@ -109,8 +109,8 @@ with the systems they depend on.
   immediate detach, next-tick reattachment and short pulses in Java and
   Horizon. [Transmission review](reviews/transmission.md)
 - [x] Clutch and Gearshift across two loaded columns, including redstone,
-  shaft replacement and a native restart. Direct removal of a shaft still
-  clears the far-side speed one tick later than Java.
+  immediate shaft detach, replacement and a native restart in the tested
+  loaded networks.
 - [x] Flywheel with shaft connections on three axes, original item and wheel
   models from the local JAR, and separate acceleration and coast animation.
 - [ ] Clutch/Gearshift and Hand Crank in all network/animation edge cases.
@@ -232,7 +232,9 @@ with the systems they depend on.
 - [ ] Authentic cold-loaded Java/network traces and full propagation-order coverage.
 - [x] Press client foundation: packets, pause/interpolation, three modes and
   item-particle order checked by oracles and actual Game tests.
-- [ ] Complete Basin/Mixer: filters, side outputs, other compacting recipes,
+- [x] Ordinary Basin recipe output filter. An active recipe completes after
+  the sample changes, and the next one is selected using the new sample.
+- [ ] Complete Basin/Mixer: special filters, side outputs, other compacting recipes,
   other fluids/heated recipes and network scenarios.
 - [x] Downward Crushing Wheels with direct Chute feed, cobblestone and gravel,
   original processing state and cold restart comparisons.
@@ -392,6 +394,7 @@ with the systems they depend on.
   checked by wheat harvest and Saw output through a portable dock.
 - [x] Saw and Drill stall timing on a Mechanical Bearing, with cutting
   progress resumed after a cold restart.
+- [x] Mounted Deployer hand and pole oscillation during a bearing stall.
 - [ ] Full actor tick ordering and saved movement contexts across all drivers.
 - [x] Moving Plough tilling, snow clearing and protection of farmland crops.
 - [x] Moving Plough impulses on ordinary living mobs, checked for overlap,

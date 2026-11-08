@@ -422,6 +422,7 @@ fn target(game: &Game<'_>) -> Option<Plan> {
             super::create_port_drill::SAW => {
                 super::create_port_saw_filter::filter_display(game, &hit)
             }
+            super::create_port_basin::ID => super::create_port_basin_filter::display(game, &hit),
             _ => super::create_port_chute::filter_display(game, &hit, &block),
         }?)
     } else {

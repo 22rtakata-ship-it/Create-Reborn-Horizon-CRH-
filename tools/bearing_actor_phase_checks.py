@@ -5,6 +5,7 @@
 import argparse
 import json
 from pathlib import Path
+import shutil
 import tempfile
 
 from actor_native_checks import matched
@@ -106,8 +107,25 @@ def native(args):
                      target=AIR if matched(rows[2 * tick + 1]) else target.partition('[')[0])
                 for tick in range(TICKS)
             ]
+        # An empty ordinary inventory is recreated on landing. A configured
+        # filter still requires a saved actor payload and must stay in place.
+        batch = Batch()
+        batch.load(PIVOT)
+        setup(batch.command, *SCENES['saw'])
+        saw = (PIVOT[0] + 1, PIVOT[1] + 1, PIVOT[2])
+        batch.command(f'data merge block {xyz(saw)} {{Filter:{{id:"minecraft:oak_planks",count:1}}}}')
+        batch.tick(3)
+        batch.put(MOTOR, motor())
+        batch.tick(20)
+        batch.expect(saw, 'create:mechanical_saw')
+        batch.data(saw)
+        placed, preserved = batch.run(session, 'filtered-saw-refused')
+        assert matched(placed) and 'minecraft:oak_planks' in preserved, (placed, preserved)
+        report['filtered_saw_preserved'] = True
     finally:
         session.control_temp.cleanup()
+        for folder in (session.resources, session.scratch / '.horizon-cache', session.scratch / 'horizon-mods'):
+            shutil.rmtree(folder, ignore_errors=True)
     return session.scratch, report
 
 

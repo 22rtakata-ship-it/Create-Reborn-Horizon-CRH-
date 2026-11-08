@@ -200,7 +200,16 @@ pub(super) fn draw(game: &Game<'_>, pos: Pos, entity: &ModBlockEntity, draw: &mu
     else {
         return;
     };
-    let rendered = game.resolve_item(&item, DisplayContext::Fixed, None, 0);
+    draw.push();
+    draw.translate(slot.center);
+    draw.rotate_about([0.0, 1.0, 0.0], slot.yaw, [0.0; 3]);
+    draw.rotate_about([1.0, 0.0, 0.0], 90.0, [0.0; 3]);
+    draw_sample(game, draw, &item);
+    draw.pop();
+}
+
+pub(super) fn draw_sample(game: &Game<'_>, draw: &mut BlockEntityDraw, item: &ItemStack) {
+    let rendered = game.resolve_item(item, DisplayContext::Fixed, None, 0);
     if rendered.is_empty() {
         return;
     }
@@ -209,14 +218,9 @@ pub(super) fn draw(game: &Game<'_>, pos: Pos, entity: &ModBlockEntity, draw: &mu
     let solid = rendered.uses_block_light();
     let scale = 0.5 * ((if solid { 1.0 } else { 0.5 }) + 1.0 / 64.0);
     let z = (if solid { 0.0 } else { -0.15 }) + custom_depth(game, &item.item);
-    draw.push();
-    draw.translate(slot.center);
-    draw.rotate_about([0.0, 1.0, 0.0], slot.yaw, [0.0; 3]);
-    draw.rotate_about([1.0, 0.0, 0.0], 90.0, [0.0; 3]);
     draw.scale([scale; 3]);
     draw.translate([0.0, 0.0, z]);
     game.submit_item_world(&rendered, draw.pose(), draw.light, draw.vertices_mut());
-    draw.pop();
 }
 
 #[cfg(test)]

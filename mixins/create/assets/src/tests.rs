@@ -71,6 +71,7 @@ fn fixture(change: impl FnOnce(&mut BTreeMap<String, Vec<u8>>)) -> Vec<u8> {
         "gui/icons",
         "block/belt_scroll",
         "block/belt_diagonal_scroll",
+        "block/rope_pulley_coil_scroll",
         "block/belt/andesite_belt_casing",
         "block/belt/brass_belt_casing",
         "block/andesite_casing",
@@ -162,12 +163,14 @@ fn imports_every_locale_byte_for_byte() {
 }
 
 #[test]
-fn belt_scroll_strips_are_copied_verbatim_to_the_uncropped_atlas_path() {
+fn scroll_strips_are_copied_verbatim_to_the_uncropped_atlas_path() {
     let mut strips = BTreeMap::new();
     let bytes = fixture(|files| {
         for (path, bytes) in files.iter_mut() {
             if let Some(name) = path.strip_prefix("assets/create/textures/block/")
-                && (name.starts_with("belt/") || name.starts_with("belt_"))
+                && (name.starts_with("belt/")
+                    || name.starts_with("belt_")
+                    || name == "rope_pulley_coil_scroll.png")
                 && name.ends_with("_scroll.png")
             {
                 bytes.extend_from_slice(name.as_bytes());
@@ -175,7 +178,7 @@ fn belt_scroll_strips_are_copied_verbatim_to_the_uncropped_atlas_path() {
             }
         }
     });
-    assert_eq!(strips.len(), 2 + 2 * BELT_DYES.len());
+    assert_eq!(strips.len(), 3 + 2 * BELT_DYES.len());
     let files = collect(bytes).unwrap();
     for (name, bytes) in strips {
         assert_eq!(
