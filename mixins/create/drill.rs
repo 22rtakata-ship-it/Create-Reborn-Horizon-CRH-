@@ -3,13 +3,15 @@
 // SPDX-License-Identifier: MIT
 // Stationary DrillBlockEntity and BlockBreakingKineticBlockEntity adapter.
 use super::{Game, native_block_entity_draw::BlockEntityDraw};
-use crate::containers::ModBlockEntity;
+use crate::containers::{BlockEntity, HOPPER_SLOTS, ModBlockEntity};
 use create_engine::{
     drilling::{Action, DrillCycle},
     placement::Direction,
 };
 use horizon_protocol::packets::play::{self, Clientbound};
-use horizon_world::nbt::Tag;
+use horizon_world::{
+    fluid::FluidKind, loot::with_native_loot_place, nbt::Tag, registry::BlockStateId,
+};
 use std::{
     cell::RefCell,
     collections::BTreeMap,
@@ -181,6 +183,76 @@ fn crack(game: &mut Game<'_>, breaker: i32, target: [i32; 3], progress: i32) {
     }
 }
 
+/// The vanilla water/lava and hopper branch of DrillBlockEntity.optimiseCobbleGen.
+fn cobble_into_hopper(game: &mut Game<'_>, target: [i32; 3], state: BlockStateId) -> bool {
+    let registry = game.pack.assets.registry;
+    if registry.default_state("minecraft:cobblestone") != Some(state) {
+        return false;
+    }
+    let [x, y, z] = target;
+    let below = [x, y - 1, z];
+    let hopper = (x, y - 1, z);
+    if game.native_block(below) != "minecraft:hopper"
+        || !matches!(game.world.block_entities.get(&hopper), Some(BlockEntity::Chest(slots)) if slots.len() == HOPPER_SLOTS)
+    {
+        return false;
+    }
+    // CobbleGenOptimisation supplies hypothetical flowing lava from any
+    // neighbouring lava state, then looks for water on a horizontal face.
+    let mut lava = false;
+    let mut water = false;
+    for [dx, dy, dz] in NEIGHBORS {
+        let neighbor = [x + dx, y + dy, z + dz];
+        if !super::create_port_contraption::resident(game, neighbor) {
+            return false;
+        }
+        let state = super::create_port_contraption::state(game, neighbor);
+        let fluid = game.res.behaviours().fluid_kind(state);
+        lava |= fluid.same_family(FluidKind::Lava);
+        water |= dy == 0 && fluid.same_family(FluidKind::Water);
+    }
+    if !lava || !water {
+        return false;
+    }
+
+    // Java rolls Block.getDrops without destroying the block or applying the
+    // ordinary block-drops gamerule. The collector discards any remainder.
+    let at = target.map(|coordinate| f64::from(coordinate) + 0.5);
+    let loot = game.loot_place_at(at, None);
+    let drops = with_native_loot_place(loot, || {
+        world_items!(game).block_drops_exploded(
+            registry,
+            state,
+            None,
+            &[],
+            &mut game.world.random,
+            Some((&mut game.rand_sequences, game.level.seed)),
+            None,
+            false,
+        )
+    });
+    for stack in drops {
+        let limit = super::create_port::stack_maximum(game, &stack);
+        let Some(BlockEntity::Chest(slots)) = game.world.block_entities.get_mut(&hopper) else {
+            break;
+        };
+        if slots.iter().all(Option::is_none) {
+            // VanillaHopperItemHandler gives an empty hopper its transfer
+            // cooldown. The standard insertion path already does that.
+            let _ = game.native_insert_item(below, horizon_core::geometry::Direction::Up, stack);
+        } else {
+            // NeoForge's insertItemStacked merges before taking an empty slot.
+            let count = stack.count;
+            let remainder = super::create_port_inventory::insert(slots, stack, limit);
+            if remainder.map_or(0, |stack| stack.count) < count {
+                game.container_changed(hopper);
+            }
+        }
+    }
+    game.level_event_at(2001, target, state.0 as i32);
+    true
+}
+
 /// Called after the network has written effective RPM, including overstress.
 pub(super) fn tick(
     game: &mut Game<'_>,
@@ -278,7 +350,7 @@ pub(super) fn tick(
         Action::Break => {
             if is_saw {
                 super::create_port_contraption_actors::finish_stationary_saw(game, pos, target);
-            } else {
+            } else if !cobble_into_hopper(game, target, state_id) {
                 let at =
                     super::create_port_contraption_actors::stationary_drop_origin(game, target);
                 if let Some(drops) = game.native_machine_destroy_block(target, None, true) {
