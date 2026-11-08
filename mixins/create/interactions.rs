@@ -149,6 +149,9 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3]) ->
         .held()
         .is_some_and(|s| s.item.as_ref() == "create:wrench");
     if wrench {
+        if block == super::create_port_saw_processing::crafter::BLOCK && !game.native_sneaking() {
+            return false;
+        }
         if encased_cog_size(&block).is_some() {
             return wrench_cog(game, pos, face);
         }
@@ -221,6 +224,10 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3]) ->
             if block.ends_with("encased_shaft") {
                 switch(game, pos, "create:shaft");
             } else {
+                use super::create_port_saw_processing::crafter;
+                let links = (block == crafter::BLOCK)
+                    .then(|| crafter::removal_links(game, pos))
+                    .flatten();
                 let contents = game
                     .native_with_mod_block_entity(pos, |e| {
                         e.items
@@ -230,6 +237,9 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3]) ->
                     })
                     .unwrap_or_default();
                 if switch(game, pos, "minecraft:air") {
+                    if let Some(links) = links {
+                        crafter::write_inputs(game, links);
+                    }
                     for stack in contents {
                         give(game, stack, pos);
                     }

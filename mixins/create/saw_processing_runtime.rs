@@ -37,18 +37,28 @@ pub(super) mod crafter {
         kinetics::Axis,
         placement::Direction,
     };
-    use horizon_core::random::RandomSource;
+    use horizon_core::{
+        geometry::{ShapeOp, Vec3, VoxelShape, traverse_blocks},
+        random::RandomSource,
+    };
     use horizon_items::item_nbt::{item_from_nbt, item_to_nbt};
+    use std::collections::{BTreeSet, VecDeque};
 
     pub(in crate::game) const BLOCK: &str = "create:mechanical_crafter";
     const SLOT_COVER: &str = "create:crafter_slot_cover";
     const INVENTORY: &str = "Inventory";
+    const CONNECTED_INPUT: &str = "ConnectedInput";
+    const MAX_INPUT_GROUP: usize = 4096;
     const GROUPED: &str = "GroupedItems";
     const PHASE: &str = "Phase";
     const COUNTDOWN: &str = "CountDown";
     const ANIMATION_TIME: &str = "CreateHorizonCrafterTime";
     const CLIENT_INPUTS: &str = "CreateHorizonCrafterInputs";
     const TIME_SLOT: usize = 2;
+
+    fn authoritative(game: &Game<'_>) -> bool {
+        game.serving.is_some() || game.options.dedicated.is_some()
+    }
 
     fn layout(game: &Game<'_>, pos: Pos) -> Option<Layout> {
         if game.native_block(pos) != BLOCK {
@@ -158,21 +168,7 @@ pub(super) mod crafter {
         let mut fields = Compound::from([
             (INVENTORY.into(), inventory(None)),
             ("Cover".into(), Tag::Byte(0)),
-            (
-                "ConnectedInput".into(),
-                Tag::Compound(Compound::from([
-                    ("Controller".into(), Tag::Byte(1)),
-                    (
-                        "Data".into(),
-                        Tag::List(vec![Tag::Compound(
-                            ["X", "Y", "Z"]
-                                .into_iter()
-                                .map(|axis| (axis.into(), Tag::Int(0)))
-                                .collect(),
-                        )]),
-                    ),
-                ])),
-            ),
+            (CONNECTED_INPUT.into(), input_tag(true, [[0; 3]])),
         ]);
         set_cycle(&mut fields, Cycle::default());
         set_grid(&mut fields, &GroupedItems::default());
@@ -358,6 +354,9 @@ pub(super) mod crafter {
             );
         }
         eject_chain(game, pos, None);
+        if let Some(tags) = removal_links(game, pos) {
+            write_inputs(game, tags);
+        }
     }
 
     fn return_stack(game: &mut Game<'_>, item: ItemStack) {
@@ -383,19 +382,361 @@ pub(super) mod crafter {
         game.native_block_entity_sync(pos);
     }
 
+    fn input_tag(controller: bool, offsets: impl IntoIterator<Item = Pos>) -> Tag {
+        let data = offsets
+            .into_iter()
+            .map(|offset| {
+                Tag::Compound(Compound::from_iter(
+                    ["X", "Y", "Z"]
+                        .into_iter()
+                        .zip(offset)
+                        .map(|(axis, delta)| (axis.into(), Tag::Int(delta))),
+                ))
+            })
+            .collect();
+        Tag::Compound(Compound::from([
+            ("Controller".into(), Tag::Byte(i8::from(controller))),
+            ("Data".into(), Tag::List(data)),
+        ]))
+    }
+
+    fn read_input(entity: &ModBlockEntity) -> Option<(bool, Vec<Pos>)> {
+        let Some(tag) = entity.nbt.get(&CONNECTED_INPUT.into()) else {
+            return Some((true, vec![[0; 3]]));
+        };
+        let Tag::List(data) = tag.get("Data")? else {
+            return None;
+        };
+        if data.is_empty() {
+            return Some((true, vec![[0; 3]]));
+        }
+        let controller = matches!(tag.get("Controller"), Some(Tag::Byte(1)));
+        if data.len() > MAX_INPUT_GROUP || (!controller && data.len() != 1) {
+            return None;
+        }
+        let offsets: Option<Vec<Pos>> = data
+            .iter()
+            .map(|row| {
+                let (Tag::Int(x), Tag::Int(y), Tag::Int(z)) =
+                    (row.get("X")?, row.get("Y")?, row.get("Z")?)
+                else {
+                    return None;
+                };
+                Some([*x, *y, *z])
+            })
+            .collect();
+        let offsets = offsets?;
+        (!controller || offsets[0] == [0; 3]).then_some((controller, offsets))
+    }
+
+    fn add(a: Pos, b: Pos) -> Option<Pos> {
+        Some([
+            a[0].checked_add(b[0])?,
+            a[1].checked_add(b[1])?,
+            a[2].checked_add(b[2])?,
+        ])
+    }
+
+    fn relative(pos: Pos, root: Pos) -> Option<Pos> {
+        Some([
+            pos[0].checked_sub(root[0])?,
+            pos[1].checked_sub(root[1])?,
+            pos[2].checked_sub(root[2])?,
+        ])
+    }
+
+    struct InputGroup {
+        root: Pos,
+        members: Vec<Pos>,
+    }
+
+    fn input_group(game: &Game<'_>, pos: Pos) -> Option<InputGroup> {
+        let (controller, offsets) = read_input(entity(game, pos)?)?;
+        let (root, offsets) = if controller {
+            (pos, offsets)
+        } else {
+            let root = add(pos, offsets[0])?;
+            let (controller, offsets) = read_input(entity(game, root)?)?;
+            if !controller {
+                return None;
+            }
+            (root, offsets)
+        };
+        let members: Vec<Pos> = offsets
+            .into_iter()
+            .map(|delta| add(root, delta))
+            .collect::<Option<_>>()?;
+        let unique: BTreeSet<_> = members.iter().copied().collect();
+        (unique.len() == members.len() && unique.contains(&pos))
+            .then_some(InputGroup { root, members })
+    }
+
+    fn group_loaded(game: &Game<'_>, group: &InputGroup) -> bool {
+        let Some(root_layout) = layout(game, group.root) else {
+            return false;
+        };
+        group.members.iter().copied().all(|pos| {
+            pos == group.root
+                || (layout(game, pos).is_some_and(|member| member.facing == root_layout.facing)
+                    && entity(game, pos).is_some_and(|member| attached_to(member, pos, group.root)))
+        })
+    }
+
+    fn attached_to(entity: &ModBlockEntity, pos: Pos, root: Pos) -> bool {
+        read_input(entity)
+            .is_some_and(|(controller, offsets)| !controller && add(pos, offsets[0]) == Some(root))
+    }
+
+    fn group_tags(group: InputGroup) -> Option<Vec<(Pos, Tag)>> {
+        let offsets = group
+            .members
+            .iter()
+            .map(|pos| relative(*pos, group.root))
+            .collect::<Option<Vec<_>>>()?;
+        let mut tags = Vec::with_capacity(group.members.len());
+        tags.push((group.root, input_tag(true, offsets)));
+        for pos in group.members.into_iter().skip(1) {
+            tags.push((pos, input_tag(false, [relative(group.root, pos)?])));
+        }
+        Some(tags)
+    }
+
+    fn take_connected(root: Pos, rest: &mut BTreeSet<Pos>) -> InputGroup {
+        let mut members = vec![root];
+        let mut frontier = VecDeque::from([root]);
+        while let Some(at) = frontier.pop_front() {
+            for side in Direction::ALL {
+                if let Some(next) = add(at, side.vector())
+                    && rest.remove(&next)
+                {
+                    members.push(next);
+                    frontier.push_back(next);
+                }
+            }
+        }
+        InputGroup { root, members }
+    }
+
+    fn input_changes(game: &Game<'_>, pos: Pos, other: Pos) -> Option<Vec<(Pos, Tag)>> {
+        let mut first = input_group(game, pos)?;
+        if !group_loaded(game, &first) {
+            return None;
+        }
+        if first.members.contains(&other) {
+            let mut rest: BTreeSet<_> = first.members.into_iter().collect();
+            rest.remove(&pos);
+            rest.remove(&other);
+            let split = take_connected(other, &mut rest);
+            let mut first = group_tags(InputGroup {
+                root: pos,
+                members: std::iter::once(pos).chain(rest).collect(),
+            })?;
+            first.extend(group_tags(split)?);
+            return Some(first);
+        }
+        let second = input_group(game, other)?;
+        if !group_loaded(game, &second)
+            || first.members.len() + second.members.len() > MAX_INPUT_GROUP
+        {
+            return None;
+        }
+        first.members.extend(second.members.into_iter().skip(1));
+        first.members.push(second.root);
+        group_tags(first)
+    }
+
+    pub(in crate::game) fn removal_links(game: &Game<'_>, pos: Pos) -> Option<Vec<(Pos, Tag)>> {
+        let group = input_group(game, pos)?;
+        if !group_loaded(game, &group) {
+            return None;
+        }
+        let mut rest: BTreeSet<_> = group.members.into_iter().collect();
+        rest.remove(&pos);
+        let mut tags = Vec::new();
+        for side in Direction::ALL {
+            if let Some(next) = add(pos, side.vector())
+                && rest.remove(&next)
+            {
+                tags.extend(group_tags(take_connected(next, &mut rest))?);
+            }
+        }
+        rest.is_empty().then_some(tags)
+    }
+
+    pub(in crate::game) fn write_inputs(game: &mut Game<'_>, tags: Vec<(Pos, Tag)>) {
+        // All offsets and reciprocal owners are validated before any write.
+        // Block entities stay in place during this single authoritative use.
+        if !authoritative(game) {
+            return;
+        }
+        let changed: Vec<_> = tags.iter().map(|(pos, _)| *pos).collect();
+        for (pos, tag) in tags {
+            game.native_with_mod_block_entity(pos, |entity| {
+                entity.nbt.insert(CONNECTED_INPUT.into(), tag);
+            });
+        }
+        for pos in changed {
+            game.native_block_entity_sync(pos);
+        }
+    }
+
+    fn blocks_link_edge(game: &Game<'_>, pos: Pos, side: Direction) -> bool {
+        if game
+            .native_block_name_in_tag(&game.native_block(pos), "minecraft:leaves")
+            .is_ok_and(|leaves| leaves)
+        {
+            return false;
+        }
+        game.block_collision_shape(pos)
+            .face_shape(belt::world_direction(side))
+            .and_then(|face| VoxelShape::block().join_is_not_empty(&face, ShapeOp::ONLY_FIRST))
+            .is_ok_and(|uncovered| !uncovered)
+    }
+
+    fn wrench_edge(game: &Game<'_>, pos: Pos, state: Layout) -> Option<Pos> {
+        if game.native_sneaking()
+            || game.spectator()
+            || !game
+                .held()
+                .is_some_and(|stack| super::super::create_port_chassis::wrench(game, stack))
+        {
+            return None;
+        }
+        let [x, y, z] = game.eye_position()?;
+        let origin = Vec3::new(x, y, z);
+        let target = origin.add_vector(
+            horizon_world::view_direction::view_vector(game.pitch, game.yaw).scale(10.0),
+        );
+        let hit = traverse_blocks(origin, target, 64, |block| {
+            game.block_collision_shape([block.x, block.y, block.z])
+                .clip(origin, target, block)
+        })
+        .ok()??;
+        if [hit.block.x, hit.block.y, hit.block.z] != pos {
+            return None;
+        }
+        let face = Direction::from_vector(hit.direction.normal())?;
+        if face == state.facing || blocks_link_edge(game, add(pos, face.vector())?, face.opposite())
+        {
+            return None;
+        }
+        let local = hit
+            .location
+            .subtract(Vec3::new(
+                f64::from(pos[0]),
+                f64::from(pos[1]),
+                f64::from(pos[2]),
+            ))
+            .components();
+        const EPSILON: f64 = 1.0 / 256.0;
+        Direction::ALL.into_iter().find_map(|edge| {
+            let axis = edge.axis().index();
+            let delta = edge.vector();
+            let boundary = if delta[axis] > 0 { 1.0 } else { 0.0 };
+            if edge.axis() == face.axis()
+                || edge.axis() == state.facing.axis()
+                || (local[axis] - boundary).abs() >= 3.0 / 16.0 + EPSILON
+                || local.iter().any(|v| *v < -EPSILON || *v >= 1.0 + EPSILON)
+            {
+                return None;
+            }
+            let neighbor = add(pos, delta)?;
+            (layout(game, neighbor).is_some_and(|next| next.facing == state.facing)
+                && !blocks_link_edge(game, add(neighbor, face.vector())?, face.opposite()))
+            .then_some(neighbor)
+        })
+    }
+
+    fn hand_feed(game: &mut Game<'_>, pos: Pos, stack: &ItemStack) {
+        if !authoritative(game) {
+            return;
+        }
+        let Some(group) = input_group(game, pos) else {
+            return;
+        };
+        let Some(layout) = layout(game, group.root) else {
+            return;
+        };
+        let right = layout.facing.clockwise(Axis::Y).opposite();
+        let horizontal = right.axis().index();
+        let sign = i64::from(right.vector()[horizontal]);
+        let mut members = group.members;
+        members.sort_by_key(|pos| (-i64::from(pos[1]), i64::from(pos[horizontal]) * sign));
+        for pos in members {
+            if game.held().is_none() {
+                break;
+            }
+            let Some(member) = entity(game, pos) else {
+                continue;
+            };
+            if (pos != group.root && !attached_to(member, pos, group.root))
+                || cycle(&member.nbt).phase != Phase::Idle
+                || create::integer(&member.nbt, "Cover") != 0
+                || member.items.first().is_some_and(Option::is_some)
+            {
+                continue;
+            }
+            let mut one = stack.clone();
+            one.count = 1;
+            if game
+                .native_with_mod_block_entity(pos, |entity| {
+                    entity.items.resize(1, None);
+                    entity.items[0] = Some(one);
+                    save_inventory(entity);
+                })
+                .is_none()
+            {
+                continue;
+            }
+            let hand = game.held_mut();
+            if let Some(held) = hand {
+                held.count -= 1;
+                if held.count == 0 {
+                    *hand = None;
+                }
+            }
+            game.native_block_entity_sync(pos);
+            crate::game::create_port_sounds::crafter_feed(game, pos);
+            start(game, pos, None, false);
+        }
+    }
+
     pub(in crate::game) fn predicts_use(game: &Game<'_>, pos: Pos, face: Pos) -> bool {
         game.native_on("create")
-            && layout(game, pos).is_some_and(|state| state.facing.vector() == face)
+            && layout(game, pos).is_some_and(|state| {
+                state.facing.vector() == face || wrench_edge(game, pos, state).is_some()
+            })
     }
 
     pub(in crate::game) fn right_click(game: &mut Game<'_>, pos: Pos, face: Pos) -> bool {
-        if !predicts_use(game, pos, face) {
+        if !game.native_on("create") {
+            return false;
+        }
+        let Some(state) = layout(game, pos) else {
+            return false;
+        };
+        if let Some(other) = wrench_edge(game, pos, state) {
+            if authoritative(game)
+                && let Some(tags) = input_changes(game, pos, other)
+            {
+                write_inputs(game, tags);
+                let at = pos.map(|v| f64::from(v) + 0.5);
+                game.with_level(|_, level, _| {
+                    level.native_play_sound(
+                        "minecraft:entity.item_frame.add_item",
+                        at,
+                        4,
+                        0.25,
+                        0.1,
+                    );
+                });
+            }
+            return true;
+        }
+        if state.facing.vector() != face {
             return false;
         }
         let Some(member) = entity(game, pos) else {
-            return false;
-        };
-        let Some(state) = layout(game, pos) else {
             return false;
         };
         let phase = cycle(&member.nbt).phase;
@@ -403,7 +744,7 @@ pub(super) mod crafter {
             .held()
             .is_some_and(|stack| stack.item.as_ref() == "create:wrench")
         {
-            if game.keys.contains(&winit::keyboard::KeyCode::ShiftLeft) {
+            if game.native_sneaking() {
                 return false;
             }
             // A live group keeps its topology until its cargo is recovered.
@@ -429,50 +770,24 @@ pub(super) mod crafter {
             }
             return true;
         }
-        if covered {
-            if held.is_none() {
-                set_cover(game, pos, false);
-                if !game.creative {
-                    return_stack(game, ItemStack::new(SLOT_COVER, 1));
-                }
+        if let Some(stack) = held.cloned() {
+            hand_feed(game, pos, &stack);
+        } else if covered {
+            set_cover(game, pos, false);
+            if !game.creative {
+                return_stack(game, ItemStack::new(SLOT_COVER, 1));
             }
-            return true;
-        }
-        match (occupied, held.cloned()) {
-            (false, Some(mut stack)) => {
-                stack.count = 1;
-                if game
-                    .native_with_mod_block_entity(pos, |entity| {
-                        entity.items.resize(1, None);
-                        entity.items[0] = Some(stack);
-                        save_inventory(entity);
-                    })
-                    .is_some()
-                {
-                    let held = game.held_mut();
-                    if let Some(stack) = held {
-                        stack.count -= 1;
-                        if stack.count == 0 {
-                            *held = None;
-                        }
-                    }
-                    game.native_block_entity_sync(pos);
-                    crate::game::create_port_sounds::crafter_feed(game, pos);
-                    start(game, pos, None, false);
-                }
+        } else if occupied {
+            if let Some(Some(stack)) = game.native_with_mod_block_entity(pos, |entity| {
+                let item = entity.items.first_mut().and_then(Option::take);
+                save_inventory(entity);
+                item
+            }) {
+                return_stack(game, stack);
+                game.native_block_entity_sync(pos);
             }
-            (true, None) => {
-                if let Some(Some(stack)) = game.native_with_mod_block_entity(pos, |entity| {
-                    let item = entity.items.first_mut().and_then(Option::take);
-                    save_inventory(entity);
-                    item
-                }) {
-                    return_stack(game, stack);
-                    game.native_block_entity_sync(pos);
-                }
-            }
-            (false, None) => return false,
-            (true, Some(_)) => {}
+        } else {
+            return false;
         }
         true
     }
