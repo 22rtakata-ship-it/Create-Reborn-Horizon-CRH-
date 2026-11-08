@@ -142,8 +142,9 @@ it to an overflow inventory.
 
 The Precision Mechanism recipe takes five rounds of three tools. A Depot
 keeps the original `create:sequenced_assembly` component through an actual
-restart, and Survival hand transfer retains it. The final roll uses the
-original 150-weight pool. Client-side progress UI, creative inventory
+restart, and Survival hand transfer retains it. A horizontal Belt can run
+all 15 operations in a line of Deployers across a chunk boundary. The final
+roll uses the original 150-weight pool. Client-side progress UI, creative inventory
 round-trips and general sequenced recipe types remain open.
 
 

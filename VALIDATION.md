@@ -170,6 +170,10 @@ developer source build. The three changes are applied in a separate checkout.
   native restart after step seven. An independent Survival pickup and
   re-deposit advances from step one to step two with the same component.
   Independent random worlds are checked against the source pool.
+- [Automatic Precision Assembly](tools/sequenced_belt_checks.py) matches all
+  460 sampled ticks and item positions on a 17-segment Belt after a Horizon
+  restart at tick 168. Each Deployer uses one tool and the Depot receives one
+  result at tick 379. The comparison allows independent final rolls.
 - [Lava Item Drain](tools/item_drain_checks.py) matches 65 samples across
   three lanes, including an incompatible 500 mB water tank and a real restart.
   [Hand interaction](tools/item_drain_hand_checks.py) matches Survival,

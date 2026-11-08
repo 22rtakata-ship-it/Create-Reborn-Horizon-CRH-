@@ -245,6 +245,8 @@ with the systems they depend on.
   removal. Preserve the marked tool and its existing damage.
 - [x] Precision Mechanism on a Depot. Match all 15 original steps, saved
   component, Survival transfer and wrong-tool rejection after a restart.
+- [x] Automatic Precision Assembly through 15 Deployers on one Belt across a
+  chunk boundary. Save and resume after the seventh operation.
 - [ ] Remaining Mechanical Saw, Deployer, Spout, Item Drain and Sand Paper
   behavior.
 - [ ] General Sequenced Assembly, client progress bar and networked creative
