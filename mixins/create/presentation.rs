@@ -95,6 +95,7 @@ pub(super) fn tick(game: &mut Game<'_>) {
     if !game.native_window() || game.remote.is_none() || !game.native_on("create") {
         return;
     }
+    super::create_port_belt::passenger_tick(game);
     let identity = (
         std::ptr::from_ref(game) as usize,
         std::ptr::from_ref(&game.world) as usize,

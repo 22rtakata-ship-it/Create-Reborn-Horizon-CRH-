@@ -22,12 +22,14 @@ use create_engine::{
     },
 };
 use horizon_assets::item_model::DisplayContext;
+use horizon_client::motion::MotionWorld;
 use horizon_core::{
-    geometry::Direction as WorldDirection,
+    geometry::{Direction as WorldDirection, Vec3},
     position::BlockPos,
     random::{LegacyRandom, RandomSource},
 };
 use horizon_world::{
+    entity_move::EntityMoveWorld,
     level::{LevelAccess, LevelEvent},
     nbt::{Compound, Tag},
     registry::BlockStateId,
@@ -90,6 +92,90 @@ thread_local! {
 fn simulates(game: &Game<'_>) -> bool {
     game.serving.is_some() || game.options.dedicated.is_some()
 }
+
+fn passenger_motion(game: &Game<'_>) -> Option<Vec3> {
+    let player = game.player.as_ref()?;
+    if !player.ground.on_ground
+        || player.shift_key_down
+        || player.flying
+        || player.spectator
+        || player.health.health() <= 0.0
+        || game.riding.is_some()
+        || game.sleeping.is_some()
+    {
+        return None;
+    }
+    let support = player.ground.supporting_block?;
+    let pos = [support.x, support.y, support.z];
+    let is_bare_horizontal = |pos| {
+        game.native_block(pos) == ID
+            && slope(game, pos) == Slope::Horizontal
+            && !cased(game, pos)
+            && game.native_block_property(pos, "waterlogged").as_deref() == Some("false")
+    };
+    if player.position.y - 0.25 < f64::from(support.y) || !is_bare_horizontal(pos) {
+        return None;
+    }
+    let (controller, index) = node_data(game, pos)?;
+    let Some(BlockEntity::Mod(owner)) = game.world.block_entities.get(&(controller[0], controller[1], controller[2])) else {
+        return None;
+    };
+    let length = int(&owner.nbt, "Length");
+    let direction = facing(game, pos);
+    if owner.id != ID
+        || !boolean(&owner.nbt, "IsController")
+        || !(2..=1000).contains(&length)
+        || !(0..length).contains(&index)
+        || !is_bare_horizontal(controller)
+        || facing(game, controller) != direction
+        || at(controller, direction, Slope::Horizontal, index) != pos
+    {
+        return None;
+    }
+    let rpm = super::create_port::running_speed(game, &owner.nbt);
+    if !rpm.is_finite() || rpm.abs() < 1.0 {
+        return None;
+    }
+    let speed = transport::movement_speed(rpm);
+    let along_x = direction.axis() == Axis::X;
+    let cross = if along_x { f64::from(support.z) + 0.5 - player.position.z }
+                else { f64::from(support.x) + 0.5 - player.position.x };
+    if cross.abs() > 0.75 {
+        return None;
+    }
+    // BeltMovementHandler centers an idle rider only. RPM is signed in
+    // world axes, independently of which endpoint was connected first.
+    let centering = if player.applied_input == [0.0; 2] {
+        cross * f64::from(speed.abs().min(0.1)) * 4.0
+    } else {
+        0.0
+    };
+    let speed = f64::from(speed);
+    Some(if along_x { Vec3::new(-speed, 0.0, centering) }
+         else { Vec3::new(centering, 0.0, speed) })
+}
+
+pub(super) fn passenger_tick(game: &mut Game<'_>) {
+    let Some(movement) = passenger_motion(game) else { return };
+    let entities = game.player_entity_collisions();
+    let Some(player) = game.player.as_mut() else { return };
+    player.fall_distance = 0.0;
+    let mut world = MotionWorld {
+        entities: &entities,
+        player,
+        scene: &mut game.world,
+        assets: &game.pack.assets,
+        collision_binding: game.collision,
+        resources: game.motion,
+        health: &game.health_resources,
+    };
+    if world.move_self(movement).is_ok() {
+        // Java's Entity.move(SELF) is followed by setOnGround(true).
+        let horizontal = world.player.ground.horizontal_collision;
+        let _ = world.set_on_ground_with_movement(true, horizontal, Vec3::ZERO);
+    }
+}
+
 fn with_state<R>(game: &Game<'_>, f: impl FnOnce(&mut State) -> R) -> R {
     STATE.with(|cell| {
         let mut cache = cell.borrow_mut();
