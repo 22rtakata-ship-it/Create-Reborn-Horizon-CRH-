@@ -56,8 +56,9 @@ chests are outside the supported capture rules.
 
 Collision uses exact boxes at quarter turns, narrow strips for oblique rotation
 and the registered shapes of piston parts and tools. Grounded transfer uses the
-top height of full blocks and supported dry slabs. Translating platforms and
-bearing side contact resolve overlap before clipping against ordinary terrain.
+surfaces of full blocks, supported dry slabs and dry straight stair treads.
+Translating platforms and bearing side contact resolve overlap before clipping
+against ordinary terrain.
 An X- or Z-axis bearing uses the vertical pass of Java's
 `ContinuousOBBCollider`. It clips separation and horizontal contact-point
 motion independently. The local client applies these corrections at the player
@@ -68,6 +69,12 @@ impact on all three axes. Live player trajectories still differ at some bearing
 angles. Compound rotation, exact sub-tick timing, moving block bounce and
 sliding, and full mob contact remain open. Sable integration remains a separate
 milestone.
+
+For supported Y-axis rotors made of full collision cubes, dropped items use the
+ordinary item tick followed by Create's contact pass at the end of the level
+tick. A stone tip carrying an item through a loaded neighboring column matches
+the Java trajectory. Bounce on moving slime, overlapping rotors, and contact
+for other moving structures still need separate parity checks.
 
 The Harvester handles wheat, carrots, potatoes, beetroot, Nether Wart, cocoa,
 sweet berries, sugar cane and supported leaves or growing plants. Its moving

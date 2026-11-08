@@ -1121,6 +1121,7 @@ pub fn append_collisions(
     obstacles: &mut Vec<Aabb>,
     excluded_controller: Option<Pos>,
     standing_bounds: Option<Aabb>,
+    exclude_upright: bool,
 ) {
     if !world.attachments.has(&ACTIVE) {
         return;
@@ -1134,7 +1135,9 @@ pub fn append_collisions(
     for chunk in world.chunks.values() {
         let Ok(records) = read(chunk) else { continue };
         for record in records.iter() {
-            if Some(record.controller) == excluded_controller {
+            if Some(record.controller) == excluded_controller
+                || (exclude_upright && upright_side_payload(record))
+            {
                 continue;
             }
             let standing = standing_bounds.filter(|_| upright_side_payload(record));

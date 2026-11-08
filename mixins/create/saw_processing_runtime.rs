@@ -1334,6 +1334,7 @@ pub(super) mod crafter {
 }
 
 pub(super) mod crushing {
+    use super::super::{create_port_chute as chute, create_port_millstone as millstone};
     use super::{
         BlockEntity, Compound, Game, INVENTORY, ItemStack, ModBlockEntity, Pos, SLOTS, Tag,
         Transported, belt, create, processing_inventory, roll_count,
@@ -1673,6 +1674,27 @@ pub(super) mod crushing {
         }
     }
 
+    fn insert_output(game: &mut Game<'_>, target: Pos, block: &str, stack: &ItemStack) -> u32 {
+        match block {
+            chute::BLOCK | chute::SMART => chute::insert_from_transport(game, target, stack),
+            "create:millstone" => millstone::insert_from_transport(game, target, stack, false),
+            "create:depot" | "create:belt" => {
+                let item = Transported::new(
+                    belt::core_stack(game, stack.clone()),
+                    belt::angle(game, stack),
+                );
+                if block == "create:depot" {
+                    belt::insert_depot_from_side(game, target, &item, Direction::Down)
+                } else if belt::insert_belt_from_side(game, target, &item, Direction::Down, false) {
+                    stack.count
+                } else {
+                    0
+                }
+            }
+            _ => unreachable!("output receiver was checked"),
+        }
+    }
+
     pub(in crate::game) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity) {
         let Some(mut cycle) = cycle(entity) else {
             return;
@@ -1762,16 +1784,15 @@ pub(super) mod crushing {
             Action::Eject => {
                 let below = offset(pos, Direction::Down);
                 let state = game.world.block(below[0], below[1], below[2]);
-                if game.res.facts().get(state).name.as_ref() == "create:depot" {
+                let block = game.res.facts().get(state).name.clone();
+                if matches!(
+                    block.as_ref(),
+                    "create:depot" | "create:belt" | "create:millstone" | chute::BLOCK | chute::SMART
+                ) {
                     let mut changed = false;
                     for slot in &mut entity.items {
                         let Some(stack) = slot else { continue };
-                        let item = Transported::new(
-                            belt::core_stack(game, stack.clone()),
-                            belt::angle(game, stack),
-                        );
-                        let moved =
-                            belt::insert_depot_from_side(game, below, &item, Direction::Down);
+                        let moved = insert_output(game, below, &block, stack);
                         if moved != 0 {
                             stack.count -= moved;
                             if stack.count == 0 {

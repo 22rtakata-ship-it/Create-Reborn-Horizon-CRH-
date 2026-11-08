@@ -15,6 +15,13 @@ pub struct ContactBox {
 }
 
 impl ContactBox {
+    pub fn cube(min: [f64; 3]) -> Self {
+        Self {
+            min,
+            max: min.map(|value| value + 1.0),
+        }
+    }
+
     pub fn penetrates(self, other: Self) -> bool {
         (0..3).all(|i| {
             self.max[i].min(other.max[i]) - self.min[i].max(other.min[i]) > CONTACT_EPSILON
@@ -79,23 +86,22 @@ pub fn linear_overlap_response(
         .then_some(response)
 }
 
-/// Contact from a grounded body on a translating top with a full X/Z footprint.
+/// Contact from a grounded body on a translating collision box.
 /// Rising tops supply lift, while gravity follows a receding surface.
 pub fn linear_top_motion(
     previous_origin: [f64; 3],
     current_origin: [f64; 3],
-    tops: impl IntoIterator<Item = (Pos, f64)>,
+    tops: impl IntoIterator<Item = ContactBox>,
     feet: [f64; 3],
     [half_x, half_z]: [f64; 2],
 ) -> Option<[f64; 3]> {
     let [x, y, z] = std::array::from_fn(|i| feet[i] - previous_origin[i]);
-    let supported = tops.into_iter().any(|(block, top)| {
-        let [block_x, block_y, block_z] = block.map(f64::from);
-        (y - block_y - top).abs() <= CONTACT_EPSILON
-            && x + half_x > block_x
-            && x - half_x < block_x + 1.0
-            && z + half_z > block_z
-            && z - half_z < block_z + 1.0
+    let supported = tops.into_iter().any(|top| {
+        (y - top.max[1]).abs() <= CONTACT_EPSILON
+            && x + half_x > top.min[0]
+            && x - half_x < top.max[0]
+            && z + half_z > top.min[2]
+            && z - half_z < top.max[2]
     });
     supported.then(|| {
         let [dx, dy, dz] = std::array::from_fn(|i| current_origin[i] - previous_origin[i]);
@@ -157,7 +163,7 @@ pub fn linear_face_separation(
 pub fn rotary_top_motion(
     anchor: Pos,
     [previous_angle, current_angle]: [f32; 2],
-    tops: impl IntoIterator<Item = (Pos, f64)>,
+    tops: impl IntoIterator<Item = ContactBox>,
     feet: [f64; 3],
     [half_x, half_z]: [f64; 2],
 ) -> Option<[f64; 3]> {
@@ -168,20 +174,21 @@ pub fn rotary_top_motion(
     let (cos, sin) = (cos.abs(), neg_sin.abs());
     let player_local_x = cos * half_x + sin * half_z;
     let player_local_z = sin * half_x + cos * half_z;
-    let block_world_radius = (cos + sin) * 0.5;
-    let supported = tops.into_iter().any(|([x, y, z], top)| {
+    let supported = tops.into_iter().any(|top| {
         // ContraptionCollider inflates the entity's collision bounds by 1e-7.
-        if (local[1] - f64::from(y) - top).abs() > CONTACT_EPSILON {
+        if (local[1] - top.max[1]).abs() > CONTACT_EPSILON {
             return false;
         }
         // Check both pairs of separating axes in the horizontal plane.
-        let x = local[0] - f64::from(x) - 0.5;
-        let z = local[2] - f64::from(z) - 0.5;
-        if x.abs() >= 0.5 + player_local_x || z.abs() >= 0.5 + player_local_z {
+        let width = (top.max[0] - top.min[0]) * 0.5;
+        let depth = (top.max[2] - top.min[2]) * 0.5;
+        let x = local[0] - top.min[0] - width;
+        let z = local[2] - top.min[2] - depth;
+        if x.abs() >= width + player_local_x || z.abs() >= depth + player_local_z {
             return false;
         }
         let [x, _, z] = previous.rotate_vector([x, 0.0, z]);
-        x.abs() < block_world_radius + half_x && z.abs() < block_world_radius + half_z
+        x.abs() < cos * width + sin * depth + half_x && z.abs() < sin * width + cos * depth + half_z
     });
     if !supported {
         return None;
@@ -278,7 +285,7 @@ mod tests {
             rotary_top_motion(
                 anchor,
                 [0.0, 90.0],
-                [([2, 0, 0], 1.0)],
+                [ContactBox::cube([2.0, 0.0, 0.0])],
                 [12.5, 65.0, -2.5],
                 [0.3; 2],
             ),
@@ -288,7 +295,7 @@ mod tests {
             rotary_top_motion(
                 anchor,
                 [0.0, 90.0],
-                [([0; 3], 1.0)],
+                [ContactBox::cube([0.0; 3])],
                 [10.5, 65.0, -2.5],
                 [0.3; 2],
             ),
@@ -303,7 +310,7 @@ mod tests {
             rotary_top_motion(
                 [0; 3],
                 [350.0, 10.0],
-                [([2, 0, 0], 1.0)],
+                [ContactBox::cube([2.0, 0.0, 0.0])],
                 [0.5 + 2.0 * cos, 1.0, 0.5 + 2.0 * sin],
                 [0.3; 2],
             ),
@@ -313,8 +320,15 @@ mod tests {
 
     #[test]
     fn only_a_footprint_over_the_actual_top_is_supported() {
-        let motion =
-            |feet| rotary_top_motion([0; 3], [45.0, 55.0], [([0; 3], 1.0)], feet, [0.025; 2]);
+        let motion = |feet| {
+            rotary_top_motion(
+                [0; 3],
+                [45.0, 55.0],
+                [ContactBox::cube([0.0; 3])],
+                feet,
+                [0.025; 2],
+            )
+        };
         assert!(motion([0.68, 1.0, 0.68]).is_some());
         assert!(motion([1.10, 1.0, 1.10]).is_none());
         assert!(motion([0.68, 0.0, 0.68]).is_none());
@@ -324,7 +338,7 @@ mod tests {
             rotary_top_motion(
                 [0; 3],
                 [0.0, 1.0],
-                [([0; 3], 1.0)],
+                [ContactBox::cube([0.0; 3])],
                 [1.25, 1.0, 0.5],
                 [0.3; 2]
             )
@@ -336,8 +350,15 @@ mod tests {
     fn rider_follows_horizontal_stroke_and_upward_lift() {
         let previous = [4.25, 16.0, -2.0];
         let feet = [4.45, 17.0, -1.5];
-        let motion =
-            |current| linear_top_motion(previous, current, [([0; 3], 1.0)], feet, [0.3; 2]);
+        let motion = |current| {
+            linear_top_motion(
+                previous,
+                current,
+                [ContactBox::cube([0.0; 3])],
+                feet,
+                [0.3; 2],
+            )
+        };
         assert_motion(motion([4.0, 16.0, -2.0]), [-0.25, 0.0, 0.0]);
         assert_motion(motion([4.25, 16.25, -2.0]), [0.0, 0.25, 0.0]);
         assert_motion(motion([4.25, 15.75, -2.0]), [0.0; 3]);
@@ -345,7 +366,7 @@ mod tests {
             linear_top_motion(
                 previous,
                 [4.5, 16.0, -2.0],
-                [([0; 3], 1.0)],
+                [ContactBox::cube([0.0; 3])],
                 [3.9, 17.0, -1.5],
                 [0.3; 2]
             )
@@ -355,7 +376,10 @@ mod tests {
 
     #[test]
     fn rider_uses_the_lower_slab_surface() {
-        let slab = [([2, 0, 0], 0.5)];
+        let slab = [ContactBox {
+            min: [2.0, 0.0, 0.0],
+            max: [3.0, 0.5, 1.0],
+        }];
         let rotary = |y| rotary_top_motion([0; 3], [0.0, 90.0], slab, [2.5, y, 0.5], [0.3; 2]);
         assert_motion(rotary(0.5), [-2.0, 0.0, -2.0]);
         assert!(rotary(1.0).is_none());
@@ -363,5 +387,26 @@ mod tests {
             |y| linear_top_motion([0.0; 3], [0.25, 0.0, 0.0], slab, [2.5, y, 0.5], [0.3; 2]);
         assert_motion(linear(0.5), [0.25, 0.0, 0.0]);
         assert!(linear(1.0).is_none());
+    }
+
+    #[test]
+    fn tread_motion_respects_the_partial_upper_footprint() {
+        let upper = ContactBox {
+            min: [2.0, 0.5, 0.0],
+            max: [3.0, 1.0, 0.5],
+        };
+        let lower = ContactBox {
+            min: [2.0, 0.0, 0.0],
+            max: [3.0, 0.5, 1.0],
+        };
+        let tops = [upper, lower];
+        let rotary = |feet| rotary_top_motion([0; 3], [0.0, 90.0], tops, feet, [0.3; 2]);
+        let linear = |feet| linear_top_motion([0.0; 3], [0.25, 0.0, 0.0], tops, feet, [0.3; 2]);
+        assert_motion(rotary([2.5, 1.0, 0.25]), [-2.25, 0.0, -1.75]);
+        assert_motion(rotary([2.5, 0.5, 0.95]), [-1.55, 0.0, -2.45]);
+        assert_motion(linear([2.5, 1.0, 0.25]), [0.25, 0.0, 0.0]);
+        assert_motion(linear([2.5, 0.5, 0.95]), [0.25, 0.0, 0.0]);
+        assert!(rotary([2.5, 1.0, 0.95]).is_none());
+        assert!(linear([2.5, 1.0, 0.95]).is_none());
     }
 }

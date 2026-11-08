@@ -2,7 +2,11 @@
 // Copyright (c) 2026 create-horizon contributors
 // SPDX-License-Identifier: MIT
 
-use super::{Game, GameLevel, native_block_entity_draw::BlockEntityDraw};
+use super::{
+    Game, GameLevel,
+    create_port_motor_value_world::{FilterDisplay, FilterLabel},
+    native_block_entity_draw::BlockEntityDraw,
+};
 use crate::{
     containers::{BlockEntity, ModBlockEntity, ModContainer},
     items::ItemStack,
@@ -536,7 +540,7 @@ impl BelowInventory {
                 game, below, stack, simulate,
             ),
             Self::Millstone => {
-                super::create_port_millstone::insert_from_chute(game, below, stack, simulate)
+                super::create_port_millstone::insert_from_transport(game, below, stack, simulate)
             }
         })
     }
@@ -959,23 +963,12 @@ pub(super) fn filter_tap(
     change_filter(game, pos, slot.entity, sample);
 }
 
-/// Presentation of the original FilteringRenderer for dry logistics.
-pub(super) struct FilterDisplay {
-    pub pos: Pos,
-    pub side: Pos,
-    pub center: [f32; 3],
-    pub hit: bool,
-    pub filled: bool,
-    pub solid_item: bool,
-    pub count: String,
-}
-
 pub(super) fn filter_display(
     game: &Game<'_>,
     hit: &super::Hit,
     block: &str,
 ) -> Option<FilterDisplay> {
-    if hit.face[1] != 0 || game.native_sneaking() {
+    if hit.face[1] != 0 {
         return None;
     }
     let slot = filter_slot(game, hit.pos, block)?;
@@ -1001,9 +994,9 @@ pub(super) fn filter_display(
             .uses_block_light()
         });
     Some(FilterDisplay {
-        pos: hit.pos,
-        side: hit.face,
         center,
+        rotation: None,
+        label: FilterLabel::Item,
         hit: hits_filter(hit.point, hit.pos, center),
         filled: filter.is_some(),
         solid_item,

@@ -4,6 +4,7 @@ package dev.createhorizon.reference;
 
 import com.google.gson.*;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.simibubi.create.CreateClient;
 import com.simibubi.create.api.equipment.goggles.IHaveGoggleInformation;
 import com.simibubi.create.api.equipment.goggles.IHaveHoveringInformation;
 import com.simibubi.create.api.registry.CreateBuiltInRegistries;
@@ -101,7 +102,13 @@ final class Observations {
             }
             if(mc.screen instanceof ValueSettingsScreen settings) result.add("value_settings",valueSettings(settings));
         }
-        result.add("widgets",widgets);result.add("goggles",goggles(mc));result.add("value_boxes",valueBoxes(mc));return result;
+        result.add("widgets",widgets);result.add("goggles",goggles(mc));result.add("value_boxes",valueBoxes(mc));
+        var settingsClient = CreateClient.VALUE_SETTINGS_HANDLER;
+        JsonArray hoverTip = new JsonArray();
+        if (settingsClient.hoverTicks > 0 && settingsClient.lastHoverTip != null)
+            settingsClient.lastHoverTip.forEach(line -> hoverTip.add(line.getString()));
+        result.add("value_hover_tip", hoverTip);
+        return result;
     }
 
     private static JsonArray matrix(PoseStack pose) {

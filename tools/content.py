@@ -962,6 +962,8 @@ def foundation():
         }
         lang.update({'create.logistics.filter' + key: values[locale == 'ru_ru']
                      for key, values in filter_labels.items()})
+        lang['create.logistics.recipe_filter'] = (
+            'Recipe Filter' if locale == 'en_us' else 'Фильтр рецепта')
         deployer_labels = {
             'header': ('Deployer Information', 'Информация об автономном активаторе:'),
             'using': ('Mode: Use', 'Режим: Использование/Размещение'),

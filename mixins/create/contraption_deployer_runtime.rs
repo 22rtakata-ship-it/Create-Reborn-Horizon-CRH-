@@ -1042,6 +1042,32 @@ pub(super) fn wrench(game: &mut Game<'_>, pos: Pos, face: Direction) -> bool {
     super::create_port_interactions::wrench_directional_axis(game, pos, face)
 }
 
+fn filter_slot(game: &Game<'_>, hit: &super::Hit) -> Option<FilterSlot> {
+    let facing = contraption::facing(game, hit.pos)?;
+    let first = game
+        .native_block_property(hit.pos, "axis_along_first")
+        .as_deref()
+        == Some("true");
+    FilterSlot::new(facing, first, Direction::from_vector(hit.face)?)
+}
+
+pub(super) fn filter_display(
+    game: &Game<'_>,
+    hit: &super::Hit,
+) -> Option<super::create_port_motor_value_world::FilterDisplay> {
+    use super::create_port_motor_value_world::{FilterDisplay, FilterLabel};
+
+    let slot = filter_slot(game, hit)?;
+    let filter = read_filter(&entity(game, hit.pos)?.nbt)?;
+    Some(FilterDisplay::sample(
+        slot.center,
+        [slot.yaw, slot.pitch, 0.0],
+        FilterLabel::Item,
+        slot.contains(hit.pos, hit.point),
+        filter.is_some(),
+    ))
+}
+
 fn filter_target(game: &Game<'_>, hit: &super::Hit) -> bool {
     use winit::keyboard::KeyCode;
 
@@ -1059,17 +1085,7 @@ fn filter_target(game: &Game<'_>, hit: &super::Hit) -> bool {
     {
         return false;
     }
-    let Some(facing) = contraption::facing(game, hit.pos) else {
-        return false;
-    };
-    let first = game
-        .native_block_property(hit.pos, "axis_along_first")
-        .as_deref()
-        == Some("true");
-    let Some(side) = Direction::from_vector(hit.face) else {
-        return false;
-    };
-    FilterSlot::new(facing, first, side).is_some_and(|slot| slot.contains(hit.pos, hit.point))
+    filter_slot(game, hit).is_some_and(|slot| slot.contains(hit.pos, hit.point))
 }
 
 fn configure_filter(game: &mut Game<'_>, pos: Pos) {

@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 import shlex
 
+from burner_heat_java_checks import items
 from chain_drive_checks import xyz
 from contraption_review_stations import (
     GANTRY, PISTON, PULLEY, STICKY_PISTON, glue_station, linear_stations, piston, sign,
@@ -16,6 +17,10 @@ from native_check_session import NativeCheckSession, wait_loaded
 
 HORIZONTAL = (904, 82, 58)
 VERTICAL = (919, 84, 58)
+STAIR_BEARING = (904, 82, 123)
+FILTER_SAW = (918, 82, 124)
+FILTER_DEPLOYER = (923, 84, 122)
+CRUSHER = (918, 84, 139)
 CLUTCHES = (
     (HORIZONTAL, (903, 81, 58), 'west', (904, 83, 58), 'minecraft:slime_block'),
     (VERTICAL, (918, 84, 59), 'south', (920, 84, 58), 'minecraft:slime_block'),
@@ -73,7 +78,71 @@ def check_rotors(plaza):
         assert plaza.call('block', *payload)['block'] == block, payload
 
 
-def prepare(session):
+def build_release_stations(plaza):
+    plaza.load((911, 81, 123))
+    plaza.put(STAIR_BEARING, 'create:mechanical_bearing[facing=up]')
+    plaza.put((904, 81, 123), 'create:clutch[axis=y,powered=true]')
+    plaza.put((903, 81, 123), 'minecraft:lever[face=wall,facing=west,powered=true]')
+    plaza.put((904, 80, 123), 'create:creative_motor[facing=up]{ScrollValue:4}')
+    plaza.put((904, 83, 123), 'minecraft:slime_block')
+    plaza.put((905, 83, 123), 'minecraft:oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]')
+    sign(plaza, (906, 81, 126), ['STAIR RIDER', 'Try each tread.', 'Lever under stair.', 'Turn off flight.'])
+
+    plaza.put(FILTER_SAW, 'create:mechanical_saw[facing=up,axis_along_first=true,flipped=false]')
+    plaza.put(FILTER_DEPLOYER, 'create:deployer[facing=down,axis_along_first=true]')
+    sign(plaza, (918, 81, 126), ['SAW FILTER', 'Aim at top slot.', 'Click with item.', 'Aim again.'])
+    sign(plaza, (923, 81, 125), ['DEPLOYER FILTER', 'Aim at side slot.', 'Click with item.', 'Aim again.'])
+    plaza.command('give @s minecraft:oak_planks 16')
+    plaza.command('give @s minecraft:oak_sapling 16')
+
+    plaza.load((911, 81, 139))
+    x, y, z = CRUSHER
+    for i, part in enumerate(('start', 'middle', 'middle', 'middle', 'end'), -2):
+        plaza.put((x+i, y-1, z), f'create:belt[facing=east,slope=horizontal,part={part}]')
+    for side, rpm in ((-1, -64), (1, 96)):
+        plaza.put((x+side, y, z), 'create:crushing_wheel[axis=z]')
+        plaza.put((x+side, y, z-1), f'create:creative_motor[facing=south]{{ScrollValue:{rpm}}}')
+    plaza.put((x-2, y-1, z-1), 'create:clutch[axis=z,powered=true]')
+    plaza.put((x-3, y-1, z-1), 'minecraft:lever[face=wall,facing=west,powered=true]')
+    plaza.put((x-2, y-1, z-2), 'create:creative_motor[facing=south]{ScrollValue:-32}')
+    plaza.call('wait', 20)
+    plaza.put((x, y+1, z), 'create:chute[facing=down,shape=normal,waterlogged=false]')
+    plaza.put((x, y+2, z), 'minecraft:hopper[facing=down]')
+    sign(plaza, (918, 81, 142), ['CRUSHER TO BELT', 'Cobble in hopper.', 'Wait for gravel.', 'Lever starts belt.'])
+    plaza.command('give @s minecraft:cobblestone 32')
+
+
+def check_crusher_to_belt(plaza):
+    x, y, z = CRUSHER
+    source = xyz(CRUSHER)
+    belt = xyz((x-2, y-1, z))
+    lever = (x-3, y-1, z-1)
+
+    def inventory(pos):
+        data = plaza.command(f'data get block {pos}')
+        return items(data, 'Inventory') if 'Inventory:' in data else {}
+
+    plaza.command(f'item replace block {x} {y+2} {z} container.0 with minecraft:cobblestone')
+    for _ in range(28):
+        plaza.call('wait', 12)
+        before = inventory(source)
+        if before.get('minecraft:gravel') == 1:
+            break
+    else:
+        raise AssertionError(('Crusher did not hold gravel over the stopped Belt', before))
+    plaza.put(lever, 'minecraft:lever[face=wall,facing=west,powered=false]')
+    for _ in range(8):
+        plaza.call('wait', 3)
+        crusher_items = inventory(source)
+        belt_items = inventory(belt)
+        if not crusher_items and belt_items.get('minecraft:gravel') == 1:
+            break
+    else:
+        raise AssertionError(('Stopped Belt did not accept the gravel when powered', crusher_items, belt_items))
+    plaza.put(lever, 'minecraft:lever[face=wall,facing=west,powered=true]')
+
+
+def prepare(session, release_audit):
     with session:
         plaza = Plaza(session.call)
         plaza.command('gamemode creative')
@@ -93,6 +162,8 @@ def prepare(session):
         linear_stations(plaza)
         sign(plaza, (919, 81, 106), ['GANTRY', 'Right: rail stop.', 'Left: reverse.', 'Glue both planks.'])
         glue_station(plaza)
+        if release_audit:
+            build_release_stations(plaza)
         plaza.command('give @s create:super_glue')
         plaza.command('give @s create:wrench')
         plaza.command('give @s create:goggles')
@@ -114,8 +185,22 @@ def prepare(session):
         assert session.call('block', *PULLEY)['block'] == 'create:rope_pulley'
         assert session.call('block', *GANTRY)['block'] == 'create:gantry_carriage'
         capture(plaza, (911.5, 90, 109.5), (912, 83, 103), session.scratch / 'linear.png')
-        plaza.command('tp @s 911.5 81 64.5')
-        session.call('look-at', 907, 84, 58)
+        if release_audit:
+            plaza.load((911, 81, 132))
+            checks = ((CRUSHER, 'create:crushing_wheel_controller'),
+                      (STAIR_BEARING, 'create:mechanical_bearing'),
+                      (FILTER_SAW, 'create:mechanical_saw'),
+                      (FILTER_DEPLOYER, 'create:deployer'))
+            wait_loaded(session.call, [pos for pos, _ in checks])
+            for pos, block in checks:
+                assert session.call('block', *pos)['block'] == block, pos
+            check_crusher_to_belt(plaza)
+            capture(plaza, (921.5, 91, 146.5), (918.5, 84, 139.5), session.scratch / 'crusher-belt.png')
+            plaza.command('tp @s 911.5 81 128.5')
+            session.call('look-at', 918.5, 83, 124.5)
+        else:
+            plaza.command('tp @s 911.5 81 64.5')
+            session.call('look-at', 907, 84, 58)
         session.call('save')
 
 
@@ -130,7 +215,7 @@ def capture(plaza, camera, target, output):
     plaza.command('gamemode creative')
 
 
-def launch_files(session):
+def launch_files(session, release_audit):
     play = session.scratch / 'Play.command'
     play.write_text(
         '#!/bin/bash\nset -euo pipefail\ncd "$(dirname "$0")"\n'
@@ -141,7 +226,7 @@ def launch_files(session):
         f'--world {session.world} --creative --name BearingReview --render-distance 4 "$@"\n'
     )
     play.chmod(0o755)
-    (session.scratch / 'REVIEW.md').write_text(
+    review = (
         '# Moving structures\n\n'
         'Open Play.command. Creative flight is useful to reach the decks. '
         'Turn flight off before checking whether a deck carries you.\n\n'
@@ -157,6 +242,15 @@ def launch_files(session):
         '| Super Glue | 904 82 136 | Glue the two wooden blocks, then release the clutch. '
         'The extra block should rotate with the bearing. |\n'
     )
+    if release_audit:
+        review += (
+            '| Stair rider | 904 82 123 | Ride the lower and upper treads of the oak stair separately. |\n'
+            '| Ghost filters | 918 82 124 and 923 84 122 | Aim at the Saw top and Deployer side slots. '
+            'Check the outline and the hint before and after setting an ordinary item. |\n'
+            '| Crusher to Belt | 918 84 139 | Put cobblestone in the hopper above the wheels. '
+            'Start the stopped Belt with the lever and watch the stored output transfer. |\n'
+        )
+    (session.scratch / 'REVIEW.md').write_text(review)
     print(json.dumps({'play': str(play), 'world': session.world, 'restart_verified': True}))
 
 
@@ -165,13 +259,16 @@ def main():
     for name in ('game', 'resources', 'ctl'):
         parser.add_argument('--' + name, type=Path, required=True)
     parser.add_argument('--jar', type=Path)
+    parser.add_argument('--release-audit', action='store_true')
     args = parser.parse_args()
+    name, world = ('release-audit', 'CreateReleaseAudit') if args.release_audit else (
+        'motion-review', 'CreateMotionReview')
     session = NativeCheckSession(args.game, args.resources, args.ctl, args.jar,
-                                 name='motion-review', world='CreateMotionReview',
+                                 name=name, world=world,
                                  size=(1280, 720), username='BearingReview')
     print(session.scratch, flush=True)
-    prepare(session)
-    launch_files(session)
+    prepare(session, args.release_audit)
+    launch_files(session, args.release_audit)
 
 
 if __name__ == '__main__':

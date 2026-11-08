@@ -8,6 +8,33 @@ changes from [Horizon #11098](https://github.com/horizon-rust/horizon/pull/11098
 [Horizon #11068](https://github.com/horizon-rust/horizon/pull/11068). This is a
 developer source build. The three changes are applied in a separate checkout.
 
+- The [release audit](docs/reviews/0.8-release-audit.md) records the current
+  boundaries and the checks to repeat on the first official Nightly with
+  all required APIs. The [region-edge comparison](tools/contraption_column_boundary_checks.py)
+  exercises separate cross-column source and destination cases. Java
+  captures and lands both. Horizon refuses each capture and retains both
+  source blocks after a cold restart.
+- [Straight stair riders](tools/contraption_stair_rider_checks.py) stand on
+  each tread of a dry oak stair on a bearing and on a piston. Both clients
+  preserve the supported heights and follow the drive in all four cases.
+  The existing rotary and piston slab rider fixtures also pass.
+- [Dropped items on a cross-column sweep](tools/bearing_chunk_sweep_checks.py)
+  match all nine horizontal Java position samples, including the seven
+  samples after contact. Support height and the nearby falling control also
+  match the fixture. The old item missed up to 0.357 blocks of horizontal
+  travel because it stayed at its original X/Z position.
+- [Saw and Deployer filters](tools/contraption_filter_hover_checks.py) match
+  nine Java hint and target-face cases with imported or bundled resources.
+  Ordinary set, replace, clear and saved filter checks still pass.
+- [Crusher output](tools/crusher_transfer_checks.py) matches 60 block
+  observations over ten Java ticks. It covers a stopped Belt, a filled dry
+  Chute and a Millstone with partial acceptance, item components and an
+  unmatched item. A cold Horizon restart preserves the waiting output.
+  The earlier Depot and loose ore checks also pass.
+- The same audit re-ran the bearing and linear movement boards, chassis range
+  board, mounted Chest and Barrel menus, cross-column kinetic transmission,
+  mixed casing Belt riders, Fluid Valve, Saw-to-Depot output, ordinary Crafter
+  recipes and four rotated production schematics.
 - [Moving riders](tools/contraption_rider_checks.py) record the camera on a
   rotating platform with the player standing and walking. The largest short
   frame steps in the verification run were 0.032 and 0.062 blocks respectively.
@@ -162,8 +189,8 @@ developer source build. The three changes are applied in a separate checkout.
   drift in the Horizon trace fell from 0.0603 blocks to below 0.000001 blocks.
   Java's radial drift was 0.000354 blocks. The sampled player position still
   differs by up to 0.154 blocks when matched by the separately observed
-  bearing angle.
-  Dropped-item carry remains a separate case.
+  bearing angle. The separate full-cube dropped-item fixture is recorded in
+  the release audit above.
 - [Dry straight stairs](tools/contraption_stair_checks.py) match the 18 landed
   states across quarter, half and three-quarter turns on all three axes.
   A sticky piston preserves both states. Dropped items settle on the two

@@ -1560,3 +1560,33 @@ bindings = [
   { name = "game", ty = "&crate::game::Game<'_>", value = "self" },
   { name = "result", ty = "Vec<Aabb>", value = "$value" },
 ]
+
+[[module]]
+id = "contraption-item-motion"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_contraption_item_motion"
+source = "contraption_item_motion.rs"
+
+[[injection]]
+id = "contraption-item-motion-tick"
+target = "horizon_client::game::Game<'_>::tick_items"
+kind = "WRAP_OPERATION"
+selector = "self.tick_dropped_items"
+ordinal = 0
+require = 1
+helper = "contraption_item_motion_hook.rs"
+bindings = [
+  { name = "game", ty = "&mut Game<'_>", value = "$receiver" },
+  { name = "round", ty = "&mut native_ticks::TickRound", value = "$arg0" },
+  { name = "original", ty = "impl FnOnce(&mut Game<'_>, &mut native_ticks::TickRound) -> ()", value = "$operation" },
+]
+
+[[injection]]
+id = "contraption-item-motion-post"
+hook = "level_tick_post"
+hook_version = 1
+kind = "HEAD"
+helper = "contraption_item_motion_post.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+]

@@ -68,6 +68,23 @@ fn entity<'g>(game: &'g Game<'_>, pos: Pos) -> Option<&'g ModBlockEntity> {
     (entity.id == ENTITY).then_some(entity)
 }
 
+pub(super) fn filter_display(
+    game: &Game<'_>,
+    hit: &Hit,
+) -> Option<super::create_port_motor_value_world::FilterDisplay> {
+    use super::create_port_motor_value_world::{FilterDisplay, FilterLabel};
+
+    let slot = Slot::at(game, hit.pos)?;
+    let filter = saw::read_filter(game, entity(game, hit.pos)?)?;
+    Some(FilterDisplay::sample(
+        slot.center,
+        [slot.yaw, 90.0, 0.0],
+        FilterLabel::Recipe,
+        slot.hit(hit.pos, hit.point),
+        filter.is_some(),
+    ))
+}
+
 enum Click<'a> {
     Blocked,
     Sample(Option<&'a ItemStack>),

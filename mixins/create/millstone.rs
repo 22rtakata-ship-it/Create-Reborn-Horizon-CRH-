@@ -240,7 +240,7 @@ pub(super) fn publish_inventory(game: &mut Game<'_>, pos: [i32; 3]) {
     }
 }
 
-pub(super) fn insert_from_chute(
+pub(super) fn insert_from_transport(
     game: &mut Game<'_>,
     pos: [i32; 3],
     stack: &ItemStack,

@@ -4,6 +4,7 @@
 // Create 6.0.10 ValueSettingsClient/Screen and KineticScrollValueBehaviour.
 // Rendering uses the original private value_settings.png sheet via the importer.
 use super::create_port_motor_control::MotionOptions;
+use super::create_port_motor_value_world::FilterLabel;
 use super::{Game, create_port_chassis as chassis, create_port_chute as chute};
 use crate::{containers::BlockEntity, mod_api::NativeScreenView};
 use create_engine::contraption::chassis::{DEFAULT_RANGE, MAX_RANGE};
@@ -58,7 +59,11 @@ thread_local! {static STATE: RefCell<State> = RefCell::new(State::default());}
 #[derive(Clone, Copy)]
 enum HoverTip {
     Board(Board),
-    Filter { filled: bool, show_amount: bool },
+    Filter {
+        label: FilterLabel,
+        filled: bool,
+        show_amount: bool,
+    },
 }
 
 impl HoverTip {
@@ -74,10 +79,20 @@ impl HoverTip {
                 None,
             ),
             Self::Filter {
+                label,
                 filled,
                 show_amount,
             } => (
-                Text::translate_with_fallback("create.logistics.filter", "Filter", &[]),
+                match label {
+                    FilterLabel::Item => {
+                        Text::translate_with_fallback("create.logistics.filter", "Filter", &[])
+                    }
+                    FilterLabel::Recipe => Text::translate_with_fallback(
+                        "create.logistics.recipe_filter",
+                        "Recipe Filter",
+                        &[],
+                    ),
+                },
                 if filled {
                     Text::translate_with_fallback(
                         "create.logistics.filter.click_to_replace",
@@ -320,9 +335,7 @@ fn arrow(row: i32) -> Text {
     )
 }
 fn can_interact(game: &Game<'_>) -> bool {
-    game.player.is_some()
-        && game.may_build()
-        && !game.keys.contains(&winit::keyboard::KeyCode::ShiftLeft)
+    game.player.is_some() && game.may_build() && !game.native_sneaking()
 }
 fn saved(game: &Game<'_>, pos: [i32; 3]) -> i32 {
     match game.world.block_entities.get(&(pos[0], pos[1], pos[2])) {
@@ -493,7 +506,8 @@ pub(super) fn tick(game: &mut Game<'_>) {
             .map(|target| HoverTip::Board(target.board))
             .or_else(|| {
                 super::create_port_motor_value_world::filter_hover(game).map(
-                    |(filled, show_amount)| HoverTip::Filter {
+                    |(label, filled, show_amount)| HoverTip::Filter {
+                        label,
                         filled,
                         show_amount,
                     },
@@ -1120,6 +1134,17 @@ pub(super) fn hud(game: &Game<'_>, batch: &mut HudBatch) {
     };
     let x = batch.width as i32 / 2;
     let (title, hint, amount) = tip.lines();
+    if matches!(tip, HoverTip::Filter { .. })
+        && game.ticks.is_multiple_of(4)
+        && std::env::var_os("CREATE_HORIZON_TRACE").is_some()
+    {
+        let lines: Vec<_> = [&title, &hint]
+            .into_iter()
+            .chain(amount.as_ref())
+            .map(|line| line.resolved().plain())
+            .collect();
+        log::info!("Create filter hover: {}", serde_json::json!(lines));
+    }
     let mut y = batch.height as i32 - 75 - 12 * (2 + i32::from(amount.is_some()));
     for (i, line) in [title, hint].into_iter().chain(amount).enumerate() {
         let [r, g, b] = if i == 0 {

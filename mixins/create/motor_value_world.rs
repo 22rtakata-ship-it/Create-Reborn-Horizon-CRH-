@@ -134,8 +134,47 @@ struct MotionBox {
 #[derive(Clone, Debug)]
 struct FilterBox {
     center: [f32; 3],
+    rotation: Option<[f32; 3]>,
+    label: FilterLabel,
     filled: bool,
     solid_item: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum FilterLabel {
+    Item,
+    Recipe,
+}
+
+/// A filtering behavior's read-only presentation at the current block hit.
+pub(super) struct FilterDisplay {
+    pub center: [f32; 3],
+    pub rotation: Option<[f32; 3]>,
+    pub label: FilterLabel,
+    pub hit: bool,
+    pub filled: bool,
+    pub solid_item: bool,
+    pub count: String,
+}
+
+impl FilterDisplay {
+    pub(super) fn sample(
+        center: [f32; 3],
+        rotation: [f32; 3],
+        label: FilterLabel,
+        hit: bool,
+        filled: bool,
+    ) -> Self {
+        Self {
+            center,
+            rotation: Some(rotation),
+            label,
+            hit,
+            filled,
+            solid_item: false,
+            count: String::new(),
+        }
+    }
 }
 
 impl Plan {
@@ -159,6 +198,9 @@ impl Plan {
     pub fn rotation(&self) -> [f32; 3] {
         if let Some(motion) = &self.motion {
             return motion.slot.rotation();
+        }
+        if let Some(rotation) = self.filter.as_ref().and_then(|filter| filter.rotation) {
+            return rotation;
         }
         [
             self.side.horizontal_angle() + 180.0,
@@ -370,9 +412,18 @@ fn target(game: &Game<'_>) -> Option<Plan> {
     let wrench_target =
         chassis::is_chassis(&block) && game.held().is_some_and(|item| chassis::wrench(game, item));
     let filter = if !motor && motion.is_none() && !wrench_target {
-        Some(super::create_port_chute::filter_display(
-            game, &hit, &block,
-        )?)
+        if game.native_sneaking() {
+            return None;
+        }
+        Some(match block.as_str() {
+            super::create_port_deployer::BLOCK => {
+                super::create_port_deployer::filter_display(game, &hit)
+            }
+            super::create_port_drill::SAW => {
+                super::create_port_saw_filter::filter_display(game, &hit)
+            }
+            _ => super::create_port_chute::filter_display(game, &hit, &block),
+        }?)
     } else {
         None
     };
@@ -381,15 +432,17 @@ fn target(game: &Game<'_>) -> Option<Plan> {
     }
     if let Some(filter) = filter {
         return Some(Plan {
-            pos: filter.pos,
+            pos: hit.pos,
             motor_facing: None,
             motion: None,
             filter: Some(FilterBox {
                 center: filter.center,
+                rotation: filter.rotation,
+                label: filter.label,
                 filled: filter.filled,
                 solid_item: filter.solid_item,
             }),
-            side: Side(filter.side),
+            side: Side(hit.face),
             text: filter.count,
             active: filter.hit,
             ticks_until_removal: 1,
@@ -489,7 +542,7 @@ pub(super) fn active(game: &Game<'_>) -> bool {
     })
 }
 
-pub(super) fn filter_hover(game: &Game<'_>) -> Option<(bool, bool)> {
+pub(super) fn filter_hover(game: &Game<'_>) -> Option<(FilterLabel, bool, bool)> {
     STATE.with_borrow(|state| {
         if state.identity != identity(game) {
             return None;
@@ -497,10 +550,9 @@ pub(super) fn filter_hover(game: &Game<'_>) -> Option<(bool, bool)> {
         let plan = state
             .boxes
             .values()
-            .find(|plan| plan.active && plan.ticks_until_removal == 1)?;
-        plan.filter
-            .as_ref()
-            .map(|filter| (filter.filled, !plan.text.is_empty()))
+            .find(|plan| plan.active && plan.ticks_until_removal == 1 && plan.filter.is_some())?;
+        let filter = plan.filter.as_ref()?;
+        Some((filter.label, filter.filled, !plan.text.is_empty()))
     })
 }
 

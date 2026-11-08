@@ -146,6 +146,7 @@
   "create.logistics.filter.exactly": "Точно",
   "create.logistics.filter.any_amount_short": "Любое",
   "create.logistics.filter.hold_to_set_amount": "Удерживайте для изменения количества",
+  "create.logistics.recipe_filter": "Фильтр рецепта",
   "create.tooltip.deployer.header": "Информация об автономном активаторе:",
   "create.tooltip.deployer.using": "Режим: Использование/Размещение",
   "create.tooltip.deployer.punching": "Режим: Атака/Разрушение",

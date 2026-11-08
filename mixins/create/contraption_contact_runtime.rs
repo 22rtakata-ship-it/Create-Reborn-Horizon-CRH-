@@ -17,11 +17,13 @@ use create_engine::{
 };
 use horizon_client::collisions::{EntityCollisions, LookupCollisions, SceneCollisions};
 use horizon_client_render::create_contraption_scene::{
-    KEY, POSE_KEY, Pos, Record, dry_slab_type, full_cube_payload, read, upright_side_payload,
+    KEY, POSE_KEY, Pos, Record, dry_slab_type, dry_straight_stair, full_cube_payload, read,
+    upright_side_payload,
 };
 use horizon_core::geometry::{Aabb, Vec3};
 use horizon_world::{
     attachments::Holder,
+    chunk::BlockState,
     collision_context::{CollisionContext, CollisionEntity, CollisionItem, EntityContextKind},
     entity_move::MovementRecord,
     entity_obstruction::EntityIdentity,
@@ -234,15 +236,8 @@ fn carry(game: &mut Game<'_>, previous: &[Record], current: &[Record]) {
             .filter(|(_, state)| full_cube_payload(state))
             .map(|(local, _)| *local);
         let tops = || {
-            record.blocks.iter().filter_map(|(local, state)| {
-                let top = if full_cube_payload(state) {
-                    1.0
-                } else if dry_slab_type(state)? == "bottom" {
-                    0.5
-                } else {
-                    1.0
-                };
-                Some((*local, top))
+            payload_colliders(game, record, [0.0; 3], |state| {
+                dry_slab_type(state).is_some() || dry_straight_stair(state)
             })
         };
         let half_extents = [size.x * 0.5, size.z * 0.5];
@@ -276,13 +271,7 @@ fn carry(game: &mut Game<'_>, previous: &[Record], current: &[Record]) {
                     record.angle,
                     body,
                     player.velocity.components(),
-                    full_blocks.map(|block| {
-                        let min = block.map(f64::from);
-                        ContactBox {
-                            min,
-                            max: min.map(|value| value + 1.0),
-                        }
-                    }),
+                    full_blocks.map(|block| ContactBox::cube(block.map(f64::from))),
                     max_step,
                 );
                 // Keep the existing path for support, lift and step-up. This
@@ -302,7 +291,7 @@ fn carry(game: &mut Game<'_>, previous: &[Record], current: &[Record]) {
                     record.angle,
                     body,
                     player.velocity.components(),
-                    payload_colliders(game, record, [0.0; 3]),
+                    payload_colliders(game, record, [0.0; 3], |_| true),
                     max_step,
                 );
                 (response.surface || response.separation != [0.0; 3]).then_some(Contact::Tilted {
@@ -338,7 +327,8 @@ fn carry(game: &mut Game<'_>, previous: &[Record], current: &[Record]) {
                     )
                     .map(|motion| Contact::Push(motion, None))
                 } else {
-                    let shapes = payload_colliders(game, record, current_origin);
+                    let shapes: Vec<_> =
+                        payload_colliders(game, record, current_origin, |_| true).collect();
                     // Horizon's ordinary collision path establishes ground
                     // contact. A touching top needs no hard separation.
                     if !shapes.iter().any(|&shape| linear_body.penetrates(shape)) {
@@ -447,35 +437,38 @@ fn carry(game: &mut Game<'_>, previous: &[Record], current: &[Record]) {
     }
 }
 
-fn payload_colliders(game: &Game<'_>, record: &Record, origin: [f64; 3]) -> Vec<ContactBox> {
-    let mut lookup = LookupCollisions {
-        block: &|_, _, _| game.world.air,
-        binding: game.collision,
-    };
-    let mut boxes = Vec::new();
-    for (local, state) in record.blocks.iter() {
+fn payload_colliders<'a>(
+    game: &'a Game<'_>,
+    record: &'a Record,
+    origin: [f64; 3],
+    include_partial: impl Fn(&BlockState) -> bool + 'a,
+) -> impl Iterator<Item = ContactBox> + 'a {
+    record.blocks.iter().flat_map(move |(local, state)| {
         let at: [f64; 3] = std::array::from_fn(|i| origin[i] + f64::from(local[i]));
-        if full_cube_payload(state) {
-            boxes.push(ContactBox {
-                min: at,
-                max: at.map(|value| value + 1.0),
-            });
-            continue;
-        }
-        let Some(id) = game.pack.assets.registry.id(state) else {
-            continue;
+        let cube = full_cube_payload(state).then(|| ContactBox::cube(at));
+        let shape = if cube.is_none() && include_partial(state) {
+            let mut lookup = LookupCollisions {
+                block: &|_, _, _| game.world.air,
+                binding: game.collision,
+            };
+            game.pack
+                .assets
+                .registry
+                .id(state)
+                .and_then(|id| game.collision.collision_shape(&mut lookup, id, *local).ok())
+        } else {
+            None
         };
-        let Ok(shape) = game.collision.collision_shape(&mut lookup, id, *local) else {
-            continue;
-        };
-        for bounds in shape.boxes() {
+        let mut index = 0;
+        cube.into_iter().chain(std::iter::from_fn(move || {
+            let bounds = shape.as_ref()?.boxes().get(index)?;
+            index += 1;
             let min = bounds.min_position().components();
             let max = bounds.max_position().components();
-            boxes.push(ContactBox {
+            Some(ContactBox {
                 min: std::array::from_fn(|i| at[i] + min[i]),
                 max: std::array::from_fn(|i| at[i] + max[i]),
-            });
-        }
-    }
-    boxes
+            })
+        }))
+    })
 }

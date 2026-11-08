@@ -10,6 +10,7 @@ fn contraption_player_collision(game: &crate::game::Game<'_>, mut result: Vec<Aa
         &mut result,
         excluded,
         standing,
+        false,
     );
     result
 }

@@ -337,9 +337,9 @@ Belts, local players and mobs. Water washes, lit ordinary fire and campfires
 smoke, soul fire and soul campfires haunt, and lava blasts. Blasting can
 destroy items, including smokeable food, according
 to the source policy; it is not a general-purpose way to cook food.
-The current blasting adapter reads the item's default fire resistance. Per-stack
-fire/damage-resistance component overrides are not yet used for that decision;
-the native destruction tests cover ordinary item definitions.
+The blasting adapter reads the effective fire resistance, including the
+supported per-stack full-fire component override and explicit removal.
+Other damage selectors keep their original data and need separate parity checks.
 
 `create:fan_transparent` and block/fluid `fan_processing_catalysts/*` retain the
 supported source entries; unavailable Create blocks are omitted. Until the API

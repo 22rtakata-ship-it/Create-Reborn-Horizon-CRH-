@@ -20,6 +20,7 @@ Super Glue, Sticker, small moving farms, and two-way Chute transfer through
 an item dock. The current checkpoint verifies farm shutdown and bearing
 landing through dry foliage against Java.
 [Contraption review route](reviews/0.8-contraption-world.md)
+· [Release audit](reviews/0.8-release-audit.md)
 
 ## Current priority
 
@@ -237,6 +238,8 @@ with the systems they depend on.
   original processing state and cold restart comparisons.
 - [x] Downward Crushing Wheels to a Depot. Compare an occupied top slot,
   a blocked buffer, partial transfer and component retention after a restart.
+- [x] Downward Crushing Wheels to a horizontal Belt, dry Chute and Millstone.
+  Compare stopped output, partial transfer, item components and restart.
 - [x] Downward Crushing Wheels with loose diamond ore and raw iron. Compare
   capture, intake of a marked stack, processing and ejection on every tick.
 - [ ] Crushing Wheel collisions with queued items and other entities, damage,
@@ -330,7 +333,9 @@ with the systems they depend on.
   shapes, state rotation and native reload. Full item contact timing remains open.
 - [x] Isolated dry straight oak and stone stairs on bearings and pistons.
   Registry tread geometry and 18 landed states checked in the original.
-- [ ] Stairs that join at corners, waterlogged stairs and stair-specific rider transfer.
+- [x] Grounded rider transfer on both treads of dry straight stairs on a
+  horizontal bearing or piston, with Java and Horizon checks.
+- [ ] Stairs that join at corners and waterlogged stairs.
 - [x] Twenty-four full-cube Create blocks on bearings and sticky pistons,
   including the solid palettes, zinc blocks and casings.
 - [x] Windmill Sail Frame and sixteen sail colors. Dye, shear, placement,
@@ -350,6 +355,8 @@ with the systems they depend on.
 - [ ] Native Cart Assembler rails, cart coupling, mounted payload and renderer.
 - [x] Dropped-item collision, grounded rotary and linear rider transfer, and
   collision of narrow piston poles in Horizon.
+- [x] A full-cube Y-axis rotor carries a dropped item through a loaded neighbor
+  at the same end-of-level-tick phase as Java, with a falling control.
 - [x] Local player lift on a rising bearing blade and tick-aligned rider
   interpolation. Live Java and Horizon checks cover a rising and receding blade.
 - [x] Grounded bottom-slab rider keeps its rotation radius in Horizon. Live
@@ -374,6 +381,9 @@ with the systems they depend on.
 - [ ] Cross-chunk capture and restoration. First validate a durable two-column
   write with both columns loaded. Recovery must replay an interrupted write
   before either column becomes visible, including across a region boundary.
+- [x] Explicit boundary regression. Java can capture and land across a region
+  edge. Horizon preserves both source blocks when it refuses either case,
+  including after a cold reload.
 - [x] Harvester on supported crops, moving Saw and Drill with cutting stalls,
   and horizontal stationary Saw tree felling.
 - [x] Harvester blade phase based on distance traveled, including reverse and
