@@ -95,6 +95,11 @@ developer source build. The three changes are applied in a separate checkout.
   A sticky piston preserves both states. Dropped items settle on the two
   tread heights within Java's contact offset of about 0.0001 blocks. The
   native fixture also covers wet stairs and obstructed landing preflight.
+- [Solid Create cargo](tools/contraption_solid_checks.py) keeps all 24
+  original block IDs on a bearing and a sticky piston. The paired pose
+  samples, four in-flight cube contacts and an air control match within the
+  original item collision offset. A separate fallback render check reopens
+  the save and shows four samples while their stationary cells remain air.
 - [Andesite building blocks](tools/andesite_palette_checks.py) use six
   stonecutting recipes checked against the pinned source. Horizon's real
   Stonecutter makes all five variants and converts them back through the
@@ -122,6 +127,10 @@ developer source build. The three changes are applied in a separate checkout.
   before an empty slot, components survive, and an obstructing item keeps
   the next one from leaving the downward opening. Redstone pauses
   extraction and clears its cooldown.
+- [Crouched Wrench pickup](tools/funnel_interaction_checks.py) removes the
+  dry vertical Funnel and returns one block in Survival or zero in
+  Creative. The Wrench is undamaged and no second item drops. The same
+  Java fixture records intake before landing as an outstanding case.
 - [Zinc ore](tools/zinc_checks.py) appears in nine new ordinary Overworld
   columns in each client. The mining checks match the stone and iron tool
   requirements and Silk Touch results. Fortune drops remain in the source
@@ -136,6 +145,9 @@ goggles HUD, gauge comparators, water wheel behavior and 13 manual crafts.
 The staged Horizon client library ran 1,300 tests: 1,164 passed, 135 were
 ignored and the source-shape guard `hook_points_stay_hookable` failed on an
 unchanged existing gauge hook. All five mounted inventory tests passed.
+The full original-resource graphical smoke also passed placement, value
+settings, engineering tools, fan processing, drill drops and the saved
+machine regressions in one native run.
 
 ## 0.8.0-alpha.5 chassis, saw and Deployer crafting
 

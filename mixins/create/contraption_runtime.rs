@@ -26,7 +26,7 @@ use glam::DVec3;
 use horizon_client::collisions::LookupCollisions;
 use horizon_client_render::create_contraption_scene::{
     ACTIVE, ACTOR_VISUAL_KEY, ClockHand, KEY, MAX_BLOCKS, MAX_RECORDS, RECORDS, Record, StrokeKind,
-    dry_slab_type, dry_straight_stair, read, vanilla_stair,
+    dry_slab_type, dry_straight_stair, read, solid_create_payload, vanilla_stair,
 };
 use horizon_core::position::BlockPos;
 use horizon_world::{
@@ -280,6 +280,7 @@ fn supported(state: &BlockState) -> bool {
     if super::create_port_sail::from_state(state).is_some()
         || dry_slab_type(state).is_some()
         || dry_straight_stair(state)
+        || solid_create_payload(state)
     {
         return true;
     }

@@ -501,15 +501,48 @@ pub fn dry_straight_stair(state: &BlockState) -> bool {
             .is_some_and(|face| matches!(face.as_str(), "north" | "south" | "east" | "west"))
 }
 
-/// Vanilla payload states that fill a cube without querying collision shapes.
-pub fn full_cube_payload(state: &BlockState) -> bool {
-    state.name.starts_with("minecraft:")
-        && !vanilla_stair(state)
-        && !matches!(
+/// Registered Create cargo with a full collision cube and no persisted state.
+pub fn solid_create_payload(state: &BlockState) -> bool {
+    state.properties.is_empty()
+        && matches!(
             state.name.as_str(),
-            "minecraft:honey_block" | "minecraft:chest"
+            "create:cut_andesite"
+                | "create:polished_cut_andesite"
+                | "create:cut_andesite_bricks"
+                | "create:small_andesite_bricks"
+                | "create:layered_andesite"
+                | "create:cut_granite"
+                | "create:polished_cut_granite"
+                | "create:cut_granite_bricks"
+                | "create:small_granite_bricks"
+                | "create:cut_diorite"
+                | "create:polished_cut_diorite"
+                | "create:cut_diorite_bricks"
+                | "create:small_diorite_bricks"
+                | "create:industrial_iron_block"
+                | "create:weathered_iron_block"
+                | "create:zinc_ore"
+                | "create:deepslate_zinc_ore"
+                | "create:raw_zinc_block"
+                | "create:zinc_block"
+                | "create:andesite_casing"
+                | "create:brass_casing"
+                | "create:copper_casing"
+                | "create:andesite_alloy_block"
+                | "create:brass_block"
         )
-        && (!state.name.ends_with("_slab") || dry_slab_type(state) == Some("double"))
+}
+
+/// Supported payload states that fill a cube without querying collision shapes.
+pub fn full_cube_payload(state: &BlockState) -> bool {
+    solid_create_payload(state)
+        || (state.name.starts_with("minecraft:")
+            && !vanilla_stair(state)
+            && !matches!(
+                state.name.as_str(),
+                "minecraft:honey_block" | "minecraft:chest"
+            )
+            && (!state.name.ends_with("_slab") || dry_slab_type(state) == Some("double")))
 }
 
 pub fn upright_side_payload(record: &Record) -> bool {

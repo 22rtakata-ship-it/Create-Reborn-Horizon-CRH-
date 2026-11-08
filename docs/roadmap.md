@@ -189,6 +189,7 @@ with the systems they depend on.
 - [ ] Funnels/tunnels/chutes, filters, brass/andesite rules and batch transfer.
 - [x] Dry vertical Andesite Funnel with an ordinary inventory. Verify the
   original stack order, Wrench, extraction cooldown and redstone.
+- [x] Crouched Wrench pickup for the dry vertical Funnel in Survival and Creative.
 - [ ] Funnel dropped-item intake, horizontal and wet placement, Belt Funnels,
   filters, Brass Funnels and their full presentation.
 - [x] Ordinary physical item intake into the Basin and Millstone: original scenes,
@@ -240,6 +241,8 @@ with the systems they depend on.
 - [x] Isolated dry straight oak and stone stairs on bearings and pistons.
   Registry tread geometry and 18 landed states checked in the original.
 - [ ] Stairs that join at corners, waterlogged stairs and stair-specific rider transfer.
+- [x] Twenty-four full-cube Create blocks on bearings and sticky pistons,
+  including the solid palettes, zinc blocks and casings.
 - [x] Windmill Sail Frame and sixteen sail colors. Dye, shear, placement,
   windmill capture, generated speed and restart verified.
 - [ ] Windmill sail placement preview and canvas contact behavior.
