@@ -31,6 +31,20 @@ developer source build. The three changes are applied in a separate checkout.
   Chute and a Millstone with partial acceptance, item components and an
   unmatched item. A cold Horizon restart preserves the waiting output.
   The earlier Depot and loose ore checks also pass.
+- [Crusher particles](tools/crusher_particle_checks.py) compare real item
+  drops in both clients. Java showed exactly four new particles in each
+  of 16 sampled ticks for both Cobblestone and Raw Iron. Horizon's renderer
+  accepted four per observed tick, with the matching block or item sprite.
+  The native fixture passed with imported and bundled models.
+  The fixture also covers ambient crit sparks, invalid wheel pairs and
+  a completed recipe whose output cannot leave. The paired captures show
+  the two materials at the same camera angle, with different lighting.
+- The [native frame check](tools/contraption_frame_checks.py) sampled
+  156 rendered rotary poses and 156 rendered piston poses without a
+  backwards step. The [particle check](tools/particle_checks.py) uses
+  the real motor board for power changes. It passed the generator
+  burst and goggles checks, four fan media, airflow reversal and stop
+  cleanup. These checks do not compare full rendered frames to Java.
 - The same audit re-ran the bearing and linear movement boards, chassis range
   board, mounted Chest and Barrel menus, cross-column kinetic transmission,
   mixed casing Belt riders, Fluid Valve, Saw-to-Depot output, ordinary Crafter

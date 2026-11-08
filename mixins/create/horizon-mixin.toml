@@ -642,6 +642,31 @@ name = "create_port_saw_processing"
 source = "saw_processing_runtime.rs"
 
 [[module]]
+id = "crusher-client"
+file = "crates/horizon-client/src/game.rs"
+name = "create_port_crusher_client"
+source = "crusher_client.rs"
+
+[[injection]]
+id = "crusher-client-be-particles"
+target = "horizon_client::game::block_entity_anims::Game<'_>::tick_block_entity_anims"
+kind = "HEAD"
+helper = "crusher_particle_tick.rs"
+bindings = [{name="game",ty="&mut crate::game::Game<'_>",value="&mut *self"}]
+
+[[injection]]
+id = "crusher-random-animate-tick"
+target = "horizon_client_lib::animate_tick::block_animate_tick"
+kind = "HEAD"
+helper = "crusher_animate.rs"
+bindings = [
+  {name="engine",ty="&mut crate::particles::ParticleEngine",value="&mut *engine"},
+  {name="ctx",ty="&crate::animate_tick::AnimateContext<'_>",value="ctx"},
+  {name="state",ty="horizon_world::registry::BlockStateId",value="state"},
+  {name="controller",ty="[i32;3]",value="pos"},
+]
+
+[[module]]
 id = "saw-filter"
 file = "crates/horizon-client/src/game.rs"
 name = "create_port_saw_filter"

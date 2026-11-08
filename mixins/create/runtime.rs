@@ -1504,6 +1504,10 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
 }
 
 pub(super) fn update_tag(entity: &ModBlockEntity, tag: &mut Option<Compound>) {
+    if entity.id == crusher::CONTROLLER && tag.is_none() {
+        *tag = Some(super::create_port_crusher_client::update_tag(entity));
+        return;
+    }
     if matches!(entity.id.as_str(), item_drain::BLOCK | super::create_port_basin::tank::BLOCK | super::create_port_basin::pump::PIPE) && tag.is_none() {
         *tag = Some(entity.nbt.clone());
         return;

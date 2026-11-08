@@ -248,6 +248,8 @@ def launch_files(session, release_audit):
             '| Ghost filters | 918 82 124 and 923 84 122 | Aim at the Saw top and Deployer side slots. '
             'Check the outline and the hint before and after setting an ordinary item. |\n'
             '| Crusher to Belt | 918 84 139 | Put cobblestone in the hopper above the wheels. '
+            'Look between the wheels from the side for cobblestone fragments while the stack is crushed. '
+            'The fragments stop when the gravel is ready. Occasional crit sparks can still appear. '
             'Start the stopped Belt with the lever and watch the stored output transfer. |\n'
         )
     (session.scratch / 'REVIEW.md').write_text(review)

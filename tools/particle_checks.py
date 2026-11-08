@@ -16,6 +16,9 @@ import tempfile
 import time
 
 from common import ROOT
+from native_check_session import wait_loaded
+from native_motors import replace_motor
+from value_settings_checks import motor_board_coordinate
 
 
 def records(path, offset=0):
@@ -30,6 +33,7 @@ def records(path, offset=0):
 def run(call, log, scratch=None, graphics=True):
     """Only use on a disposable world. Reserves x237..270/y68..74/z-3..10."""
     origin, y = 240, 70
+    motor = (origin - 1, y, 0)
     log = Path(log)
 
     def command(text):
@@ -45,7 +49,26 @@ def run(call, log, scratch=None, graphics=True):
                 and (pos is None or r['origin'] == list(pos))]
 
     def speed(rpm):
-        command(f'data merge block {origin - 1} {y} 0 {{ScrollValue:{rpm}}}')
+        if rpm == 0:
+            replace_motor(call, motor, rpm, 'east')
+            return
+        command(f'tp @s {motor[0] + .5} {y} 3.5')
+        call('look-at', 'block', *motor, 'south')
+        call('wait', 3)
+        call('mouse', 'right', 'down')
+        call('wait', 10)
+        assert call('screen')['screen'] == 'mod'
+        boards = [json.loads(line.split('Create motor board: ', 1)[1])
+                  for line in log.read_text().splitlines() if 'Create motor board: ' in line]
+        assert boards and boards[-1]['pos'] == list(motor), boards[-1:]
+        point = motor_board_coordinate(boards[-1], int(rpm > 0), abs(rpm))
+        call('click-at', *point, 'right')
+        call('release')
+        call('wait', 8)
+        assert call('screen')['screen'] == 'playing'
+        state = command('data get block %d %d %d' % motor)
+        assert f'ScrollValue: {rpm}' in ' '.join(state['chat']), state
+        command(f'tp @s {origin + 5.5} {y} 4.5')
 
     def wait(ticks=10):
         call('wait', ticks)
@@ -53,7 +76,7 @@ def run(call, log, scratch=None, graphics=True):
     command('tick unfreeze')
     command('gamemode creative')
     command(f'tp @s {origin + 5.5} {y} 4.5')
-    call('wait-ready', 120)
+    wait_loaded(call, [(x, y, z) for x in (237, 255, 270) for z in (-3, 10)])
     call('fill', origin - 3, 68, -3, origin + 30, 74, 10, 'minecraft:air')
     call('fill', origin - 3, 69, -3, origin + 30, 69, 10, 'minecraft:smooth_stone')
     # Clearing the platform can let the live player fall before the following
@@ -63,7 +86,6 @@ def run(call, log, scratch=None, graphics=True):
     before = mark()
     call('setblock', origin - 1, y, 0, 'create:creative_motor[facing=east]')
     wait(10)
-    motor = (origin - 1, y, 0)
     bursts = scoped(before, 'rotation_indicator', 'spawn', motor)
     assert len(bursts) == 20, ('first source generator tier burst', len(bursts),
                                'requires CREATE_HORIZON_PARTICLE_TRACE=1')
@@ -102,11 +124,9 @@ def run(call, log, scratch=None, graphics=True):
     # removeSource clears the source's raw speed before reActivateSource runs.
     left = (origin+3, y, 6)
     right = (origin+5, y, 6)
-    call('setblock', *left, 'create:creative_motor[facing=east]')
-    command('data merge block %d %d %d {ScrollValue:32}' % left)
+    replace_motor(call, left, 32, 'east')
     call('setblock', origin+4, y, 6, 'create:shaft[axis=x]')
-    call('setblock', *right, 'create:creative_motor[facing=west]')
-    command('data merge block %d %d %d {ScrollValue:-64}' % right)
+    replace_motor(call, right, -64, 'west')
     wait(50)
     before = mark()
     call('setblock', *right, 'minecraft:air')
@@ -209,15 +229,14 @@ def capture_media(call, scratch):
     command('time set day')
     command('weather clear')
     command('tp @s 245.5 70 4.5')
-    call('wait-ready',120)
+    wait_loaded(call, [(x, 70, z) for x in (237, 255, 270) for z in (-3, 10)])
     call('fill',237,68,-3,270,74,10,'minecraft:air')
     call('fill',237,69,-3,270,69,10,'minecraft:smooth_stone')
     command('tp @s 245.5 70 4.5')
     call('wait',12)
     camera=call('status')['player']
     assert camera['on_ground'] and abs(camera['position'][1]-70)<1e-4,camera
-    call('setblock',239,70,0,'create:creative_motor[facing=east]')
-    command('data merge block 239 70 0 {ScrollValue:256}')
+    replace_motor(call, (239, 70, 0), 256, 'east')
     call('setblock',240,70,0,'create:encased_fan[facing=east]')
     call('setblock',253,70,0,'minecraft:stone')
     call('key','f1','tap')
@@ -259,7 +278,8 @@ def main():
     shutil.copy2(args.create_jar,inputs/'create.jar')
     env=os.environ.copy()
     for key,folder in [('HORIZON_HOME','home'),('HORIZON_LAUNCHER_HOME','launcher'),('XDG_DATA_HOME','data'),('XDG_CONFIG_HOME','config'),('HORIZON_LAUNCHER_TRASH','trash'),('HORIZON_LAUNCHER_CLIPBOARD','clipboard'),('HORIZON_LAUNCHER_DESKTOP','desktop')]:env[key]=str(scratch/folder)
-    env.update({'HORIZON_NO_AUDIO':'1','HORIZON_LAUNCHER_NO_SELF_UPDATE':'1','CREATE_HORIZON_PARTICLE_TRACE':'1'})
+    env.update({'HORIZON_NO_AUDIO':'1','HORIZON_LAUNCHER_NO_SELF_UPDATE':'1',
+                'CREATE_HORIZON_PARTICLE_TRACE':'1','CREATE_HORIZON_TRACE':'1'})
     socket=scratch/'control.sock';log_path=scratch/'game.log';transcript=[]
     def call(*words,timeout=120):
         reply=subprocess.run([str(args.ctl.resolve()),'--socket',str(socket),*map(str,words)],env=env,text=True,capture_output=True,timeout=timeout)
@@ -283,6 +303,8 @@ def main():
             if process.poll() is None:
                 try:call('quit',timeout=30);process.wait(timeout=30)
                 except (RuntimeError,subprocess.TimeoutExpired):process.terminate();process.wait(timeout=10)
+            for temporary in (resources, scratch/'.horizon-cache', scratch/'horizon-mods'):
+                shutil.rmtree(temporary, ignore_errors=True)
 
 
 if __name__=='__main__':main()

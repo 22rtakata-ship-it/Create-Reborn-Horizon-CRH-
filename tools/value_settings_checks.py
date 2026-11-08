@@ -8,6 +8,15 @@ import json
 import re
 
 
+def motor_board_coordinate(layout, row, speed):
+    left, top = layout['origin']
+    label = layout['size'][0] - 318
+    horizontal = left + ((max(1, speed) - 1) // 32) * 4 + speed + 1.5 + label + 18
+    horizontal += 2 if speed % 32 == 0 else 0
+    horizontal += 4 if speed > 0 else 0
+    return horizontal, top + (row + .5) * 11 - .5
+
+
 def run(call, graphics, log, scratch, pos):
     if not graphics:
         raise AssertionError('Value settings checks require a rendered client')
@@ -35,18 +44,10 @@ def run(call, graphics, log, scratch, pos):
         assert last['size'][1] == 22, last
         return last
 
-    def coordinate(layout, row, speed):
-        left, top = layout['origin']
-        label = layout['size'][0] - 318
-        horizontal = left + ((max(1, speed) - 1) // 32) * 4 + speed + 1.5 + label + 18
-        horizontal += 2 if speed % 32 == 0 else 0
-        horizontal += 4 if speed > 0 else 0
-        return horizontal, top + (row + .5) * 11 - .5
-
     def choose(row, speed):
         before = value()
         layout = board()
-        point = coordinate(layout, row, speed)
+        point = motor_board_coordinate(layout, row, speed)
         # Left-click must not commit a board opened with the right use binding.
         call('click-at', *point)
         call('wait', 2)
@@ -77,7 +78,7 @@ def run(call, graphics, log, scratch, pos):
     choose(1, 128)
     choose(0, 64)
     layout = board()
-    call('click-at', *coordinate(layout, 1, 256))
+    call('click-at', *motor_board_coordinate(layout, 1, 256))
     call('key', 'escape', 'tap')
     call('release')
     call('wait', 8)
