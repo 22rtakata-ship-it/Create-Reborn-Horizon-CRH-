@@ -472,6 +472,27 @@
         "id": "create:encased_fan"
       }
     },
+    "create/recipe/crafting/kinetics/fluid_tank.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "B": {
+          "tag": "c:plates/copper"
+        },
+        "C": {
+          "tag": "c:barrels/wooden"
+        }
+      },
+      "pattern": [
+        "B",
+        "C",
+        "B"
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:fluid_tank"
+      }
+    },
     "create/recipe/crafting/kinetics/flywheel.json": {
       "type": "minecraft:crafting_shaped",
       "category": "misc",
@@ -7877,6 +7898,16 @@
         "minecraft:string"
       ]
     },
+    "c/tags/item/barrels/wooden.json": {
+      "values": [
+        "minecraft:barrel"
+      ]
+    },
+    "c/tags/item/plates/copper.json": {
+      "values": [
+        "create:copper_sheet"
+      ]
+    },
     "c/tags/item/netherracks.json": {
       "values": [
         "minecraft:netherrack"
@@ -8105,6 +8136,7 @@
         "create:smart_chute",
         "create:speedometer",
         "create:stressometer",
+        "create:fluid_tank",
         "create:item_drain",
         "create:mechanical_piston",
         "create:sticky_mechanical_piston",
@@ -8725,6 +8757,27 @@
         }
       ],
       "random_sequence": "create:blocks/item_drain"
+    },
+    "create/loot_table/blocks/fluid_tank.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:fluid_tank"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/fluid_tank"
     },
     "create/loot_table/blocks/sticker.json": {
       "type": "minecraft:block",

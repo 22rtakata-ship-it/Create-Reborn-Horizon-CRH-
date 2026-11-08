@@ -61,10 +61,15 @@ fn read_segment(tag: &Tag) -> Result<Option<Fluid<Key>>, Unsupported> {
         return Err(Unsupported("unknown basin fluid segment fields"));
     }
     level(segment)?;
-    let content = compound(
-        segment.get(&"TankContent".into()),
-        "noncanonical basin tank content",
-    )?;
+    read_content(segment.get(&"TankContent".into()), TANK_CAPACITY)
+}
+
+/// NeoForge FluidTank.writeToNBT, used both directly and inside basin segments.
+pub(super) fn read_content(
+    tag: Option<&Tag>,
+    capacity: u32,
+) -> Result<Option<Fluid<Key>>, Unsupported> {
+    let content = compound(tag, "noncanonical basin tank content")?;
     if content.is_empty() {
         return Ok(None);
     }
@@ -88,7 +93,7 @@ fn read_segment(tag: &Tag) -> Result<Option<Fluid<Key>>, Unsupported> {
     let Some(Tag::Int(amount)) = fluid.get(&"amount".into()) else {
         return Err(Unsupported("noncanonical basin fluid amount"));
     };
-    if !(1..=TANK_CAPACITY as i32).contains(amount) {
+    if *amount <= 0 || *amount as u32 > capacity {
         return Err(Unsupported(
             "basin fluid amount outside supported tank capacity",
         ));
@@ -102,6 +107,30 @@ fn read_segment(tag: &Tag) -> Result<Option<Fluid<Key>>, Unsupported> {
         key: Key { id, components },
         amount: *amount as u32,
     }))
+}
+
+pub(super) fn write_content(fluid: Option<&Fluid<Key>>, capacity: u32) -> Result<Tag, Unsupported> {
+    let mut content = Compound::new();
+    if let Some(fluid) = fluid {
+        if fluid.amount == 0
+            || fluid.amount > capacity
+            || !matches!(fluid.key.id.as_str(), "minecraft:water" | "minecraft:lava")
+        {
+            return Err(Unsupported("unsupported replacement basin fluid"));
+        }
+        let mut payload = Compound::from([
+            ("id".into(), Tag::String(fluid.key.id.as_str().into())),
+            ("amount".into(), Tag::Int(fluid.amount as i32)),
+        ]);
+        if !fluid.key.components.is_empty() {
+            payload.insert(
+                "components".into(),
+                Tag::Compound(fluid.key.components.clone()),
+            );
+        }
+        content.insert("Fluid".into(), Tag::Compound(payload));
+    }
+    Ok(Tag::Compound(content))
 }
 pub(super) fn read_half(value: Option<&Tag>) -> Result<Tanks, Unsupported> {
     let Some(Tag::List(segments)) = value else {
@@ -170,27 +199,8 @@ pub(super) fn write_half(original: Option<&Tag>, tanks: &Tanks) -> Result<Tag, U
             continue;
         }
         let mut segment = compound(Some(&segments[i]), "noncanonical basin segment")?.clone();
-        let mut content = Compound::new();
-        if let Some(fluid) = tanks[i].as_ref() {
-            if fluid.amount == 0
-                || fluid.amount > TANK_CAPACITY
-                || !matches!(fluid.key.id.as_str(), "minecraft:water" | "minecraft:lava")
-            {
-                return Err(Unsupported("unsupported replacement basin fluid"));
-            }
-            let mut payload = Compound::from([
-                ("id".into(), Tag::String(fluid.key.id.as_str().into())),
-                ("amount".into(), Tag::Int(fluid.amount as i32)),
-            ]);
-            if !fluid.key.components.is_empty() {
-                payload.insert(
-                    "components".into(),
-                    Tag::Compound(fluid.key.components.clone()),
-                );
-            }
-            content.insert("Fluid".into(), Tag::Compound(payload));
-        }
-        segment.insert("TankContent".into(), Tag::Compound(content));
+        let content = write_content(tanks[i].as_ref(), TANK_CAPACITY)?;
+        segment.insert("TankContent".into(), content);
         let mut level = level(&segment)?.clone();
         // onFluidStackChanged().chase(amount/capacity,.25,EXP). Retain
         // current Value and the serialization-boundary Force flag; never

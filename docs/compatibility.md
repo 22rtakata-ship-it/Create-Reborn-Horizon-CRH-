@@ -169,6 +169,19 @@ conveyor or hand pour. Other containers and pipe
 connections are pending. The original JAR supplies the body model.
 The bucket's highlight and its overlap with the stream still differ slightly.
 
+A standalone Fluid Tank stores up to 8,000 mB of water or lava. In Creative,
+right-click with a filled bucket to add 1,000 mB or an empty bucket to drain
+1,000 mB. The held bucket stays the same. Survival uses vanilla bucket
+interactions. A Wrench toggles the tank's windows, and a comparator reads
+its fill level. The tank uses Create's original `TankContent` save format
+and exposes the same storage on every side through Horizon's fluid capability.
+The original JAR supplies the tank models and textures. The built-in model
+uses vanilla copper and glass.
+
+Tank placement that would form a vertical stack or a wider tank is refused.
+Boilers, moving tanks, goggles tooltips, splash particles and world light
+from lava are pending.
+
 The four sheet items retain `create:iron_sheet`, `create:golden_sheet` and
 `create:copper_sheet` and `create:brass_sheet`. Kinetic entities retain `Speed` as a float. Depot data
 uses `HeldItem.Item`, `Pos`, `PrevPos`, `Offset`, `PrevOffset`, `InSegment`,

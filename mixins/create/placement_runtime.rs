@@ -49,6 +49,10 @@ pub(super) fn state(
     answer: &mut Option<Option<BlockStateId>>,
 ) {
     let block = game.native_state_block(state).unwrap_or("");
+    if block == super::create_port_basin::tank::BLOCK {
+        *answer = Some(super::create_port_basin::tank::placement(game, ctx).then_some(state));
+        return;
+    }
     if let Some(large) = super::create_port_interactions::encased_cog_size(block) {
         let pos = [ctx.pos.x, ctx.pos.y, ctx.pos.z];
         let face = direction(ctx.face);

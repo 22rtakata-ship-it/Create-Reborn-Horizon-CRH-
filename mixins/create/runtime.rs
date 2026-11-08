@@ -157,6 +157,11 @@ pub(super) fn owns(block: &str) -> bool {
 }
 
 pub(super) fn entity(block: &str, entity: &mut Option<(String, Compound)>) {
+    use super::create_port_basin::tank;
+    if block == tank::BLOCK && entity.is_none() {
+        *entity = Some((block.into(), tank::default_nbt()));
+        return;
+    }
     if block == item_drain::BLOCK && entity.is_none() {
         *entity = Some((block.into(), item_drain::default_nbt()));
         return;
@@ -242,6 +247,7 @@ pub(super) fn ticks(block: &str, ticks: &mut bool) {
         || super::create_port_chute::funnel::is_funnel(block)
         || block == crusher::CONTROLLER
         || block == item_drain::BLOCK
+        || block == super::create_port_basin::tank::BLOCK
     {
         *ticks = true;
     }
@@ -450,6 +456,7 @@ pub(super) fn predicts_use(game: &Game<'_>, pos: [i32; 3], face: [i32; 3]) -> bo
     !inventory_blocked(game, pos)
         && (crate::game::create_port_burner::reacts(game, pos)
             || crate::game::create_port_basin::reacts(game, pos)
+            || crate::game::create_port_basin::tank::predicts_use(game, pos)
             || item_drain::predicts_use(game, pos)
             || super::create_port_belt::predicts_dye(game, pos)
             || super::create_port_belt::predicts_casing(game, pos, face)
@@ -505,7 +512,10 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3], ca
         game.swing_arm();
         return;
     }
-    if crate::game::create_port_basin::right_click(game, pos) || item_drain::right_click(game, pos) {
+    if crate::game::create_port_basin::right_click(game, pos)
+        || crate::game::create_port_basin::tank::right_click(game, pos)
+        || item_drain::right_click(game, pos)
+    {
         *canceled = true;
         game.swing_arm();
         return;
@@ -1096,6 +1106,10 @@ pub(super) fn apply_network(
 
 pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEntity) {
     let block = game.native_block(pos);
+    if block == super::create_port_basin::tank::BLOCK {
+        super::create_port_basin::tank::tick(game, pos, entity);
+        return;
+    }
     if block == item_drain::BLOCK {
         item_drain::tick(game, pos, entity);
         return;
@@ -1461,7 +1475,7 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
 }
 
 pub(super) fn update_tag(entity: &ModBlockEntity, tag: &mut Option<Compound>) {
-    if entity.id == item_drain::BLOCK && tag.is_none() {
+    if matches!(entity.id.as_str(), item_drain::BLOCK | super::create_port_basin::tank::BLOCK) && tag.is_none() {
         *tag = Some(entity.nbt.clone());
         return;
     }
@@ -1629,6 +1643,10 @@ pub(super) fn draw(
     entity: &ModBlockEntity,
     draw: &mut BlockEntityDraw,
 ) {
+    if block == super::create_port_basin::tank::BLOCK {
+        super::create_port_basin::tank::draw(game, pos, entity, draw);
+        return;
+    }
     if block == item_drain::BLOCK {
         item_drain::draw(game, pos, entity, draw);
         return;

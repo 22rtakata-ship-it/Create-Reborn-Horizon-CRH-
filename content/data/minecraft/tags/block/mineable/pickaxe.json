@@ -33,6 +33,7 @@
     "create:smart_chute",
     "create:speedometer",
     "create:stressometer",
+    "create:fluid_tank",
     "create:item_drain",
     "create:mechanical_piston",
     "create:sticky_mechanical_piston",

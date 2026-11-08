@@ -37,6 +37,7 @@ pub const BLOCKS: &[&str] = &[
     "rope_pulley",
     "mechanical_crafter",
     "item_drain",
+    "fluid_tank",
     "mechanical_piston",
     "sticky_mechanical_piston",
     "piston_extension_pole",

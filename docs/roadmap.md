@@ -44,7 +44,7 @@ with the systems they depend on.
 | Schematics | Bounded `.nbt` preflight and creative paste with horizontal rotation and mirroring | Preview/UI and broader block/entity transformations |
 | Transport and automation | Bare belts, Minecraft hoppers and basic IO | Complete belts, funnels/tunnels, mechanical arms |
 | Mixing and heating | Dry Basin/Mixer; heated brass; burner and fuel in separate native runs | Combined regression, missing interactions and presentation |
-| Fluids | Water/lava in canonical Basin tanks; buckets, dough and mud | Complete processing, pipe networks, pumps, tanks |
+| Fluids | Water/lava in Basins and standalone Fluid Tanks, Item Drain, buckets, dough and mud | Complete processing, pipe networks, pumps, multiblock tanks and boilers |
 | Contraptions | Bearings, pistons, Gantry and Rope Pulley with bounded cargo, riders and farm tools | Broader payloads, cross-chunk ownership, more drives, contact and portable storage |
 | Trains and logistics | Pending | Tracks, trains, schedules, cargo |
 | Ponder and guides | Pending | Original scenes, controls and presentation |
@@ -417,8 +417,11 @@ with the systems they depend on.
 - [x] Lava buckets through a Belt or by hand. Keep incompatible fluids separate.
 - [x] Item Drain output to a horizontal Belt across a chunk boundary, with a
   stopped outlet and actual restart before release.
-- [ ] Other Drain containers and pipes. Fluid Tanks, Hose
-  Pulley, Spout, displays and fluid levels.
+- [x] Standalone Fluid Tank for water and lava. Creative bucket interaction,
+  original tank save data, Wrench windows and comparator output.
+- [ ] Tank towers, wider tanks, boilers, moving tanks, goggles tooltips,
+  splash particles and lava light in the world.
+- [ ] Other Drain containers, Hose Pulley, Spout, displays and fluid levels.
 - [ ] Trains: tracks, signals, stations, assembly, controls, schedules and persistence.
 - [ ] Logistics networks, Redstone Links, Display Links and Display Boards.
 - [ ] Materials/ores/world generation, decorative families and the full crafting set.

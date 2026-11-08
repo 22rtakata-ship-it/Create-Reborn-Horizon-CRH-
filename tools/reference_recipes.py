@@ -10,6 +10,7 @@ from smart_chute_content import BLOCK as SMART_CHUTE
 from crushing_content import WHEEL as CRUSHER
 from crafter_content import CRAFTER
 from item_drain_content import BLOCK as ITEM_DRAIN
+from fluid_tank_content import BLOCK as FLUID_TANK
 from sail_content import COLORED_SAILS, SAIL_ITEMS
 from portable_storage_content import PSI
 from chute_content import CHUTE
@@ -241,6 +242,7 @@ def main():
     # NeoForge's verified 1.21.1 convention contains this vanilla block item;
     # its optional legacy #forge alias is unavailable here and is omitted.
     conventional['c:netherracks'] = ['minecraft:netherrack']
+    conventional['c:barrels/wooden'] = ['minecraft:barrel']
     colors = ['white','orange','magenta','light_blue','yellow','lime','pink','gray','light_gray','cyan','purple','blue','brown','green','red','black']
     conventional['c:glass_blocks'] = ['minecraft:glass', 'minecraft:tinted_glass'] + ['minecraft:' + color + '_stained_glass' for color in colors]
     conventional['c:glass_panes'] = ['minecraft:glass_pane'] + ['minecraft:' + color + '_stained_glass_pane' for color in colors]
@@ -389,6 +391,7 @@ def main():
         f'create/loot_table/blocks/{CRUSHER}.json',
         f'create/loot_table/blocks/{CRAFTER}.json',
         f'create/loot_table/blocks/{ITEM_DRAIN}.json',
+        f'create/loot_table/blocks/{FLUID_TANK}.json',
         f'create/loot_table/blocks/{STICKER}.json',
         *[f'create/loot_table/blocks/{name}.json' for name in ENCASED_COGS],
         'create/loot_table/blocks/zinc_block.json',

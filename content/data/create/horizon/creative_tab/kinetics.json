@@ -39,6 +39,7 @@
     "create:rope_pulley",
     "create:mechanical_crafter",
     "create:item_drain",
+    "create:fluid_tank",
     "create:mechanical_piston",
     "create:sticky_mechanical_piston",
     "create:piston_extension_pole",

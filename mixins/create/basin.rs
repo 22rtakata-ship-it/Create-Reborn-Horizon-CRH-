@@ -87,6 +87,7 @@ pub(super) fn reset(reload: bool) {
     if !reload {
         MOTION.with(|m| m.borrow_mut().clear());
         SERVER.with(|m| m.borrow_mut().clear());
+        tank::reset();
     }
 }
 
@@ -267,7 +268,7 @@ pub(super) fn has_analog(
     state: horizon_world::registry::BlockStateId,
     output: &mut bool,
 ) {
-    if matches!(game.facts.get(state).name.as_ref(), ID | item_drain::BLOCK) {
+    if matches!(game.facts.get(state).name.as_ref(), ID | item_drain::BLOCK | tank::BLOCK) {
         *output = true;
     }
 }
@@ -278,7 +279,7 @@ pub(super) fn analog(
     output: &mut i32,
 ) {
     let block = game.facts.get(state).name.as_ref();
-    if !matches!(block, ID | item_drain::BLOCK) {
+    if !matches!(block, ID | item_drain::BLOCK | tank::BLOCK) {
         return;
     }
     *output = 0;
@@ -287,6 +288,10 @@ pub(super) fn analog(
     };
     if block == item_drain::BLOCK {
         *output = item_drain::comparator(e);
+        return;
+    }
+    if block == tank::BLOCK {
+        *output = tank::comparator(e);
         return;
     }
     // Unsupported native-created inventories may not have canonical slots yet.
@@ -528,7 +533,7 @@ fn native_fluid(stack: &rules::Fluid<fluids::Key>) -> NativeFluidStack {
 }
 /// Use the shared Horizon fluid helpers for sided automation.
 pub(super) fn custom_fluids(block: &str, custom: &mut bool) {
-    if block == ID {
+    if matches!(block, ID | tank::BLOCK) {
         *custom = true;
     }
 }
@@ -538,6 +543,10 @@ pub(super) fn fluid_tanks(
     _side: Option<horizon_core::geometry::Direction>,
     out: &mut Option<Vec<NativeFluidTankView>>,
 ) {
+    if game.native_block(pos) == tank::BLOCK {
+        *out = tank::view(game, pos);
+        return;
+    }
     let Some(state) = fluid_state(game, pos) else {
         return;
     };
@@ -561,6 +570,10 @@ pub(super) fn fluid_fill(
     action: NativeFluidAction,
     out: &mut Option<i32>,
 ) {
+    if game.native_block(pos) == tank::BLOCK {
+        *out = tank::fill(game, pos, resource, action);
+        return;
+    }
     let Some(mut state) = fluid_state(game, pos) else {
         return;
     };
@@ -598,6 +611,10 @@ pub(super) fn fluid_drain(
     action: NativeFluidAction,
     out: &mut Option<NativeFluidStack>,
 ) {
+    if game.native_block(pos) == tank::BLOCK {
+        *out = tank::drain(game, pos, request, action);
+        return;
+    }
     let Some(mut state) = fluid_state(game, pos) else {
         return;
     };
@@ -913,6 +930,485 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: Pos) -> bool {
     true
 }
 
+/// Ordinary singleton FluidTankBlockEntity. A controller or non-singleton save
+/// never falls back to empty storage. Towers, boiler and moving tanks need their
+/// own topology adapter.
+pub(super) mod tank {
+    use super::*;
+    use horizon_world::level::PlacementContext;
+
+    pub(in crate::game) const BLOCK: &str = "create:fluid_tank";
+    const CAPACITY: u32 = 8000;
+    const BUCKET: i32 = 1000;
+    const TOTAL_HEIGHT: f32 = 7.0 / 16.0;
+    type Fluid = rules::Fluid<fluids::Key>;
+
+    #[derive(Default)]
+    struct RenderLevel {
+        owner: Option<ModRevision>,
+        tick: Option<i64>,
+        chase: rules::FluidLevel,
+    }
+
+    thread_local! {
+        static RENDER: RefCell<SessionCache<BTreeMap<Pos, RenderLevel>>> = RefCell::new(SessionCache::default());
+    }
+
+    pub(super) fn reset() {
+        RENDER.with(|cache| cache.borrow_mut().clear());
+    }
+
+    pub(in crate::game) fn default_nbt() -> Compound {
+        Compound::from([
+            (
+                "Boiler".into(),
+                Tag::Compound(Compound::from([
+                    ("ActiveHeat".into(), Tag::Int(0)),
+                    ("Engines".into(), Tag::Int(0)),
+                    ("PassiveHeat".into(), Tag::Byte(0)),
+                    ("Supply".into(), Tag::Float(0)),
+                    ("Update".into(), Tag::Byte(0)),
+                    ("Whistles".into(), Tag::Int(0)),
+                ])),
+            ),
+            ("Height".into(), Tag::Int(1)),
+            ("Size".into(), Tag::Int(1)),
+            ("Luminosity".into(), Tag::Int(0)),
+            ("Window".into(), Tag::Byte(1)),
+            ("TankContent".into(), Tag::Compound(Compound::new())),
+        ])
+    }
+
+    fn read(entity: &ModBlockEntity) -> Option<(bool, Option<Fluid>)> {
+        let nbt = &entity.nbt;
+        if entity.id != BLOCK
+            || nbt.contains_key(&"Controller".into())
+            || !matches!(nbt.get(&"Size".into()), Some(Tag::Int(1)))
+            || !matches!(nbt.get(&"Height".into()), Some(Tag::Int(1)))
+        {
+            return None;
+        }
+        let Tag::Compound(boiler) = nbt.get(&"Boiler".into())? else {
+            return None;
+        };
+        if ["Engines", "Whistles"]
+            .iter()
+            .any(|key| !matches!(boiler.get(&(*key).into()), Some(Tag::Int(0))))
+        {
+            return None;
+        }
+        let window = match nbt.get(&"Window".into())? {
+            Tag::Byte(value @ (0 | 1)) => *value != 0,
+            _ => return None,
+        };
+        Some((
+            window,
+            fluids::read_content(nbt.get(&"TankContent".into()), CAPACITY).ok()?,
+        ))
+    }
+
+    fn entity_at<'a>(game: &'a Game<'_>, [x, y, z]: Pos) -> Option<&'a ModBlockEntity> {
+        match game.world.block_entities.get(&(x, y, z))? {
+            BlockEntity::Mod(entity) => Some(entity),
+            _ => None,
+        }
+    }
+
+    fn current(game: &Game<'_>, pos: Pos) -> Option<(bool, Option<Fluid>)> {
+        if game.options.execution_role.is_client() || !game.native_on("create") {
+            return None;
+        }
+        let state = game
+            .pack
+            .assets
+            .registry
+            .state(game.world.block(pos[0], pos[1], pos[2]))?;
+        if state.name != BLOCK
+            || state.properties.get("top").is_none_or(|v| v != "true")
+            || state.properties.get("bottom").is_none_or(|v| v != "true")
+            || !matches!(
+                state.properties.get("shape").map(String::as_str),
+                Some("window" | "plain")
+            )
+        {
+            return None;
+        }
+        read(entity_at(game, pos)?)
+    }
+
+    pub(in crate::game) fn placement(game: &GameLevel<'_>, ctx: &PlacementContext) -> bool {
+        let [x, y, z] = [ctx.pos.x, ctx.pos.y, ctx.pos.z];
+        let is_tank = |x, y, z| game.native_state_block(game.world.block(x, y, z)) == Some(BLOCK);
+        if is_tank(x, y - 1, z) || is_tank(x, y + 1, z) {
+            return false;
+        }
+        // Vertical groups always occupy the same column. For wider groups,
+        // completing a horizontal 2×2 is the first point Java could merge.
+        for dx in [-1, 1] {
+            for dz in [-1, 1] {
+                if !game.world.loaded(x + dx, z + dz)
+                    || (is_tank(x + dx, y, z)
+                        && is_tank(x, y, z + dz)
+                        && is_tank(x + dx, y, z + dz))
+                {
+                    return false;
+                }
+            }
+        }
+        true
+    }
+
+    pub(in crate::game) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity) {
+        if entity.nbt.contains_key(&"LastKnownPos".into()) || read(entity).is_none() {
+            return;
+        }
+        entity
+            .nbt
+            .insert("LastKnownPos".into(), Tag::IntArray(pos.to_vec()));
+        game.world.modified.insert((pos[0] >> 4, pos[2] >> 4));
+    }
+
+    fn fraction(fluid: Option<&Fluid>) -> f32 {
+        fluid.map_or(0.0, |fluid| fluid.amount as f32 / CAPACITY as f32)
+    }
+
+    pub(super) fn comparator(entity: &ModBlockEntity) -> i32 {
+        read(entity).map_or(0, |(_, fluid)| {
+            let fraction = f64::from(fraction(fluid.as_ref()));
+            (fraction * 14.0 + f64::from(u8::from(fraction > 0.0))).floor() as i32
+        })
+    }
+
+    pub(super) fn view(game: &Game<'_>, pos: Pos) -> Option<Vec<NativeFluidTankView>> {
+        let (_, fluid) = current(game, pos)?;
+        Some(vec![NativeFluidTankView {
+            tank: 0,
+            content: fluid.as_ref().map(native_fluid),
+            capacity: CAPACITY as i32,
+            can_fill: true,
+            can_drain: true,
+        }])
+    }
+
+    fn commit(game: &mut Game<'_>, pos: Pos, fluid: Option<&Fluid>) -> bool {
+        let Ok(content) = fluids::write_content(fluid, CAPACITY) else {
+            return false;
+        };
+        let luminosity = fluid.map_or(0, |fluid| {
+            if fluid.key.id == "minecraft:lava" {
+                12
+            } else {
+                0
+            }
+        });
+        if game
+            .native_with_mod_block_entity(pos, |entity| {
+                entity.nbt.insert("TankContent".into(), content);
+                entity.nbt.insert("Luminosity".into(), Tag::Int(luminosity));
+            })
+            .is_none()
+        {
+            return false;
+        }
+        game.native_block_entity_sync(pos);
+        game.native_update_output_neighbors(game.dim.id(), pos);
+        true
+    }
+
+    pub(super) fn fill(
+        game: &mut Game<'_>,
+        pos: Pos,
+        resource: &NativeFluidStack,
+        action: NativeFluidAction,
+    ) -> Option<i32> {
+        let (_, current) = current(game, pos)?;
+        let Some(mut fluid) = core_fluid(resource) else {
+            return Some(0);
+        };
+        let stored = match current {
+            Some(current) if current.key == fluid.key => current.amount,
+            Some(_) => return Some(0),
+            None => 0,
+        };
+        let accepted = fluid.amount.min(CAPACITY - stored);
+        #[allow(unreachable_patterns)]
+        match action {
+            NativeFluidAction::Simulate => {}
+            NativeFluidAction::Execute => {
+                fluid.amount = stored + accepted;
+                if accepted != 0 && !commit(game, pos, Some(&fluid)) {
+                    return Some(0);
+                }
+            }
+            _ => return Some(0),
+        }
+        Some(accepted as i32)
+    }
+
+    pub(super) fn drain(
+        game: &mut Game<'_>,
+        pos: Pos,
+        request: &NativeFluidDrain,
+        action: NativeFluidAction,
+    ) -> Option<NativeFluidStack> {
+        let (_, fluid) = current(game, pos)?;
+        let mut fluid = fluid?;
+        let maximum = match request {
+            NativeFluidDrain::Any(maximum) => *maximum,
+            NativeFluidDrain::Exact(wanted)
+                if wanted.fluid == fluid.key.id && wanted.components == fluid.key.components =>
+            {
+                wanted.amount
+            }
+            _ => return None,
+        };
+        if maximum <= 0 {
+            return None;
+        }
+        let drained = fluid.amount.min(maximum as u32);
+        #[allow(unreachable_patterns)]
+        match action {
+            NativeFluidAction::Simulate => {}
+            NativeFluidAction::Execute => {
+                fluid.amount -= drained;
+                if !commit(game, pos, (fluid.amount > 0).then_some(&fluid)) {
+                    return None;
+                }
+            }
+            _ => return None,
+        }
+        fluid.amount = drained;
+        Some(native_fluid(&fluid))
+    }
+
+    pub(in crate::game) fn predicts_use(game: &Game<'_>, pos: Pos) -> bool {
+        game.native_on("create")
+            && game.native_block(pos) == BLOCK
+            && !game.native_sneaking()
+            && game
+                .held()
+                .filter(|held| held.count > 0)
+                .is_some_and(|held| {
+                    game.may_build() && crate::game::create_port_chassis::wrench(game, held)
+                        || game.creative
+                            && matches!(
+                                held.item.as_ref(),
+                                "minecraft:bucket"
+                                    | "minecraft:water_bucket"
+                                    | "minecraft:lava_bucket"
+                            )
+                })
+    }
+
+    pub(in crate::game) fn right_click(game: &mut Game<'_>, pos: Pos) -> bool {
+        if !predicts_use(game, pos) {
+            return false;
+        }
+        let Some((window, before)) = current(game, pos) else {
+            return true;
+        };
+        let Some(held) = game.held().cloned() else {
+            return false;
+        };
+        if crate::game::create_port_chassis::wrench(game, &held) {
+            let next = if window { "plain" } else { "window" };
+            if game.native_set_block_property_with(
+                pos,
+                "shape",
+                next,
+                horizon_world::level::flags::UPDATE_CLIENTS,
+            ) {
+                game.native_with_mod_block_entity(pos, |entity| {
+                    entity
+                        .nbt
+                        .insert("Window".into(), Tag::Byte(i8::from(!window)));
+                });
+                game.native_block_entity_sync(pos);
+            }
+            return true;
+        }
+        let (fluid, amount, emptying) = if held.item.as_ref() == "minecraft:bucket" {
+            let Some(mut resource) = before
+                .as_ref()
+                .map(native_fluid)
+                .filter(|f| f.components.is_empty())
+            else {
+                return true;
+            };
+            if resource.amount < BUCKET
+                || game
+                    .native_item_fluid_fill(&held, &resource.fluid, BUCKET)
+                    .is_none_or(|(amount, _)| amount != BUCKET)
+            {
+                return true;
+            }
+            let remaining = resource.amount - BUCKET;
+            resource.amount = BUCKET;
+            let request = NativeFluidDrain::Exact(resource);
+            let mut drained = None;
+            game.native_custom_fluid_drain(
+                pos,
+                None,
+                &request,
+                NativeFluidAction::Execute,
+                &mut drained,
+            );
+            let Some(drained) = drained else {
+                return true;
+            };
+            (drained.fluid, remaining, false)
+        } else {
+            let Some((fluid, amount, _)) = game.native_item_fluid_drain(&held, BUCKET) else {
+                return true;
+            };
+            let resource = NativeFluidStack {
+                fluid,
+                amount,
+                components: Compound::new(),
+            };
+            let mut accepted = None;
+            game.native_custom_fluid_fill(
+                pos,
+                None,
+                &resource,
+                NativeFluidAction::Simulate,
+                &mut accepted,
+            );
+            if accepted != Some(amount) {
+                return true;
+            }
+            accepted = None;
+            game.native_custom_fluid_fill(
+                pos,
+                None,
+                &resource,
+                NativeFluidAction::Execute,
+                &mut accepted,
+            );
+            if accepted != Some(amount) {
+                return true;
+            }
+            (
+                resource.fluid,
+                before.as_ref().map_or(0, |f| f.amount as i32) + amount,
+                true,
+            )
+        };
+        play_bucket(game, pos, &fluid, amount, emptying);
+        true
+    }
+
+    fn play_bucket(game: &mut Game<'_>, pos: Pos, fluid: &str, amount: i32, emptying: bool) {
+        let event = match (emptying, fluid) {
+            (true, "minecraft:lava") => "minecraft:item.bucket.empty_lava",
+            (false, "minecraft:lava") => "minecraft:item.bucket.fill_lava",
+            (true, _) => "minecraft:item.bucket.empty",
+            (false, _) => "minecraft:item.bucket.fill",
+        };
+        game.with_level(|_, level, _| {
+            let Some(random) = level.native_level_random() else {
+                return;
+            };
+            let pitch = (1.0 - amount as f32 / (CAPACITY as f32 * 16.0)).clamp(0.0, 1.0) / 1.5
+                + 0.5
+                + (random.next_float() - 0.5) / 4.0;
+            level.native_play_sound(
+                event,
+                pos.map(|coordinate| f64::from(coordinate) + 0.5),
+                4,
+                0.5,
+                pitch,
+            );
+        });
+    }
+
+    pub(super) fn client_tick(
+        session: usize,
+        dimension: &str,
+        time: i64,
+        entries: &[(Pos, &ModBlockEntity)],
+    ) {
+        RENDER.with(|cache| {
+            let mut cache = cache.borrow_mut();
+            let cache = cache.dimension(session, dimension);
+            let mut live = std::collections::BTreeSet::new();
+            for &(pos, entity) in entries.iter().filter(|(_, e)| e.id == BLOCK) {
+                let Some((_, fluid)) = read(entity) else {
+                    continue;
+                };
+                live.insert(pos);
+                let owner = entity.revision();
+                let target = fraction(fluid.as_ref());
+                let motion = cache.entry(pos).or_default();
+                if motion.tick.is_some_and(|old| old > time)
+                    || motion
+                        .owner
+                        .is_none_or(|old| !old.is_same_create_entity(owner))
+                {
+                    *motion = RenderLevel {
+                        owner: Some(owner),
+                        tick: None,
+                        chase: rules::FluidLevel {
+                            previous: target,
+                            value: target,
+                            target,
+                            speed: 0.5,
+                        },
+                    };
+                }
+                motion.chase.target = target;
+                if motion.tick != Some(time) {
+                    motion.chase.tick();
+                    motion.tick = Some(time);
+                }
+            }
+            cache.retain(|pos, _| live.contains(pos));
+        });
+    }
+
+    pub(in crate::game) fn draw(
+        game: &Game<'_>,
+        pos: Pos,
+        entity: &ModBlockEntity,
+        draw: &mut BlockEntityDraw,
+    ) {
+        let Some((true, Some(fluid))) = read(entity) else {
+            return;
+        };
+        let level = RENDER.with(|cache| {
+            cache
+                .borrow_mut()
+                .dimension(std::ptr::from_ref(&game.world) as usize, game.dim.id())
+                .get(&pos)
+                .filter(|motion| {
+                    motion
+                        .owner
+                        .is_some_and(|old| old.is_same_create_entity(entity.revision()))
+                })
+                .map_or_else(
+                    || fraction(Some(&fluid)),
+                    |motion| motion.chase.at(draw.partial),
+                )
+        });
+        if level < 1.0 / (512.0 * TOTAL_HEIGHT) {
+            return;
+        }
+        let hull = 1.0 / 16.0 + 1.0 / 128.0;
+        let floor = 5.0 / 16.0;
+        let height = (level * TOTAL_HEIGHT).clamp(0.0, TOTAL_HEIGHT);
+        game.native_draw_fluid_box(
+            draw,
+            &native_fluid(&fluid),
+            [hull, floor, hull, 1.0 - hull, floor + height, 1.0 - hull],
+            NativeFluidRenderOptions {
+                argb: None,
+                render_bottom: false,
+                uv_shrink_ratio: 4.0 / 2048.0,
+            },
+        );
+    }
+}
+
 pub(super) fn removed(game: &mut Game<'_>, pos: Pos) {
     SERVER.with(|cache| {
         cache
@@ -943,10 +1439,15 @@ pub(super) fn client_tick(game: &mut Game<'_>) {
         .block_entities
         .iter()
         .filter_map(|(&(x, y, z), e)| match e {
-            BlockEntity::Mod(e) if e.id == ID => Some(([x, y, z], e.revision())),
+            BlockEntity::Mod(e) if matches!(e.id.as_str(), ID | tank::BLOCK) => {
+                Some(([x, y, z], e.as_ref()))
+            }
             _ => None,
         })
         .collect();
+    tank::client_tick(session, &dimension, time, &entries);
+    let entries = entries.into_iter().filter_map(|(pos, e)| (e.id == ID).then(|| (pos, e.revision())));
+    let entries: Vec<_> = entries.collect();
     let live: std::collections::BTreeSet<_> = entries.iter().map(|(pos, _)| *pos).collect();
     MOTION.with(|cache| {
         let mut cache = cache.borrow_mut();
