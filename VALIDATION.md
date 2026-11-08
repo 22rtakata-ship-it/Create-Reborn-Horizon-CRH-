@@ -52,6 +52,9 @@ developer source build. The three changes are applied in a separate checkout.
   client. Cutting and export match. Five of 103 samples show a one-tick
   difference in Belt refills or Chute deliveries after the reload.
   The same fixture with `--chute-inlet` matches all 103 samples exactly.
+- [Chute-to-Depot input](tools/chute_depot_checks.py) matches 48 lane-tick
+  observations. A held item or occupied output buffer blocks delivery.
+  The marked stack enters with the original vertical pose after release.
 - [Belt-to-Millstone transfer](tools/belt_millstone_checks.py) matches
   full and partial acceptance, recipe rejection and a full receiver.
   The canonical input is visible on the transfer tick even if the

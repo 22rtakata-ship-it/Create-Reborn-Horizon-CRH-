@@ -413,6 +413,8 @@ with the systems they depend on.
   and direct unloading from one moving chest through a portable interface.
 - [x] Dry diagonal Chutes in all four directions. Place by clicking a side,
   route cargo through two connected slopes, and update shapes on disconnection.
+- [x] Vertical Chutes deliver to Depots and Millstones. Compare blocked
+  Depot slots, recipe refusal, partial Millstone input and saved cargo.
 - [x] Industrial Iron encasement on a dry vertical Chute. Ordinary clicks
   preserve the moving stack and its components, including on restart.
 - [x] Chute input into a moving chest through a portable interface, including

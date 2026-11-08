@@ -492,13 +492,54 @@ fn grouped_pull_plan(
 enum Route {
     Blocked,
     Chute { target: Pos, start: f32 },
+    Inventory(BelowInventory),
+    Drop,
+}
+
+#[derive(Clone, Copy)]
+enum BelowInventory {
     Belt,
+    Depot,
     Container,
     PortableStorage,
     Crusher,
     Saw,
     Millstone,
-    Drop,
+}
+
+impl BelowInventory {
+    fn insert(
+        self,
+        game: &mut Game<'_>,
+        pos: Pos,
+        below: Pos,
+        stack: &ItemStack,
+        simulate: bool,
+    ) -> Option<u32> {
+        Some(match self {
+            Self::Belt => {
+                super::create_port_belt::insert_from_container(game, below, stack, simulate)
+            }
+            Self::Depot => {
+                super::create_port_belt::insert_depot_from_chute(game, below, stack, simulate)
+            }
+            Self::Container => {
+                return game.chute_insert((below[0], below[1], below[2]), stack, simulate);
+            }
+            Self::PortableStorage => {
+                super::create_port_portable_storage::push_chute(game, below, pos, stack, simulate)
+            }
+            Self::Crusher => {
+                super::create_port_saw_processing::crushing::insert(game, below, stack, simulate)
+            }
+            Self::Saw => super::create_port_saw_processing::insert_from_transport(
+                game, below, stack, simulate,
+            ),
+            Self::Millstone => {
+                super::create_port_millstone::insert_from_chute(game, below, stack, simulate)
+            }
+        })
+    }
 }
 
 fn route_below(
@@ -522,48 +563,18 @@ fn route_below(
             Route::Blocked
         };
     }
-    if block == "create:belt" {
-        return if super::create_port_belt::insert_from_container(game, below, stack, true) > 0 {
-            Route::Belt
-        } else {
-            Route::Blocked
-        };
-    }
-    if block == super::create_port_portable_storage::BLOCK {
-        let moved = super::create_port_portable_storage::push_chute(game, below, pos, stack, true);
-        return if moved != 0 {
-            Route::PortableStorage
-        } else {
-            Route::Blocked
-        };
-    }
-    if block == super::create_port_saw_processing::crushing::CONTROLLER {
-        return if super::create_port_saw_processing::crushing::insert(game, below, stack, true) > 0
-        {
-            Route::Crusher
-        } else {
-            Route::Blocked
-        };
-    }
-    if block == super::create_port_drill::SAW {
-        let moved =
-            super::create_port_saw_processing::insert_from_transport(game, below, stack, true);
+    let inventory = match block.as_str() {
+        "create:belt" => BelowInventory::Belt,
+        "create:depot" => BelowInventory::Depot,
+        super::create_port_portable_storage::BLOCK => BelowInventory::PortableStorage,
+        super::create_port_saw_processing::crushing::CONTROLLER => BelowInventory::Crusher,
+        super::create_port_drill::SAW => BelowInventory::Saw,
+        super::create_port_millstone::ID => BelowInventory::Millstone,
+        _ => BelowInventory::Container,
+    };
+    if let Some(moved) = inventory.insert(game, pos, below, stack, true) {
         return if moved > 0 {
-            Route::Saw
-        } else {
-            Route::Blocked
-        };
-    }
-    if block == super::create_port_millstone::ID {
-        return if super::create_port_millstone::insert_from_chute(game, below, stack, true) > 0 {
-            Route::Millstone
-        } else {
-            Route::Blocked
-        };
-    }
-    if let Some(moved) = game.chute_insert((below[0], below[1], below[2]), stack, true) {
-        return if moved > 0 {
-            Route::Container
+            Route::Inventory(inventory)
         } else {
             Route::Blocked
         };
@@ -665,33 +676,11 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity) {
                     }
                     set_item(entity, None, ENTRY);
                 }
-                Route::Container
-                | Route::PortableStorage
-                | Route::Crusher
-                | Route::Belt
-                | Route::Saw
-                | Route::Millstone => {
+                Route::Inventory(inventory) => {
                     let mut rest = stack;
-                    let moved = match output {
-                        Route::PortableStorage => super::create_port_portable_storage::push_chute(
-                            game, below, pos, &rest, false,
-                        ),
-                        Route::Crusher => super::create_port_saw_processing::crushing::insert(
-                            game, below, &rest, false,
-                        ),
-                        Route::Belt => super::create_port_belt::insert_from_container(
-                            game, below, &rest, false,
-                        ),
-                        Route::Saw => super::create_port_saw_processing::insert_from_transport(
-                            game, below, &rest, false,
-                        ),
-                        Route::Millstone => super::create_port_millstone::insert_from_chute(
-                            game, below, &rest, false,
-                        ),
-                        _ => game
-                            .chute_insert((below[0], below[1], below[2]), &rest, false)
-                            .unwrap_or(0),
-                    };
+                    let moved = inventory
+                        .insert(game, pos, below, &rest, false)
+                        .unwrap_or(0);
                     rest.count -= moved;
                     let previous = previous(game, pos, offset);
                     set_item(entity, (rest.count != 0).then_some(rest), previous);

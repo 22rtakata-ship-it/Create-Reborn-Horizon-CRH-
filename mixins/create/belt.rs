@@ -658,6 +658,53 @@ pub(super) fn depot_item(
     write_item(&item)
 }
 
+fn depot_accepts_inventory_stack(entity: &ModBlockEntity) -> bool {
+    entity.id == "create:depot"
+        && super::create_port::inventory_supported(entity)
+        && !entity.items.is_empty()
+        && entity.items.iter().all(Option::is_none)
+}
+
+/// Chutes use DepotItemHandler, whose uncentered stack starts at position 0
+/// and slides toward the center. Direct belt input has a different pose.
+pub(super) fn insert_depot_from_chute(
+    game: &mut Game<'_>,
+    [x, y, z]: Pos,
+    stack: &ItemStack,
+    simulate: bool,
+) -> u32 {
+    let Some(BlockEntity::Mod(entity)) = game.world.block_entities.get(&(x, y, z)) else {
+        return 0;
+    };
+    if !depot_accepts_inventory_stack(entity) {
+        return 0;
+    }
+    let count = stack
+        .count
+        .min(super::create_port::stack_maximum(game, stack));
+    if count == 0 || simulate {
+        return count;
+    }
+    let inserted = ItemStack {
+        count,
+        ..stack.clone()
+    };
+    let record = depot_item(game, &inserted, 0.0, Direction::Up);
+    let target = [x, y, z];
+    if game
+        .native_with_mod_block_entity(target, |entity| {
+            entity.items[0] = Some(inserted);
+            entity.nbt.insert("HeldItem".into(), record);
+        })
+        .is_none()
+    {
+        return 0;
+    }
+    super::create_port_sounds::land(game, target);
+    game.native_block_entity_sync(target);
+    count
+}
+
 /// DepotBehaviour's direct input refuses a held stack or an occupied output
 /// buffer. It takes at most one stack and keeps the transported record.
 pub(super) fn insert_depot_from_side(
@@ -677,11 +724,7 @@ pub(super) fn insert_depot_from_side(
     }
     let moved = game
         .native_with_mod_block_entity(target, |e| {
-            if e.id != "create:depot"
-                || !super::create_port::inventory_supported(e)
-                || e.items.is_empty()
-                || e.items.iter().any(Option::is_some)
-            {
+            if !depot_accepts_inventory_stack(e) {
                 return false;
             }
             e.items[0] = Some(game_stack(&inserted.stack));
