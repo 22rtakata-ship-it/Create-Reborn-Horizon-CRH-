@@ -1168,6 +1168,43 @@ pub(super) fn insert_belt_from_side(
     true
 }
 
+pub(super) fn insert_from_container(
+    game: &mut Game<'_>,
+    target: Pos,
+    stack: &ItemStack,
+    simulate: bool,
+) -> u32 {
+    // A lone or truncated Belt has no receiving inventory, even if a saved
+    // member points at itself. Confirm ownership before moving the stack.
+    let Some((controller, known)) = restored_chain(game, target) else {
+        return 0;
+    };
+    let Some(index) = known
+        .chain
+        .segments
+        .iter()
+        .position(|segment| segment.pos == target)
+    else {
+        return 0;
+    };
+    let target_belt = Belt {
+        rpm: known.rpm,
+        facing: known.chain.facing,
+        slope: known.chain.slope,
+        length: known.chain.segments.len() as i32,
+    };
+    let mut contents = known.inventory;
+    let input = core_stack(game, stack.clone());
+    // Insertion preview must neither draw a random display angle nor publish.
+    let angle = if simulate { 0 } else { angle(game, stack) };
+    let remainder = contents.insert_automation(target_belt, index as i32, input, angle, simulate);
+    let moved = stack.count - remainder.count;
+    if moved > 0 && !simulate {
+        save_controller(game, controller, &mut contents);
+    }
+    moved
+}
+
 fn stage_processing(game: &mut Game<'_>, controller: Pos, inventory: Contents) {
     // Canonical NBT is always save-safe. Its flushed clone is also what an
     // outbound tag must show, without exposing queued outputs to another
@@ -1652,10 +1689,12 @@ impl Hooks<ItemStack> for WorldHooks<'_, '_> {
     }
     fn ending(&mut self, _positive: bool) -> Ending {
         let target = self.target();
+        let target_block = self.game.native_block(target);
         if matches!(
-            self.game.native_block(target).as_str(),
+            target_block.as_str(),
             ID | "create:depot" | "create:millstone" | item_drain::BLOCK
-        ) {
+        ) || super::create_port_chute::is_chute(&target_block)
+        {
             return Ending::Insert;
         }
         let state = self.game.world.block(target[0], target[1], target[2]);
@@ -1671,41 +1710,38 @@ impl Hooks<ItemStack> for WorldHooks<'_, '_> {
         }
     }
     fn insert_transported_end(&mut self, item: &Moving, from: Direction) -> Stack<ItemStack> {
+        use super::create_port_chute as chute;
+
         let stack = &item.stack;
         let target = self.target();
-        if self.game.native_block(target) == ID {
-            if insert_belt_from_side(self.game, target, item, from, true) {
-                return Stack {
-                    count: 0,
-                    ..stack.clone()
-                };
+        let count = match self.game.native_block(target).as_str() {
+            ID => {
+                if insert_belt_from_side(self.game, target, item, from, true) {
+                    0
+                } else {
+                    stack.count
+                }
             }
-            stack.clone()
-        } else if self.game.native_block(target) == "create:depot" {
-            let moved = insert_depot_from_side(self.game, target, item, from);
-            Stack {
-                count: stack.count - moved,
-                ..stack.clone()
+            "create:depot" => stack.count - insert_depot_from_side(self.game, target, item, from),
+            item_drain::BLOCK => stack.count - item_drain::insert(self.game, target, item, from),
+            chute::BLOCK | chute::SMART => {
+                stack.count - chute::insert_from_transport(self.game, target, &game_stack(stack))
             }
-        } else if self.game.native_block(target) == item_drain::BLOCK {
-            let moved = item_drain::insert(self.game, target, item, from);
-            Stack {
-                count: stack.count - moved,
-                ..stack.clone()
+            _ => {
+                // MillstoneBlockEntity has the default DirectBeltInputBehaviour.
+                let remaining = self
+                    .game
+                    .native_insert_item(target, world_direction(from), game_stack(stack))
+                    .map_or(0, |s| s.count);
+                if remaining < stack.count {
+                    super::create_port_millstone::publish_inventory(self.game, target);
+                }
+                remaining
             }
-        } else {
-            // MillstoneBlockEntity has the default DirectBeltInputBehaviour.
-            let remaining = self
-                .game
-                .native_insert_item(target, world_direction(from), game_stack(stack))
-                .map_or(0, |s| s.count);
-            if remaining < stack.count {
-                super::create_port_millstone::publish_inventory(self.game, target);
-            }
-            Stack {
-                count: remaining,
-                ..stack.clone()
-            }
+        };
+        Stack {
+            count,
+            ..stack.clone()
         }
     }
 }

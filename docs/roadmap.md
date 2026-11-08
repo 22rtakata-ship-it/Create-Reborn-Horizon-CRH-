@@ -194,13 +194,18 @@ with the systems they depend on.
   Replacing a belt preserves the new chain and ejects the old load once.
   [Motion review](reviews/belt-motion.md)
 - [ ] Belts: frame-by-frame scrolling, item shadows, complete lifecycle and IO.
-- [ ] Belt passenger motion through a contact layer shared with moving surfaces.
-  The static belt shapes stay in the block registry. Moving surfaces need
+- [x] Dry bare horizontal Belts carry a grounded local player. Compare both
+  X directions, Z movement, steering, crouching, a stop and a wall.
+- [ ] Belt passengers on slopes and other actors. Moving surfaces also need
   transformed contact geometry and a world-space movement request.
 - [x] Bounded surface geometry: X rotation fixed; 1600 source cases,
   60 actual Game/CPU draw cases and inspection of limited Java/native views.
 - [x] Bounded bare-belt foundation: connector, original shapes, RPM transmission,
   items, output Depots/hoppers and persistence through an actual restart.
+- [x] All 16 Belt colors and ordinary washing, with chain-wide persistence.
+  Andesite and Brass Casing apply per segment across the five Belt shapes.
+- [x] Horizontal Belt to dry Chute or Smart Chute and back onto a Belt.
+  Include stopped output, filter and redstone refusal, and cold restart.
 - [ ] Funnels/tunnels/chutes, filters, brass/andesite rules and batch transfer.
 - [x] Dry vertical Andesite Funnel with an ordinary inventory. Verify the
   original stack order, Wrench, extraction cooldown and redstone.

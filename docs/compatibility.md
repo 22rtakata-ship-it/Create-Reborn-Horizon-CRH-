@@ -120,6 +120,12 @@ clears. The filter and cargo survive a restart. Hold use over the filter when
 the Chute feeds an inventory to choose Up to or Exactly. The board uses the
 sample item's stack limit. Special filters remain open.
 
+Horizontal Mechanical Belts can feed dry Chutes and receive their downward
+output. Stopped, incomplete and incompatible receivers hold cargo upstream.
+The same item and components continue after a restart. Andesite and Brass
+Casing use the original per-segment states, and dye or washing changes the
+color of the full Belt. Dry, bare horizontal Belts carry grounded local
+players. Sloped belts and other passenger types still need separate checks.
 
 Mechanical Crafters support manual front-slot loading and the original
 5×5 Crushing Wheel recipe in a same-facing array inside one chunk column.
@@ -201,11 +207,11 @@ JAR; they are not included in the public repository.
 
 This is an identifier/data convention baseline, not a completed Java serializer.
 Horizon also saves its generic `Items` container field. Item stacks use Horizon's
-26.3 item codec, not a separately implemented 1.21.1 data fixer. Depot's transport
-position defaults are placeholders; belt movement is not implemented. Hopper insertion and extraction of the held
-slot and output buffer follow the implemented ordinary-depot defaults. Reading a Java depot's `HeldItem` into
-Horizon slots is not implemented. Waterlogged state names are declared, but
-fluid placement/ticks still need their own increment.
+26.3 item codec. Belt deliveries store the current and previous transport
+positions of the Depot's held item. Hopper insertion and extraction follow
+the ordinary Depot rules for its held slot and output buffer. A Java Depot's
+`HeldItem` still needs an import path into Horizon slots. Waterlogged placement
+and fluid ticks remain open.
 
 Network serialization (`Source`, `Network`) is not fully represented yet. The prototype also stores diagnostic `Capacity`, `Stress`,
 `NetworkStatus` and press bookkeeping `Applied`/`LastTick`; these are port-specific

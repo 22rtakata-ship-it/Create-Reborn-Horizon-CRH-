@@ -54,7 +54,7 @@ def items(nbt, name):
 
 
 def number(block, key, default=None):
-    match = re.search(r'\b' + key + r'\s*:\s*(-?[\d.]+)', block.get('nbt', ''))
+    match = re.search(r'\b' + key + r'\s*:\s*(-?[\d.]+(?:[eE][+-]?\d+)?)', block.get('nbt', ''))
     if default is not None and not match: return default
     assert match, (key, block)
     return float(match[1])

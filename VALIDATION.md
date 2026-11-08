@@ -52,6 +52,10 @@ developer source build. The three changes are applied in a separate checkout.
   The canonical input is visible on the transfer tick even if the
   Millstone already ticked. A restart at that point preserves the accepted
   items and components. The Saw-to-Millstone test also passed again.
+- [Belt-to-Chute-to-Belt](tools/belt_chute_checks.py) matches 120 warm,
+  cold, release and running samples across plain and Smart Chute lanes.
+  An incomplete native receiver retains the marked cargo in the Chute until
+  it is replaced by a complete Belt.
 - [Chute-fed Crushing Wheels](tools/crushing_wheel_checks.py) match 357
   active lane observations for downward wheel pairs, including unequal RPM,
   both ticker orders, stop/resume, Milling fallback and Crushing recipe
@@ -187,6 +191,12 @@ developer source build. The three changes are applied in a separate checkout.
   Creative, full-tank refusal and marked cargo retrieval. The
   [Drain-to-Belt run](tools/item_drain_belt_checks.py) matches 38 warm and
   12 resumed ticks across a column boundary, including the entry pose.
+- [Dry Belt riders](tools/belt_rider_checks.py) match Java player motion on
+  bare horizontal Belts across a chunk boundary, including direction,
+  steering, crouching, stopping and a collision with a wall.
+- [Belt casings](tools/belt_casing_checks.py) and
+  [dyes](tools/belt_dye_checks.py) were checked in Java and in native clients
+  with fallback and imported resources, including persistence after restart.
 
 The [offscreen engineering run](tools/engineering_checks.py) used ordinary
 crank clicks on all six facings and measured the rendered base and handle

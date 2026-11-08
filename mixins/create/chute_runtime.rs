@@ -83,6 +83,11 @@ fn empty(entity: &ModBlockEntity) -> bool {
         .is_none_or(|slot| slot.as_ref().is_none_or(|stack| stack.count == 0))
 }
 
+fn still_air(entity: &ModBlockEntity) -> bool {
+    super::create_port::number(&entity.nbt, "Pull") == 0.0
+        && super::create_port::number(&entity.nbt, "Push") == 0.0
+}
+
 fn set_position(entity: &mut ModBlockEntity, value: f32) {
     entity
         .nbt
@@ -154,7 +159,9 @@ fn enter(game: &mut Game<'_>, pos: Pos, stack: ItemStack) -> bool {
 fn can_enter(game: &Game<'_>, pos: Pos, stack: &ItemStack) -> bool {
     dry(game, pos)
         && entity_at(game, pos).is_some_and(|entity| {
-            empty(entity)
+            entity.items.len() <= 1
+                && still_air(entity)
+                && empty(entity)
                 && (entity.id != SMART
                     || (!powered(game, pos) && accepts_filter(game, entity, stack)))
         })
@@ -286,6 +293,7 @@ fn grouped_pull_plan(
 enum Route {
     Blocked,
     Chute,
+    Belt,
     Container,
     PortableStorage,
     Crusher,
@@ -296,14 +304,22 @@ fn route(game: &mut Game<'_>, pos: Pos, below: Pos, stack: &ItemStack) -> Route 
     if !super::create_port_contraption::resident(game, below) {
         return Route::Blocked;
     }
-    if is_chute(&game.native_block(below)) {
+    let block = game.native_block(below);
+    if is_chute(&block) {
         return if can_enter(game, below, stack) {
             Route::Chute
         } else {
             Route::Blocked
         };
     }
-    if game.native_block(below) == super::create_port_portable_storage::BLOCK {
+    if block == "create:belt" {
+        return if super::create_port_belt::insert_from_container(game, below, stack, true) > 0 {
+            Route::Belt
+        } else {
+            Route::Blocked
+        };
+    }
+    if block == super::create_port_portable_storage::BLOCK {
         let moved = super::create_port_portable_storage::push_chute(game, below, pos, stack, true);
         return if moved != 0 {
             Route::PortableStorage
@@ -311,7 +327,7 @@ fn route(game: &mut Game<'_>, pos: Pos, below: Pos, stack: &ItemStack) -> Route 
             Route::Blocked
         };
     }
-    if game.native_block(below) == super::create_port_saw_processing::crushing::CONTROLLER {
+    if block == super::create_port_saw_processing::crushing::CONTROLLER {
         return if super::create_port_saw_processing::crushing::insert(game, below, stack, true) > 0
         {
             Route::Crusher
@@ -339,12 +355,7 @@ fn route(game: &mut Game<'_>, pos: Pos, below: Pos, stack: &ItemStack) -> Route 
 }
 
 pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity) {
-    if !dry(game, pos)
-        || !is_chute(&entity.id)
-        || entity.items.len() > 1
-        || super::create_port::number(&entity.nbt, "Pull") != 0.0
-        || super::create_port::number(&entity.nbt, "Push") != 0.0
-    {
+    if !dry(game, pos) || !is_chute(&entity.id) || entity.items.len() > 1 || !still_air(entity) {
         return;
     }
     let smart = entity.id == SMART;
@@ -402,19 +413,21 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity) {
             let stack = stack.clone();
             match output {
                 Route::Chute if enter(game, below, stack.clone()) => set_item(entity, None, ENTRY),
-                Route::Container | Route::PortableStorage | Route::Crusher => {
+                Route::Container | Route::PortableStorage | Route::Crusher | Route::Belt => {
                     let mut rest = stack;
-                    let moved = if matches!(output, Route::PortableStorage) {
-                        super::create_port_portable_storage::push_chute(
+                    let moved = match output {
+                        Route::PortableStorage => super::create_port_portable_storage::push_chute(
                             game, below, pos, &rest, false,
-                        )
-                    } else if matches!(output, Route::Crusher) {
-                        super::create_port_saw_processing::crushing::insert(
+                        ),
+                        Route::Crusher => super::create_port_saw_processing::crushing::insert(
                             game, below, &rest, false,
-                        )
-                    } else {
-                        game.chute_insert((below[0], below[1], below[2]), &rest, false)
-                            .unwrap_or(0)
+                        ),
+                        Route::Belt => super::create_port_belt::insert_from_container(
+                            game, below, &rest, false,
+                        ),
+                        _ => game
+                            .chute_insert((below[0], below[1], below[2]), &rest, false)
+                            .unwrap_or(0),
                     };
                     rest.count -= moved;
                     let previous = previous(game, pos, offset);
