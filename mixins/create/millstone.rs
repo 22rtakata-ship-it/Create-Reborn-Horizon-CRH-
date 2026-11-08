@@ -5,7 +5,7 @@
 // empty-hand collection and original NBT. No vanilla container screen is used.
 use super::{Game, native_block_entity_draw::BlockEntityDraw};
 use crate::{
-    containers::{ModBlockEntity, ModContainer},
+    containers::{BlockEntity, ModBlockEntity, ModContainer},
     items::ItemStack,
 };
 use create_engine::{
@@ -20,7 +20,7 @@ use std::{
     sync::Arc,
 };
 
-const ID: &str = "create:millstone";
+pub(super) const ID: &str = "create:millstone";
 
 thread_local! {
     // Containers::can_place has the item registry but no recipe table at API
@@ -238,6 +238,39 @@ pub(super) fn publish_inventory(game: &mut Game<'_>, pos: [i32; 3]) {
     if game.native_with_mod_block_entity(pos, data) == Some(true) {
         game.native_block_entity_sync(pos);
     }
+}
+
+pub(super) fn insert_from_chute(
+    game: &mut Game<'_>,
+    pos: [i32; 3],
+    stack: &ItemStack,
+    simulate: bool,
+) -> u32 {
+    let [x, y, z] = pos;
+    let Some(BlockEntity::Mod(entity)) = game.world.block_entities.get(&(x, y, z)) else {
+        return 0;
+    };
+    if entity.id != ID
+        || !super::create_port::inventory_supported(entity)
+        || !can_process(game, stack)
+    {
+        return 0;
+    }
+    if simulate {
+        let present = match entity.items.first().and_then(Option::as_ref) {
+            Some(current) if !current.same_item_same_components(stack) => return 0,
+            Some(current) => current.count,
+            None => 0,
+        };
+        return stack.count.min(max_stack(game, stack).saturating_sub(present));
+    }
+    let remaining = game
+        .native_insert_item(pos, horizon_core::geometry::Direction::Up, stack.clone())
+        .map_or(0, |rest| rest.count);
+    if remaining < stack.count {
+        publish_inventory(game, pos);
+    }
+    stack.count - remaining
 }
 
 fn max_stack(game: &Game<'_>, stack: &ItemStack) -> u32 {

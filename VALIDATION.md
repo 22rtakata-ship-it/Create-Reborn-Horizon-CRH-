@@ -57,6 +57,8 @@ developer source build. The three changes are applied in a separate checkout.
   The canonical input is visible on the transfer tick even if the
   Millstone already ticked. A restart at that point preserves the accepted
   items and components. The Saw-to-Millstone test also passed again.
+  With `--chute` the four dry inlet cases match Java as well, including
+  partial insertion into a nearly full slot and retention through a restart.
 - [Belt-to-Chute-to-Belt](tools/belt_chute_checks.py) matches 120 warm,
   cold, release and running samples across plain and Smart Chute lanes.
   An incomplete native receiver retains the marked cargo in the Chute until

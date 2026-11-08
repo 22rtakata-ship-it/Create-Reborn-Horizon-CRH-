@@ -298,6 +298,7 @@ enum Route {
     PortableStorage,
     Crusher,
     Saw,
+    Millstone,
     Drop,
 }
 
@@ -342,6 +343,13 @@ fn route(game: &mut Game<'_>, pos: Pos, below: Pos, stack: &ItemStack) -> Route 
         );
         return if moved > 0 {
             Route::Saw
+        } else {
+            Route::Blocked
+        };
+    }
+    if block == super::create_port_millstone::ID {
+        return if super::create_port_millstone::insert_from_chute(game, below, stack, true) > 0 {
+            Route::Millstone
         } else {
             Route::Blocked
         };
@@ -428,7 +436,8 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity) {
                 | Route::PortableStorage
                 | Route::Crusher
                 | Route::Belt
-                | Route::Saw => {
+                | Route::Saw
+                | Route::Millstone => {
                     let mut rest = stack;
                     let moved = match output {
                         Route::PortableStorage => super::create_port_portable_storage::push_chute(
@@ -441,6 +450,9 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity) {
                             game, below, &rest, false,
                         ),
                         Route::Saw => super::create_port_saw_processing::insert_from_transport(
+                            game, below, &rest, false,
+                        ),
+                        Route::Millstone => super::create_port_millstone::insert_from_chute(
                             game, below, &rest, false,
                         ),
                         _ => game
