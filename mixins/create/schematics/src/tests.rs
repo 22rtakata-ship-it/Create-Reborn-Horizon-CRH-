@@ -15,6 +15,18 @@ impl Resolver for Registry {
                 defaults.insert("axis", "y");
                 defaults.insert("waterlogged", "false");
             }
+            name if encased_cogwheel(name) => {
+                defaults.extend([
+                    ("axis", "y"),
+                    ("top_shaft", "false"),
+                    ("bottom_shaft", "false"),
+                ]);
+                be = Some(BlockEntitySchema::new(if name.contains("_large_") {
+                    "create:encased_large_cogwheel"
+                } else {
+                    "create:encased_cogwheel"
+                }));
+            }
             "create:creative_motor" => {
                 defaults.insert("facing", "north");
                 let mut schema = BlockEntitySchema::new("create:motor");
@@ -125,6 +137,54 @@ impl Resolver for Registry {
             return Err("motor ScrollValue out of source range".into());
         }
         Ok(())
+    }
+}
+
+#[test]
+fn encased_cogwheels_transform_the_positive_shaft_end() {
+    for (axis, rotation) in [
+        ("x", [("x", false), ("z", false), ("x", true), ("z", true)]),
+        ("y", [("y", false); 4]),
+        ("z", [("z", false), ("x", true), ("z", true), ("x", false)]),
+    ] {
+        let requested = BlockState {
+            name: "create:brass_encased_large_cogwheel".into(),
+            properties: BTreeMap::from([
+                ("axis".into(), axis.into()),
+                ("top_shaft".into(), "true".into()),
+                ("bottom_shaft".into(), "false".into()),
+            ]),
+        };
+        assert!(resolve(&Registry, &requested).is_ok());
+        for (mirror, mirrored) in [
+            (Mirror::None, false),
+            (Mirror::LeftRight, axis == "z"),
+            (Mirror::FrontBack, axis == "x"),
+        ] {
+            for (turns, (expected_axis, rotated)) in rotation.into_iter().enumerate() {
+                let transformed = transform_state(
+                    &requested,
+                    requested.clone(),
+                    &Options {
+                        mirror,
+                        quarter_turns: turns as u8,
+                        ..Options::default()
+                    },
+                )
+                .unwrap();
+                let swapped = mirrored ^ rotated;
+                assert_eq!(transformed.properties["axis"], expected_axis);
+                assert_eq!(transformed.properties["top_shaft"], (!swapped).to_string());
+                assert_eq!(transformed.properties["bottom_shaft"], swapped.to_string());
+            }
+        }
+        let mut incomplete = requested;
+        incomplete.properties.remove("top_shaft");
+        assert!(
+            resolve(&Registry, &incomplete)
+                .unwrap_err()
+                .contains("both shaft ends")
+        );
     }
 }
 

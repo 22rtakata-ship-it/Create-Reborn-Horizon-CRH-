@@ -85,7 +85,8 @@ shaft neighbor opens its end at the time of encasing. Use a Wrench on an axial
 face to toggle that end, or on a tooth face to rotate the axis. Sneak-use the
 Wrench to restore the original cogwheel. The original casing models and moving
 parts load from the optional JAR. Neighbor-connected textures, face-sensitive
-pick-block and moving or schematic Encased Cogwheels remain pending.
+pick-block and moving Encased Cogwheels remain pending. Horizontal schematic
+transforms keep each shaft on the correct signed end of the axis.
 
 The building-blocks tab includes the cut, polished cut, cut bricks and small
 bricks variants of andesite, granite and diorite, plus layered andesite. Each

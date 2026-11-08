@@ -485,6 +485,17 @@ fn valid_id(id: &str) -> bool {
             .bytes()
             .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || b"/_.-".contains(&c))
 }
+
+fn encased_cogwheel(name: &str) -> bool {
+    matches!(
+        name,
+        "create:andesite_encased_cogwheel"
+            | "create:andesite_encased_large_cogwheel"
+            | "create:brass_encased_cogwheel"
+            | "create:brass_encased_large_cogwheel"
+    )
+}
+
 fn resolve(resolver: &impl Resolver, state: &BlockState) -> Result<BlockSchema, String> {
     if state.name == "create:belt" && horizontal_belt_step(state).is_none() {
         return Err("only explicit dry uncased horizontal Belt states are supported".into());
@@ -495,6 +506,13 @@ fn resolve(resolver: &impl Resolver, state: &BlockState) -> Result<BlockSchema, 
             .any(|key| !state.properties.contains_key(*key))
     {
         return Err("a Deployer requires explicit facing and axis_along_first properties".into());
+    }
+    if encased_cogwheel(&state.name)
+        && ["axis", "top_shaft", "bottom_shaft"]
+            .iter()
+            .any(|key| !state.properties.contains_key(*key))
+    {
+        return Err("an Encased Cogwheel requires explicit axis and both shaft ends".into());
     }
     if !valid_id(&state.name) {
         return Err(format!("invalid namespaced block ID {:?}", state.name));
@@ -557,9 +575,11 @@ fn transform_state(
     } else {
         "rotation"
     };
+    let encased = encased_cogwheel(&state.name);
     let (properties, orientation): (&[&str], Option<&str>) = match state.name.as_str() {
         "create:shaft" => (&["axis", "waterlogged"], Some("axis")),
         "create:flywheel" => (&["axis"], Some("axis")),
+        _ if encased => (&["axis", "top_shaft", "bottom_shaft"], Some("axis")),
         "create:creative_motor" | "create:mechanical_press" => (&["facing"], Some("facing")),
         "create:mechanical_crafter" => (&["facing", "pointing"], Some("facing")),
         "create:deployer" => (&["facing", "axis_along_first"], Some("facing")),
@@ -614,6 +634,30 @@ fn transform_state(
             )
         })?;
         let after = if key == "axis" {
+            if encased {
+                let top_direction = match before.as_str() {
+                    "x" => [1, 0, 0],
+                    "y" => [0, 1, 0],
+                    "z" => [0, 0, 1],
+                    _ => return Err(format!("invalid {operation} axis {before}")),
+                };
+                // The top shaft is the positive end of the axis in Create.
+                if transform_position(top_direction, options)
+                    .into_iter()
+                    .any(|sign| sign < 0)
+                {
+                    let top = requested
+                        .properties
+                        .get("top_shaft")
+                        .ok_or("missing top shaft")?;
+                    let bottom = requested
+                        .properties
+                        .get("bottom_shaft")
+                        .ok_or("missing bottom shaft")?;
+                    state.properties.insert("top_shaft".into(), bottom.clone());
+                    state.properties.insert("bottom_shaft".into(), top.clone());
+                }
+            }
             // Reflection changes the direction, but not the unoriented axis.
             match (before.as_str(), options.quarter_turns % 2) {
                 ("x", 1) => "z",
@@ -641,7 +685,7 @@ fn transform_state(
         };
         state.properties.insert(key.into(), after.into());
     }
-    if state.name == "create:deployer" && options.quarter_turns % 2 != 0 {
+    if state.name == "create:deployer" && !options.quarter_turns.is_multiple_of(2) {
         // DirectionalAxisKineticBlock.rotate toggles this property even when
         // facing is vertical. Its mirror delegates to a 0° or 180° rotation.
         let along = state

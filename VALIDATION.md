@@ -161,6 +161,9 @@ developer source build. The three changes are applied in a separate checkout.
 - [Deployer schematic paste](tools/schematic_deployer_checks.py) matches all
   144 Java orientation and transform cases. Unsafe source data, occupied
   destinations and active destinations are refused before the first write.
+- [Encased Cogwheel schematic paste](tools/schematic_encased_cog_checks.py)
+  matches 576 placements using the same `.nbt` bytes. All 48 states keep their
+  block entity type and expose the correct signed shaft ends after transforms.
 - [Deployer transport](tools/deployer_transport_checks.py) matches all 85
   ticks in three lanes for ordinary and large Cogwheels and an incompatible
   input. A native restart preserves the in-flight hand and transport state.

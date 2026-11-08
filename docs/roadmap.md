@@ -87,7 +87,7 @@ with the systems they depend on.
   shaft ends, Wrench interactions and source casing/rotating models from the
   local JAR. See the [paired fixture](../tools/encased_cog_checks.py).
 - [ ] Encased Cogwheel connected textures, face-sensitive pick-block,
-  contraption and schematic integration.
+  and contraption integration.
 - [x] Manual Copper Casing recipes and the NeoForge convention tags for
   stripped logs and wood. Connected textures and advancements remain pending.
 - [x] Encased Chain Drive: 24 source states, placement/shape updates, ordinary Wrench,
@@ -278,6 +278,8 @@ with the systems they depend on.
   preserve the original supported states, motor settings and production.
 - [x] Empty inactive Deployers in USE mode, including all 144 orientation
   and transform combinations and atomic refusal of unsafe source or destination data.
+- [x] All 48 Encased Cogwheel states in schematics, including all 12 horizontal
+  rotations and mirrors of the signed shaft ends.
 - [ ] Rotate and mirror the remaining blocks, block entities and entities.
 - [ ] Original Schematic and Quill, preview, UI, deployment and Schematicannon.
 - [x] Core captures connected blocks with host-provided attachment rules and
