@@ -214,10 +214,13 @@ def main():
         if status.returncode:
             raise RuntimeError(name+' failed; inspect '+str(work/name))
     env=environment();env['CARGO_TARGET_DIR']=str(target);env['CARGO_BUILD_JOBS']=str(args.jobs)
+    snapshot_dir = tempfile.TemporaryDirectory(prefix='create-horizon-source-')
+    source_snapshot = Path(snapshot_dir.name) / 'workspace'
     try:
-        # Keep Finder metadata out of the immutable Mixins input on macOS.
-        source_snapshot = work/'.source'
         result['source_snapshot'] = snapshot_source(source, revision, source_snapshot)
+        if os.uname().sysname == 'Darwin':
+            # Finder can otherwise add metadata to the source during Mixins planning.
+            source_snapshot.chmod(0o555)
         save()
         previous = None
         if os.uname().sysname == 'Darwin' and stage.exists():
@@ -255,10 +258,16 @@ def main():
             result.update(package_artifacts(binary, bundle, stage, work/'artifacts',
                                             revision, mixins_revision, args.profile, args.base))
         result['passed']=True
+        if previous is not None:
+            shutil.rmtree(previous, ignore_errors=True)
+            result['previous_stage_removed'] = not previous.exists()
     except Exception as error:
         result['error']=str(error)
         raise
     finally:
+        if source_snapshot.is_dir():
+            source_snapshot.chmod(0o755)
+        snapshot_dir.cleanup()
         save()
         stage_lock.close()
     print(json.dumps({'passed':result['passed'],'result':str(work/'result.json'),'game':result.get('game')}))
