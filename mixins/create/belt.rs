@@ -640,6 +640,33 @@ pub(super) fn connector_preview(game: &mut Game<'_>) {
     }
 }
 
+fn change_pulley(game: &mut Game<'_>, pos: Pos, previous: Part, next: Part) -> bool {
+    let Some((controller, index)) = node_data(game, pos) else {
+        return false;
+    };
+    let (Ok(index), Some(owner)) = (usize::try_from(index), belt_revision(game, pos)) else {
+        return false;
+    };
+    if !game.native_set_block_property(pos, "part", part_name(next)) {
+        return false;
+    }
+    // Middle and pulley are two states of the same belt entity. Update only
+    // its matching chain entry so maintenance sees the in-place change.
+    if belt_revision(game, pos).is_some_and(|live| owner.is_same_create_entity(live)) {
+        with_state(game, |state| {
+            if let Some(chain) = state.chains.get_mut(&controller)
+                && chain.owners.get(index).is_some_and(|old| old.is_same_create_entity(owner))
+                && let Some(segment) = chain.chain.segments.get_mut(index)
+                && segment.pos == pos && segment.part == previous
+            {
+                segment.part = next;
+            }
+        });
+    }
+    super::create_port_kinetic_runtime::invalidate();
+    true
+}
+
 pub(super) fn right_click(game: &mut Game<'_>, pos: Pos, _face: Pos) -> bool {
     if !game.native_on("create") {
         return false;
@@ -764,25 +791,23 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: Pos, _face: Pos) -> bool {
         .is_some_and(|s| s.item.as_ref() == "create:shaft")
         && part(game, pos) == Part::Middle
     {
-        game.native_set_block_property(pos, "part", "pulley");
-        if !game.creative
+        if change_pulley(game, pos, Part::Middle, Part::Pulley)
+            && !game.creative
             && let Some(s) = game.held_mut().as_mut()
         {
             s.count = s.count.saturating_sub(1);
         }
-        super::create_port_kinetic_runtime::invalidate();
         return true;
     }
     if held
         .as_ref()
         .is_some_and(|s| s.item.as_ref() == "create:wrench")
     {
-        if part(game, pos) == Part::Pulley {
-            game.native_set_block_property(pos, "part", "middle");
-            if !game.creative {
-                return_to_player(game, pos, ItemStack::new("create:shaft", 1));
-            }
-            super::create_port_kinetic_runtime::invalidate();
+        if part(game, pos) == Part::Pulley
+            && change_pulley(game, pos, Part::Pulley, Part::Middle)
+            && !game.creative
+        {
+            return_to_player(game, pos, ItemStack::new("create:shaft", 1));
         }
         return true;
     }
