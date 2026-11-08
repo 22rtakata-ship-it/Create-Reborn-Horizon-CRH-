@@ -411,6 +411,8 @@ with the systems they depend on.
   vanilla hopper, with redstone, comparator, item components and restart.
 - [x] Dry vertical Chutes with container and stacked transfer, manual crafting,
   and direct unloading from one moving chest through a portable interface.
+- [x] Dry diagonal Chutes in all four directions. Place by clicking a side,
+  route cargo through two connected slopes, and update shapes on disconnection.
 - [x] Industrial Iron encasement on a dry vertical Chute. Ordinary clicks
   preserve the moving stack and its components, including on restart.
 - [x] Chute input into a moving chest through a portable interface, including

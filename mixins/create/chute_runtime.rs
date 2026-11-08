@@ -2,7 +2,7 @@
 // Copyright (c) 2026 create-horizon contributors
 // SPDX-License-Identifier: MIT
 
-use super::{Game, native_block_entity_draw::BlockEntityDraw};
+use super::{Game, GameLevel, native_block_entity_draw::BlockEntityDraw};
 use crate::{
     containers::{BlockEntity, ModBlockEntity, ModContainer},
     items::ItemStack,
@@ -15,17 +15,43 @@ use horizon_core::geometry::Direction;
 use horizon_items::item_nbt::{item_from_nbt, item_to_nbt};
 use horizon_world::{
     attachments::{AttachmentType, Holder},
+    chunk::BlockState,
+    level::{PlacementContext, flags},
     nbt::{Compound, Tag},
+    registry::BlockStateId,
 };
 
 pub(super) const BLOCK: &str = "create:chute";
 pub(super) const SMART: &str = "create:smart_chute";
 const CASING: &str = "create:industrial_iron_block";
+const HORIZONTAL: [Direction; 4] = [
+    Direction::North,
+    Direction::South,
+    Direction::West,
+    Direction::East,
+];
+const DIRECTION_NAMES: [&str; 6] = ["down", "up", "north", "south", "west", "east"];
 
 const PREVIOUS: AttachmentType<f32> = AttachmentType {
     namespace: "create",
     name: "chute_previous_position",
     default: || 0.0,
+    codec: None,
+    copy_on_death: false,
+    sync: false,
+};
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+struct Topology {
+    inlet_sides: u8,
+    vertical_above: bool,
+    outlet_present: bool,
+}
+
+const TOPOLOGY: AttachmentType<Option<Topology>> = AttachmentType {
+    namespace: "create",
+    name: "chute_topology",
+    default: || None,
     codec: None,
     copy_on_death: false,
     sync: false,
@@ -68,12 +94,185 @@ pub(super) fn container(block: &str) -> ModContainer {
 fn dry(game: &Game<'_>, pos: Pos) -> bool {
     match game.native_block(pos).as_str() {
         SMART => true,
-        BLOCK => {
-            game.native_block_property(pos, "facing").as_deref() == Some("down")
-                && game.native_block_property(pos, "waterlogged").as_deref() == Some("false")
-        }
+        BLOCK => game.native_block_property(pos, "waterlogged").as_deref() == Some("false"),
         _ => false,
     }
+}
+
+fn direction(state: &BlockState) -> Option<Direction> {
+    match state.name.as_str() {
+        SMART => Some(Direction::Down),
+        BLOCK => {
+            let name = state.properties.get("facing")?;
+            Direction::ALL
+                .into_iter()
+                .find(|face| DIRECTION_NAMES[*face as usize] == name)
+        }
+        _ => None,
+    }
+}
+
+fn offset([x, y, z]: Pos, direction: Direction, height: i32) -> Pos {
+    let [dx, _, dz] = direction.normal();
+    [x + dx, y + height, z + dz]
+}
+
+fn topology<'a>(
+    pos: Pos,
+    face: Direction,
+    read: impl Fn(Pos) -> Option<&'a BlockState>,
+) -> Option<Topology> {
+    let outlet_present =
+        face == Direction::Down || is_chute(&read(offset(pos, face.opposite(), -1))?.name);
+    let mut inlet_sides = 0;
+    for (index, side) in HORIZONTAL.into_iter().enumerate() {
+        if direction(read(offset(pos, side, 1))?) == Some(side) {
+            inlet_sides |= 1 << index;
+        }
+    }
+    let above = read(offset(pos, Direction::Up, 1))?;
+    let vertical_above = direction(above) == Some(Direction::Down)
+        || (funnel::is_funnel(&above.name)
+            && above.properties.get("facing").is_some_and(|v| v == "down"));
+    Some(Topology {
+        inlet_sides,
+        vertical_above,
+        outlet_present,
+    })
+}
+
+fn shape_for(face: Direction, old_shape: &str, topology: Topology) -> (Direction, &'static str) {
+    if !topology.outlet_present {
+        return (Direction::Down, "normal");
+    }
+    let shape = if face == Direction::Down {
+        if topology.inlet_sides == 0 {
+            match old_shape {
+                "window" => "window",
+                "encased" => "encased",
+                _ => "normal",
+            }
+        } else {
+            "intersection"
+        }
+    } else {
+        let inlet = HORIZONTAL.iter().position(|&side| side == face);
+        if inlet.is_some_and(|side| topology.inlet_sides == 1 << side) && !topology.vertical_above {
+            if old_shape == "encased" {
+                "encased"
+            } else {
+                "normal"
+            }
+        } else {
+            "intersection"
+        }
+    };
+    (face, shape)
+}
+
+pub(super) fn placement(
+    game: &GameLevel<'_>,
+    state: BlockStateId,
+    ctx: &PlacementContext,
+) -> Option<BlockStateId> {
+    let pos = [ctx.pos.x, ctx.pos.y, ctx.pos.z];
+    let read = |[x, y, z]: Pos| {
+        game.registry
+            .state(game.world.block(x, y, z))
+            .filter(|_| game.world.loaded(x, z))
+    };
+    if read(offset(pos, Direction::Up, 1))
+        .and_then(direction)
+        .is_some_and(|face| face != Direction::Down)
+    {
+        return None;
+    }
+    let face = if HORIZONTAL.contains(&ctx.face) && !ctx.sneaking {
+        ctx.face
+    } else {
+        Direction::Down
+    };
+    let (face, shape) = topology(pos, face, read).map_or((face, "normal"), |neighbors| {
+        shape_for(face, "normal", neighbors)
+    });
+    let state = game.native_state_with_property(state, "facing", DIRECTION_NAMES[face as usize])?;
+    game.native_state_with_property(state, "shape", shape)
+}
+
+pub(super) fn placed(game: &mut Game<'_>, [x, y, z]: Pos) {
+    let registry = game.pack.assets.registry;
+    let Some(face) = registry
+        .state(game.world.block(x, y, z))
+        .and_then(direction)
+    else {
+        return;
+    };
+    let [tx, ty, tz] = offset([x, y, z], face.opposite(), -1);
+    if game.native_block([tx, ty, tz]) == BLOCK
+        && let Some(map) = game.world.block_entities.attachments_mut((tx, ty, tz))
+    {
+        // Placement schedules the destination even before its first ticker.
+        let _ = map.set(&TOPOLOGY, None);
+    }
+}
+
+fn update_shape(game: &mut Game<'_>, pos: Pos) -> Option<Direction> {
+    let registry = game.pack.assets.registry;
+    let [x, y, z] = pos;
+    let state = game.world.block(x, y, z);
+    let block = registry.state(state)?;
+    let face = direction(block)?;
+    if block.name != BLOCK {
+        return Some(face);
+    }
+    let read = |[x, y, z]: Pos| {
+        registry
+            .state(game.world.block(x, y, z))
+            .filter(|_| game.world.loaded(x, z))
+    };
+    let Some(neighbors) = topology(pos, face, read) else {
+        return Some(face);
+    };
+    let (facing, shape) = shape_for(face, block.properties.get("shape")?, neighbors);
+    let settled = if face == facing {
+        neighbors
+    } else {
+        topology(pos, facing, read)?
+    };
+    let changed = game
+        .world
+        .block_entities
+        .attachments_mut((x, y, z))
+        .is_some_and(|map| {
+            let old = map.get_existing(&TOPOLOGY).ok().flatten();
+            if old != Some(Some(settled)) {
+                let _ = map.set(&TOPOLOGY, Some(settled));
+            }
+            old.is_some_and(|old| old != Some(neighbors))
+        });
+    // Java recomputes on neighbor events. On load, an existing shape is
+    // authoritative until a neighbor changes, including a detached chute
+    // that just became a vertical normal chute with an inlet still above.
+    if !changed && neighbors.outlet_present {
+        return Some(face);
+    }
+    if face == facing
+        && block
+            .properties
+            .get("shape")
+            .is_some_and(|current| current == shape)
+    {
+        return Some(face);
+    }
+    let mut next = block.clone();
+    next.properties
+        .insert("facing".into(), DIRECTION_NAMES[facing as usize].into());
+    next.properties.insert("shape".into(), shape.into());
+    let next = registry.id(&next)?;
+    if next != state && !game.native_set_block(game.dim.id(), pos, next, flags::UPDATE_ALL) {
+        return Some(face);
+    }
+    Some(facing)
 }
 
 fn empty(entity: &ModBlockEntity) -> bool {
@@ -138,7 +337,7 @@ fn entity_at<'g>(game: &'g Game<'_>, [x, y, z]: Pos) -> Option<&'g ModBlockEntit
     }
 }
 
-fn enter(game: &mut Game<'_>, pos: Pos, stack: ItemStack) -> bool {
+fn enter_at(game: &mut Game<'_>, pos: Pos, stack: ItemStack, start: f32) -> bool {
     if !can_enter(game, pos, &stack) {
         return false;
     }
@@ -146,7 +345,7 @@ fn enter(game: &mut Game<'_>, pos: Pos, stack: ItemStack) -> bool {
         if !is_chute(&entity.id) || !empty(entity) {
             return false;
         }
-        set_item(entity, Some(stack), ENTRY);
+        set_item(entity, Some(stack), start);
         true
     }) == Some(true);
     if accepted {
@@ -292,7 +491,7 @@ fn grouped_pull_plan(
 #[derive(Clone, Copy)]
 enum Route {
     Blocked,
-    Chute,
+    Chute { target: Pos, start: f32 },
     Belt,
     Container,
     PortableStorage,
@@ -302,14 +501,23 @@ enum Route {
     Drop,
 }
 
-fn route(game: &mut Game<'_>, pos: Pos, below: Pos, stack: &ItemStack) -> Route {
+fn route_below(
+    game: &mut Game<'_>,
+    pos: Pos,
+    below: Pos,
+    stack: &ItemStack,
+    vertical: bool,
+) -> Route {
     if !super::create_port_contraption::resident(game, below) {
         return Route::Blocked;
     }
     let block = game.native_block(below);
     if is_chute(&block) {
-        return if can_enter(game, below, stack) {
-            Route::Chute
+        return if (vertical || block == SMART) && can_enter(game, below, stack) {
+            Route::Chute {
+                target: below,
+                start: ENTRY,
+            }
         } else {
             Route::Blocked
         };
@@ -338,9 +546,8 @@ fn route(game: &mut Game<'_>, pos: Pos, below: Pos, stack: &ItemStack) -> Route 
         };
     }
     if block == super::create_port_drill::SAW {
-        let moved = super::create_port_saw_processing::insert_from_transport(
-            game, below, stack, true,
-        );
+        let moved =
+            super::create_port_saw_processing::insert_from_transport(game, below, stack, true);
         return if moved > 0 {
             Route::Saw
         } else {
@@ -362,10 +569,11 @@ fn route(game: &mut Game<'_>, pos: Pos, below: Pos, stack: &ItemStack) -> Route 
         };
     }
     let state = game.world.block(below[0], below[1], below[2]);
-    if game
-        .res
-        .behaviours()
-        .is_face_sturdy_rigid(state, Direction::Up)
+    if !vertical
+        || game
+            .res
+            .behaviours()
+            .is_face_sturdy_rigid(state, Direction::Up)
     {
         Route::Blocked
     } else {
@@ -373,10 +581,30 @@ fn route(game: &mut Game<'_>, pos: Pos, below: Pos, stack: &ItemStack) -> Route 
     }
 }
 
+fn route(game: &mut Game<'_>, pos: Pos, below: Pos, stack: &ItemStack, facing: Direction) -> Route {
+    let vertical = facing == Direction::Down;
+    let direct = route_below(game, pos, below, stack, vertical);
+    if vertical || !matches!(direct, Route::Blocked) {
+        return direct;
+    }
+    let target = offset(pos, facing.opposite(), -1);
+    if super::create_port_contraption::resident(game, target) && can_enter(game, target, stack) {
+        Route::Chute {
+            target,
+            start: 0.51,
+        }
+    } else {
+        Route::Blocked
+    }
+}
+
 pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity) {
     if !dry(game, pos) || !is_chute(&entity.id) || entity.items.len() > 1 || !still_air(entity) {
         return;
     }
+    let Some(facing) = update_shape(game, pos) else {
+        return;
+    };
     let smart = entity.id == SMART;
     let powered = smart && refresh_power(game, pos);
     let Some(stack) = entity
@@ -415,7 +643,7 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity) {
     let mut output = Route::Blocked;
     match chute::step(offset, || {
         if !powered {
-            output = route(game, pos, below, stack);
+            output = route(game, pos, below, stack, facing);
         }
         !matches!(output, Route::Blocked)
     }) {
@@ -431,7 +659,12 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity) {
         Step::Output => {
             let stack = stack.clone();
             match output {
-                Route::Chute if enter(game, below, stack.clone()) => set_item(entity, None, ENTRY),
+                Route::Chute { target, start } => {
+                    if !enter_at(game, target, stack, start) {
+                        return;
+                    }
+                    set_item(entity, None, ENTRY);
+                }
                 Route::Container
                 | Route::PortableStorage
                 | Route::Crusher
@@ -486,9 +719,18 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity) {
 
 pub(super) fn insert_from_transport(game: &mut Game<'_>, pos: Pos, stack: &ItemStack) -> u32 {
     let above = [pos[0], pos[1] + 1, pos[2]];
+    let registry = game.pack.assets.registry;
+    let state_at = |[x, y, z]: Pos| registry.state(game.world.block(x, y, z));
     if !game.native_on("create")
         || !dry(game, pos)
-        || is_chute(&game.native_block(above))
+        || state_at(above).and_then(direction) == Some(Direction::Down)
+        || !state_at(pos).is_some_and(|block| {
+            direction(block) == Some(Direction::Down)
+                || block
+                    .properties
+                    .get("shape")
+                    .is_some_and(|shape| shape == "intersection")
+        })
         || stack.count == 0
     {
         return 0;
@@ -502,13 +744,14 @@ pub(super) fn insert_from_transport(game: &mut Game<'_>, pos: Pos, stack: &ItemS
         .count
         .min(super::create_port::stack_maximum(game, stack));
     if count == 0
-        || !enter(
+        || !enter_at(
             game,
             pos,
             ItemStack {
                 count,
                 ..stack.clone()
             },
+            ENTRY,
         )
     {
         return 0;
@@ -835,9 +1078,11 @@ fn shape_change(game: &Game<'_>, pos: Pos, item: &ItemStack) -> Option<(String, 
         if !super::create_port_chassis::wrench(game, item) || !game.may_build() {
             return None;
         }
+        let vertical = game.native_block_property(pos, "facing").as_deref() == Some("down");
         match shape.as_str() {
-            "normal" => "window",
+            "normal" if vertical => "window",
             "window" | "encased" => "normal",
+            "normal" => "normal",
             _ => return None,
         }
     };
@@ -865,6 +1110,9 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: Pos) -> bool {
         let Some((shape, next)) = shape_change(game, pos, item) else {
             return false;
         };
+        if shape == next {
+            return true;
+        }
         if !game.native_set_block_property(pos, "shape", next) {
             return false;
         }

@@ -210,6 +210,9 @@ developer source build. The three changes are applied in a separate checkout.
 - [Harvester flowers and saplings](tools/harvester_bush_checks.py) match 90
   block observations on a moving Mechanical Bearing. Dandelion, poppy, oak
   and birch saplings drop one item apiece. Young wheat stays planted.
+- [Dry diagonal Chutes](tools/diagonal_chute_checks.py) match 92 samples
+  across four directions, with ordinary side placement, two diagonal
+  handoffs, item components and the detached shape after removal.
 - [Straight Pump lines](tools/fluid_pump_native_checks.py) match 115 ticks in
   each of six [Java cases](tools/fluid_pump_java_checks.py), including both
   fluids, both RPM signs and both placement orders. The fixture also checks

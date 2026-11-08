@@ -361,6 +361,9 @@ pub(super) fn placed(game: &mut Game<'_>, stack: &ItemStack, pos: [i32; 3]) {
     if game.native_on("create") && stack.item.as_ref() == super::create_port_chute::SMART {
         super::create_port_chute::refresh_power(game, pos);
     }
+    if game.native_on("create") && super::create_port_chute::is_chute(&stack.item) {
+        super::create_port_chute::placed(game, pos);
+    }
     let Some((clicked, face)) = PLACEMENT_HIT.take() else {
         return;
     };

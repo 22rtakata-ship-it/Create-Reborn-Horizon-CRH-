@@ -57,6 +57,10 @@ pub(super) fn state(
         *answer = Some(super::create_port_basin::tank::placement(game, ctx).then_some(state));
         return;
     }
+    if block == super::create_port_chute::BLOCK {
+        *answer = Some(super::create_port_chute::placement(game, state, ctx));
+        return;
+    }
     if let Some(large) = super::create_port_interactions::encased_cog_size(block) {
         let pos = [ctx.pos.x, ctx.pos.y, ctx.pos.z];
         let face = direction(ctx.face);
