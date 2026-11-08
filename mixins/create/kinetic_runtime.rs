@@ -355,7 +355,10 @@ pub(super) fn transmission_changed(dimension: &str, pos: Pos) {
 }
 
 pub(super) fn transmission_block(block: &str) -> bool {
-    matches!(block, "create:clutch" | "create:gearshift")
+    matches!(
+        block,
+        "create:clutch" | "create:gearshift" | super::create_port_chain::ADJUSTABLE
+    )
 }
 
 fn transmission_owner(game: &Game<'_>, pos: Pos) -> Option<ModRevision> {
@@ -420,16 +423,20 @@ pub(super) fn refresh_transmissions(game: &mut Game<'_>) {
         }
         let powered = game.native_neighbor_signal(&dimension, pos) > 0;
         let clutch = block == "create:clutch";
+        let adjustable = block == super::create_port_chain::ADJUSTABLE;
         let mut flags = horizon_world::level::flags::UPDATE_CLIENTS;
-        if clutch {
+        if clutch || adjustable {
             flags |= horizon_world::level::flags::UPDATE_KNOWN_SHAPE;
         }
-        if !game.native_set_block_property_with(
+        let changed = game.native_set_block_property_with(
             pos,
             "powered",
             if powered { "true" } else { "false" },
             flags,
-        ) {
+        );
+        // ChainGearshiftBlock updates its model state in neighborChanged.
+        // Its entity applies the analog ratio on its own turn.
+        if !changed || adjustable {
             continue;
         }
         let owner = transmission_owner(game, pos);
