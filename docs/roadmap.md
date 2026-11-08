@@ -38,11 +38,11 @@ with the systems they depend on.
 |---|---|---|
 | Installation and resources | Working native pipeline, local JAR | Verify the next release through the same route |
 | Kinetic network | Basic shafts, gears, gearboxes, stress and Encased Chain Drive; bounded source-event traces | Source ownership, propagation transients, effects and complex connections |
-| Item processing | Depot, press, millstone, airflow; press/fan over belts, bounded compacting over a Basin | Accurate presentation and complete factory chains |
+| Item processing | Presses, fans, millstones, stationary saws, linked Crafter hand input and a full Precision Mechanism line | Remaining recipe families, automation and presentation |
 | Rotation sources | Creative Motor, Hand Crank, water wheels | Other sources, control and power systems |
 | UI and visual feedback | Java comparisons of motor and Basin tooltips; other UI/effects are partial | Complete layout and lifecycle of supported screens, original lighting |
 | Schematics | Bounded `.nbt` preflight and creative paste with horizontal rotation and mirroring | Preview/UI and broader block/entity transformations |
-| Transport and automation | Bare belts, Minecraft hoppers and basic IO | Complete belts, funnels/tunnels, mechanical arms |
+| Transport and automation | Horizontal Belts with casings and rider support, dry Chutes, and ordinary machine input and output | Sloped Belt riders, more Funnel and Tunnel modes, Mechanical Arms |
 | Mixing and heating | Dry Basin/Mixer; heated brass; burner and fuel in separate native runs | Combined regression, missing interactions and presentation |
 | Fluids | Water/lava in Basins, standalone Fluid Tanks, straight pipes with a pump and optional valve, Item Drain, buckets, dough and mud | Branching networks, open ends, other fluid machines, multiblock tanks and boilers |
 | Contraptions | Bearings, pistons, Gantry and Rope Pulley with bounded cargo, riders and farm tools | Broader payloads, cross-chunk ownership, more drives, contact and portable storage |
@@ -282,8 +282,8 @@ with the systems they depend on.
 ## 4. Schematics and contraptions
 
 - [x] Bounded GZIP/NBT reader, strict palette/state/data checks before writing.
-- [x] Bounded creative paste of supported schematics, safe NBT and reported refusal;
-  belts, entities and unsupported data are currently rejected.
+- [x] Bounded creative paste for supported blocks and safe NBT. Unimplemented
+  blocks, entities and unsupported data are rejected during preflight.
 - [x] Identical bytes of a five-block schematic produced one Copper Sheet in Java and Horizon;
   result collection was checked within a bounded time, without claiming exact timing.
 - [x] Bounded horizontal rotations around the schematic anchor. The same
