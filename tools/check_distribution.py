@@ -42,7 +42,7 @@ def main():
             for path in (content / "data/create/horizon/creative_tab").glob("*.json")}
     assert set(tabs) == {"kinetics", "palettes"}
     assert tabs["kinetics"]["title"] == "itemGroup.create.base"
-    assert HIDDEN_CREATIVE_ITEMS <= set(ITEMS)
+    assert HIDDEN_CREATIVE_ITEMS <= set(BLOCKS + ITEMS)
     assert tabs["kinetics"]["items"] == [
         "create:" + name for name in BLOCKS + ITEMS
         if name not in PALETTE_BLOCKS and name not in HIDDEN_CREATIVE_ITEMS
