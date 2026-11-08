@@ -255,8 +255,12 @@ with the systems they depend on.
   The export and crafting particle events are implemented.
 - [x] Downward Crafter output to a horizontal Belt, including a stopped Belt,
   an actual restart and delivery of both wheels on the first powered tick.
-- [ ] Crafter linked inputs, special recipes, mixed remainders, sideways Belt
-  output and full presentation.
+- [x] Wrench-linked Crafter inputs and manual feeding in the original slot
+  order. Controller offsets survive a restart and separate when a member is
+  removed with a Wrench. [Paired fixture](../tools/crafter_link_checks.py)
+- [ ] Linked Crafter automation, edge outlines and connected textures.
+- [ ] Crafter special recipes, mixed remainders, sideways Belt output and
+  remaining animation work.
 - [x] Downward Deployer over a Depot and bare Belt. Match small and large
   Cogwheel application, item counts, hand changes and native restart.
 - [x] Downward Deployer for vanilla copper waxing, wax removal and oxidation
@@ -399,6 +403,8 @@ with the systems they depend on.
 - [x] Upward Saw ordinary output filter slot, replacement and clearing.
 - [x] Horizontal Belt feed into an upward Saw. One log enters while it is
   stopped and resumes cutting after a cold restart. Remaining logs wait.
+- [x] Dry vertical Chute feeds an upward Saw one item at a time, including
+  while stopped. The rest waits in the Chute and resumes after a cold restart.
 - [ ] Remaining Saw recipes, automation, advanced filter items, hover feedback
   and cutting particles.
 - [x] Portable Storage Interface unloading from one moving chest into a

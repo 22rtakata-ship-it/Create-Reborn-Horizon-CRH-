@@ -1636,28 +1636,35 @@ fn apply(
     }
 }
 
-fn accept_input(game: &mut Game<'_>, pos: Pos, stack: &ItemStack, from_world: bool) -> bool {
+pub(super) fn insert_from_transport(
+    game: &mut Game<'_>,
+    pos: Pos,
+    stack: &ItemStack,
+    simulate: bool,
+) -> u32 {
     if stack.count == 0
         || !game.native_on("create")
         || game.native_block(pos) != super::create_port_drill::SAW
         || game.native_block_property(pos, "facing").as_deref() != Some("up")
     {
-        return false;
+        return 0;
     }
     let Some(BlockEntity::Mod(entity)) = game.world.block_entities.get(&(pos[0], pos[1], pos[2]))
     else {
-        return false;
+        return 0;
     };
-    if (from_world && (game.clock.frozen() || create::number(&entity.nbt, "Speed") == 0.0))
-        || entity.id != "create:saw"
+    if entity.id != "create:saw"
         || entity.items.len() != SLOTS
         || entity.items.iter().any(Option::is_some)
     {
-        return false;
+        return 0;
     }
     let (Some(filter), Some(mut cycle)) = (read_filter(game, entity), cycle(entity)) else {
-        return false;
+        return 0;
     };
+    if simulate {
+        return 1;
+    }
     let mut inserted = stack.clone();
     inserted.count = 1;
     start(game, &mut cycle, &inserted, filter.as_ref());
@@ -1668,18 +1675,21 @@ fn accept_input(game: &mut Game<'_>, pos: Pos, stack: &ItemStack, from_world: bo
         })
         .is_none()
     {
-        return false;
+        return 0;
     }
     game.native_block_entity_sync(pos);
-    true
-}
-
-pub(super) fn insert_from_transport(game: &mut Game<'_>, pos: Pos, stack: &ItemStack) -> u32 {
-    u32::from(accept_input(game, pos, stack, false))
+    1
 }
 
 pub(super) fn landed(game: &mut Game<'_>, pos: Pos, stack: &mut ItemStack) -> bool {
-    if !accept_input(game, pos, stack, true) {
+    let [x, y, z] = pos;
+    let Some(BlockEntity::Mod(entity)) = game.world.block_entities.get(&(x, y, z)) else {
+        return false;
+    };
+    if game.clock.frozen() || create::number(&entity.nbt, "Speed") == 0.0 {
+        return false;
+    }
+    if insert_from_transport(game, pos, stack, false) == 0 {
         return false;
     }
     stack.count -= 1;

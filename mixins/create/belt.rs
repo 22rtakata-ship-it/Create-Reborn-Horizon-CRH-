@@ -1728,7 +1728,7 @@ impl Hooks<ItemStack> for WorldHooks<'_, '_> {
             }
             super::create_port_drill::SAW => {
                 stack.count - super::create_port_saw_processing::insert_from_transport(
-                    self.game, target, &game_stack(stack),
+                    self.game, target, &game_stack(stack), false,
                 )
             }
             _ => {

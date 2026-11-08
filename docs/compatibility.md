@@ -121,7 +121,8 @@ the Chute feeds an inventory to choose Up to or Exactly. The board uses the
 sample item's stack limit. Special filters remain open.
 
 Horizontal Mechanical Belts can feed dry Chutes and receive their downward
-output. Stopped, incomplete and incompatible receivers hold cargo upstream.
+output, even when the receiving Belt is stopped. An incomplete Belt or a
+Chute that rejects the item holds the cargo upstream.
 The same item and components continue after a restart. Andesite and Brass
 Casing use the original per-segment states, and dye or washing changes the
 color of the full Belt. Dry horizontal Belts carry grounded local players
@@ -141,10 +142,17 @@ order, within a 3×3 occupied area. Mirrored patterns and empty cells follow
 the normal crafting rules. A recipe marked `_manual_only` stays manual.
 Equal item remainders occupy separate output
 cells and wait for space, as with the three buckets from a cake.
+Use a Wrench on the shared edge of two same-facing Crafters from an accessible
+side or back to link or separate their inputs. Feeding any linked member by
+hand fills available slots from the top row down, ordered by facing within
+each row. Covered and busy slots are skipped, and empty-hand pickup stays
+local. The group keeps Create's controller and relative offsets across saves.
+Player removal repairs the surviving loaded members. Removal by commands
+and disconnected groups with unloaded members remain pending.
 The animation shows ingredients merging and the finished item turning, with
 the export and crafting particles. Scrolling on the Crafter's small belts,
-linked input, special recipes, mixed remainders and side insertion into a
-Belt remain open.
+linked hopper and machine input, edge outlines and connected textures, special
+recipes, mixed remainders and side insertion into a Belt remain open.
 
 A downward Deployer can apply the original small and large cogwheel recipes
 to cargo on a Depot or bare horizontal Belt. It also has the original

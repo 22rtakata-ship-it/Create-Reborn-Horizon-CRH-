@@ -51,6 +51,7 @@ developer source build. The three changes are applied in a separate checkout.
   the stopped Saw and two on the Belt through a cold restart in each
   client. Cutting and export match. Five of 103 samples show a one-tick
   difference in Belt refills or Chute deliveries after the reload.
+  The same fixture with `--chute-inlet` matches all 103 samples exactly.
 - [Belt-to-Millstone transfer](tools/belt_millstone_checks.py) matches
   full and partial acceptance, recipe rejection and a full receiver.
   The canonical input is visible on the transfer tick even if the
