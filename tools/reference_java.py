@@ -232,11 +232,12 @@ def process_alive(base):
     path = base / 'process.json'
     if not path.is_file():
         return False
-    try:
-        os.kill(json.loads(path.read_text())['pid'], 0)
-        return True
-    except ProcessLookupError:
-        return False
+    pid = json.loads(path.read_text())['pid']
+    status = subprocess.run(['ps', '-o', 'stat=', '-p', str(pid)], capture_output=True, text=True)
+    state = status.stdout.strip()
+    # A stopped JVM may still have a process table entry until its caller
+    # reaps it. Its world and loopback server are already closed.
+    return status.returncode == 0 and bool(state) and not state.startswith('Z')
 
 
 def launch(base, wait=True, normal_world=False):
