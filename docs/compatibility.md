@@ -223,10 +223,12 @@ development contexts; they do not run the full original mod.
 
 The paired schematic checks paste the same authored 1.21.1 files in Create
 and Horizon. For a supported palette, put the file in the Horizon instance's
-`schematics` folder and use `/create schematic paste FILE.nbt X Y Z [quarter_turns]`
-in Creative with operator permission. Zero to three clockwise quarter turns
-rotate around the supplied anchor. Rotated blocks can extend into negative
-offsets from that anchor. The rotated palette is limited to verified simple
-blocks, logs, shafts, Flywheels, Creative Motors, Mechanical Presses and
-Depots. See the [paired checks](../VALIDATION.md) for the tested layouts.
+`schematics` folder and use
+`/create schematic paste FILE.nbt X Y Z [quarter_turns [mirror]]` in Creative
+with operator permission. The mirror values are `none`, `left_right` and
+`front_back`. The mirror is applied first, followed by zero to three clockwise
+quarter turns around the supplied anchor. The placement can extend into
+negative offsets from the anchor. The transformed palette is limited to
+verified simple blocks, logs, shafts, Flywheels, Creative Motors, Mechanical
+Presses and Depots. See the [paired checks](../VALIDATION.md) for the layouts.
 Cross-version world interchange remains outside the supported scope.

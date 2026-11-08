@@ -15,7 +15,10 @@ emits an item entity.
 
 Vanilla hoppers also reach the Chute's ordinary single slot. Empty-hand use
 recovers the held stack. A wrench switches between normal and window for a
-vertical Chute. The fallback models use vanilla textures, and the optional
+vertical Chute. Use a Block of Industrial Iron on either shape to encase it
+without consuming the block. The wrench removes the casing. These transitions
+keep the item in transit and its position. The fallback models use vanilla
+textures, and the optional
 original JAR supplies Create's models and textures. The window shows the item
 at its current position. Original sub-tick interpolation and pickup particles
 remain open.

@@ -146,6 +146,14 @@ path. Its lid direction rotates with the structure. The paired fixtures
 cover horizontal and vertical rotation, slot contents and custom item data.
 Open barrels and barrels with names, locks or pending loot tables are refused.
 
+A vertical Mechanical Bearing can carry two closed ordinary chests, two
+closed barrels or one of each within its loaded chunk column. The order
+matches the original Java local-position hash buckets. Assemblies with two
+banks in the same bucket are refused because their relative order would
+depend on the Java capture traversal. The saved one-bank format is unchanged.
+The two-bank format stores each 27-slot inventory under the same controller
+and restores both together after landing, including an obstructed restart.
+
 A vertical Mechanical Bearing can land through ordinary dry vanilla leaves
 when the incoming block has collision. The leaves use the usual block-break
 effect and bare-hand drops after the assembly lands. Logs, waterlogged
@@ -157,9 +165,9 @@ below. A dry Chute above the dock can supply the moving chest and holds
 anything the chest could not accept. Both directions preserve the components.
 [Portable Storage Interface](portable-storage.md)
 
-Access the inventory when the chest has landed. The moving chest menu,
-multiple or double chests, named, locked and loot-table chests
-are outside the current adapter.
+Access the inventory after landing. Moving menus, more than two banks,
+double chests, named, locked and loot-table containers are outside the
+current adapter.
 
 ## Windmill sails
 

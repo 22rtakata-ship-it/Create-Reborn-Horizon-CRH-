@@ -20,6 +20,12 @@ developer source build. The three changes are applied in a separate checkout.
   in six chunk-edge fixtures. Wheat and seeds share a position, with zero
   initial velocity and ten ticks of pickup delay. Ore spawns experience in the
   same vanilla range. The block-drops rule suppresses both loot and ore experience.
+- [Drill-fed cobblestone generator](tools/drill_cobble_checks.py) compares
+  88 active observations across five layouts. Water, lava and a collecting
+  Hopper keep the Cobblestone in place. Full inventory, ordinary breaking
+  without a collector and the block-drops rule match. Both clients restore
+  the saved state after a cold restart and deliver the first resumed item on
+  tick seven. The second arrives on Java tick 19 and Horizon tick 20.
 - [Cross-chunk transmission](tools/cross_chunk_kinetics_checks.py) matches 60 of
   64 action observations and all four Horizon reload checks. Direct shaft
   removal is the remaining difference. The far shaft stops immediately in Java
@@ -53,9 +59,23 @@ developer source build. The three changes are applied in a separate checkout.
   placements match coordinates, states and RPM, with one Copper Sheet made
   by each press. Unsupported rotations and blocked destinations are refused
   before any changes are written.
+- [Mirrored schematics](tools/schematic_mirror_checks.py) match all eight
+  mirror/quarter-turn pairs on 11 observed cells each. Both motor settings,
+  signed RPM, both shaft axes and the eight Copper Sheets match. Invalid
+  mirror values, unsupported blocks and bedrock leave the target untouched.
 - [Mounted barrels](tools/bearing_barrel_checks.py) match the original
   position, lid direction and contents after a native restart on two axes.
   The refusal checks preserve open, named, locked and loot-table barrels.
+- [Paired mounted inventories](tools/bearing_mounted_pair_checks.py) cover
+  chest/barrel, chest/chest and barrel/barrel on a vertical Mechanical
+  Bearing. Java determines the bank order, and Horizon preserves that order
+  and the item components through a cold reload and landing. A save from
+  the preceding single-bank build also cold-loads. An obstructed landing
+  preserves both banks for a retry.
+- [Adjustable Chain Gearshift transitions](tools/adjustable_chain_transition_checks.py)
+  match all 66 lane observations, including analog changes, an instantaneous
+  redstone pulse and a native reload. The model state changes at the
+  neighbor notification and analog speed changes on the block entity tick.
 - [Piston slab cargo](tools/piston_slab_checks.py) matches half-block
   shapes and the ordinary/sticky retraction outcomes after a native restart
   at 0.46875 blocks of extension. In the [grounded player check](tools/piston_slab_rider_checks.py),
@@ -75,6 +95,25 @@ developer source build. The three changes are applied in a separate checkout.
 - The same fixture verifies eight more solid blocks across granite and
   diorite, ten original recipes and one drop per block. The combined local
   import check covers 40 original files across the three families.
+- [Industrial and Weathered Iron](tools/iron_palette_checks.py) both cut
+  two blocks per ingot through the ordinary Stonecutter in each client.
+  Normal Wrench use leaves the blocks in place, and crouched use returns
+  one to the player. An ordinary water-fed Fan processes two Industrial
+  Iron Blocks into two Weathered Iron Blocks on a Depot. The local JAR
+  import matches 48 original palette resource files.
+- [Chute encasement](tools/chute_encasement_checks.py) preserves seven
+  marked items and their transit position across four ordinary transitions.
+  Industrial Iron is reusable. After a Horizon restart, opening the outlet
+  transfers the marked stack intact. Java and Horizon used the same
+  survival inputs, and Horizon ran with its built-in resources.
+
+The [offscreen engineering run](tools/engineering_checks.py) used ordinary
+crank clicks on all six facings and measured the rendered base and handle
+against live shaft speed. It also passed gearbox/clutch/gearshift poses, the
+goggles HUD, gauge comparators, water wheel behavior and 13 manual crafts.
+The staged Horizon client library ran 1,300 tests: 1,164 passed, 135 were
+ignored and the source-shape guard `hook_points_stay_hookable` failed on an
+unchanged existing gauge hook. All five mounted inventory tests passed.
 
 ## 0.8.0-alpha.5 chassis, saw and Deployer crafting
 

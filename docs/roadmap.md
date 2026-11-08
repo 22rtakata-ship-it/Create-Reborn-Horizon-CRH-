@@ -41,7 +41,7 @@ with the systems they depend on.
 | Item processing | Depot, press, millstone, airflow; press/fan over belts, bounded compacting over a Basin | Accurate presentation and complete factory chains |
 | Rotation sources | Creative Motor, Hand Crank, water wheels | Other sources, control and power systems |
 | UI and visual feedback | Java comparisons of motor and Basin tooltips; other UI/effects are partial | Complete layout and lifecycle of supported screens, original lighting |
-| Schematics | Bounded `.nbt` preflight and creative paste; one shared press fixture | Preview/UI, transformations, other machine support |
+| Schematics | Bounded `.nbt` preflight and creative paste with horizontal rotation and mirroring | Preview/UI and broader block/entity transformations |
 | Transport and automation | Bare belts, Minecraft hoppers and basic IO | Complete belts, funnels/tunnels, mechanical arms |
 | Mixing and heating | Dry Basin/Mixer; heated brass; burner and fuel in separate native runs | Combined regression, missing interactions and presentation |
 | Fluids | Water/lava in canonical Basin tanks; buckets, dough and mud | Complete processing, pipe networks, pumps, tanks |
@@ -93,7 +93,9 @@ with the systems they depend on.
   detach semantics from RotationPropagator.
 - [x] Adjustable Chain Gearshift. Settled shaft speeds and block states for all
   16 redstone strengths from either input end, plus native save/reload.
-- [ ] Adjustable Chain Gearshift transient timing and full visual parity.
+- [x] Adjustable Chain Gearshift redstone transitions: 66 matching
+  Java and Horizon lane observations, including a short pulse and reload.
+- [ ] Adjustable Chain Gearshift full visual parity.
 - [x] Original Rose Quartz, Sand Paper, Electron Tube and Brass Hand recipes.
   Hand and ground polishing unlock the Deployer and Adjustable Chain Gearshift recipes.
 - [ ] Remaining redstone controls, belt and gearbox connection variants.
@@ -135,6 +137,9 @@ with the systems they depend on.
 - [x] Stationary Drill across a chunk boundary. Six Java and Horizon
   cases cover placement order, breaking ticks, shared loot origin, pickup
   delay, the block-drops rule and ore experience.
+- [x] Stationary Drill with a water/lava cobblestone generator and an ordinary
+  Hopper. Match block retention, normal inventory cadence and the first
+  output after a cold restart. The second post-restart output can differ by one tick.
 - [x] Upward Saw output to a neighboring Depot, including blocked and partial
   delivery across a chunk boundary, both output directions and native reloads.
 - [x] Upward Saw output to a neighboring Millstone, including input filtering,
@@ -199,12 +204,14 @@ with the systems they depend on.
 
 - [x] Bounded GZIP/NBT reader, strict palette/state/data checks before writing.
 - [x] Bounded creative paste of supported schematics, safe NBT and reported refusal;
-  belts, entities, rotations and unsupported data are currently rejected.
+  belts, entities and unsupported data are currently rejected.
 - [x] Identical bytes of a five-block schematic produced one Copper Sheet in Java and Horizon;
   result collection was checked within a bounded time, without claiming exact timing.
 - [x] Bounded horizontal rotations around the schematic anchor. The same
   eight-block Flywheel and Press layout runs in all four directions in both games.
-- [ ] Rotations/mirrors with verified block and block entity transformations.
+- [x] Bounded horizontal mirrors before rotation. All eight combinations
+  preserve the original supported states, motor settings and production.
+- [ ] Rotate and mirror the remaining blocks, block entities and entities.
 - [ ] Original Schematic and Quill, preview, UI, deployment and Schematicannon.
 - [x] Core captures connected blocks with host-provided attachment rules and
   preserves their snapshots through a failed restoration preflight.
@@ -249,10 +256,12 @@ with the systems they depend on.
   and cutter loot, item components, restart and landing recovery.
 - [x] One closed barrel on a Mechanical Bearing, including horizontal and
   vertical turns, slot contents and item components after a native restart.
+- [x] Two ordinary chests or barrels on a vertical Mechanical Bearing,
+  including mixed pairs, ordered banks, obstructed landing and a cold restart.
 - [x] Ordinary chest cargo on Gantry, dry Rope Pulley and both Mechanical
   Pistons. Preserve components and slot order through translated landing and
   an obstructed restart.
-- [ ] Full entity contact, multiple mounted inventories and moving chest menus.
+- [ ] Full entity contact, larger mounted inventories, double chests and moving menus.
 - [ ] Cross-chunk capture and restoration. First validate a durable two-column
   write with both columns loaded. Recovery must replay an interrupted write
   before either column becomes visible, including across a region boundary.
@@ -311,6 +320,8 @@ with the systems they depend on.
   vanilla hopper, with redstone, comparator, item components and restart.
 - [x] Dry vertical Chutes with container and stacked transfer, manual crafting,
   and direct unloading from one moving chest through a portable interface.
+- [x] Industrial Iron encasement on a dry vertical Chute. Ordinary clicks
+  preserve the moving stack and its components, including on restart.
 - [x] Chute input into a moving chest through a portable interface, including
   partial transfer and component preservation.
 - [ ] Generic portable item automation, fluid interfaces, and Plough
@@ -321,6 +332,8 @@ with the systems they depend on.
 
 - [x] Thirteen solid andesite, granite and diorite variants with the original stonecutting recipes,
   drops, local models and a building-blocks tab. Layered connected textures remain open.
+- [x] Industrial and Weathered Iron Blocks, their Stonecutter recipes, Wrench pickup,
+  and fan washing with the original output count.
 - [ ] Pipes/pumps/valves, connectivity and flow direction.
 - [ ] Fluid Tanks, Hose Pulley, Item Drain/Spout, displays and fluid levels.
 - [ ] Trains: tracks, signals, stations, assembly, controls, schedules and persistence.
