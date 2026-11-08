@@ -94,8 +94,11 @@ developer source build. The three changes are applied in a separate checkout.
   the rider follows the measured Horizon stroke on both slab halves.
   Java's observed client motion differs from its server stroke sample by
   one tick. The [rotary rider check](tools/rotary_slab_rider_checks.py)
-  preserves the lower slab's foot height in both clients. The maximum
-  measured player position difference at matched angles was 0.17 blocks.
+  preserves the lower slab's foot height in both clients. The maximum radial
+  drift in the Horizon trace fell from 0.0603 blocks to below 0.000001 blocks.
+  Java's radial drift was 0.000354 blocks. The sampled player position still
+  differs by up to 0.154 blocks when matched by the separately observed
+  bearing angle.
   Dropped-item carry remains a separate case.
 - [Dry straight stairs](tools/contraption_stair_checks.py) match the 18 landed
   states across quarter, half and three-quarter turns on all three axes.

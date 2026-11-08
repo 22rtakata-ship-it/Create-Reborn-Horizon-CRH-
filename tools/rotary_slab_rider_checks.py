@@ -50,11 +50,12 @@ def verify(before, trace):
     assert len(trace) >= 7 and 58 <= trace[-1]['angle'] < 75, trace
     assert all(abs(row['position'][1] - 101.5) < 0.001 for row in trace), trace
     final = trace[-1]['position']
-    radius = math.hypot(final[0] - CENTER[0], final[2] - CENTER[1])
-    # Sweep geometry keeps the rider on the slab in both clients. Report
-    # horizontal drift separately from the strict feet-height check.
-    assert abs(radius - 1) < 0.10 and before[2] - final[2] > 0.65, trace
-    return abs(radius - 1)
+    radial_errors = [abs(math.hypot(x - CENTER[0], z - CENTER[1]) - 1)
+                     for x, _, z in (row['position'] for row in trace)]
+    # Radial error is independent of when the observation reads the angle.
+    # The old native contact clipped the tangent and drifted by 0.06 blocks.
+    assert max(radial_errors) < 0.002 and before[2] - final[2] > 0.65, trace
+    return radial_errors[-1], max(radial_errors)
 
 
 def java_run(work):
@@ -80,7 +81,9 @@ def java_run(work):
     finally:
         host.call('tick', {'frozen': True})
         host.command('tick rate 20')
+        host.command('fill 1506 99 276 1514 106 284 minecraft:air')
         host.command('forceload remove ' + LOAD)
+        host.call('camera', {'position': state['position'], 'yaw': state['yaw'], 'pitch': state['pitch']})
         host.call('tick', {'frozen': state['server']['frozen']})
         (work / 'transcript.json').write_text(json.dumps(host.trace, indent=2) + '\n')
 
@@ -110,7 +113,8 @@ def native_run(session):
         session.stop()
         session.control_temp.cleanup()
         (session.scratch / 'transcript.json').write_text(json.dumps(session.transcript, indent=2) + '\n')
-        shutil.rmtree(session.resources, ignore_errors=True)
+        for path in (session.resources, session.scratch / '.horizon-cache', session.scratch / 'horizon-mods'):
+            shutil.rmtree(path, ignore_errors=True)
 
 
 def main():
@@ -134,7 +138,7 @@ def main():
     result = dict(passed=False, create=PINS['create_revision'], before=before, trace=trace)
     path = work / 'result.json'
     try:
-        result['final_radius_error'] = verify(before, trace)
+        result['final_radius_error'], result['maximum_radius_error'] = verify(before, trace)
         if not args.java:
             java = {round(row['angle'], 1): row['position'] for row in reference['trace']}
             distances = [math.dist(row['position'], java[round(row['angle'], 1)]) for row in trace

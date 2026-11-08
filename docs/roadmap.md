@@ -288,6 +288,9 @@ with the systems they depend on.
 - [ ] Native Cart Assembler rails, cart coupling, mounted payload and renderer.
 - [x] Dropped-item collision, grounded rotary and linear rider transfer, and
   collision of narrow piston poles in Horizon.
+- [x] Grounded bottom-slab rider keeps its rotation radius in Horizon. Live
+  Java and Horizon traces preserve feet height. Position sampled at matched
+  bearing angles still differs by up to 0.154 blocks.
 - [x] Unobstructed and wall-constrained side pushes from a horizontal piston,
   including mirrored wall exits checked in Java.
 - [x] Side pushes and wall sliding from full cubes on a vertical Mechanical

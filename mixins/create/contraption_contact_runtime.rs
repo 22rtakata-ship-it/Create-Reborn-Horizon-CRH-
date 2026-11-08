@@ -173,7 +173,9 @@ fn carry(game: &mut Game<'_>, column: (i32, i32), previous: &[Record]) {
                         half_extents,
                     )
                 {
-                    return Some((motion, false, None));
+                    // Create resolves this rotor's shape before moving the
+                    // contact point through the ordinary world colliders.
+                    return Some((motion, false, Some(record.controller)));
                 }
                 if side.is_some() || !upright_side_payload(record) {
                     return None;
