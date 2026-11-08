@@ -55,6 +55,7 @@ implementing each feature, and test save/reload inside Horizon.
 | `create:shaft` | `create:simple_kinetic` | `axis`, `waterlogged` (default false) |
 | `create:cogwheel` | `create:simple_kinetic` | `axis`, `waterlogged` (default false) |
 | `create:large_cogwheel` | `create:simple_kinetic` | `axis`, `waterlogged` (default false) |
+| `create:flywheel` | `create:flywheel` | `axis` (default Y) and common kinetic data. Wheel speed and angle are client-side and are not saved. |
 | `create:creative_motor` | `create:motor` | `facing`; `ScrollValue` int, default 16 |
 | `create:mechanical_press` | `create:mechanical_press` | horizontal `facing`; `Running`, `Finished` bytes; `Ticks`, `Mode` ints (WORLD=0, BELT=1) |
 | `create:depot` | `create:depot` | `waterlogged` (default false), no facing/open state; `HeldItem`, `OutputBuffer` |
@@ -212,9 +213,12 @@ behavior, not a class-for-class translation. The existing AST-based oracles
 compare selected unchanged Java method bodies against Rust with restricted
 development contexts; they do not run the full original mod.
 
-A future end-to-end comparison will build equivalent schematic test fixtures in
-original Create and Horizon, apply the same inputs/actions, and compare output
-counts/components, timing, rotation, stopping conditions and saved state. That
-cross-runtime fixture runner is planned, not implemented in 0.5. It does not
-change the explicit exclusion of cross-version world interchange or imply a
-working schematic-import feature.
+The paired schematic checks paste the same authored 1.21.1 files in Create
+and Horizon. For a supported palette, put the file in the Horizon instance's
+`schematics` folder and use `/create schematic paste FILE.nbt X Y Z [quarter_turns]`
+in Creative with operator permission. Zero to three clockwise quarter turns
+rotate around the supplied anchor. Rotated blocks can extend into negative
+offsets from that anchor. The rotated palette is limited to verified simple
+blocks, logs, shafts, Flywheels, Creative Motors, Mechanical Presses and
+Depots. See the [paired checks](../VALIDATION.md) for the tested layouts.
+Cross-version world interchange remains outside the supported scope.

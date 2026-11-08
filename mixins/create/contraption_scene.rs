@@ -464,6 +464,22 @@ fn block_cross_section([u, v]: [usize; 2], [cos, sin]: [f64; 2], bounds: Aabb) -
     strips
 }
 
+pub fn dry_slab_type(state: &BlockState) -> Option<&str> {
+    if !matches!(
+        state.name.as_str(),
+        "minecraft:oak_slab" | "minecraft:smooth_stone_slab"
+    ) || state.properties.len() != 2
+        || state.properties.get("waterlogged").map(String::as_str) != Some("false")
+    {
+        return None;
+    }
+    state
+        .properties
+        .get("type")
+        .map(String::as_str)
+        .filter(|kind| matches!(*kind, "bottom" | "top" | "double"))
+}
+
 /// Vanilla payload states that fill a cube without querying collision shapes.
 pub fn full_cube_payload(state: &BlockState) -> bool {
     state.name.starts_with("minecraft:")
@@ -471,6 +487,7 @@ pub fn full_cube_payload(state: &BlockState) -> bool {
             state.name.as_str(),
             "minecraft:honey_block" | "minecraft:chest"
         )
+        && (!state.name.ends_with("_slab") || dry_slab_type(state) == Some("double"))
 }
 
 pub fn upright_side_payload(record: &Record) -> bool {
@@ -482,7 +499,7 @@ pub fn upright_side_payload(record: &Record) -> bool {
         && record
             .blocks
             .iter()
-            .all(|(_, state)| full_cube_payload(state))
+            .all(|(_, state)| full_cube_payload(state) || dry_slab_type(state).is_some())
 }
 
 pub fn append_collisions(
@@ -636,6 +653,22 @@ mod collision_tests {
         let mid = vector(rotate_plane([2, 0], rotation, [0.0, 0.0, -0.4]));
         assert!(boxes.iter().any(|box_| box_.contains(mid)));
         assert!(!boxes.iter().any(|box_| box_.contains(Vec3::ZERO)));
+    }
+
+    #[test]
+    fn slabs_keep_their_half_height_through_oblique_y_rotation() {
+        let bottom = Aabb::new(Vec3::new(-0.5, -0.5, -0.5), Vec3::new(0.5, 0.0, 0.5));
+        let strips = block_cross_section([2, 0], collision_rotation(37.0), bottom);
+        assert!(!strips.is_empty());
+        assert!(
+            strips.iter().all(|bounds| {
+                bounds.min_position().y == -0.5 && bounds.max_position().y == 0.0
+            })
+        );
+        let turned = block_cross_section([1, 2], collision_rotation(180.0), bottom);
+        assert_eq!(turned.len(), 1);
+        assert_eq!(turned[0].min_position().components(), [-0.5, 0.0, -0.5]);
+        assert_eq!(turned[0].max_position().components(), [0.5, 0.5, 0.5]);
     }
 
     #[test]

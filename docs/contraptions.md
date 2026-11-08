@@ -13,11 +13,17 @@ rules while using Horizon's block, item and player APIs.
 | Presentation | The client receives the captured structure and successive poses. Models are drawn in the same coordinate system used for collision. Original resources remain an optional local import. |
 | Contact and actors | Horizon's normal collision paths handle moving geometry. A rider on a flat platform can follow horizontal rotation or translation and be lifted. Moving harvesters, saws and drills use the original crop or block rules and Horizon loot. |
 
-The current native adapter limits each structure and its swept footprint to one
-loaded chunk column. This keeps the source, target and persistent record in the
-same chunk save. It refuses unsupported snapshots and most occupied landing cells
+The current native adapter keeps each structure's source blocks, landing cells
+and persistent record in one loaded chunk column so they share a chunk save.
+A rotor can pass through a neighboring loaded column between snapped poses.
+The adapter refuses unsupported snapshots and most occupied landing cells
 instead of discarding blocks. Capture is limited to an allowlist of stateless
-blocks and idle tools. A vertical Mechanical Bearing can carry a Deployer.
+blocks and idle tools. This includes ordinary dyed concrete, stained glass
+and unglazed terracotta. The paired bearing check mixes them with wool and
+compares the quarter-turn landing after a native restart. Dry oak and smooth
+stone slabs keep their registered half-block or double-block collision. A
+half-turn about X or Z flips their top or bottom state at landing. A vertical
+Mechanical Bearing can carry a Deployer.
 A vertical Mechanical Bearing, Gantry, Rope Pulley or Mechanical Piston can
 carry one ordinary chest. All four can use the three chassis variants to
 expand capture.
@@ -38,7 +44,7 @@ the original six separating axes and the ordinary terrain resolver. Existing
 flat-platform support and linear actuator paths retain their own rules.
 The upright resolver matches the pinned JAR for separation, surface and time
 of impact. The native adapter applies the lateral overlap response. Arbitrary
-tilt, contact with partial shapes, moving block bounce, exact client sub-tick
+tilt, complete contact timing for partial shapes, moving block bounce, exact client sub-tick
 pose timing, mounted mobs and downward lock behavior remain open. Sable
 integration remains a separate milestone.
 
@@ -62,7 +68,10 @@ An upward stationary Saw strips logs, bark blocks, stems, hyphae and Bamboo
 Blocks, cuts stripped wood into planks, and cycles through plank shapes and
 stonecutting results. It also cuts Andesite Alloy into six shafts. Drop an
 item on the powered blade. The default Saw takes one input at a time and
-ejects its output in the direction set by the shaft and rotation. The saved
+outputs in the direction set by the shaft and rotation. A neighboring Depot
+receives the stack directly. The Saw waits if the Depot holds a stack or
+has items in its output buffer. In open space the Saw ejects the result.
+The saved
 `RecipeIndex` and ordinary output filter select the next recipe in the pinned
 Java order. A Saw with no matching recipe passes the item through unchanged.
 

@@ -19,6 +19,14 @@ use std::{
 const ID: &str = "create:mechanical_drill";
 pub(super) const SAW: &str = "create:mechanical_saw";
 static NEXT_BREAKER: AtomicI32 = AtomicI32::new(-1);
+const NEIGHBORS: [[i32; 3]; 6] = [
+    [1, 0, 0],
+    [-1, 0, 0],
+    [0, 1, 0],
+    [0, -1, 0],
+    [0, 0, 1],
+    [0, 0, -1],
+];
 
 struct Running {
     lazy: i32,
@@ -31,19 +39,37 @@ struct Running {
 struct DimensionState {
     drills: BTreeMap<[i32; 3], Running>,
     cleaned: Option<i64>,
+    changes: BTreeMap<[i32; 3], u64>,
+    change_sequence: u64,
+    changes_through_last_tick: u64,
+}
+impl DimensionState {
+    fn neighbor_changed_after_placement(&self, pos: [i32; 3]) -> bool {
+        self.changes.get(&pos).is_some_and(|placed| {
+            NEIGHBORS.into_iter().any(|offset| {
+                let neighbor = std::array::from_fn(|i| pos[i] + offset[i]);
+                self.changes
+                    .get(&neighbor)
+                    .is_some_and(|changed| changed > placed)
+            })
+        })
+    }
 }
 #[derive(Default)]
 struct State {
     game: Option<usize>,
-    dimensions: BTreeMap<String, DimensionState>,
+    dimensions: BTreeMap<&'static str, DimensionState>,
 }
 impl State {
-    fn dimension(&mut self, game: usize, dimension: &str) -> &mut DimensionState {
-        if self.game != Some(game) {
-            self.game = Some(game);
+    fn dimension(&mut self, game: usize, dimension: &'static str) -> &mut DimensionState {
+        if self
+            .game
+            .replace(game)
+            .is_some_and(|previous| previous != game)
+        {
             self.dimensions.clear();
         }
-        self.dimensions.entry(dimension.to_owned()).or_default()
+        self.dimensions.entry(dimension).or_default()
     }
 }
 thread_local! {static STATE: RefCell<State> = RefCell::new(State::default());}
@@ -55,25 +81,18 @@ pub(super) fn reset(reload: bool) {
 }
 
 /// DrillBlock.neighborChanged: wakes progress after one intervening tick.
-/// Called by the existing block-change hook; only registered drill neighbours
-/// are touched, so world generation does not create an unbounded change log.
-pub(super) fn changed(dimension: &str, pos: [i32; 3]) {
+/// Keep recent positions until their first drill tick, including changes
+/// between placement and the creation of the transient drill entry.
+pub(super) fn changed(dimension: &'static str, pos: [i32; 3]) {
     STATE.with(|state| {
         let mut state = state.borrow_mut();
-        if let Some(dimension) = state.dimensions.get_mut(dimension) {
-            for offset in [
-                [0, 0, 0],
-                [1, 0, 0],
-                [-1, 0, 0],
-                [0, 1, 0],
-                [0, -1, 0],
-                [0, 0, 1],
-                [0, 0, -1],
-            ] {
-                let neighbor = std::array::from_fn(|i| pos[i] + offset[i]);
-                if let Some(drill) = dimension.drills.get_mut(&neighbor) {
-                    drill.dirty = true;
-                }
+        let dimension = state.dimensions.entry(dimension).or_default();
+        dimension.change_sequence += 1;
+        dimension.changes.insert(pos, dimension.change_sequence);
+        for offset in std::iter::once([0, 0, 0]).chain(NEIGHBORS) {
+            let neighbor = std::array::from_fn(|i| pos[i] + offset[i]);
+            if let Some(drill) = dimension.drills.get_mut(&neighbor) {
+                drill.dirty = true;
             }
         }
     });
@@ -90,6 +109,10 @@ pub(super) fn maintenance(game: &mut Game<'_>) {
             return Vec::new();
         }
         state.cleaned = Some(time);
+        state
+            .changes
+            .retain(|_, sequence| *sequence > state.changes_through_last_tick);
+        state.changes_through_last_tick = state.change_sequence;
         let mut removed = Vec::new();
         state.drills.retain(|pos, value| {
             let live = time >= value.seen
@@ -155,9 +178,10 @@ pub(super) fn tick(
         let mut state = state.borrow_mut();
         let state = state.dimension(std::ptr::from_ref(game) as usize, game.dim.id());
         let fresh = !state.drills.contains_key(&pos);
+        let dirty = fresh && !is_saw && state.neighbor_changed_after_placement(pos);
         let state = state.drills.entry(pos).or_insert_with(|| Running {
             lazy: 10,
-            dirty: false,
+            dirty,
             breaker: NEXT_BREAKER.fetch_sub(1, Ordering::Relaxed),
             seen: time,
             target,
@@ -225,14 +249,16 @@ pub(super) fn tick(
         Action::Hit => crack(game, breaker, target, cycle.progress),
         Action::Clear => crack(game, breaker, target, -1),
         Action::Break => {
-            // The normal Level destruction path rolls block loot with no
-            // player and an empty tool, preserves fluid, spills block entities,
-            // honours block_drops and sends destroy particles to all clients.
-            // It deliberately never calls the acting player's mining path.
             if is_saw {
                 super::create_port_contraption_actors::finish_stationary_saw(game, pos, target);
-            } else if let Err(error) = game.destroy_block_dropping(target) {
-                log::warn!("Create drill could not destroy {target:?}: {error:?}");
+            } else {
+                let at =
+                    super::create_port_contraption_actors::stationary_drop_origin(game, target);
+                if let Some(drops) = game.native_machine_destroy_block(target, None, true) {
+                    for stack in drops {
+                        game.spawn_item(stack, at, [0.0; 3], 10);
+                    }
+                }
             }
             crack(game, breaker, target, -1);
         }

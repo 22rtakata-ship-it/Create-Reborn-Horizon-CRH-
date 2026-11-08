@@ -100,6 +100,11 @@ with the systems they depend on.
 - [x] Straight Clutch and Gearshift lines with either input end. Compare the
   immediate detach, next-tick reattachment and short pulses in Java and
   Horizon. [Transmission review](reviews/transmission.md)
+- [x] Clutch and Gearshift across two loaded columns, including redstone,
+  shaft replacement and a native restart. Direct removal of a shaft still
+  clears the far-side speed one tick later than Java.
+- [x] Flywheel with shaft connections on three axes, original item and wheel
+  models from the local JAR, and separate acceleration and coast animation.
 - [ ] Clutch/Gearshift and Hand Crank in all network/animation edge cases.
 - [ ] Original goggles tooltips and value settings, including RU/EN, colors, units and fading.
 - [ ] Original speed/overstress particles, placement assistance, outlines and sound loops.
@@ -120,6 +125,11 @@ with the systems they depend on.
   full-fire tag and recipe priority; actual Java/native scenes and native restart.
 - [ ] General damage-selector/data-fixer equivalence across Minecraft versions.
 - [x] Stationary drill: breaking the block in front, drops, speed and stopping.
+- [x] Stationary Drill across a chunk boundary. Five Java and Horizon
+  cases cover placement order, breaking ticks, shared loot origin, pickup
+  delay, the block-drops rule and ore experience.
+- [x] Upward Saw output to a neighboring Depot, including blocked and partial
+  delivery across a chunk boundary, both output directions and native reloads.
 - [ ] Fan: players/mobs/other entities, ignition/damage/effects and exact particles/sound.
 - [ ] Full observable parity of already supported machines, including item animation.
 - [x] Bounded press over a bare belt: single-item processing, holding the remainder,
@@ -181,6 +191,8 @@ with the systems they depend on.
   belts, entities, rotations and unsupported data are currently rejected.
 - [x] Identical bytes of a five-block schematic produced one Copper Sheet in Java and Horizon;
   result collection was checked within a bounded time, without claiming exact timing.
+- [x] Bounded horizontal rotations around the schematic anchor. The same
+  eight-block Flywheel and Press layout runs in all four directions in both games.
 - [ ] Rotations/mirrors with verified block and block entity transformations.
 - [ ] Original Schematic and Quill, preview, UI, deployment and Schematicannon.
 - [x] Core captures connected blocks with host-provided attachment rules and
@@ -199,6 +211,8 @@ with the systems they depend on.
   group settings and the saved value on reopen.
 - [ ] Chassis attached-block outlines, other drivers and complete block movement rules.
 - [x] Mechanical Bearing: native assembly, rotation, restart and orphan recovery.
+- [x] Dry oak and smooth stone slabs on bearings, with narrow collision
+  shapes, state rotation and native reload. Full item contact timing remains open.
 - [x] Windmill Sail Frame and sixteen sail colors. Dye, shear, placement,
   windmill capture, generated speed and restart verified.
 - [ ] Windmill sail placement preview and canvas contact behavior.

@@ -2,7 +2,7 @@
 // Copyright (c) 2026 create-horizon contributors
 // SPDX-License-Identifier: MIT
 // Create 6.0.10 SchematicPlacePacket/SchematicPrinter/BlockHelper adapter.
-// Identity transforms, source safe-NBT and explicit supported fixtures only.
+// Bounded clockwise rotations and source safe-NBT for supported blocks.
 use super::Game;
 use crate::{
     containers::BlockEntity,
@@ -27,6 +27,10 @@ pub(super) fn register(game: &Game<'_>, commands: &mut Vec<NativeCommand>) {
         ));
         commands.push(NativeCommand::op(
             "create schematic paste <filename:word> <x:integer> <y:integer> <z:integer>",
+            2,
+        ));
+        commands.push(NativeCommand::op(
+            "create schematic paste <filename:word> <x:integer> <y:integer> <z:integer> <quarter_turns:integer>",
             2,
         ));
     }
@@ -580,9 +584,9 @@ pub(super) fn command(
         );
         return;
     }
-    let (mode, filename, origin) = match words.as_slice() {
-        ["create", "schematic", "inspect", name] => ("inspect", *name, None),
-        ["create", "schematic", "paste", name, x, y, z] => {
+    let (mode, filename, origin, quarter_turns) = match words.as_slice() {
+        ["create", "schematic", "inspect", name] => ("inspect", *name, None, 0),
+        ["create", "schematic", "paste", name, x, y, z, turns @ ..] => {
             let parsed = [x.parse::<i32>(), y.parse::<i32>(), z.parse::<i32>()];
             let [Ok(x), Ok(y), Ok(z)] = parsed else {
                 reply(
@@ -591,13 +595,25 @@ pub(super) fn command(
                 );
                 return;
             };
-            ("paste", *name, Some([x, y, z]))
+            let quarter_turns = match turns {
+                [] => Some(0),
+                [turns] => turns.parse::<u8>().ok().filter(|turns| *turns <= 3),
+                _ => None,
+            };
+            let Some(quarter_turns) = quarter_turns else {
+                reply(
+                    game,
+                    failure("paste accepts 0 to 3 clockwise quarter turns"),
+                );
+                return;
+            };
+            ("paste", *name, Some([x, y, z]), quarter_turns)
         }
         _ => {
             reply(
                 game,
                 failure(
-                    "usage: create schematic inspect FILE.nbt | create schematic paste FILE.nbt X Y Z",
+                    "usage: create schematic inspect FILE.nbt | create schematic paste FILE.nbt X Y Z [quarter_turns]",
                 ),
             );
             return;
@@ -644,7 +660,10 @@ pub(super) fn command(
     let plan = match create_schematics::preflight(
         &schematic,
         &Registry { game },
-        &Options::default(),
+        &Options {
+            quarter_turns,
+            ..Options::default()
+        },
     ) {
         Ok(plan) => plan,
         Err(issues) => {
@@ -656,6 +675,9 @@ pub(super) fn command(
         }
     };
     let mut report = json!({"ok":true,"mode":mode,"issues":[],"notes":plan.notes.iter().map(|n|json!({"pos":n.relative_pos,"field":n.field,"message":n.message})).collect::<Vec<_>>(),"blocks":plan.blocks.len(),"skipped_air":plan.skipped_air,"size":plan.size,"data_version":schematic.data_version});
+    if quarter_turns != 0 {
+        report["quarter_turns"] = json!(quarter_turns);
+    }
     if let Some(origin) = origin {
         let writes = match destination(game, &plan, origin) {
             Ok(writes) => writes,

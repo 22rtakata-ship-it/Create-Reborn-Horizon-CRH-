@@ -332,6 +332,7 @@ def main():
         'create/loot_table/blocks/encased_chain_drive.json',
         'create/loot_table/blocks/adjustable_chain_gearshift.json',
         'create/loot_table/blocks/copper_casing.json',
+        'create/loot_table/blocks/flywheel.json',
         'create/loot_table/blocks/mechanical_piston.json',
         'create/loot_table/blocks/sticky_mechanical_piston.json',
         'create/loot_table/blocks/piston_extension_pole.json',

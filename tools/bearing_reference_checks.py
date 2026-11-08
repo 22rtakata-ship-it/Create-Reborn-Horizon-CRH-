@@ -15,6 +15,40 @@ def offset(pos, direction, scale=1):
     return tuple(p + v * scale for p, v in zip(pos, direction, strict=True))
 
 
+PAYLOAD_PIVOT = (904, 100, 72)
+PAYLOAD_MOTOR = offset(PAYLOAD_PIVOT, (0, -1, 0))
+PAYLOAD_ANCHOR = offset(PAYLOAD_PIVOT, (0, 1, 0))
+PAYLOAD_RIM = tuple(offset(PAYLOAD_ANCHOR, side) for side in (
+    (1, 0, 0), (0, 0, -1), (-1, 0, 0), (0, 0, 1),
+))
+PAYLOAD_IDS = (
+    'minecraft:red_concrete', 'minecraft:cyan_stained_glass',
+    'minecraft:light_gray_terracotta', 'minecraft:blue_wool',
+)
+
+
+def put_payload(put):
+    put(PAYLOAD_PIVOT, 'create:mechanical_bearing[facing=up]')
+    put(PAYLOAD_ANCHOR, 'minecraft:slime_block')
+    for position, block in zip(PAYLOAD_RIM, PAYLOAD_IDS, strict=True):
+        put(position, block)
+    put(PAYLOAD_MOTOR, 'create:creative_motor[facing=up]{ScrollValue:32}')
+
+
+def payload_reference(step, put):
+    positions = [PAYLOAD_PIVOT, PAYLOAD_ANCHOR, *PAYLOAD_RIM]
+    put_payload(put)
+    moving = step(10, positions)[-1]['blocks']
+    assert number(moving[0], 'Running') == 1 and number(moving[0], 'Angle') > 45, moving
+    assert [block['id'] for block in moving[1:]] == ['minecraft:air'] * 5, moving
+    put(PAYLOAD_MOTOR, 'minecraft:air')
+    final = step(1, positions)[-1]['blocks']
+    assert number(final[0], 'Running') == 0, final
+    landed = [block['id'] for block in final[1:]]
+    assert landed == ['minecraft:slime_block', PAYLOAD_IDS[-1], *PAYLOAD_IDS[:-1]], final
+    return dict(angle=number(moving[0], 'Angle'), landed=landed)
+
+
 def main():
     host = Original()
     assert host.call('state', {})['data_version'] == 3955
@@ -68,8 +102,10 @@ def main():
         assert final[-1]['properties']['axis'] == final_axis, final
         rows.append(dict(facing=facing, trace=trace, final=final))
 
+    host.command('fill 900 96 69 909 106 75 minecraft:air')
+    payload = payload_reference(step, put)
     work = Path(tempfile.mkdtemp(prefix='bearing-reference-', dir=ROOT / '.local'))
-    report = dict(passed=True, create=PINS['create_revision'], cases=rows)
+    report = dict(passed=True, create=PINS['create_revision'], cases=rows, payload=payload)
     (work / 'result.json').write_text(json.dumps(report, indent=2) + '\n')
     (work / 'transcript.json').write_text(json.dumps(host.trace, indent=2) + '\n')
     print(json.dumps(dict(result=str(work / 'result.json'), samples=len(expected) * len(cases))))

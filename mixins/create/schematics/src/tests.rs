@@ -136,6 +136,78 @@ fn plan(s: &Schematic) -> Result<Plan, Vec<Issue>> {
 }
 
 #[test]
+fn clockwise_rotations_use_the_zero_pivot_and_preserve_safe_motor_settings() {
+    let mut schematic = fixture();
+    schematic.blocks[1].relative_pos = [1, 0, 1];
+    for (turns, expected_pos, axis, facing, size) in [
+        (1, [-1, 0, 1], "z", "south", [2, 2, 4]),
+        (2, [-1, 0, -1], "x", "west", [4, 2, 2]),
+        (3, [1, 0, -1], "z", "north", [2, 2, 4]),
+    ] {
+        let placed = preflight(
+            &schematic,
+            &Registry,
+            &Options {
+                quarter_turns: turns,
+                ..Options::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(placed.size, size);
+        assert_eq!(placed.skipped_air, 1);
+        let motor = placed
+            .blocks
+            .iter()
+            .find(|b| b.relative_pos == [0; 3])
+            .unwrap();
+        assert_eq!(motor.state.properties["facing"], facing);
+        assert_eq!(
+            motor.block_entity.as_ref().unwrap().data,
+            Compound::from([("ScrollValue".into(), Tag::Int(128))])
+        );
+        let shaft = placed
+            .blocks
+            .iter()
+            .find(|b| b.relative_pos == expected_pos)
+            .unwrap();
+        assert_eq!(shaft.state.properties["axis"], axis);
+        assert_eq!(shaft.state.properties["waterlogged"], "false");
+    }
+}
+
+#[test]
+fn rotated_preflight_rejects_unsupported_blocks_missing_axes_and_invalid_positions() {
+    let mut schematic = fixture();
+    let options = Options {
+        quarter_turns: 1,
+        ..Options::default()
+    };
+    schematic.palettes[0].push(BlockState::new("minecraft:torch"));
+    assert!(plan(&schematic).is_ok());
+    assert!(
+        preflight(&schematic, &Registry, &options).unwrap_err()[0]
+            .message
+            .contains("rotation is unsupported for minecraft:torch")
+    );
+    schematic.palettes[0].pop();
+    schematic.palettes[0][1].properties.remove("axis");
+    assert!(
+        preflight(&schematic, &Registry, &options).unwrap_err()[0]
+            .message
+            .contains("explicit axis")
+    );
+    schematic.palettes[0][1]
+        .properties
+        .insert("axis".into(), "x".into());
+    schematic.blocks[1].relative_pos = [i32::MIN, 0, 0];
+    assert!(
+        preflight(&schematic, &Registry, &options).unwrap_err()[0]
+            .message
+            .contains("position outside size")
+    );
+}
+
+#[test]
 fn generated_fixture_roundtrip_preserves_types_and_source_safe_policy() {
     let s = fixture();
     let root = s.to_compound();
@@ -292,7 +364,7 @@ fn version_entities_transforms_and_random_palettes_fail_explicitly() {
             &s,
             &Registry,
             &Options {
-                quarter_turns: 1,
+                quarter_turns: 4,
                 ..Options::default()
             }
         )

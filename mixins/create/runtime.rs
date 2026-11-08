@@ -18,6 +18,7 @@ use horizon_world::{
 use serde_json::Value;
 
 static ORIGINAL_ASSETS: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+pub(super) const FLYWHEEL: &str = "create:flywheel";
 
 pub(super) fn original_assets() -> bool {
     ORIGINAL_ASSETS.load(std::sync::atomic::Ordering::Relaxed)
@@ -109,6 +110,7 @@ pub(super) fn owns(block: &str) -> bool {
         block,
         "create:creative_motor"
             | "create:shaft"
+            | FLYWHEEL
             | "create:cogwheel"
             | "create:large_cogwheel"
             | super::create_port_contraption::BLOCK
@@ -315,6 +317,7 @@ pub(super) fn placed(game: &mut Game<'_>, stack: &ItemStack, pos: [i32; 3]) {
     let look = nearest(game.yaw, game.pitch);
     let axis = match stack.item.as_ref() {
         "create:shaft"
+        | FLYWHEEL
         | "create:andesite_encased_shaft"
         | "create:brass_encased_shaft"
         | "create:clutch"
@@ -754,9 +757,10 @@ pub(super) fn node(game: &Game<'_>, pos: [i32; 3]) -> Option<Node> {
             },
             capacity: 16384.0,
         },
-        "create:shaft" | "create:andesite_encased_shaft" | "create:brass_encased_shaft" => {
-            Kind::Shaft
-        }
+        "create:shaft"
+        | FLYWHEEL
+        | "create:andesite_encased_shaft"
+        | "create:brass_encased_shaft" => Kind::Shaft,
         super::create_port_gantry::SHAFT => Kind::GantryShaft {
             facing: Direction::from_vector(direction)?,
             powered: game.native_block_property(pos, "powered").as_deref() == Some("true"),
@@ -1658,6 +1662,15 @@ pub(super) fn draw(
     let direction = game.native_block_property(pos, "facing");
     crate::game::create_port_presentation::hints(game, pos, draw);
     let time = draw.game_time as f64 + f64::from(draw.partial);
+    if block == FLYWHEEL {
+        draw.push();
+        orient(draw, node.axis);
+        let angle = super::create_port_presentation::flywheel_angle(game, pos, draw.partial);
+        draw.rotate_about([0.0, 1.0, 0.0], angle, [0.5; 3]);
+        game.native_draw_model(draw, "create:block/flywheel/block", 0xFFFFFF);
+        draw.pop();
+        // The ordinary shaft below follows the network directly.
+    }
     if block == "create:hand_crank" {
         let facing = Direction::from_vector(facing(direction.as_deref().unwrap_or("up"))).unwrap();
         let axis = create_engine::visual::positive_axis(node.axis);

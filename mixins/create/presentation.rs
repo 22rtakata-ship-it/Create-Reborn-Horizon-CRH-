@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MIT
 // Client adapter for crank interpolation, depot piles, goggles and kinetic feedback.
 use super::{Game, native_block_entity_draw::BlockEntityDraw};
-use crate::game::create_port::{integer, number};
+use crate::game::create_port::{FLYWHEEL, integer, number, running_speed};
 use crate::{
     containers::{BlockEntity, ModBlockEntity},
     hud::HudBatch,
@@ -14,7 +14,7 @@ use create_engine::{
     kinetics::{Axis, Pos},
     particles::{self as particle_rules, KineticEffects, ParticleRandom},
     placement::Direction,
-    visual::{self, CrankMotion},
+    visual::{self, CrankMotion, FlywheelMotion},
 };
 use horizon_core::random::{LegacyRandom, RandomSource};
 use horizon_world::nbt::{Compound, Tag};
@@ -24,6 +24,7 @@ struct Motion {
     tick: i64,
     block: String,
     crank: CrankMotion,
+    flywheel: FlywheelMotion,
     dial: f32,
     previous_dial: f32,
     speed: f32,
@@ -59,6 +60,13 @@ pub(super) fn crank_angle(game: &Game<'_>, pos: Pos, partial: f32) -> f32 {
         m.borrow()
             .get(&key(game, pos))
             .map_or(0.0, |v| v.crank.rendered(partial))
+    })
+}
+pub(super) fn flywheel_angle(game: &Game<'_>, pos: Pos, partial: f32) -> f32 {
+    MOTION.with(|m| {
+        m.borrow()
+            .get(&key(game, pos))
+            .map_or(0.0, |v| v.flywheel.rendered(partial))
     })
 }
 pub(super) fn dial(game: &Game<'_>, pos: Pos, partial: f32) -> f32 {
@@ -131,6 +139,9 @@ pub(super) fn tick(game: &mut Game<'_>) {
             state.speed = speed;
             state.status = status.clone();
             state.crank.tick(speed);
+            if block == FLYWHEEL {
+                state.flywheel.tick(running_speed(game, &nbt));
+            }
             state.previous_dial = state.dial;
             state.dial += (number(&nbt, "Value") - state.dial) * 0.125;
             if state.dial > 1.0 && game.particles.level_random().next_float() < 0.5 {
@@ -166,8 +177,14 @@ pub(super) fn tick(game: &mut Game<'_>) {
         }
     }
     MOTION.with(|m| {
-        m.borrow_mut()
-            .retain(|(dimension, _), v| dimension == game.dim.id() && time - v.tick < 200)
+        m.borrow_mut().retain(|(dimension, _), v| {
+            dimension == game.dim.id()
+                && if v.block == FLYWHEEL {
+                    v.tick == time
+                } else {
+                    time - v.tick < 200
+                }
+        })
     });
 }
 fn trace(event: &str, pos: Pos, details: serde_json::Value) {

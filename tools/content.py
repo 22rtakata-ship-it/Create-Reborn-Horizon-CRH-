@@ -587,9 +587,51 @@ def fallback_instruments_and_wheels():
                   {'parent': f'create:block/{part}', 'textures': {'all': texture, 'particle': texture}})
 
 
+def flywheel():
+    # FlywheelBlock uses AllShapes.LARGE_GEAR, an axis-aligned slab and six-pixel shaft.
+    shapes = {"property": "axis", "values": {
+        axis: axial_boxes(face, [(0, 6, 10), (5, 0, 16)])
+        for axis, face in (("x", "east"), ("y", "up"), ("z", "south"))
+    }}
+    write("data/create/horizon/block/flywheel.json", {
+        "template": "minecraft:gold_block", "item": True,
+        "properties": {"occludes": False, "map_color": 40, "render_shape": "ENTITYBLOCK_ANIMATED"},
+        "state_properties": {"axis": {"type": "enum", "values": ["x", "y", "z"]}},
+        "default_state": {"axis": "y"}, "shapes": shapes, "collision_shapes": shapes,
+    })
+    # Authored fallback rim and spokes. The runtime draws the shaft separately.
+    wheel = [
+        ([-3, 5, -12], [19, 11, -8]), ([-3, 5, 24], [19, 11, 28]),
+        ([-12, 5, -3], [-8, 11, 19]), ([24, 5, -3], [28, 11, 19]),
+        ([-8, 5, -8], [-2, 11, -2]), ([18, 5, -8], [24, 11, -2]),
+        ([-8, 5, 18], [-2, 11, 24]), ([18, 5, 18], [24, 11, 24]),
+        ([-8, 6, 6], [24, 10, 10]), ([6, 6, -8], [10, 10, 6]), ([6, 6, 10], [10, 10, 24]),
+    ]
+    texture = "minecraft:block/gold_block"
+    model("flywheel/block", wheel, texture)
+    model("flywheel/item", wheel + [([5, 0, 5], [11, 16, 11])], texture)
+    model("flywheel/particle", [], texture)
+    write("assets/create/blockstates/flywheel.json", {
+        "variants": {"": {"model": "create:block/flywheel/particle"}},
+    })
+    write("assets/create/models/item/flywheel.json", {
+        "parent": "create:block/flywheel/item",
+        "display": {
+            "gui": {"rotation": [30, 225, 0], "scale": [.4, .4, .4]},
+            "fixed": {"rotation": [90, 0, 0], "translation": [0, 0, -1], "scale": [.375, .375, .375]},
+        },
+    })
+    write("assets/create/items/flywheel.json", {
+        "model": {"type": "minecraft:model", "model": "create:item/flywheel"},
+    })
+
+
 def foundation():
     from catalog import BLOCKS as all_blocks, ITEMS, TRANSMISSIONS, STATIC_BLOCKS, INSTRUMENTS, GENERATORS, INTERNAL_BLOCKS, SANDPAPERS, rust_catalog
     for block in TRANSMISSIONS + STATIC_BLOCKS + INSTRUMENTS + GENERATORS:
+        if block == "flywheel":
+            flywheel()
+            continue
         declaration = {"template": "minecraft:glass", "item": True,
                        "properties": {"hardness": 1.5, "sounds": "minecraft:andesite"}}
         if block in TRANSMISSIONS and block != "hand_crank":
@@ -714,6 +756,7 @@ def foundation():
     extra_blocks.update({'blaze_burner': 'Blaze Burner', 'lit_blaze_burner': 'Lit Blaze Burner'})
     extra_blocks['encased_chain_drive'] = 'Encased Chain Drive'
     extra_blocks['adjustable_chain_gearshift'] = 'Adjustable Chain Gearshift'
+    extra_blocks['flywheel'] = 'Flywheel'
     extra_blocks['copper_casing'] = 'Copper Casing'
     extra_blocks['mechanical_bearing'] = 'Mechanical Bearing'
     extra_blocks['windmill_bearing'] = 'Windmill Bearing'
@@ -771,6 +814,7 @@ def foundation():
                          'item.create.electron_tube': 'Электронная лампа',
                          'item.create.brass_hand': 'Латунная рука'})
             lang['block.create.adjustable_chain_gearshift'] = 'Регулируемая цепная коробка передач'
+            lang['block.create.flywheel'] = 'Маховик'
             lang['block.create.copper_casing'] = 'Медный корпус'
             lang['block.create.mechanical_bearing'] = 'Механический вращатель'
             lang['block.create.windmill_bearing'] = 'Вращатель ветряной мельницы'

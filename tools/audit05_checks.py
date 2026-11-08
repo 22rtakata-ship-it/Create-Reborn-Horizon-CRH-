@@ -155,6 +155,7 @@ def run(call, graphics=False, log=None, scratch=None):
     call('wait', 5)
     before = number(2, 'FanProcessingTime', 68)
     assert 0 < before < 70, text(2, 68)
+    setblock(2, 68, 2, 'minecraft:smooth_stone')
     call('command', f'tp @s {X + 2.5} 69 2.5')
     call('look-at', 'block', X + 2, 68, 0, 'up')
     call('interact', X + 2, 68, 0, 'up')

@@ -527,6 +527,7 @@ fn state_shaft_port(state: &horizon_world::chunk::BlockState, face: Direction) -
                 && state_axis(state) == face.axis()
         }
         "create:shaft"
+        | super::create_port::FLYWHEEL
         | "create:andesite_encased_shaft"
         | "create:brass_encased_shaft"
         | "create:encased_chain_drive"

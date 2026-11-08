@@ -8,7 +8,9 @@ import os
 from pathlib import Path
 import subprocess
 
-from bearing_reference_checks import offset
+from bearing_reference_checks import (
+    PAYLOAD_ANCHOR, PAYLOAD_MOTOR, PAYLOAD_PIVOT, PAYLOAD_RIM, offset, put_payload,
+)
 from burner_heat_java_checks import number
 from chain_drive_checks import xyz
 from common import PINS
@@ -176,6 +178,35 @@ def test_honey(session):
         row == '[BearingReview] bearing_check' for row in rows[1:]), rows
 
 
+def test_payload(session, reference):
+    positions = (PAYLOAD_ANCHOR, *PAYLOAD_RIM)
+    batch = Batch()
+    batch.load(PAYLOAD_PIVOT)
+    batch.command('fill 900 96 69 909 106 75 minecraft:air')
+    put_payload(batch.put)
+    batch.tick(10)
+    batch.data(PAYLOAD_PIVOT)
+    for pos in positions:
+        batch.expect(pos, 'minecraft:air')
+    observed = batch.run(session, 'colored-payload-moving')
+    assert number({'nbt': observed[0]}, 'Running') == 1, observed
+    assert number({'nbt': observed[0]}, 'Angle') == reference['angle'], observed
+    assert all('bearing_check' in row for row in observed[1:]), observed
+
+    batch = Batch()
+    batch.load(PAYLOAD_PIVOT)
+    for pos in positions:
+        batch.expect(pos, 'minecraft:air')
+    batch.put(PAYLOAD_MOTOR, 'minecraft:air')
+    batch.tick()
+    batch.data(PAYLOAD_PIVOT)
+    for pos, block in zip(positions, reference['landed'], strict=True):
+        batch.expect(pos, block)
+    observed = batch.run(session, 'colored-payload-restart')
+    assert all('bearing_check' in row for row in observed[:5] + observed[6:]), observed
+    assert number({'nbt': observed[5]}, 'Running') == 0, observed
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for flag in ('game', 'resources', 'ctl', 'reference'):
@@ -190,6 +221,8 @@ def main():
     try:
         test(session, reference)
         test_honey(session)
+        if 'payload' in reference:
+            test_payload(session, reference['payload'])
     finally:
         session.control_temp.cleanup()
     print(json.dumps(dict(passed=True, world=str(session.scratch))))

@@ -2,7 +2,10 @@
 // Copyright (c) 2026 create-horizon contributors
 // SPDX-License-Identifier: MIT
 
-use super::{Game, create_port as create, native_block_entity_draw::BlockEntityDraw};
+use super::{
+    Game, create_port as create, create_port_belt as belt,
+    native_block_entity_draw::BlockEntityDraw,
+};
 use crate::{
     containers::{BlockEntity, ModBlockEntity, ModContainer},
     items::ItemStack,
@@ -10,7 +13,9 @@ use crate::{
 use create_engine::{
     kinetics::Pos,
     milling::roll_count,
+    placement::Direction,
     saw_processing::{self, Action, CuttingCycle},
+    transport::Transported,
 };
 use horizon_core::random::RandomSource;
 use horizon_items::item_nbt::item_from_nbt;
@@ -283,7 +288,7 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity, r
         .native_block_property(pos, "axis_along_first")
         .as_deref()
         == Some("true");
-    let motion = saw_processing::item_motion(first, rpm).map(f64::from);
+    let motion = saw_processing::item_motion(first, rpm);
     let Some(input) = entity.items[0]
         .as_ref()
         .filter(|item| item.count > 0)
@@ -292,6 +297,7 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity, r
     else {
         return false;
     };
+    let previous = cycle;
     match cycle.tick(rpm, entity.items[0].is_some()) {
         Action::Idle => return false,
         Action::Start => start(game, &mut cycle, &input, filter.as_ref()),
@@ -305,16 +311,43 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity, r
             activation_sound(game, pos, &input);
         }
         Action::Export => {
-            let at = [
-                f64::from(pos[0]) + 0.5 + motion[0] * 0.5,
-                f64::from(pos[1]) + 1.0,
-                f64::from(pos[2]) + 0.5 + motion[2] * 0.5,
-            ];
-            let velocity = [motion[0] * 0.0625, 0.125, motion[2] * 0.0625];
-            for stack in entity.items.iter_mut().filter_map(Option::take) {
-                game.spawn_item(stack, at, velocity, 0);
+            let target = std::array::from_fn(|axis| pos[axis] + motion[axis]);
+            if game.native_block(target) == "create:depot" {
+                let from = Direction::from_vector(motion).expect("horizontal saw output");
+                let mut changed = false;
+                for slot in &mut entity.items {
+                    let Some(stack) = slot else { continue };
+                    let item = Transported::new(
+                        belt::core_stack(game, stack.clone()),
+                        belt::angle(game, stack),
+                    );
+                    let moved = belt::insert_depot_from_side(game, target, &item, from);
+                    if moved != 0 {
+                        stack.count -= moved;
+                        if stack.count == 0 {
+                            *slot = None;
+                        }
+                        changed = true;
+                    }
+                }
+                // Direct input retains the finished phase. Keep rejected
+                // stacks in their slots and try again on the next tick.
+                if !changed && cycle == previous {
+                    return false;
+                }
+            } else {
+                let motion = motion.map(f64::from);
+                let at = [
+                    f64::from(pos[0]) + 0.5 + motion[0] * 0.5,
+                    f64::from(pos[1]) + 1.0,
+                    f64::from(pos[2]) + 0.5 + motion[2] * 0.5,
+                ];
+                let velocity = [motion[0] * 0.0625, 0.125, motion[2] * 0.0625];
+                for stack in entity.items.iter_mut().filter_map(Option::take) {
+                    game.spawn_item(stack, at, velocity, 0);
+                }
+                cycle.finish_export();
             }
-            cycle.finish_export();
         }
     }
     save(entity, cycle);

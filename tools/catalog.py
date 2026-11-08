@@ -6,7 +6,7 @@ from chute_content import CHUTE
 from sticker_content import STICKER
 
 BASE_BLOCKS = ['creative_motor', 'shaft', 'cogwheel', 'large_cogwheel', 'mechanical_press', 'depot']
-TRANSMISSIONS = ['gearbox', 'clutch', 'gearshift', 'hand_crank', 'andesite_encased_shaft', 'brass_encased_shaft', 'encased_chain_drive', 'adjustable_chain_gearshift']
+TRANSMISSIONS = ['gearbox', 'clutch', 'gearshift', 'hand_crank', 'andesite_encased_shaft', 'brass_encased_shaft', 'encased_chain_drive', 'adjustable_chain_gearshift', 'flywheel']
 STATIC_BLOCKS = ['andesite_casing', 'brass_casing', 'copper_casing', 'andesite_alloy_block', 'brass_block', 'zinc_block']
 INSTRUMENTS = ['speedometer', 'stressometer']
 GENERATORS = ['water_wheel', 'large_water_wheel']
@@ -27,7 +27,7 @@ PARTS += ['belt_pulley', 'belt/particle'] + ['belt/' + part for part in
     ['start', 'middle', 'end', 'start_bottom', 'middle_bottom', 'end_bottom',
      'diagonal_start', 'diagonal_middle', 'diagonal_end']]
 PARTS += ['basin/block', 'basin/block_directional', 'mechanical_mixer/block',
-          'mechanical_mixer/pole', 'mechanical_mixer/head', 'cogwheel_shaftless']
+          'mechanical_mixer/pole', 'mechanical_mixer/head', 'cogwheel_shaftless', 'flywheel/block']
 PARTS += ['bearing/top', 'bearing/top_wooden']
 PARTS += ['rope_pulley/' + name for name in ('rope_coil', 'rope', 'pulley_magnet', 'rope_half', 'rope_half_magnet')]
 PARTS += ['mechanical_harvester/blade'] + [

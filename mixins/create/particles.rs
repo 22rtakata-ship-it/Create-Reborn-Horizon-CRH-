@@ -418,6 +418,7 @@ fn radii(block: &str) -> (f32, f32) {
     match block {
         "create:shaft" => (0.125, 0.35),
         "create:large_cogwheel" | "create:water_wheel" => (1.0, 1.125),
+        super::create_port::FLYWHEEL => (1.75, 2.0),
         "create:large_water_wheel" => (2.25, 2.5),
         _ => (0.75, 0.65),
     }

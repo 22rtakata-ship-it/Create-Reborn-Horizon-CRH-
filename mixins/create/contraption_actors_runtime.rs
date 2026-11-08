@@ -909,10 +909,7 @@ pub(super) fn finish_stationary_saw(game: &mut Game<'_>, origin: Pos, target: Po
         return;
     };
     let broken = tree_block(game, state);
-    let mut at = block_center(target);
-    for coord in &mut at {
-        *coord += f64::from((game.world.random.next_float() - 0.5) * 0.25);
-    }
+    let at = stationary_drop_origin(game, target);
     if !chop(
         game,
         target,
@@ -928,6 +925,16 @@ pub(super) fn finish_stationary_saw(game: &mut Game<'_>, origin: Pos, target: Po
     fell_tree(game, None, target, broken, |cell| {
         saw::tree_drop_velocity(direction, cell, Some(block_center(target)))
     });
+}
+
+/// BlockBreakingKineticBlockEntity gives every loot stack from this block
+/// the same randomized origin within one eighth of the block's center.
+pub(super) fn stationary_drop_origin(game: &mut Game<'_>, target: Pos) -> [f64; 3] {
+    let mut at = block_center(target);
+    for coord in &mut at {
+        *coord += f64::from((game.world.random.next_float() - 0.5) * 0.25);
+    }
+    at
 }
 
 fn fell_tree(

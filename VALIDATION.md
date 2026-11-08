@@ -1,5 +1,51 @@
 # Checks and evidence
 
+## November 8 development checkpoint
+
+The local client build uses official Nightly `2ebf00a` with the published
+changes from [Horizon #11098](https://github.com/horizon-rust/horizon/pull/11098),
+[Horizon #11116](https://github.com/horizon-rust/horizon/pull/11116) and
+[Horizon #11068](https://github.com/horizon-rust/horizon/pull/11068). This is a
+developer source build. The three changes are applied in a separate checkout.
+
+- [Flywheel connections](tools/flywheel_checks.py) transmit 32 RPM along each of
+  the three axes and settle to zero after disconnecting. The powered state
+  survives a Horizon restart. Ordinary placement matches neighbor preference
+  and the fallback for conflicting shaft axes. The Wrench rotates X to Z
+  through the top face. The [animation probe](tools/flywheel_motion_oracle.py)
+  matched all 7,520 angle samples against Catnip's Java chaser, including
+  reverse rotation and coasting. Both fallback and locally imported models
+  were inspected in the running client.
+- [Stationary Drill drops](tools/drill_drop_checks.py) match the breaking tick
+  in five chunk-edge fixtures. Wheat and seeds share a position, with zero
+  initial velocity and ten ticks of pickup delay. Ore spawns experience in the
+  same vanilla range and the block-drops rule suppresses loot.
+- [Cross-chunk transmission](tools/cross_chunk_kinetics_checks.py) matches 60 of
+  64 action observations and all four Horizon reload checks. Direct shaft
+  removal is the remaining difference. The far shaft stops immediately in Java
+  and on the next tick in Horizon.
+- [Saw-to-Depot transfer](tools/saw_depot_checks.py) matches the inventories,
+  direction and cycle state of six blocks over 39 ticks. The cases cover both
+  directions of rotation, backpressure from a held stack and from the output
+  buffer, and partial delivery across native reloads. Another 22-tick trace
+  confirms the default Saw takes one item from a dropped stack.
+- Mixed colored cargo restores the same cells on a Mechanical Bearing after
+  a real Horizon restart. The [separate swept-volume check](tools/bearing_chunk_sweep_checks.py)
+  matches nine angles, neighboring-column item support and all 15 landing
+  cells. Item movement across the rotating surface still differs horizontally.
+  Cross-chunk capture and restoration remain outside the supported boundary.
+- [Dry slab cargo](tools/bearing_slab_checks.py) keeps its geometry on the
+  moving bearing and restores all 21 cells after a native restart. The Y
+  turn preserves the slab halves and the X/Z half turns invert them.
+  Waterlogged slabs are refused. Dropped-item support heights match within
+  Java's contact offset of about 0.0001 blocks. The lower slab's initial
+  contact timing still differs.
+- [Rotated schematics](tools/schematic_rotation_checks.py) use the same
+  authored file in the original creative placement and in Horizon. All four
+  placements match coordinates, states and RPM, with one Copper Sheet made
+  by each press. Unsupported rotations and blocked destinations are refused
+  before any changes are written.
+
 ## 0.8.0-alpha.5 chassis, saw and Deployer crafting
 
 The Linear, Secondary Linear and Radial Chassis retain their sticky faces

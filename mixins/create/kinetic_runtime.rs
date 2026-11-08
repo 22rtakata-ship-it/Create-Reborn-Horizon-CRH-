@@ -346,11 +346,10 @@ pub(super) fn transmission_changed(dimension: &str, pos: Pos) {
         if pending.scan_loaded {
             return;
         }
-        if pending.positions.len() == MAX_PENDING_TRANSMISSIONS {
+        pending.positions.insert(pos);
+        if pending.positions.len() > MAX_PENDING_TRANSMISSIONS {
             pending.positions.clear();
             pending.scan_loaded = true;
-        } else {
-            pending.positions.insert(pos);
         }
     });
 }
@@ -545,15 +544,25 @@ mod lifetime_tests {
     fn pending_bulk_changes_fall_back_to_one_loaded_scan_without_dropping_the_dimension() {
         reset();
         for x in 0..MAX_PENDING_TRANSMISSIONS as i32 {
-            changed("minecraft:overworld", [x * 4, 70, 0]);
+            transmission_changed("minecraft:overworld", [x * 4, 70, 0]);
         }
-        changed("minecraft:the_nether", [1, 70, 0]);
+        transmission_changed("minecraft:overworld", [0, 70, 0]);
+        CHANGED.with(|cell| {
+            let pending = cell.borrow();
+            assert!(!pending["minecraft:overworld"].scan_loaded);
+            assert_eq!(
+                pending["minecraft:overworld"].positions.len(),
+                MAX_PENDING_TRANSMISSIONS
+            );
+        });
+        transmission_changed("minecraft:overworld", [-1, 70, 0]);
+        transmission_changed("minecraft:the_nether", [1, 70, 0]);
         CHANGED.with(|cell| {
             let pending = cell.borrow();
             assert!(pending["minecraft:overworld"].scan_loaded);
             assert!(pending["minecraft:overworld"].positions.is_empty());
             assert!(!pending["minecraft:the_nether"].scan_loaded);
-            assert_eq!(pending["minecraft:the_nether"].positions.len(), 7);
+            assert_eq!(pending["minecraft:the_nether"].positions.len(), 1);
         });
         reset();
         CHANGED.with(|cell| assert!(cell.borrow().is_empty()));

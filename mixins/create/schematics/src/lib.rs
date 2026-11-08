@@ -503,6 +503,91 @@ fn resolve(resolver: &impl Resolver, state: &BlockState) -> Result<BlockSchema, 
     Ok(schema)
 }
 
+// StructureTemplate.transform with the default zero pivot used by
+// SchematicItem.getSettings. Rotated offsets may be negative.
+fn rotate_position([x, y, z]: [i32; 3], quarter_turns: u8) -> [i32; 3] {
+    match quarter_turns {
+        1 => [-z, y, x],
+        2 => [-x, y, -z],
+        3 => [z, y, -x],
+        _ => [x, y, z],
+    }
+}
+
+fn rotate_state(
+    requested: &BlockState,
+    mut state: BlockState,
+    quarter_turns: u8,
+) -> Result<BlockState, String> {
+    let (properties, orientation): (&[&str], Option<&str>) = match state.name.as_str() {
+        "create:shaft" => (&["axis", "waterlogged"], Some("axis")),
+        "create:flywheel" => (&["axis"], Some("axis")),
+        "create:creative_motor" | "create:mechanical_press" => (&["facing"], Some("facing")),
+        "create:depot" => (&["waterlogged"], None),
+        "minecraft:air"
+        | "minecraft:cave_air"
+        | "minecraft:void_air"
+        | "minecraft:stone"
+        | "minecraft:cobblestone"
+        | "minecraft:smooth_stone"
+        | "minecraft:stone_bricks"
+        | "minecraft:bricks"
+        | "minecraft:andesite"
+        | "minecraft:diorite"
+        | "minecraft:granite"
+        | "minecraft:netherrack"
+        | "minecraft:end_stone"
+        | "minecraft:obsidian" => (&[], None),
+        name if name.starts_with("minecraft:") && name.ends_with("_log") => {
+            (&["axis"], Some("axis"))
+        }
+        name if name.starts_with("minecraft:") && name.ends_with("_planks") => (&[], None),
+        name => return Err(format!("rotation is unsupported for {name}")),
+    };
+    if let Some(key) = state
+        .properties
+        .keys()
+        .find(|key| !properties.contains(&key.as_str()))
+    {
+        return Err(format!(
+            "rotation does not support {} property {key}",
+            state.name
+        ));
+    }
+    if let Some(key) = orientation {
+        // A Java export supplies these properties. Do not rotate a default
+        // that may differ between the two games.
+        let before = requested.properties.get(key).ok_or_else(|| {
+            format!(
+                "rotation requires the explicit {key} property for {}",
+                state.name
+            )
+        })?;
+        let after = if key == "axis" {
+            match (before.as_str(), quarter_turns % 2) {
+                ("x", 1) => "z",
+                ("z", 1) => "x",
+                ("x" | "y" | "z", _) => before,
+                _ => return Err(format!("invalid rotation axis {before}")),
+            }
+        } else {
+            let directions = ["north", "east", "south", "west"];
+            if let Some(i) = directions
+                .iter()
+                .position(|facing| *facing == before.as_str())
+            {
+                directions[(i + usize::from(quarter_turns)) % directions.len()]
+            } else if matches!(before.as_str(), "up" | "down") {
+                before
+            } else {
+                return Err(format!("invalid rotation facing {before}"));
+            }
+        };
+        state.properties.insert(key.into(), after.into());
+    }
+    Ok(state)
+}
+
 /// Validate the complete schematic before returning a world-independent plan.
 /// The adapter must additionally preflight destination bounds/chunks/permissions
 /// and snapshot/rollback a failed write. This function has no world handle.
@@ -536,11 +621,11 @@ pub fn preflight(
             "exactly one palette is supported; random palette choice is not implemented".into(),
         );
     }
-    if options.quarter_turns != 0 || options.mirror {
+    if options.quarter_turns > 3 || options.mirror {
         fail(
             "transform".into(),
             None,
-            "rotation and mirroring are not implemented".into(),
+            "expected 0 to 3 clockwise quarter turns without mirroring".into(),
         );
     }
     let limits = Limits::default();
@@ -584,7 +669,14 @@ pub fn preflight(
     let mut resolved = Vec::new();
     for (p, palette) in schematic.palettes.iter().enumerate() {
         for (i, state) in palette.iter().enumerate() {
-            match resolve(resolver, state) {
+            let schema = resolve(resolver, state).and_then(|schema| {
+                if options.quarter_turns == 0 {
+                    return Ok(schema);
+                }
+                let rotated = rotate_state(state, schema.state, options.quarter_turns)?;
+                resolve(resolver, &rotated)
+            });
+            match schema {
                 Ok(schema) if p == 0 => resolved.push(Some(schema)),
                 Ok(_) => {}
                 Err(message) => {
@@ -610,18 +702,20 @@ pub fn preflight(
     let mut positions = BTreeSet::new();
     for (index, block) in schematic.blocks.iter().enumerate() {
         let path = format!("blocks[{index}]");
-        let pos = block.relative_pos;
-        if pos
+        let input_pos = block.relative_pos;
+        if input_pos
             .iter()
             .zip(schematic.size)
             .any(|(p, s)| *p < 0 || *p >= s)
         {
             fail(
                 format!("{path}.pos"),
-                Some(pos),
+                Some(input_pos),
                 "position outside size".into(),
             );
+            continue;
         }
+        let pos = rotate_position(input_pos, options.quarter_turns);
         if !positions.insert(pos) {
             fail(
                 format!("{path}.pos"),
@@ -748,6 +842,17 @@ pub fn preflight(
             if let Err(message) = resolver.validate_safe_nbt(&prepared.state, &safe) {
                 fail(format!("{path}.nbt"), Some(pos), message);
             }
+            if options.quarter_turns != 0
+                && safe.keys().any(|key| {
+                    prepared.state.name != "create:creative_motor" || key != "ScrollValue"
+                })
+            {
+                fail(
+                    format!("{path}.nbt"),
+                    Some(pos),
+                    "rotation is unsupported for this block-entity data".into(),
+                );
+            }
             planned_be = Some(PlannedBlockEntity {
                 id: be_schema.id.clone(),
                 data: safe,
@@ -784,8 +889,13 @@ pub fn preflight(
             b.relative_pos[0],
         )
     });
+    let [x, y, z] = schematic.size;
     Ok(Plan {
-        size: schematic.size,
+        size: if options.quarter_turns.is_multiple_of(2) {
+            [x, y, z]
+        } else {
+            [z, y, x]
+        },
         blocks: blocks.into_iter().map(|(_, b)| b).collect(),
         notes,
         skipped_air,

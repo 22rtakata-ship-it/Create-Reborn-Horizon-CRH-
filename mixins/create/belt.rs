@@ -367,6 +367,47 @@ pub(super) fn depot_item(
     item.inserted_from = from;
     write_item(&item)
 }
+
+/// DepotBehaviour's direct input refuses a held stack or an occupied output
+/// buffer. It takes at most one stack and keeps the transported record.
+pub(super) fn insert_depot_from_side(
+    game: &mut Game<'_>,
+    target: Pos,
+    item: &Transported<ItemStack>,
+    from: Direction,
+) -> u32 {
+    let mut inserted = item.source_copy();
+    inserted.position = if from.axis() == Axis::Y { 0.5 } else { 0.0 };
+    inserted.previous_position = inserted.position;
+    inserted.previous_side_offset = inserted.side_offset;
+    inserted.inserted_from = from;
+    inserted.stack.count = inserted.stack.count.min(inserted.stack.maximum);
+    if inserted.stack.count == 0 {
+        return 0;
+    }
+    let moved = game
+        .native_with_mod_block_entity(target, |e| {
+            if e.id != "create:depot"
+                || !super::create_port::inventory_supported(e)
+                || e.items.is_empty()
+                || e.items.iter().any(Option::is_some)
+            {
+                return false;
+            }
+            e.items[0] = Some(game_stack(&inserted.stack));
+            e.nbt.insert("HeldItem".into(), write_item(&inserted));
+            true
+        })
+        .unwrap_or(false);
+    if moved {
+        super::create_port_sounds::depot(game, target);
+        game.native_block_entity_sync(target);
+        inserted.stack.count
+    } else {
+        0
+    }
+}
+
 fn read_inventory(game: &Game<'_>, e: &ModBlockEntity) -> Contents {
     let Some(Tag::Compound(nbt)) = e.nbt.get(&"Inventory".into()) else {
         return Contents::default();
@@ -1269,34 +1310,10 @@ impl Hooks<ItemStack> for WorldHooks<'_, '_> {
             }
             stack.clone()
         } else if self.game.native_block(target) == "create:depot" {
-            // DepotBehaviour's direct input refuses a held stack OR any output
-            // buffer. It preserves the transported record and does not merge.
-            let mut inserted = item.source_copy();
-            inserted.position = if from.axis() == Axis::Y { 0.5 } else { 0.0 };
-            inserted.previous_position = inserted.position;
-            inserted.previous_side_offset = inserted.side_offset;
-            inserted.inserted_from = from;
-            inserted.stack.count = inserted.stack.count.min(inserted.stack.maximum);
-            let moved = self
-                .game
-                .native_with_mod_block_entity(target, |e| {
-                    if e.items.is_empty() || e.items.iter().any(Option::is_some) {
-                        return false;
-                    }
-                    e.items[0] = Some(game_stack(&inserted.stack));
-                    e.nbt.insert("HeldItem".into(), write_item(&inserted));
-                    true
-                })
-                .unwrap_or(false);
-            if moved {
-                super::create_port_sounds::depot(self.game, target);
-                self.game.native_block_entity_sync(target);
-                Stack {
-                    count: stack.count - inserted.stack.count,
-                    ..stack.clone()
-                }
-            } else {
-                stack.clone()
+            let moved = insert_depot_from_side(self.game, target, item, from);
+            Stack {
+                count: stack.count - moved,
+                ..stack.clone()
             }
         } else {
             // MillstoneBlockEntity has the default DirectBeltInputBehaviour.
@@ -1490,6 +1507,11 @@ pub(super) fn render_bounds(
     entity: &ModBlockEntity,
     bounds: &mut [f32; 6],
 ) {
+    if entity.id == super::create_port::FLYWHEEL {
+        // FlywheelBlockEntity inflates its ordinary block bounds by two.
+        *bounds = [-2.0, -2.0, -2.0, 3.0, 3.0, 3.0];
+        return;
+    }
     if entity.id != ID || !boolean(&entity.nbt, "IsController") {
         return;
     }

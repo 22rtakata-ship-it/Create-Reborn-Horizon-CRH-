@@ -1,7 +1,8 @@
 // Copyright (c) The Create Team / The Creators of Create
 // Copyright (c) 2026 create-horizon contributors
 // SPDX-License-Identifier: MIT
-// KineticBlockEntityVisual, HandCrankBlockEntity, GaugeBlockEntity and DepotRenderer.
+// KineticBlockEntityVisual, HandCrankBlockEntity, FlywheelBlockEntity, GaugeBlockEntity and DepotRenderer.
+use super::basin::FluidLevel;
 use super::kinetics::{Axis, Pos};
 
 pub fn rotation_offset(pos: Pos, axis: Axis, large: bool) -> f32 {
@@ -39,6 +40,37 @@ impl CrankMotion {
     }
     pub fn rendered(self, partial: f32) -> f32 {
         self.angle + partial * self.velocity
+    }
+}
+
+/// FlywheelBlockEntity ticks the wheel separately from its ordinary shaft.
+#[derive(Clone, Copy, Debug)]
+pub struct FlywheelMotion {
+    angle: f32,
+    speed: FluidLevel,
+}
+
+impl Default for FlywheelMotion {
+    fn default() -> Self {
+        Self {
+            angle: 0.0,
+            speed: FluidLevel {
+                speed: 1.0 / 64.0,
+                ..FluidLevel::default()
+            },
+        }
+    }
+}
+
+impl FlywheelMotion {
+    pub fn tick(&mut self, rpm: f32) {
+        self.speed.target = rpm;
+        self.speed.tick();
+        self.angle = (self.angle + self.speed.value * 3.0 / 10.0) % 360.0;
+    }
+
+    pub fn rendered(self, partial: f32) -> f32 {
+        self.angle + self.speed.at(partial) * 3.0 / 10.0 * partial
     }
 }
 pub fn speed_dial(speed: f32) -> f32 {

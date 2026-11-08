@@ -58,6 +58,7 @@
     "create:black_sail",
     "create:andesite_casing",
     "create:brass_casing",
-    "create:copper_casing"
+    "create:copper_casing",
+    "create:flywheel"
   ]
 }

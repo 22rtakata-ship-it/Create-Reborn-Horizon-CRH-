@@ -407,6 +407,27 @@
         "id": "create:encased_fan"
       }
     },
+    "create/recipe/crafting/kinetics/flywheel.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "A": {
+          "item": "create:shaft"
+        },
+        "C": {
+          "tag": "c:ingots/brass"
+        }
+      },
+      "pattern": [
+        "CCC",
+        "CAC",
+        "CCC"
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:flywheel"
+      }
+    },
     "create/recipe/crafting/kinetics/gantry_carriage.json": {
       "type": "minecraft:crafting_shaped",
       "category": "misc",
@@ -5663,7 +5684,8 @@
         "create:black_sail",
         "create:andesite_casing",
         "create:brass_casing",
-        "create:copper_casing"
+        "create:copper_casing",
+        "create:flywheel"
       ]
     },
     "minecraft/tags/block/mineable/pickaxe.json": {
@@ -5718,6 +5740,7 @@
         "create:andesite_casing",
         "create:brass_casing",
         "create:copper_casing",
+        "create:flywheel",
         "create:zinc_block",
         "create:andesite_alloy_block",
         "create:brass_block"
@@ -5916,6 +5939,27 @@
         }
       ],
       "random_sequence": "create:blocks/copper_casing"
+    },
+    "create/loot_table/blocks/flywheel.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:flywheel"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/flywheel"
     },
     "create/loot_table/blocks/mechanical_piston.json": {
       "type": "minecraft:block",

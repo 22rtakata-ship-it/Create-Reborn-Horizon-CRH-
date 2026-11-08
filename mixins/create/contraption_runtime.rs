@@ -26,7 +26,7 @@ use glam::DVec3;
 use horizon_client::collisions::LookupCollisions;
 use horizon_client_render::create_contraption_scene::{
     ACTIVE, ACTOR_VISUAL_KEY, ClockHand, KEY, MAX_BLOCKS, MAX_RECORDS, RECORDS, Record, StrokeKind,
-    read,
+    dry_slab_type, read,
 };
 use horizon_core::position::BlockPos;
 use horizon_world::{
@@ -247,7 +247,7 @@ const WOOD_FAMILIES: &[&str] = &[
 ];
 
 fn supported(state: &BlockState) -> bool {
-    if super::create_port_sail::from_state(state).is_some() {
+    if super::create_port_sail::from_state(state).is_some() || dry_slab_type(state).is_some() {
         return true;
     }
     match state.name.as_str() {
@@ -280,7 +280,13 @@ fn supported(state: &BlockState) -> bool {
                 ) || name
                     .strip_suffix("_planks")
                     .is_some_and(|wood| WOOD_FAMILIES.contains(&wood))
-                    || name.ends_with("_wool");
+                    || ["_wool", "_concrete", "_stained_glass", "_terracotta"]
+                        .into_iter()
+                        .any(|suffix| {
+                            name.strip_suffix(suffix).is_some_and(|color| {
+                                horizon_client::mobs::render::DYE_NAMES.contains(&color)
+                            })
+                        });
             }
             let wood = name.strip_prefix("stripped_").unwrap_or(name);
             let pillar = ["_log", "_wood", "_stem", "_hyphae", "_block"]
@@ -373,8 +379,19 @@ impl CaptureView for Capture<'_, '_> {
 
     fn snapshot(&self, p: Pos) -> Option<BlockState> {
         let game = self.0;
-        let state = game.pack.assets.registry.state(state(game, p))?;
+        let id = state(game, p);
+        let state = game.pack.assets.registry.state(id)?;
         if !supported(state) || state.name == sticker::BLOCK {
+            return None;
+        }
+        if dry_slab_type(state).is_some()
+            && game
+                .collision
+                .cached_shapes()
+                .cached_shape(id)
+                .ok()?
+                .is_none()
+        {
             return None;
         }
         if let Some(entity) = game.world.block_entities.get(&(p[0], p[1], p[2])) {
@@ -682,6 +699,17 @@ fn rotate_state(state: &BlockState, turn: QuarterTurn) -> Option<BlockState> {
         return None;
     }
     let mut rotated = state.clone();
+    // StructureTransform.apply flips slab halves only when an X/Z half turn
+    // points the original up face down. A horizontal quarter turn has no
+    // standing slab state, so Java keeps its original half when it lands.
+    if turn.facing(Direction::Up) == Direction::Down
+        && let Some(half @ ("bottom" | "top")) = dry_slab_type(state)
+    {
+        rotated.properties.insert(
+            "type".into(),
+            if half == "bottom" { "top" } else { "bottom" }.into(),
+        );
+    }
     if state.name == deployer::BLOCK
         && turn.axis(Axis::X) != Axis::X
         && let Some(first) = rotated.properties.get_mut("axis_along_first")
@@ -1430,5 +1458,45 @@ pub(super) fn tick_windmill(
     if set_records(game, key, records).is_ok() {
         write_controller(entity, true, driver.angle());
         actors::tick(game, &previous, &current);
+    }
+}
+
+#[cfg(test)]
+mod payload_tests {
+    use super::*;
+    use horizon_client_render::create_contraption_scene::full_cube_payload;
+
+    #[test]
+    fn dry_slab_landing_matches_java_structure_transform() {
+        for name in ["minecraft:oak_slab", "minecraft:smooth_stone_slab"] {
+            for half in ["bottom", "top", "double"] {
+                let mut state = BlockState {
+                    name: name.into(),
+                    properties: Default::default(),
+                };
+                state.properties.insert("type".into(), half.into());
+                state
+                    .properties
+                    .insert("waterlogged".into(), "false".into());
+                assert!(supported(&state));
+                assert_eq!(full_cube_payload(&state), half == "double");
+                for axis in [Axis::X, Axis::Y, Axis::Z] {
+                    for angle in [0.0, 90.0, 180.0, 270.0] {
+                        let turn = Rotation::new([0; 3], axis, angle).unwrap().snapped();
+                        let actual = rotate_state(&state, turn).unwrap();
+                        let expected = match (axis != Axis::Y && angle == 180.0, half) {
+                            (true, "bottom") => "top",
+                            (true, "top") => "bottom",
+                            _ => half,
+                        };
+                        assert_eq!(actual.name, state.name);
+                        assert_eq!(dry_slab_type(&actual), Some(expected));
+                    }
+                }
+                state.properties.insert("waterlogged".into(), "true".into());
+                assert!(!supported(&state));
+                assert!(rotate_state(&state, QuarterTurn::IDENTITY).is_none());
+            }
+        }
     }
 }
