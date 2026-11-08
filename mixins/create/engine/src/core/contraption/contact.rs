@@ -79,19 +79,19 @@ pub fn linear_overlap_response(
         .then_some(response)
 }
 
-/// Contact from a grounded body on a translating full-block top. Rising tops
-/// supply lift, while the normal gravity path follows a receding surface.
+/// Contact from a grounded body on a translating top with a full X/Z footprint.
+/// Rising tops supply lift, while gravity follows a receding surface.
 pub fn linear_top_motion(
     previous_origin: [f64; 3],
     current_origin: [f64; 3],
-    full_blocks: impl IntoIterator<Item = Pos>,
+    tops: impl IntoIterator<Item = (Pos, f64)>,
     feet: [f64; 3],
     [half_x, half_z]: [f64; 2],
 ) -> Option<[f64; 3]> {
     let [x, y, z] = std::array::from_fn(|i| feet[i] - previous_origin[i]);
-    let supported = full_blocks.into_iter().any(|block| {
+    let supported = tops.into_iter().any(|(block, top)| {
         let [block_x, block_y, block_z] = block.map(f64::from);
-        (y - block_y - 1.0).abs() <= CONTACT_EPSILON
+        (y - block_y - top).abs() <= CONTACT_EPSILON
             && x + half_x > block_x
             && x - half_x < block_x + 1.0
             && z + half_z > block_z
@@ -157,7 +157,7 @@ pub fn linear_face_separation(
 pub fn rotary_top_motion(
     anchor: Pos,
     [previous_angle, current_angle]: [f32; 2],
-    full_blocks: impl IntoIterator<Item = Pos>,
+    tops: impl IntoIterator<Item = (Pos, f64)>,
     feet: [f64; 3],
     [half_x, half_z]: [f64; 2],
 ) -> Option<[f64; 3]> {
@@ -169,9 +169,9 @@ pub fn rotary_top_motion(
     let player_local_x = cos * half_x + sin * half_z;
     let player_local_z = sin * half_x + cos * half_z;
     let block_world_radius = (cos + sin) * 0.5;
-    let supported = full_blocks.into_iter().any(|[x, y, z]| {
+    let supported = tops.into_iter().any(|([x, y, z], top)| {
         // ContraptionCollider inflates the entity's collision bounds by 1e-7.
-        if (local[1] - f64::from(y) - 1.0).abs() > CONTACT_EPSILON {
+        if (local[1] - f64::from(y) - top).abs() > CONTACT_EPSILON {
             return false;
         }
         // Check both pairs of separating axes in the horizontal plane.
@@ -278,14 +278,20 @@ mod tests {
             rotary_top_motion(
                 anchor,
                 [0.0, 90.0],
-                [[2, 0, 0]],
+                [([2, 0, 0], 1.0)],
                 [12.5, 65.0, -2.5],
                 [0.3; 2],
             ),
             [-2.0, 0.0, -2.0],
         );
         assert_motion(
-            rotary_top_motion(anchor, [0.0, 90.0], [[0; 3]], [10.5, 65.0, -2.5], [0.3; 2]),
+            rotary_top_motion(
+                anchor,
+                [0.0, 90.0],
+                [([0; 3], 1.0)],
+                [10.5, 65.0, -2.5],
+                [0.3; 2],
+            ),
             [0.0; 3],
         );
     }
@@ -297,7 +303,7 @@ mod tests {
             rotary_top_motion(
                 [0; 3],
                 [350.0, 10.0],
-                [[2, 0, 0]],
+                [([2, 0, 0], 1.0)],
                 [0.5 + 2.0 * cos, 1.0, 0.5 + 2.0 * sin],
                 [0.3; 2],
             ),
@@ -307,14 +313,22 @@ mod tests {
 
     #[test]
     fn only_a_footprint_over_the_actual_top_is_supported() {
-        let motion = |feet| rotary_top_motion([0; 3], [45.0, 55.0], [[0; 3]], feet, [0.025; 2]);
+        let motion =
+            |feet| rotary_top_motion([0; 3], [45.0, 55.0], [([0; 3], 1.0)], feet, [0.025; 2]);
         assert!(motion([0.68, 1.0, 0.68]).is_some());
         assert!(motion([1.10, 1.0, 1.10]).is_none());
         assert!(motion([0.68, 0.0, 0.68]).is_none());
         assert!(motion([0.68, 1.25, 0.68]).is_none());
         // A rider can stand with the center of their feet outside the block.
         assert!(
-            rotary_top_motion([0; 3], [0.0, 1.0], [[0; 3]], [1.25, 1.0, 0.5], [0.3; 2]).is_some()
+            rotary_top_motion(
+                [0; 3],
+                [0.0, 1.0],
+                [([0; 3], 1.0)],
+                [1.25, 1.0, 0.5],
+                [0.3; 2]
+            )
+            .is_some()
         );
     }
 
@@ -322,7 +336,8 @@ mod tests {
     fn rider_follows_horizontal_stroke_and_upward_lift() {
         let previous = [4.25, 16.0, -2.0];
         let feet = [4.45, 17.0, -1.5];
-        let motion = |current| linear_top_motion(previous, current, [[0; 3]], feet, [0.3; 2]);
+        let motion =
+            |current| linear_top_motion(previous, current, [([0; 3], 1.0)], feet, [0.3; 2]);
         assert_motion(motion([4.0, 16.0, -2.0]), [-0.25, 0.0, 0.0]);
         assert_motion(motion([4.25, 16.25, -2.0]), [0.0, 0.25, 0.0]);
         assert_motion(motion([4.25, 15.75, -2.0]), [0.0; 3]);
@@ -330,11 +345,23 @@ mod tests {
             linear_top_motion(
                 previous,
                 [4.5, 16.0, -2.0],
-                [[0; 3]],
+                [([0; 3], 1.0)],
                 [3.9, 17.0, -1.5],
                 [0.3; 2]
             )
             .is_none()
         );
+    }
+
+    #[test]
+    fn rider_uses_the_lower_slab_surface() {
+        let slab = [([2, 0, 0], 0.5)];
+        let rotary = |y| rotary_top_motion([0; 3], [0.0, 90.0], slab, [2.5, y, 0.5], [0.3; 2]);
+        assert_motion(rotary(0.5), [-2.0, 0.0, -2.0]);
+        assert!(rotary(1.0).is_none());
+        let linear =
+            |y| linear_top_motion([0.0; 3], [0.25, 0.0, 0.0], slab, [2.5, y, 0.5], [0.3; 2]);
+        assert_motion(linear(0.5), [0.25, 0.0, 0.0]);
+        assert!(linear(1.0).is_none());
     }
 }

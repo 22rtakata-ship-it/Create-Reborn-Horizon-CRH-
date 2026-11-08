@@ -108,7 +108,14 @@ with the systems they depend on.
 - [ ] Clutch/Gearshift and Hand Crank in all network/animation edge cases.
 - [ ] Original goggles tooltips and value settings, including RU/EN, colors, units and fading.
 - [ ] Original speed/overstress particles, placement assistance, outlines and sound loops.
-- [ ] Speed Controller, Rotational Speed Controller, Sequenced Gearshift and redstone modules.
+- [ ] Rotational Speed Controller, Sequenced Gearshift and redstone modules.
+  The [Java controller fixture](../tools/speed_controller_java_checks.py) covers
+  both shaft faces and the perpendicular large cog above. At a target of zero,
+  cog input owns the idle controller while its shafts remain outside the
+  network. Shaft input still passes through the controller and owns the idle
+  cog. Competing inputs can retain different source ownership depending on
+  connection order. The solver needs directed speed transfer and shared stress
+  accounting across both RPM domains.
 - [x] Windmill Bearing: wool sails, assembly, rear shaft output and restoration.
 - [ ] Complete Windmill controls, sail blocks, Steam Engine, boiler and other stress sources/consumers.
 

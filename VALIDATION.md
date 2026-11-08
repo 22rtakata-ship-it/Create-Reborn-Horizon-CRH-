@@ -48,6 +48,15 @@ developer source build. The three changes are applied in a separate checkout.
 - [Mounted barrels](tools/bearing_barrel_checks.py) match the original
   position, lid direction and contents after a native restart on two axes.
   The refusal checks preserve open, named, locked and loot-table barrels.
+- [Piston slab cargo](tools/piston_slab_checks.py) matches half-block
+  shapes and the ordinary/sticky retraction outcomes after a native restart
+  at 0.46875 blocks of extension. In the [grounded player check](tools/piston_slab_rider_checks.py),
+  the rider follows the measured Horizon stroke on both slab halves.
+  Java's observed client motion differs from its server stroke sample by
+  one tick. The [rotary rider check](tools/rotary_slab_rider_checks.py)
+  preserves the lower slab's foot height in both clients. The maximum
+  measured player position difference at matched angles was 0.17 blocks.
+  Dropped-item carry remains a separate case.
 
 ## 0.8.0-alpha.5 chassis, saw and Deployer crafting
 

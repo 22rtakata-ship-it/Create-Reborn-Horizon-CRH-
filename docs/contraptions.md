@@ -27,14 +27,14 @@ Mechanical Bearing can carry a Deployer.
 A vertical Mechanical Bearing, Gantry, Rope Pulley or Mechanical Piston can
 carry one ordinary chest. All four can use the three chassis variants to
 expand capture. A Mechanical Bearing can also carry one ordinary closed
-barrel with its full inventory. The
-supported Gantry path has a fixed loaded rail span.
+barrel with its full inventory. The supported Gantry path has a fixed loaded
+rail span.
 The Rope Pulley supports dry rope and cargo. The clockwork hands are captured
 and restored together and currently accept vanilla payloads only.
 
 Collision uses exact boxes at quarter turns, narrow strips for oblique rotation
-and the registered shapes of piston parts and tools. Tests cover dropped items
-and grounded riders on full block tops. Horizontal translating shapes resolve
+and the registered shapes of piston parts and tools. Grounded player transfer
+uses the real top height of full blocks and the supported dry slabs. Horizontal translating shapes resolve
 player overlap using the minimum-separation axes from Java's
 `ContinuousOBBCollider`, then use Horizon's terrain collision resolver. The
 wall fixture checks sideways separation in both directions. A vertical
@@ -71,8 +71,7 @@ item on the powered blade. The default Saw takes one input at a time and
 outputs in the direction set by the shaft and rotation. A neighboring Depot
 receives the stack directly. The Saw waits if the Depot holds a stack or
 has items in its output buffer. In open space the Saw ejects the result.
-The saved
-`RecipeIndex` and ordinary output filter select the next recipe in the pinned
+The saved `RecipeIndex` and ordinary output filter select the next recipe in the pinned
 Java order. A Saw with no matching recipe passes the item through unchanged.
 
 The Saw uses Horizon's loaded stonecutting recipes with 1.21.1 ID aliases

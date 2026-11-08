@@ -13,7 +13,7 @@ use create_engine::contraption::{
 };
 use horizon_client::collisions::{EntityCollisions, LookupCollisions, SceneCollisions};
 use horizon_client_render::create_contraption_scene::{
-    KEY, Pos, Record, full_cube_payload, read, upright_side_payload,
+    KEY, Pos, Record, dry_slab_type, full_cube_payload, read, upright_side_payload,
 };
 use horizon_core::geometry::{Aabb, Vec3};
 use horizon_world::{
@@ -143,6 +143,18 @@ fn carry(game: &mut Game<'_>, column: (i32, i32), previous: &[Record]) {
             .iter()
             .filter(|(_, state)| full_cube_payload(state))
             .map(|(local, _)| *local);
+        let tops = || {
+            record.blocks.iter().filter_map(|(local, state)| {
+                let top = if full_cube_payload(state) {
+                    1.0
+                } else if dry_slab_type(state)? == "bottom" {
+                    0.5
+                } else {
+                    1.0
+                };
+                Some((*local, top))
+            })
+        };
         let half_extents = [size.x * 0.5, size.z * 0.5];
         // The last applied transform must match this update's predecessor.
         // Snapshots and duplicate updates never apply a second displacement.
@@ -156,7 +168,7 @@ fn carry(game: &mut Game<'_>, column: (i32, i32), previous: &[Record]) {
                     && let Some(motion) = rotary_top_motion(
                         record.anchor,
                         [before.angle, record.angle],
-                        full_blocks.clone(),
+                        tops(),
                         feet,
                         half_extents,
                     )
@@ -190,7 +202,7 @@ fn carry(game: &mut Game<'_>, column: (i32, i32), previous: &[Record]) {
                     && let Some(motion) = linear_top_motion(
                         previous_origin,
                         current_origin,
-                        full_blocks.clone(),
+                        tops(),
                         feet,
                         half_extents,
                     )
