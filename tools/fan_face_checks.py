@@ -13,7 +13,7 @@ from bearing_native_checks import Batch
 from burner_heat_java_checks import number
 from chain_drive_checks import Original, xyz
 from common import PINS, ROOT
-from native_check_session import NativeCheckSession
+from native_check_session import NativeCheckSession, wait_loaded
 import reference_java
 
 
@@ -88,13 +88,53 @@ def native_run(session):
     return sample(values[:len(CASES)], values[len(CASES):])
 
 
+def native_player(session):
+    """Check the actual local player during ordinary unfrozen simulation."""
+    with session:
+        call = session.call
+
+        def command(value):
+            return call('command', value)['chat']
+
+        lanes = (('push', 0, 256), ('pull', 4, -256), ('smoking', 8, 256))
+        command('tp @s 206.5 173 6.5')
+        wait_loaded(call, [(200, 172, z) for _, z, _ in lanes])
+        command('fill 197 171 -2 220 176 10 minecraft:air')
+        command('fill 197 171 -2 220 171 10 minecraft:smooth_stone')
+        command('setblock 201 172 8 minecraft:campfire[lit=true]')
+        for _, z, rpm in lanes:
+            command(f'setblock 199 172 {z} create:creative_motor[facing=east]{{ScrollValue:{rpm}}}')
+            command(f'setblock 200 172 {z} create:encased_fan[facing=east]')
+        command('tick unfreeze')
+        call('wait', 30)
+        command('gamemode survival')
+        result = {}
+        for name, z, rpm in lanes:
+            fan = ' '.join(command(f'data get block 200 172 {z}'))
+            assert number({'nbt': fan}, 'Speed') == rpm, fan
+            command(f'tp @s 203.5 172 {z+.5}')
+            call('wait', 12)
+            player = call('status')['player']
+            result[name] = dict(dx=player['position'][0] - 203.5, health=player['health'])
+        assert result['push']['dx'] > 0.02 and result['pull']['dx'] < -0.02, result
+        hits = [hit for player in call('hurtlog')['players'] for hit in player['hurts']
+                if hit['source'] == 'create:fan_fire' and hit['hurt']]
+        assert hits and hits[0]['taken'] == 2 and result['smoking']['health'] < 20, (hits, result)
+        result['first_fan_fire_damage'] = hits[0]['taken']
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--java', action='store_true')
     parser.add_argument('--baseline', action='store_true', help='Prove the old native boundary discrepancy')
+    parser.add_argument('--player', action='store_true', help='Also check push, pull and smoke in unfrozen Horizon')
     for name in ('game', 'resources', 'ctl', 'reference'):
         parser.add_argument('--' + name, type=Path)
     args = parser.parse_args()
+    if args.player and args.java:
+        parser.error('--player is a Horizon integration check')
+    player = None
     if args.java:
         work = Path(tempfile.mkdtemp(prefix='fan-face-java-', dir=ROOT / '.local'))
         result = java_run(work)
@@ -105,11 +145,13 @@ def main():
         reference = json.loads(args.reference.read_text())
         assert reference['passed'] and reference['create'] == PINS['create_revision']
         expected = reference['effects']
-        session = NativeCheckSession(args.game, args.resources, args.ctl, None, graphics=False,
+        session = NativeCheckSession(args.game, args.resources, args.ctl, None, graphics=args.player,
                                      name='fan-face-native', world='CreateFanFace')
         work = session.scratch
         try:
             result = native_run(session)
+            if args.player:
+                player = native_player(session)
         finally:
             session.control_temp.cleanup()
             for folder in (session.resources, work / '.horizon-cache', work / 'horizon-mods'):
@@ -119,7 +161,10 @@ def main():
     (work / 'observed.json').write_text(json.dumps(result, indent=2) + '\n')
     assert result == expected, (result, expected)
     path = work / 'result.json'
-    path.write_text(json.dumps(dict(passed=True, create=PINS['create_revision'], effects=result), indent=2) + '\n')
+    receipt = dict(passed=True, create=PINS['create_revision'], effects=result)
+    if player is not None:
+        receipt['unfrozen_native_player'] = player
+    path.write_text(json.dumps(receipt, indent=2) + '\n')
     print(path)
 
 
