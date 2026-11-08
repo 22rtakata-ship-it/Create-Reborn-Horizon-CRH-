@@ -499,7 +499,9 @@ pub fn upright_side_payload(record: &Record) -> bool {
         && record
             .blocks
             .iter()
-            .all(|(_, state)| full_cube_payload(state) || dry_slab_type(state).is_some())
+            // The lateral solver clips with its own rotor excluded. Mixed
+            // shapes must stay in the ordinary terrain collision path.
+            .all(|(_, state)| full_cube_payload(state))
 }
 
 pub fn append_collisions(
@@ -669,6 +671,42 @@ mod collision_tests {
         assert_eq!(turned.len(), 1);
         assert_eq!(turned[0].min_position().components(), [-0.5, 0.0, -0.5]);
         assert_eq!(turned[0].max_position().components(), [0.5, 0.5, 0.5]);
+    }
+
+    #[test]
+    fn slabs_are_not_excluded_by_the_full_cube_side_resolver() {
+        let mut record = Record {
+            controller: [0, 64, 0],
+            anchor: [0, 65, 0],
+            axis: 1,
+            angle: 0.0,
+            previous_angle: -0.3,
+            rpm: 8.0,
+            stalled: false,
+            return_home: false,
+            clock_hand: None,
+            stroke: None,
+            blocks: vec![(
+                [0; 3],
+                BlockState {
+                    name: "minecraft:stone".into(),
+                    properties: Default::default(),
+                },
+            )],
+        };
+        assert!(upright_side_payload(&record));
+        record.blocks.push((
+            [1, 0, 0],
+            BlockState {
+                name: "minecraft:oak_slab".into(),
+                properties: [
+                    ("type".into(), "bottom".into()),
+                    ("waterlogged".into(), "false".into()),
+                ]
+                .into(),
+            },
+        ));
+        assert!(!upright_side_payload(&record));
     }
 
     #[test]

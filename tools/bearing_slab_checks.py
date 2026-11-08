@@ -9,6 +9,7 @@ Use --require-contact-timing to require the full item height trace to match.
 """
 
 import argparse
+import errno
 import hashlib
 import json
 import math
@@ -314,7 +315,12 @@ def main():
         (work / 'result.json').write_text(json.dumps(report, indent=2) + '\n')
         if session:
             session.control_temp.cleanup()
-            shutil.rmtree(session.resources)
+            try:
+                shutil.rmtree(session.resources)
+            except OSError as error:
+                if error.errno != errno.ENOTEMPTY:
+                    raise
+                shutil.rmtree(session.resources)
     print(json.dumps(dict(result=str(work / 'result.json'), comparison=report.get('comparison'))), flush=True)
 
 

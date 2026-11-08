@@ -19,6 +19,7 @@ use std::{
 const ID: &str = "create:mechanical_drill";
 pub(super) const SAW: &str = "create:mechanical_saw";
 static NEXT_BREAKER: AtomicI32 = AtomicI32::new(-1);
+const MAX_RECENT_CHANGES: usize = 8192;
 const NEIGHBORS: [[i32; 3]; 6] = [
     [1, 0, 0],
     [-1, 0, 0],
@@ -40,10 +41,40 @@ struct DimensionState {
     drills: BTreeMap<[i32; 3], Running>,
     cleaned: Option<i64>,
     changes: BTreeMap<[i32; 3], u64>,
+    changes_by_age: BTreeMap<u64, [i32; 3]>,
     change_sequence: u64,
     changes_through_last_tick: u64,
 }
 impl DimensionState {
+    fn record_change(&mut self, pos: [i32; 3]) {
+        self.change_sequence += 1;
+        if let Some(old) = self.changes.insert(pos, self.change_sequence) {
+            self.changes_by_age.remove(&old);
+        }
+        self.changes_by_age.insert(self.change_sequence, pos);
+        // Large edits during a frozen tick can outlive normal maintenance.
+        if self.changes.len() > MAX_RECENT_CHANGES {
+            self.discard_oldest_change();
+        }
+    }
+
+    fn discard_oldest_change(&mut self) {
+        if let Some((_, pos)) = self.changes_by_age.pop_first() {
+            self.changes.remove(&pos);
+        }
+    }
+
+    fn expire_changes(&mut self) {
+        while self
+            .changes_by_age
+            .first_key_value()
+            .is_some_and(|(sequence, _)| *sequence <= self.changes_through_last_tick)
+        {
+            self.discard_oldest_change();
+        }
+        self.changes_through_last_tick = self.change_sequence;
+    }
+
     fn neighbor_changed_after_placement(&self, pos: [i32; 3]) -> bool {
         self.changes.get(&pos).is_some_and(|placed| {
             NEIGHBORS.into_iter().any(|offset| {
@@ -87,8 +118,7 @@ pub(super) fn changed(dimension: &'static str, pos: [i32; 3]) {
     STATE.with(|state| {
         let mut state = state.borrow_mut();
         let dimension = state.dimensions.entry(dimension).or_default();
-        dimension.change_sequence += 1;
-        dimension.changes.insert(pos, dimension.change_sequence);
+        dimension.record_change(pos);
         for offset in std::iter::once([0, 0, 0]).chain(NEIGHBORS) {
             let neighbor = std::array::from_fn(|i| pos[i] + offset[i]);
             if let Some(drill) = dimension.drills.get_mut(&neighbor) {
@@ -109,10 +139,7 @@ pub(super) fn maintenance(game: &mut Game<'_>) {
             return Vec::new();
         }
         state.cleaned = Some(time);
-        state
-            .changes
-            .retain(|_, sequence| *sequence > state.changes_through_last_tick);
-        state.changes_through_last_tick = state.change_sequence;
+        state.expire_changes();
         let mut removed = Vec::new();
         state.drills.retain(|pos, value| {
             let live = time >= value.seen
@@ -296,4 +323,35 @@ pub(super) fn draw(
     game.native_draw_model(draw, "create:block/mechanical_drill/head", 0xFFFFFF);
     draw.pop();
     true
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn drill_change_journal_keeps_recent_order_with_a_bounded_paused_world() {
+        let mut state = DimensionState::default();
+        let old = [0, 64, 0];
+        state.record_change(old);
+        for x in 1..=MAX_RECENT_CHANGES as i32 {
+            state.record_change([x, 64, 0]);
+        }
+        assert_eq!(state.changes.len(), MAX_RECENT_CHANGES);
+        assert!(!state.changes.contains_key(&old));
+
+        let drill = [0, 70, 0];
+        let target = [1, 70, 0];
+        state.record_change(target);
+        state.record_change(drill);
+        assert!(!state.neighbor_changed_after_placement(drill));
+        state.record_change(target);
+        assert!(state.neighbor_changed_after_placement(drill));
+        assert_eq!(state.changes_by_age.len(), MAX_RECENT_CHANGES);
+
+        state.expire_changes();
+        assert!(state.neighbor_changed_after_placement(drill));
+        state.expire_changes();
+        assert!(state.changes.is_empty() && state.changes_by_age.is_empty());
+    }
 }
