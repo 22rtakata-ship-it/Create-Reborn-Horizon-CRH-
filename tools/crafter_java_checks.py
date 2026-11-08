@@ -29,6 +29,8 @@ SINK = (X + 2, Y, Z)
 LEAF = (X + 1, Y + 4, Z)
 MARK = 'crafter_probe'
 DEPOT = (SINK[0], SINK[1] - 1, SINK[2])
+BELT_START = (SINK[0], SINK[1] - 1, SINK[2] - 2)
+BELT_MOTOR = (BELT_START[0] - 1, BELT_START[1], BELT_START[2])
 SIGNAL = (LEAF[0], LEAF[1], LEAF[2] - 1)
 DENSE = [(X + col, Y + row, Z) for row in range(5) for col in range(5)]
 CORNERS = [pos for pos in DENSE if pos not in POINTS]
@@ -165,11 +167,11 @@ def run(work):
         (work / 'transcript.json').write_text(json.dumps(host.trace, indent=2) + '\n')
 
 
-def native_setup(batch, dense=False, covers=False, chest=False):
+def native_setup(batch, dense=False, covers=False, chest=False, belt=False):
     batch.load((X + 2, Y + 2, Z + 4))
     setup(batch.command, dense)
     if dense:
-        seed_output(batch.command, chest)
+        seed_output(batch.command, chest, belt)
     batch.tick(20)
     batch.command('tick freeze')
     if covers:
@@ -318,7 +320,12 @@ def ordinary_break(session):
     return dict(pointing=pointing_order, drops=[block, cargo])
 
 
-def seed_output(command, chest):
+def seed_output(command, chest, belt=False):
+    if belt:
+        x, y, z = BELT_START
+        for index, part in enumerate(('start', 'middle', 'middle', 'middle', 'end')):
+            command(f'setblock {x} {y} {z + index} create:belt[facing=south,slope=horizontal,part={part}]')
+        return
     if chest:
         command(f'setblock {xyz(DEPOT)} minecraft:chest')
         slots = ['{Slot:0b,id:"create:crushing_wheel",count:63}']
@@ -330,14 +337,24 @@ def seed_output(command, chest):
             '{HeldItem:{Item:{id:"minecraft:diamond",count:1},Pos:0.5f,PrevPos:0.5f,Angle:180,InDirection:1}}')
 
 
-def clear_output(command, chest):
+def clear_output(command, chest, belt=False):
+    if belt:
+        command(f'setblock {xyz(BELT_MOTOR)} create:creative_motor[facing=east]{{ScrollValue:32}}')
+        return
     if chest:
         command(f'item replace block {xyz(DEPOT)} container.1 with minecraft:air')
     else:
         command(f'data remove block {xyz(DEPOT)} HeldItem')
 
 
-def dense_snapshot(crafter, target, chest=False):
+def dense_snapshot(crafter, target, chest=False, belt=False):
+    if belt:
+        inventory = field(target, 'Inventory')
+        items_in_belt = items(inventory, 'Items')
+        return {'phase': phase({'nbt': crafter}), 'output': items(crafter, 'Grid'), 'belt': items_in_belt,
+                'entry': None if not items_in_belt else [
+                    number({'nbt': inventory}, key) for key in ('InSegment', 'InDirection', 'Pos', 'PrevPos')
+                ]}
     inventory = items(target, 'Items') if chest else items(target, 'HeldItem') if 'HeldItem:' in target else {}
     return {'phase': phase({'nbt': crafter}), 'output': items(crafter, 'Grid'), 'depot': inventory}
 
@@ -354,6 +371,18 @@ def verify_chest(trace, cleared):
                for row in cleared[1:]), cleared
 
 
+def verify_belt(trace, cleared):
+    product = {'create:crushing_wheel': 2}
+    blocked = {'phase': ['INSERTING', 0], 'output': product, 'belt': {}, 'entry': None}
+    assert trace[-1] == cleared[0] == blocked, (trace[-1], cleared[0])
+    first = next(row for row in cleared[1:] if row['belt'])
+    assert first['belt'] == product and first['phase'] == ['IDLE', 0] and not first['output'], first
+    segment, direction, position, previous = first['entry']
+    assert segment == 2 and direction == 0 and abs(position - 2.5) < .15, first
+    assert abs(position - previous) <= .07, first
+    assert all(sum(row['output'].values()) + sum(row['belt'].values()) == 2 for row in cleared)
+
+
 def verify_depot(trace, cleared):
     assert trace[0] == dict(phase=['IDLE', 0], output={}, depot={'minecraft:diamond': 1}), trace[0]
     blocked = dict(phase=['INSERTING', 0], output={'create:crushing_wheel': 2},
@@ -365,7 +394,7 @@ def verify_depot(trace, cleared):
     assert all(row == cleared[1] for row in cleared[1:]), cleared
 
 
-def java_depot(work, covers=False, chest=False):
+def java_depot(work, covers=False, chest=False, belt=False):
     host = Original()
     initial = host.call('state', {})
     if initial.get('screen') == 'PauseScreen':
@@ -373,10 +402,10 @@ def java_depot(work, covers=False, chest=False):
         initial = host.call('state', {})
     assert initial['ready'] and initial['data_version'] == 3955, initial
     host.call('tick', {'frozen': True})
-    positions = [SINK, DEPOT]
+    positions = [SINK, BELT_START if belt else DEPOT]
 
     def snapshots(ticks):
-        return [dense_snapshot(*(block['nbt'] for block in row['blocks']), chest=chest)
+        return [dense_snapshot(*(block['nbt'] for block in row['blocks']), chest=chest, belt=belt)
                 for row in host.call('observe_ticks', {'ticks': ticks, 'positions': positions})['samples']]
 
     try:
@@ -385,7 +414,7 @@ def java_depot(work, covers=False, chest=False):
         host.command('forceload add ' + FORCE)
         host.snapshot([SINK], 25)
         setup(host.command, dense=True)
-        seed_output(host.command, chest)
+        seed_output(host.command, chest, belt)
         host.snapshot(POINTS, 20)
         for row in range(5):
             stand = (X, Y + row - 2, Z + 3)
@@ -403,15 +432,16 @@ def java_depot(work, covers=False, chest=False):
             assert all(row['phase'] == ['IDLE', 0] for row in trace), trace
             host.command(f'setblock {xyz(SIGNAL)} minecraft:redstone_block')
             trace.extend(snapshots(85))
-        cold = dense_snapshot(*(host.call('block', {'pos': pos})['nbt'] for pos in positions), chest=chest)
-        clear_output(host.command, chest)
-        cleared = [cold, *snapshots(25 if chest else 4)]
-        (verify_chest if chest else verify_depot)(trace, cleared)
+        cold = dense_snapshot(*(host.call('block', {'pos': pos})['nbt'] for pos in positions), chest=chest, belt=belt)
+        clear_output(host.command, chest, belt)
+        cleared = [cold, *snapshots(25 if chest else 10 if belt else 4)]
+        (verify_belt if belt else verify_chest if chest else verify_depot)(trace, cleared)
         count = host.command(f'execute if entity {DROPS} run say crafter_loose_output')
         assert not any('crafter_loose_output' in line for line in count['messages']), count
         if covers:
             assert all(number(host.call('block', {'pos': pos}), 'Cover') == 1 for pos in CORNERS)
-        return dict(passed=True, create=PINS['create_revision'], covers=covers, chest=chest, trace=trace, cleared=cleared)
+        return dict(passed=True, create=PINS['create_revision'], covers=covers, chest=chest, belt=belt,
+                    trace=trace, cleared=cleared)
     finally:
         host.command(f'kill {DROPS}')
         host.command('fill ' + ROOM + ' minecraft:air')
@@ -420,16 +450,17 @@ def java_depot(work, covers=False, chest=False):
         (work / 'transcript.json').write_text(json.dumps(host.trace, indent=2) + '\n')
 
 
-def native_depot(session, reference, covers=False, chest=False):
+def native_depot(session, reference, covers=False, chest=False, belt=False):
     batch = Batch()
-    native_setup(batch, dense=True, covers=covers, chest=chest)
+    native_setup(batch, dense=True, covers=covers, chest=chest, belt=belt)
+    target = BELT_START if belt else DEPOT
     for tick in range(88):
         if tick == 3 and not covers:
             batch.put(SIGNAL, 'minecraft:redstone_block')
         if tick > 0 or not covers:
             batch.tick()
         batch.data(SINK)
-        batch.data(DEPOT)
+        batch.data(target)
     values = iter(batch.run(session, 'dense-covers' if covers else 'dense-redstone'))
     if covers:
         for pos in CORNERS:
@@ -437,7 +468,7 @@ def native_depot(session, reference, covers=False, chest=False):
             assert number({'nbt': raw}, 'Cover') == 1 and not items(raw, 'Inventory'), (pos, raw)
             assert number({'nbt': held}, 'count') == 2 and COVER in held, (pos, held)
     check_native_feed(values)
-    trace = [dense_snapshot(next(values), next(values), chest) for _ in range(88)]
+    trace = [dense_snapshot(next(values), next(values), chest, belt) for _ in range(88)]
     assert next(values, None) is None
     for tick, (observed, expected) in enumerate(zip(trace, reference['trace'], strict=True), 1):
         assert observed == expected, (tick, observed, expected)
@@ -445,29 +476,29 @@ def native_depot(session, reference, covers=False, chest=False):
     batch = Batch()
     batch.load((X + 2, Y + 2, Z + 4))
     batch.data(SINK)
-    batch.data(DEPOT)
+    batch.data(target)
     if covers:
         for pos in CORNERS:
             batch.data(pos)
-    clear_output(batch.command, chest)
-    release_ticks = 25 if chest else 4
+    clear_output(batch.command, chest, belt)
+    release_ticks = 25 if chest else 10 if belt else 4
     for _ in range(release_ticks):
         batch.tick()
         batch.data(SINK)
-        batch.data(DEPOT)
+        batch.data(target)
     batch.command(f'execute if entity {DROPS} run say crafter_loose_output', True)
     values = iter(batch.run(session, 'clear-after-restart'))
-    cold = dense_snapshot(next(values), next(values), chest)
+    cold = dense_snapshot(next(values), next(values), chest, belt)
     if covers:
         for pos in CORNERS:
             raw = next(values)
             assert number({'nbt': raw}, 'Cover') == 1, (pos, raw)
-    cleared = [cold, *(dense_snapshot(next(values), next(values), chest) for _ in range(release_ticks))]
+    cleared = [cold, *(dense_snapshot(next(values), next(values), chest, belt) for _ in range(release_ticks))]
     if not chest:
         assert cleared == reference['cleared'], (cleared, reference['cleared'])
     assert 'crafter_loose_output' not in next(values)
     assert next(values, None) is None
-    (verify_chest if chest else verify_depot)(trace, cleared)
+    (verify_belt if belt else verify_chest if chest else verify_depot)(trace, cleared)
     return dict(ticks=len(trace), cold=cleared[0], released=cleared[-1],
                 release_tick=cleared.index(cleared[-1]))
 
@@ -480,8 +511,9 @@ if __name__ == '__main__':
     cases.add_argument('--depot', action='store_true')
     cases.add_argument('--covers', action='store_true')
     cases.add_argument('--chest', action='store_true')
+    cases.add_argument('--belt', action='store_true')
     args = parser.parse_args()
-    dense = args.depot or args.covers or args.chest
+    dense = args.depot or args.covers or args.chest or args.belt
     if args.game:
         if not all((args.resources, args.ctl, args.reference)):
             parser.error('Horizon runs require --game, --resources, --ctl and --reference')
@@ -496,8 +528,9 @@ if __name__ == '__main__':
             if dense:
                 assert reference.get('covers', False) == args.covers
                 assert reference.get('chest', False) == args.chest
+                assert reference.get('belt', False) == args.belt
                 report = dict(passed=True, create=PINS['create_revision'],
-                              **native_depot(session, reference, covers=args.covers, chest=args.chest))
+                              **native_depot(session, reference, covers=args.covers, chest=args.chest, belt=args.belt))
             else:
                 report = dict(passed=True, create=PINS['create_revision'], **native(session, reference),
                               restart=cold_checkpoint(session, reference), survival_break=ordinary_break(session))
@@ -508,7 +541,7 @@ if __name__ == '__main__':
                 shutil.rmtree(folder, ignore_errors=True)
     else:
         work = Path(tempfile.mkdtemp(prefix='crafter-java-', dir=ROOT / '.local'))
-        report = java_depot(work, covers=args.covers, chest=args.chest) if dense else run(work)
+        report = java_depot(work, covers=args.covers, chest=args.chest, belt=args.belt) if dense else run(work)
     output = work / 'result.json'
     output.write_text(json.dumps(report, indent=2) + '\n')
     print(output)

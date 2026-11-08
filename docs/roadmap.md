@@ -229,9 +229,11 @@ with the systems they depend on.
   with partial transfer and an actual restart.
 - [x] Empty unlinked Mechanical Crafters in source schematics. Rotation and
   mirror cases match Java, with active or occupied entities rejected atomically.
-- [x] Crafter ingredient merge, finished-item turn and two particle events
-  captured in both clients. The small belt scroll remains pending.
-- [ ] Crafter linked inputs, other recipes, Belt output and full presentation.
+- [x] Crafter ingredient merge and finished-item turn captured in both clients.
+  The export and crafting particle events are implemented.
+- [x] Downward Crafter output to a horizontal Belt, including a stopped Belt,
+  an actual restart and delivery of both wheels on the first powered tick.
+- [ ] Crafter linked inputs, other recipes, sideways Belt output and full presentation.
 - [x] Downward Deployer over a Depot and bare Belt. Match small and large
   Cogwheel application, item counts, hand changes and native restart.
 - [x] Downward Deployer for vanilla copper waxing, wax removal and oxidation

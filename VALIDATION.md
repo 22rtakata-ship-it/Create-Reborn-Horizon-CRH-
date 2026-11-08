@@ -151,6 +151,9 @@ developer source build. The three changes are applied in a separate checkout.
 - [Crafter presentation](tools/crafter_visual_checks.py) compares loaded,
   merging and crafting frames in both actual clients. The regular 21-Crafter
   run still matches all 62 phase samples per block after the rendering changes.
+- [Crafter-to-Belt output](tools/crafter_java_checks.py) matches 88 warm ticks
+  while the Belt is stopped and 10 release ticks after a native restart.
+  The exact Belt entry side, segment, position and previous position match.
 - [Deployer transport](tools/deployer_transport_checks.py) matches all 85
   ticks in three lanes for ordinary and large Cogwheels and an incompatible
   input. A native restart preserves the in-flight hand and transport state.

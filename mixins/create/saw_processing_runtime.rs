@@ -192,6 +192,7 @@ pub(super) mod crafter {
     enum Outlet {
         Open,
         Depot,
+        Belt,
         Container,
     }
 
@@ -200,6 +201,12 @@ pub(super) mod crafter {
         let block = game.native_block(target);
         if block == "create:depot" {
             return Some(Outlet::Depot);
+        }
+        if layout.target_direction() == Direction::Down
+            && block == "create:belt"
+            && game.native_block_property(target, "slope").as_deref() == Some("horizontal")
+        {
+            return Some(Outlet::Belt);
         }
         if layout.target_direction() == Direction::Down
             && matches!(
@@ -633,7 +640,7 @@ pub(super) mod crafter {
         layout: Layout,
         outlet: Option<Outlet>,
     ) -> bool {
-        let Some(outlet @ (Outlet::Depot | Outlet::Container)) = outlet else {
+        let Some(outlet @ (Outlet::Depot | Outlet::Belt | Outlet::Container)) = outlet else {
             eject_chain(game, pos, Some(entity));
             return true;
         };
@@ -643,17 +650,21 @@ pub(super) mod crafter {
         grouped.grid.retain(|_, stack| {
             let Some(stack) = stack else { return false };
             let moved = match outlet {
-                Outlet::Depot => {
+                Outlet::Depot | Outlet::Belt => {
                     let item = Transported::new(
                         belt::core_stack(game, stack.clone()),
                         belt::angle(game, stack),
                     );
-                    belt::insert_depot_from_side(
-                        game,
-                        destination,
-                        &item,
-                        layout.target_direction(),
-                    )
+                    let direction = layout.target_direction();
+                    if matches!(outlet, Outlet::Belt) {
+                        if belt::insert_belt_from_side(game, destination, &item, direction, false) {
+                            stack.count
+                        } else {
+                            0
+                        }
+                    } else {
+                        belt::insert_depot_from_side(game, destination, &item, direction)
+                    }
                 }
                 Outlet::Container => game.chute_insert((x, y, z), stack, false).unwrap_or(0),
                 Outlet::Open => unreachable!("only accepting outlets reach insertion"),
@@ -711,7 +722,7 @@ pub(super) mod crafter {
         }
         if state.phase == Phase::Inserting {
             let target = outlet(game, pos, layout_here);
-            return (lazy || matches!(target, Some(Outlet::Depot)))
+            return (lazy || matches!(target, Some(Outlet::Depot | Outlet::Belt)))
                 && try_output(game, pos, entity, layout_here, target);
         }
         let action = state.tick(rpm);

@@ -117,11 +117,11 @@ The finished stack drops at the front of the last Crafter or enters a Depot.
 The phase, countdown and component-bearing grouped items can resume after
 a restart. The 21-Crafter test matches all 62 Java ticks. A full 5×5 grid
 can use a redstone pulse or four Crafter Slot Covers for its empty corners.
-The finished stack can also feed down into an ordinary container. A blocked
-Depot or full container keeps the remainder for retry after a restart.
+The finished stack can also feed down into an ordinary container or horizontal
+Belt. A blocked receiver or stopped Belt keeps the remainder after a restart.
 The animation shows ingredients merging and the finished item turning, with
 the export and crafting particles. Scrolling on the Crafter's small belts,
-linked input, other recipes and Belt output remain open.
+linked input, other recipes and side insertion into a Belt remain open.
 
 A downward Deployer can apply the original small and large cogwheel recipes
 to cargo on a Depot or bare horizontal Belt. It also has the original
