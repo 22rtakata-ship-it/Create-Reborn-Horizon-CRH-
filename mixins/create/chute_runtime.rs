@@ -450,7 +450,7 @@ pub(in crate::game) mod funnel {
     use crate::game::{Game, GameLevel, create_port_belt::world_direction};
     use crate::{containers::ModBlockEntity, items::ItemStack};
     use create_engine::{kinetics::Pos, placement::Direction};
-    use horizon_core::{geometry::Vec3, position::BlockPos};
+    use horizon_core::{geometry::Vec3, position::BlockPos, random::RandomSource};
     use horizon_world::{
         fluid::FluidKind,
         level::{PlaceContext, PlaceOutcome, PlacementContext, flags},
@@ -604,16 +604,19 @@ pub(in crate::game) mod funnel {
     enum Use {
         Attach,
         Wrench,
+        Pickup,
         Collect,
     }
 
     fn action(game: &Game<'_>, pos: Pos, face: Pos, stack: &ItemStack) -> Option<Use> {
-        if !game.native_on("create") || game.spectator() || game.native_sneaking() {
+        if !game.native_on("create") || game.spectator() {
             return None;
         }
+        let sneaking = game.native_sneaking();
         let block = game.native_block(pos);
         if stack.item.as_ref() == BLOCK {
-            return (matches!(face, [0, -1, 0] | [0, 1, 0])
+            return (!sneaking
+                && matches!(face, [0, -1, 0] | [0, 1, 0])
                 && matches!(
                     block.as_str(),
                     "minecraft:chest" | "minecraft:trapped_chest" | "minecraft:barrel"
@@ -624,9 +627,9 @@ pub(in crate::game) mod funnel {
             return None;
         }
         if game.may_build() && crate::game::create_port_chassis::wrench(game, stack) {
-            return Some(Use::Wrench);
+            return Some(if sneaking { Use::Pickup } else { Use::Wrench });
         }
-        collecting(game, pos, face, stack).then_some(Use::Collect)
+        (!sneaking && collecting(game, pos, face, stack)).then_some(Use::Collect)
     }
 
     pub(in crate::game) fn predicts_use(game: &Game<'_>, pos: Pos, face: Pos) -> bool {
@@ -641,6 +644,7 @@ pub(in crate::game) mod funnel {
         match action(game, pos, face, &stack) {
             None => return false,
             Some(Use::Attach) => attach(game, pos, face, &stack),
+            Some(Use::Pickup) => pickup(game, pos, &stack),
             Some(Use::Wrench) => {
                 let extracting = property(game, pos, "extracting");
                 game.native_set_block_property(
@@ -660,6 +664,32 @@ pub(in crate::game) mod funnel {
             }
         }
         true
+    }
+
+    fn pickup(game: &mut Game<'_>, pos: Pos, wrench: &ItemStack) {
+        let [x, y, z] = pos;
+        let state = game.world.block(x, y, z);
+        let mut canceled = false;
+        game.native_destroy_block(pos, state, &mut canceled);
+        if canceled || game.world.block(x, y, z) != state {
+            return;
+        }
+        let drops = if game.creative {
+            Vec::new()
+        } else {
+            let entity = game.loot_block_entity(pos, BLOCK);
+            game.block_loot_at(pos, state, Some(wrench), entity)
+        };
+        if game.with_level(|b, level, ticks| {
+            b.destroy_block(level, ticks, BlockPos::new(x, y, z), false)
+        }) {
+            let _ = game.process_level_events();
+            for stack in drops {
+                game.give_or_drop(stack);
+            }
+            let pitch = 0.5 + game.world.random.next_float() * 0.5;
+            crate::game::create_port_sounds::wrench_remove(game, pos, pitch);
+        }
     }
 
     fn attach(game: &mut Game<'_>, pos: Pos, face: Pos, stack: &ItemStack) {
