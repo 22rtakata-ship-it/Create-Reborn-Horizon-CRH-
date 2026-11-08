@@ -780,11 +780,14 @@ pub(super) fn refresh_power(game: &mut Game<'_>, pos: Pos) -> bool {
 }
 
 fn smart_extracting(game: &Game<'_>, [x, y, z]: Pos) -> bool {
-    !is_chute(&game.native_block([x, y - 1, z]))
+    // In the supported downward flow, the count board describes the source
+    // above the Smart Chute, even when the outlet below is open.
+    let source_y = y + 1;
+    !is_chute(&game.native_block([x, source_y, z]))
         && !game
             .res
             .behaviours()
-            .is_replaceable(game.world.block(x, y - 1, z))
+            .is_replaceable(game.world.block(x, source_y, z))
 }
 
 fn filter_maximum(game: &Game<'_>, sample: Option<&ItemStack>) -> u32 {

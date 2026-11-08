@@ -11,7 +11,20 @@
   The separate six-lane transport fixture still matches 16 of 18 phases.
   In the south-facing horizontal lane, the first two Java segments name
   each other as kinetic sources and retain 32 RPM after disconnecting. The
-  same result is recorded with imported and bundled assets.
+  same result is recorded with imported and bundled assets. Horizon
+  intentionally keeps the normal 32, 0, −32 RPM sequence in this lane.
+- [Fan entity discovery](tools/fan_search_checks.py) compares 34 observations
+  across four lanes, covering dropped items and sheep during steady flow,
+  a neighbor update, an unblocked outlet and a motor restart. All observations
+  match after separating the obstruction and entity search schedules. The old
+  adapter applied force early in 11 observations.
+- [Dry Chutes](tools/chute_native_checks.py) hold a marked stack over a
+  powered, downward-facing Andesite Funnel and resume at the same tick as
+  Java when the funnel is replaced by a Chest. The [Smart Chute comparison](tools/smart_chute_checks.py)
+  also covers an exact-four extraction from a Chest into an open outlet.
+  Three matching items wait in the source until four can be extracted.
+  Both clients open the amount board and confirm Exactly 16 while the outlet
+  is open. [Amount board fixture](tools/brass_funnel_checks.py)
 - [Rope Pulley coil](tools/pulley_coil_visual_checks.py) uses the original
   16×32 strip from the local JAR. Both clients show scrolling and reversal
   at three matched offsets during lowering and retraction. Screenshot

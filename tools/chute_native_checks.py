@@ -6,13 +6,14 @@
 import argparse
 import json
 from pathlib import Path
+import shutil
 
 from actor_native_checks import matched
 from bearing_native_checks import Batch
 from burner_heat_java_checks import items
 from chain_drive_checks import xyz
 from chute_reference_checks import (
-    AIR, CHUTE, LOWER, SOURCE, UPPER, X, Y, Z, fixture, seed, snapshot, verify,
+    AIR, CASES, CHEST, CHUTE, LOWER, SOURCE, UPPER, X, Y, Z, fixture, seed, snapshot, verify,
 )
 from common import PINS
 from foundation_checks import crafting
@@ -35,6 +36,8 @@ def compare_case(session, mode, reference):
     for i in range(len(reference)):
         if mode == 'blocked' and i == 10:
             batch.command(f'item replace block {xyz(target)} container.6 with {AIR}')
+        if mode == 'funnel' and i == 10:
+            batch.put(target, CHEST)
         batch.tick()
         for pos in points:
             batch.data(pos)
@@ -118,7 +121,7 @@ def main():
     for flag in ('game', 'resources', 'ctl', 'reference'):
         parser.add_argument('--' + flag, type=Path, required=True)
     parser.add_argument('--create-jar', type=Path)
-    parser.add_argument('--case', action='append', choices=('single', 'column', 'blocked', 'hopper', 'restart', 'drop', 'craft'))
+    parser.add_argument('--case', action='append', choices=(*CASES, 'restart', 'drop', 'craft'))
     args = parser.parse_args()
     reference = json.loads(args.reference.read_text())
     assert reference['create'] == PINS['create_revision']
@@ -127,10 +130,16 @@ def main():
     for name in scenarios:
         session = NativeCheckSession(args.game, args.resources, args.ctl, args.create_jar,
                                      name=f'chute-native-{name}', graphics=name == 'craft', world='CreateChuteCheck')
-        if name in reference['cases']:
-            result = compare_case(session, name, reference['cases'][name])
-        else:
-            result = {'restart': restart, 'drop': open_drop, 'craft': craft}[name](session)
+        try:
+            if name in CASES:
+                result = compare_case(session, name, reference['cases'][name])
+            else:
+                result = {'restart': restart, 'drop': open_drop, 'craft': craft}[name](session)
+        finally:
+            session.control_temp.cleanup()
+            for folder in (session.resources, session.scratch / '.horizon-cache',
+                           session.scratch / 'horizon-mods'):
+                shutil.rmtree(folder, ignore_errors=True)
         path = session.scratch / 'result.json'
         path.write_text(json.dumps(result, indent=2) + '\n')
         print(json.dumps(dict(case=name, path=str(path), differences=len(result.get('differences', [])))), flush=True)

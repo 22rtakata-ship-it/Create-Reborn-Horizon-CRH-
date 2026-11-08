@@ -159,20 +159,23 @@ pub(super) fn server_tick(
     rpm: f32,
     distance: f32,
     segments: &[Segment],
+    search: bool,
 ) {
-    if rpm == 0.0 || distance < 0.25 {
-        clear(game.dim.id(), origin);
+    if rpm == 0.0 {
         return;
     }
     let key = (game.dim.id().to_owned(), origin);
+    if distance < 0.25 {
+        CACHE.with(|c| c.borrow_mut().server.remove(&key));
+        return;
+    }
     let area = bounds(origin, facing, distance);
     let (mut current, mob_indices) = CACHE.with(|c| {
         let mut c = c.borrow_mut();
         prepare(&mut c, game);
         index(&mut c, game);
         let mut current = c.server.remove(&key).unwrap_or_default();
-        if current.search <= 0 {
-            current.search = 5;
+        if search {
             current.caught.clear();
             let mut found = BTreeSet::new();
             for cell in cells(area) {
@@ -200,8 +203,6 @@ pub(super) fn server_tick(
                     }
                 }
             }
-        } else {
-            current.search -= 1;
         }
         let indices = current
             .caught
@@ -285,20 +286,19 @@ pub(super) fn client_tick(
     distance: f32,
     _segments: &[Segment],
 ) {
-    if rpm == 0.0 || distance < 0.25 {
-        clear(game.dim.id(), origin);
+    if rpm == 0.0 {
         return;
     }
     let Some(player) = game.player.as_ref() else {
         return;
     };
-    let eligible =
-        rules::eligible(
-            player.health.health() > 0.0,
-            player.spectator,
-            game.creative,
-            player.flying,
-        ) && rules::intersects(bounds(origin, facing, distance), corners(player.bounds()));
+    let eligible = rules::eligible(
+        player.health.health() > 0.0,
+        player.spectator,
+        game.creative,
+        player.flying,
+    ) && distance >= 0.25
+        && rules::intersects(bounds(origin, facing, distance), corners(player.bounds()));
     let apply = CACHE.with(|c| {
         let mut c = c.borrow_mut();
         prepare(&mut c, game);

@@ -131,6 +131,29 @@ def transport(host, work, cold_restart=None):
     return {'idle': idle, 'loaded': loaded, 'paused': paused, 'resumed': resumed, 'filter_cleared': True}
 
 
+def open_outlet(host, work):
+    setup(host)
+    cmd = host.command
+    put(cmd, TARGET, 'minecraft:air')
+    click(host, work, 'open-outlet-filter', 'south', FILTER)
+    cmd(f'data merge block {xyz(CHUTE)} {{FilterAmount:4,UpTo:0b}}')
+    cmd(f'item replace block {xyz(SOURCE)} container.1 with {CARGO} 3')
+    put(cmd, SIGNAL, 'minecraft:air')
+
+    def sample():
+        chute, source = step(host, 1, CHUTE, SOURCE)
+        assert number(chute, 'FilterAmount') == 4 and number(chute, 'UpTo') == 0, chute
+        return dict(cargo=items(chute['nbt'], 'Item'), source=items(source['nbt'], 'Items'),
+                    position=number(chute, 'ItemPosition'))
+
+    waiting = sample()
+    assert not waiting['cargo'] and waiting['source'] == {STICK: 3}, waiting
+    cmd(f'item replace block {xyz(SOURCE)} container.2 with {CARGO} 4')
+    loaded = sample()
+    assert loaded == dict(cargo={STICK: 4}, source={STICK: 3}, position=1), loaded
+    return dict(waiting=waiting, loaded=loaded)
+
+
 def run_java(host, work, report):
     assert json.loads((java.BASE / 'manifest.json').read_text())['create_sha256'] == java.CREATE_SHA256
     initial = host.call('state', {})
@@ -145,6 +168,7 @@ def run_java(host, work, report):
         host.snapshot([CHUTE], 4)
         filter_clicks(host, work)
         report.update(transport(host, work))
+        report['open_outlet'] = open_outlet(host, work)
     finally:
         host.command('gamemode creative')
         host.command('item replace entity @s weapon.mainhand with minecraft:air')
@@ -170,6 +194,7 @@ def run_native(session, reference, report):
         step(host, 4, CHUTE)
         filter_clicks(host, session.scratch)
         observed = transport(host, session.scratch, cold_restart)
+        observed['open_outlet'] = open_outlet(host, session.scratch)
         assert observed == {key: reference[key] for key in observed}, (observed, reference)
         report.update(observed, cold_restart=True)
 

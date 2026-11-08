@@ -266,7 +266,10 @@ def smart_amounts(host, work):
     step(host, 1, smart.CHUTE)
     assert items(block(host, smart.CHUTE)['nbt'], 'Filter') == {STICK: 3}
     cmd('item replace entity @s weapon.mainhand with minecraft:wheat 5')
+    # The amount board follows the source chest even with no destination.
+    put(cmd, smart.TARGET, 'minecraft:air')
     exact_board = board(host, work, 1, pos=smart.CHUTE, aim_at=smart_aim, case='-smart')
+    put(cmd, smart.TARGET, 'minecraft:chest')
     for slot, stack in [(0, 'minecraft:wheat 8'), (1, marked(31, 6)), (4, marked(82, 18))]:
         cmd(f'item replace block {xyz(smart.SOURCE)} container.{slot} with {stack}')
     put(cmd, smart.SIGNAL, 'minecraft:air')

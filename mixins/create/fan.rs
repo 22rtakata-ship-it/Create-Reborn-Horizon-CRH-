@@ -16,8 +16,9 @@ use std::{cell::RefCell, collections::BTreeMap};
 struct Current {
     facing: Option<Direction>,
     rpm: f32,
-    cooldown: i32,
-    search: i32,
+    block_check: u8,
+    entity_search: u8,
+    dirty: bool,
     distance: f32,
     segments: Vec<Segment>,
     caught: Vec<u32>,
@@ -66,7 +67,7 @@ pub(super) fn changed(dimension: &str, pos: [i32; 3]) {
                 .sum::<i32>()
                 <= 1
             {
-                current.cooldown = 0;
+                current.dirty = true;
             }
         }
     });
@@ -540,15 +541,23 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
         CACHE.with(|cache| cache.borrow_mut().currents.remove(&key).unwrap_or_default());
     let facing = facing(game, pos);
     let push = fan::pushing(rpm, facing);
+    // EncasedFanBlockEntity checks obstructions every 31 ticks. A neighbor
+    // update or speed change rebuilds immediately without moving that schedule.
+    let periodic = current.block_check == 0;
+    if periodic {
+        current.block_check = 30;
+    } else {
+        current.block_check -= 1;
+    }
     let rebuild = current.facing != Some(facing)
         || current.rpm != rpm
-        || current.cooldown <= 0
+        || current.dirty
+        || periodic
         || entity.data.first() != Some(&AIR_CURRENT_VERSION);
-    current.cooldown -= 1;
     if rebuild {
         current.facing = Some(facing);
         current.rpm = rpm;
-        current.cooldown = 30;
+        current.dirty = false;
         current.distance = if rpm == 0.0 {
             0.0
         } else {
@@ -585,17 +594,27 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
         // The transport payload is added by update_tag, never to saved BE NBT.
         game.native_block_entity_sync(pos);
     }
-    if rpm != 0.0 && current.distance >= 0.25 {
+    // Entity discovery is independent of rebuilding the geometry. The
+    // discovery clock advances on powered ticks, even when the outlet is shut.
+    let mut search = false;
+    if rpm != 0.0 {
+        search = current.entity_search == 0;
+        if search {
+            current.entity_search = 5;
+        } else {
+            current.entity_search -= 1;
+        }
+    }
+    if rpm != 0.0 && current.distance < 0.25 {
+        current.caught.clear();
+    } else if rpm != 0.0 {
         let (min, max) = bounds(pos, facing, current.distance);
-        if rebuild || current.search <= 0 {
+        if search {
             current.caught = game
                 .native_item_entities(&dim, min, max)
                 .iter()
                 .map(|e| e.id)
                 .collect();
-            current.search = 5;
-        } else {
-            current.search -= 1;
         }
         let flow = if push {
             facing.vector()
@@ -676,6 +695,7 @@ pub(super) fn tick(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEnti
         rpm,
         current.distance,
         &current.segments,
+        search,
     );
     CACHE.with(|cache| cache.borrow_mut().currents.insert(key, current));
 }

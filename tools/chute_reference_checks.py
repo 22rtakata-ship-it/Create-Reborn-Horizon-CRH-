@@ -19,7 +19,9 @@ UPPER = (X, Y + 1, Z)
 LOWER = (X, Y, Z)
 CHEST = 'minecraft:chest[facing=north,type=single,waterlogged=false]'
 CHUTE = 'create:chute[facing=down,shape=normal,waterlogged=false]'
+FUNNEL = 'create:andesite_funnel[facing=down,extracting=true,powered=true,waterlogged=false]'
 AIR = 'minecraft:air'
+CASES = ('single', 'column', 'blocked', 'hopper', 'funnel')
 
 
 def fixture(put, command, mode):
@@ -29,7 +31,11 @@ def fixture(put, command, mode):
     if mode == 'column':
         put(LOWER, CHUTE)
         target = (X, Y - 1, Z)
-    put(target, 'minecraft:hopper[facing=down]' if mode == 'hopper' else CHEST)
+    if mode == 'funnel':
+        put((X + 1, Y, Z), 'minecraft:redstone_block')
+        put(target, FUNNEL)
+    else:
+        put(target, 'minecraft:hopper[facing=down]' if mode == 'hopper' else CHEST)
     if mode == 'blocked':
         for slot in range(27):
             command(f'item replace block {xyz(target)} container.{slot} with minecraft:cobblestone 64')
@@ -53,7 +59,8 @@ def scalar(nbt, name):
 
 def snapshot(blocks):
     source, *chutes, target = (block['nbt'] for block in blocks)
-    return dict(source=items(source, 'Items'), target=items(target, 'Items'), target_nbt=target,
+    target_items = {} if 'id:"create:funnel"' in target.replace(' ', '') else items(target, 'Items')
+    return dict(source=items(source, 'Items'), target=target_items, target_nbt=target,
                 chutes=[dict(item=items(chute, 'Item'), position=scalar(chute, 'ItemPosition'),
                              nbt=chute) for chute in chutes])
 
@@ -87,6 +94,14 @@ def verify(cases):
     assert hopper[0]['target'] == {'minecraft:stick': 1}
     assert hopper[6]['target'] == sticks and 'chute_probe:43' in hopper[-1]['target_nbt']
 
+    if 'funnel' in cases:
+        funnel = cases['funnel']
+        assert all('create:funnel' in row['target_nbt'] for row in funnel[:10])
+        assert all(row['chutes'][0]['position'] == 0.5 and row['chutes'][0]['item'] == sticks
+                   for row in funnel[3:10])
+        assert [row['chutes'][0]['position'] for row in funnel[10:13]] == [0.3, 0.10000001, 0.3]
+        assert funnel[12]['target'] == sticks and 'chute_probe:43' in funnel[-1]['target_nbt']
+
 
 def main():
     host = Original()
@@ -110,15 +125,18 @@ def main():
         loaded = True
         host.call('observe_ticks', {'ticks': 24, 'positions': [SOURCE]})
         results = {}
-        for mode in ('single', 'column', 'blocked', 'hopper'):
+        for mode in CASES:
             host.command(f'fill {X - 2} {Y - 3} {Z - 2} {X + 2} {Y + 5} {Z + 2} {AIR}')
             target = fixture(put, host.command, mode)
             points = [SOURCE, UPPER, LOWER, target] if mode == 'column' else [SOURCE, UPPER, target]
             observe(points, 3)
             seed(host.command, mode)
-            if mode == 'blocked':
+            if mode in ('blocked', 'funnel'):
                 rows = observe(points, 10)
-                host.command(f'item replace block {xyz(target)} container.6 with {AIR}')
+                if mode == 'funnel':
+                    put(target, CHEST)
+                else:
+                    host.command(f'item replace block {xyz(target)} container.6 with {AIR}')
                 rows += observe(points, 8)
             else:
                 rows = observe(points, 24)
