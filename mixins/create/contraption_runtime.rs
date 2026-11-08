@@ -26,7 +26,7 @@ use glam::DVec3;
 use horizon_client::collisions::LookupCollisions;
 use horizon_client_render::create_contraption_scene::{
     ACTIVE, ACTOR_VISUAL_KEY, ClockHand, KEY, MAX_BLOCKS, MAX_RECORDS, RECORDS, Record, StrokeKind,
-    dry_slab_type, read,
+    dry_slab_type, dry_straight_stair, read, vanilla_stair,
 };
 use horizon_core::position::BlockPos;
 use horizon_world::{
@@ -154,6 +154,18 @@ pub(super) fn set_records(
 
 type Edit = (Pos, BlockStateId, BlockStateId);
 
+fn stair_neighbors(pos: Pos, is_stair: impl FnMut(Pos) -> bool) -> bool {
+    [
+        Direction::North,
+        Direction::South,
+        Direction::West,
+        Direction::East,
+    ]
+    .into_iter()
+    .filter_map(|face| sticker::neighbor(pos, face))
+    .any(is_stair)
+}
+
 /// All edits and the saved attachment share one column. No save or network
 /// flush runs between the writes. Supported states need no on-place callbacks.
 pub(super) fn commit(
@@ -162,9 +174,27 @@ pub(super) fn commit(
     records: Vec<Record>,
     edits: &[Edit],
 ) -> bool {
-    let mut positions = std::collections::BTreeSet::new();
-    if edits.iter().any(|&(p, before, _)| {
-        !positions.insert(p) || column(p) != key || !resident(game, p) || state(game, p) != before
+    let mut positions = BTreeMap::new();
+    if edits.iter().any(|&(p, before, after)| {
+        positions.insert(p, after).is_some()
+            || column(p) != key
+            || !resident(game, p)
+            || state(game, p) != before
+    }) {
+        return false;
+    }
+    let registry = game.pack.assets.registry;
+    // Straight stair states can be restored without neighbor recomputation.
+    // Check both unchanged terrain and other cells in this landing transaction.
+    if edits.iter().any(|&(p, _, after)| {
+        registry.state(after).is_some_and(dry_straight_stair)
+            && stair_neighbors(p, |neighbor| {
+                let block = positions
+                    .get(&neighbor)
+                    .copied()
+                    .or_else(|| resident(game, neighbor).then(|| state(game, neighbor)));
+                block.is_none_or(|id| registry.state(id).is_some_and(vanilla_stair))
+            })
     }) {
         return false;
     }
@@ -247,7 +277,10 @@ const WOOD_FAMILIES: &[&str] = &[
 ];
 
 fn supported(state: &BlockState) -> bool {
-    if super::create_port_sail::from_state(state).is_some() || dry_slab_type(state).is_some() {
+    if super::create_port_sail::from_state(state).is_some()
+        || dry_slab_type(state).is_some()
+        || dry_straight_stair(state)
+    {
         return true;
     }
     match state.name.as_str() {
@@ -384,7 +417,21 @@ impl CaptureView for Capture<'_, '_> {
         if !supported(state) || state.name == sticker::BLOCK {
             return None;
         }
-        if dry_slab_type(state).is_some()
+        let stair = dry_straight_stair(state);
+        if stair
+            && stair_neighbors(p, |neighbor| {
+                !resident(game, neighbor)
+                    || game
+                        .pack
+                        .assets
+                        .registry
+                        .state(self::state(game, neighbor))
+                        .is_some_and(vanilla_stair)
+            })
+        {
+            return None;
+        }
+        if (stair || dry_slab_type(state).is_some())
             && game
                 .collision
                 .cached_shapes()
@@ -707,6 +754,19 @@ fn rotate_state(state: &BlockState, turn: QuarterTurn) -> Option<BlockState> {
         return None;
     }
     let mut rotated = state.clone();
+    if dry_straight_stair(state) {
+        let facing = Direction::ALL
+            .into_iter()
+            .find(|face| face.name() == state.properties["facing"])?;
+        let (facing, bottom) = rotate_stair(facing, state.properties["half"] == "bottom", turn);
+        rotated
+            .properties
+            .insert("facing".into(), facing.name().into());
+        rotated
+            .properties
+            .insert("half".into(), if bottom { "bottom" } else { "top" }.into());
+        return Some(rotated);
+    }
     // StructureTransform.apply flips slab halves only when an X/Z half turn
     // points the original up face down. A horizontal quarter turn has no
     // standing slab state, so Java keeps its original half when it lands.
@@ -746,6 +806,33 @@ fn rotate_state(state: &BlockState, turn: QuarterTurn) -> Option<BlockState> {
         }
     }
     Some(rotated)
+}
+
+fn rotate_stair(mut facing: Direction, mut bottom: bool, turn: QuarterTurn) -> (Direction, bool) {
+    match turn.facing(Direction::Up) {
+        Direction::Up => (turn.facing(facing), bottom),
+        Direction::Down => (turn.facing(facing), !bottom),
+        up if turn.facing(facing).axis() == Axis::Y => {
+            // StructureTransform.transformStairs encodes a sideways quarter
+            // turn as alternating half and facing changes. The source's
+            // positive 90-degree angle uses COUNTERCLOCKWISE_90 (ordinal 3).
+            let steps = if matches!(up, Direction::South | Direction::West) {
+                3
+            } else {
+                1
+            };
+            for _ in 0..steps {
+                let positive = matches!(facing, Direction::East | Direction::South);
+                if positive ^ bottom ^ (facing.axis() == Axis::Z) {
+                    bottom = !bottom;
+                } else {
+                    facing = facing.opposite();
+                }
+            }
+            (facing, bottom)
+        }
+        _ => (facing, bottom),
+    }
 }
 
 fn replaceable_leaf(

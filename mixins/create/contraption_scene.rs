@@ -480,9 +480,31 @@ pub fn dry_slab_type(state: &BlockState) -> Option<&str> {
         .filter(|kind| matches!(*kind, "bottom" | "top" | "double"))
 }
 
+pub fn vanilla_stair(state: &BlockState) -> bool {
+    state.name.starts_with("minecraft:") && state.name.ends_with("_stairs")
+}
+
+pub fn dry_straight_stair(state: &BlockState) -> bool {
+    matches!(
+        state.name.as_str(),
+        "minecraft:oak_stairs" | "minecraft:stone_stairs"
+    ) && state.properties.len() == 4
+        && state.properties.get("waterlogged").map(String::as_str) == Some("false")
+        && state.properties.get("shape").map(String::as_str) == Some("straight")
+        && state
+            .properties
+            .get("half")
+            .is_some_and(|half| matches!(half.as_str(), "bottom" | "top"))
+        && state
+            .properties
+            .get("facing")
+            .is_some_and(|face| matches!(face.as_str(), "north" | "south" | "east" | "west"))
+}
+
 /// Vanilla payload states that fill a cube without querying collision shapes.
 pub fn full_cube_payload(state: &BlockState) -> bool {
     state.name.starts_with("minecraft:")
+        && !vanilla_stair(state)
         && !matches!(
             state.name.as_str(),
             "minecraft:honey_block" | "minecraft:chest"
