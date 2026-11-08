@@ -349,6 +349,51 @@ pub fn should_use(
     held == Held::Empty || stationary_facing != Some(Direction::Down) || !target.transports_items
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BeltAction {
+    Pass,
+    Hold,
+    Start,
+    Apply,
+}
+
+/// BeltDeployerCallbacks. The entrance and already-held callback test power
+/// and the availability of a recipe at different points in the stroke.
+pub fn belt_action(
+    state: Stationary,
+    held: bool,
+    powered: bool,
+    hand_has_item: bool,
+    matches_recipe: bool,
+) -> BeltAction {
+    if !held {
+        if state.phase != Phase::Waiting {
+            return BeltAction::Hold;
+        }
+        if powered {
+            return BeltAction::Pass;
+        }
+    }
+    if !hand_has_item {
+        return BeltAction::Hold;
+    }
+    if !matches_recipe {
+        return BeltAction::Pass;
+    }
+    if held && state.phase == Phase::Retracting && state.timer == STROKE {
+        return BeltAction::Apply;
+    }
+    if state.phase == Phase::Waiting {
+        if powered {
+            BeltAction::Pass
+        } else {
+            BeltAction::Start
+        }
+    } else {
+        BeltAction::Hold
+    }
+}
+
 /// A downward stationary Deployer delegates item activation to the belt
 /// behaviour even if a stroke began with an empty hand.
 pub fn station_uses_world(facing: Direction, target: Target<'_>) -> bool {
@@ -499,6 +544,60 @@ pub fn punch_progress(before: f32, destroy_progress: f32) -> PunchProgress {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn belt_entrance_and_held_items_follow_source_state_and_power_order() {
+        let waiting = Stationary::default();
+        let expanding = Stationary {
+            phase: Phase::Expanding,
+            ..waiting
+        };
+        let at_apply = Stationary {
+            phase: Phase::Retracting,
+            timer: STROKE,
+            ..waiting
+        };
+        let after_apply = Stationary {
+            timer: STROKE - 1,
+            ..at_apply
+        };
+        assert_eq!(
+            belt_action(waiting, false, true, false, false),
+            BeltAction::Pass
+        );
+        assert_eq!(
+            belt_action(waiting, false, false, false, false),
+            BeltAction::Hold
+        );
+        assert_eq!(
+            belt_action(waiting, false, false, true, false),
+            BeltAction::Pass
+        );
+        assert_eq!(
+            belt_action(waiting, false, false, true, true),
+            BeltAction::Start
+        );
+        assert_eq!(
+            belt_action(expanding, false, true, true, false),
+            BeltAction::Hold
+        );
+        assert_eq!(
+            belt_action(waiting, true, true, false, false),
+            BeltAction::Hold
+        );
+        assert_eq!(
+            belt_action(at_apply, true, true, true, true),
+            BeltAction::Apply
+        );
+        assert_eq!(
+            belt_action(after_apply, true, true, true, true),
+            BeltAction::Hold
+        );
+        assert_eq!(
+            belt_action(at_apply, true, false, true, false),
+            BeltAction::Pass
+        );
+    }
 
     #[test]
     fn stationary_planting_matches_the_observed_java_timer_trace() {

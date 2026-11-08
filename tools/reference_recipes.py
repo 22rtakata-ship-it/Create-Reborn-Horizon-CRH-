@@ -172,7 +172,7 @@ def main():
             for child in value: yield from dependencies(child)
     recipes = {}
     processing = {'create:milling', 'create:crushing', 'create:splashing', 'create:haunting', 'create:mixing', 'create:compacting',
-                  'create:sandpaper_polishing', 'create:cutting'}
+                  'create:sandpaper_polishing', 'create:cutting', 'create:deploying', 'create:sequenced_assembly'}
     cooking = {'minecraft:smelting', 'minecraft:smoking', 'minecraft:blasting'}
     palette_recipes = {
         base + f'create/recipe/{name}_from_stone_types_{stone}_stonecutting.json'
@@ -187,6 +187,17 @@ def main():
         kind = r.get('type', '')
         if kind == 'create:crushing' and name != base + 'create/recipe/crushing/gravel.json':
             continue
+        if kind == 'create:sequenced_assembly' and name != base + 'create/recipe/sequenced_assembly/precision_mechanism.json':
+            continue
+        if kind == 'create:deploying':
+            gears = {'cogwheel.json', 'large_cogwheel.json'}
+            inputs = r.get('ingredients', [])
+            copper = (name.endswith(('_from_adding_wax.json', '_from_removing_wax.json',
+                                     '_from_deoxidising.json'))
+                      and len(inputs) == 2 and inputs[0].get('item', '').startswith('minecraft:')
+                      and r.get('keep_held_item') is True)
+            if name.rsplit('/', 1)[1] not in gears and not copper:
+                continue
         if kind == 'create:mechanical_crafting' and name != base + f'create/recipe/mechanical_crafting/{CRUSHER}.json':
             continue
         palette_cut = kind == 'minecraft:stonecutting' and name in palette_recipes

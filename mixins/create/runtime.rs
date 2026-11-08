@@ -947,24 +947,18 @@ fn slide_depot(game: &mut Game<'_>, pos: [i32; 3], entity: &mut ModBlockEntity) 
         | depot_field(held, "Pos", Tag::Float(next.to_bits()))
         | depot_field(held, "PrevOffset", Tag::Float(side.to_bits()))
         | depot_field(held, "Angle", Tag::Int(angle));
-    let press = [pos[0], pos[1] + 2, pos[2]];
-    if !ready || !super::create_port_belt_press::available(game, press) {
+    let above = [pos[0], pos[1] + 2, pos[2]];
+    let Some(processor) = super::create_port_belt::Processor::at(game, above).filter(|_| ready) else {
         return changed;
-    }
+    };
     let Some(mut item) = super::create_port_belt::read_item(game, tag) else {
         return changed;
     };
-    let update = if item.locked {
-        super::create_port_belt_press::held(game, press, &mut item)
-    } else {
-        if !game
-            .native_block_collision([pos[0], pos[1] + 1, pos[2]])
-            .is_empty()
-        {
-            return changed;
-        }
-        super::create_port_belt_press::received(game, press, &mut item)
-    };
+    let locked = item.locked;
+    if !locked && !game.native_block_collision([pos[0], pos[1] + 1, pos[2]]).is_empty() {
+        return changed;
+    }
+    let update = processor.process(game, above, &mut item, locked);
     let (processed, overflow) = super::create_port_inventory::process_depot(entity, &item, update);
     for stack in overflow {
         game.spawn_item(

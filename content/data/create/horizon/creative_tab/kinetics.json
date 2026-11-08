@@ -91,6 +91,8 @@
     "create:sand_paper",
     "create:red_sand_paper",
     "create:raw_zinc",
-    "create:crafter_slot_cover"
+    "create:crafter_slot_cover",
+    "create:precision_mechanism",
+    "create:crushed_raw_gold"
   ]
 }

@@ -130,6 +130,9 @@ pub const ITEMS: &[&str] = &[
     "red_sand_paper",
     "raw_zinc",
     "crafter_slot_cover",
+    "incomplete_precision_mechanism",
+    "precision_mechanism",
+    "crushed_raw_gold",
 ];
 pub const PARTS: &[&str] = &[
     "shaft",

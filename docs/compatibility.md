@@ -119,8 +119,23 @@ a restart. The 21-Crafter test matches all 62 Java ticks. A full 5×5 grid
 can use a redstone pulse or four Crafter Slot Covers for its empty corners.
 The finished stack can also feed down into an ordinary container. A blocked
 Depot or full container keeps the remainder for retry after a restart.
-Linked input, other recipes, Belt output and parts of the craft animation
-are pending.
+The animation shows ingredients merging and the finished item turning, with
+the export and crafting particles. Scrolling on the Crafter's small belts,
+linked input, other recipes and Belt output remain open.
+
+A downward Deployer can apply the original small and large cogwheel recipes
+to cargo on a Depot or bare horizontal Belt. It also has the original
+vanilla copper wax, unwax and deoxidation recipes. Those recipes keep the
+Honeycomb Block or Axe in the hand, including the Axe's current damage.
+Changing a filter during a stroke lets that stroke finish. While waiting,
+the mod parks a mismatched hand until the player changes it. Java moves
+it to an overflow inventory.
+
+The Precision Mechanism recipe takes five rounds of three tools. A Depot
+keeps the original `create:sequenced_assembly` component through an actual
+restart, and Survival hand transfer retains it. The final roll uses the
+original 150-weight pool. Client-side progress UI, creative inventory
+round-trips and general sequenced recipe types remain open.
 
 
 A dry vertical Brass Funnel can filter with a plain item sample. Downward

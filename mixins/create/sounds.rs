@@ -77,3 +77,10 @@ pub(super) fn crafter_craft(game: &mut Game<'_>, pos: [i32; 3]) {
     crafter_click(game, pos, 2.0);
     event(game, pos, "minecraft:entity.item.break", 0.125, 0.75);
 }
+
+pub(super) fn deployer_apply(game: &mut Game<'_>, pos: [i32; 3], hand_emptied: bool) {
+    if hand_emptied {
+        event(game, pos, "minecraft:entity.item.break", 0.25, 1.0);
+    }
+    event(game, pos, "minecraft:entity.item.pickup", 0.25, 0.75);
+}

@@ -148,6 +148,23 @@ developer source build. The three changes are applied in a separate checkout.
   and raw zinc. The samples come from Minecraft 1.21.1 and 26.3 terrain
   independently.
 
+- [Crafter presentation](tools/crafter_visual_checks.py) compares loaded,
+  merging and crafting frames in both actual clients. The regular 21-Crafter
+  run still matches all 62 phase samples per block after the rendering changes.
+- [Deployer transport](tools/deployer_transport_checks.py) matches all 85
+  ticks in three lanes for ordinary and large Cogwheels and an incompatible
+  input. A native restart preserves the in-flight hand and transport state.
+  [Filter changes during a stroke](tools/deployer_filter_transport_checks.py)
+  match all 16 samples, including both results and the marked hand remainder.
+- [Copper treatment](tools/deployer_copper_checks.py) matches 70 ticks across
+  four lanes, including repeated oxidation removal, one refused input and
+  unchanged tool components and damage.
+- [Precision Mechanism](tools/sequenced_checks.py) compares 21 checkpoints in
+  Java and Horizon, including all 14 saved intermediate components and a
+  native restart after step seven. An independent Survival pickup and
+  re-deposit advances from step one to step two with the same component.
+  Independent random worlds are checked against the source pool.
+
 The [offscreen engineering run](tools/engineering_checks.py) used ordinary
 crank clicks on all six facings and measured the rendered base and handle
 against live shaft speed. It also passed gearbox/clutch/gearshift poses, the

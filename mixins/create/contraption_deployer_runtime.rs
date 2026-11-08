@@ -5,8 +5,9 @@
 // Bounded stationary and mounted Deployer item use.
 
 use super::{
-    Game, create_port as kinetics, create_port_contraption as contraption,
-    create_port_contraption_storage as storage, native_block_entity_draw::BlockEntityDraw,
+    Game, create_port as kinetics, create_port_belt as belt,
+    create_port_contraption as contraption, create_port_contraption_storage as storage,
+    native_block_entity_draw::BlockEntityDraw,
 };
 use crate::{
     containers::{BlockEntity, ModBlockEntity, ModBlockEntityFields},
@@ -15,15 +16,19 @@ use crate::{
 use create_engine::{
     contraption::QuarterTurn,
     deployer::{
-        Aim, Held, Mode, MovingAction, Phase, Segment, Stationary, Target, TickAction, Waiting,
-        grabs_from_storage, moving_action, should_use, stationary_aim, timer_speed,
+        Aim, BeltAction, Held, Mode, MovingAction, Phase, Segment, Stationary, Target, TickAction,
+        Waiting, belt_action, grabs_from_storage, moving_action, should_use, stationary_aim,
+        timer_speed,
     },
     kinetics::{Axis, Pos},
     placement::Direction,
+    sequenced,
+    transport::{ProcessingResult, ProcessingUpdate, Transported, TransportedResult},
 };
 use glam::DVec3;
 use horizon_assets::item_model::DisplayContext;
 use horizon_client_render::create_contraption_scene::{MAX_RECORDS, Record};
+use horizon_core::random::RandomSource;
 use horizon_core::{
     geometry::{Direction as Face, Vec3},
     position::BlockPos,
@@ -41,6 +46,9 @@ use std::collections::BTreeMap;
 pub(super) const BLOCK: &str = "create:deployer";
 const UPDATE_TICK: &str = "create_horizon:DeployerTick";
 const BONE_MEAL: &str = "minecraft:bone_meal";
+const SEQUENCE_COMPONENT: &str = "create:sequenced_assembly";
+const PRECISION_RECIPE: &str = "create:sequenced_assembly/precision_mechanism";
+
 const MAX_DEPLOYERS: usize = 2;
 const SAPLINGS: &[&str] = &[
     "minecraft:oak_sapling",
@@ -387,11 +395,26 @@ fn get<'a>(nbt: &'a Compound, key: &str) -> Option<&'a Tag> {
     nbt.get(&key.into())
 }
 
-fn supported_item(item: &ItemStack) -> bool {
+fn supported_moving_item(item: &ItemStack) -> bool {
     (SAPLINGS.contains(&item.item.as_ref()) || item.item.as_ref() == BONE_MEAL)
         && (1..=64).contains(&item.count)
         && item.damage == 0
         && item.data().is_none()
+}
+
+fn supported_item(item: &ItemStack) -> bool {
+    supported_moving_item(item)
+        || ((item.item.starts_with("minecraft:") && item.item.ends_with("_planks")
+            || matches!(
+                item.item.as_ref(),
+                "create:cogwheel"
+                    | "create:large_cogwheel"
+                    | "minecraft:iron_nugget"
+                    | "minecraft:honeycomb_block"
+            ))
+            && (1..=64).contains(&item.count)
+            && item.damage == 0)
+        || (item.item.starts_with("minecraft:") && item.item.ends_with("_axe") && item.count == 1)
 }
 
 fn held_kind(item: &ItemStack) -> Held<'_> {
@@ -449,11 +472,13 @@ fn valid_nbt(nbt: &Compound) -> bool {
                 _ => false,
             })
         && read_filter(nbt).is_some_and(|filter| {
-            read_hand(nbt).is_some_and(|hand| {
-                filter
-                    .as_ref()
-                    .is_none_or(|filter| hand.as_ref().is_none_or(|held| held.item == filter.item))
-            })
+            filter.as_ref().is_none_or(supported_moving_item)
+                && read_hand(nbt).is_some_and(|hand| {
+                    hand.as_ref().is_none_or(supported_moving_item)
+                        && filter.as_ref().is_none_or(|filter| {
+                            hand.as_ref().is_none_or(|held| held.item == filter.item)
+                        })
+                })
         })
 }
 
@@ -479,6 +504,12 @@ fn read_filter(nbt: &Compound) -> Option<Option<ItemStack>> {
     (supported_item(&stack) && item_to_nbt(&stack) == *filter).then_some(Some(stack))
 }
 
+fn filter_rejects_hand(filter: Option<&ItemStack>, hand: Option<&ItemStack>) -> bool {
+    filter
+        .zip(hand)
+        .is_some_and(|(filter, held)| held.item != filter.item)
+}
+
 fn write_hand(nbt: &mut Compound, hand: Option<ItemStack>) {
     nbt.insert(
         "HeldItem".into(),
@@ -491,12 +522,17 @@ fn write_hand(nbt: &mut Compound, hand: Option<ItemStack>) {
 fn consistent_hand(entity: &ModBlockEntity) -> Option<Option<ItemStack>> {
     let hand = read_hand(&entity.nbt)?;
     // Java-shaped commands may initialize only Inventory. The native slot
-    // tracks hand swaps and is spillable when an ordinary block breaks.
+    // tracks hand swaps and is spillable when an ordinary block breaks. A
+    // stack received from the player's inventory may retain a wire patch.
     (entity.items.len() <= 1
         && entity
             .items
             .first()
-            .is_none_or(|item| item.is_none() || *item == hand))
+            .and_then(Option::as_ref)
+            .is_none_or(|slot| {
+                hand.as_ref()
+                    .is_some_and(|held| slot == held || item_to_nbt(slot) == item_to_nbt(held))
+            }))
     .then_some(hand)
 }
 
@@ -534,6 +570,245 @@ fn station_state(nbt: &Compound) -> Option<Stationary> {
     })
 }
 
+pub(super) fn transports(game: &Game<'_>, pos: Pos) -> bool {
+    game.native_block(pos) == BLOCK
+        && contraption::facing(game, pos) == Some(Direction::Down)
+        && entity(game, pos).is_some_and(|entity| station_state(&entity.nbt).is_some())
+}
+
+enum TransportRecipe {
+    Output(ItemStack),
+    Weighted(Vec<(ItemStack, f32)>),
+}
+
+impl TransportRecipe {
+    fn apply(self, game: &mut Game<'_>) -> Option<ItemStack> {
+        match self {
+            Self::Output(stack) => Some(stack),
+            Self::Weighted(mut pool) => {
+                let weights = pool.iter().map(|(_, weight)| *weight).collect::<Vec<_>>();
+                let index = sequenced::roll_result(&weights, game.world.random.next_float())?;
+                Some(pool.swap_remove(index).0)
+            }
+        }
+    }
+}
+
+fn ingredient_matches(game: &Game<'_>, data: &serde_json::Value, stack: &ItemStack) -> bool {
+    kinetics::ingredient(data)
+        .and_then(|value| game.native_recipe_ingredient(&value))
+        .is_some_and(|ingredient| ingredient.test(stack))
+}
+
+fn sequence_recipe(
+    game: &Game<'_>,
+    input: &ItemStack,
+    hand: &ItemStack,
+) -> Option<TransportRecipe> {
+    let definition = game
+        .native_recipes_of_type("create:sequenced_assembly")
+        .iter()
+        .find(|recipe| recipe.id == PRECISION_RECIPE)?;
+    let data = &definition.json;
+    let transitional = &data["transitional_item"];
+    let step = if let Some(component) = input.data().and_then(|data| data.other(SEQUENCE_COMPONENT))
+    {
+        let (Tag::String(recipe), Tag::Int(step), Tag::Float(_)) = (
+            component.get("id")?,
+            component.get("step")?,
+            component.get("progress")?,
+        ) else {
+            return None;
+        };
+        if recipe != &PRECISION_RECIPE.into() || transitional["id"].as_str()? != input.item.as_ref()
+        {
+            return None;
+        }
+        *step
+    } else {
+        if !ingredient_matches(game, &data["ingredient"], input) {
+            return None;
+        }
+        0
+    };
+    let sequence = data["sequence"].as_array()?;
+    let loops = u32::try_from(data["loops"].as_u64()?).ok()?;
+    let next = sequenced::step(sequence.len(), loops, step)?;
+    let recipe = &sequence[next.recipe_index];
+    let [_, held] = recipe["ingredients"].as_array()?.as_slice() else {
+        return None;
+    };
+    if recipe["type"] != "create:deploying" || !ingredient_matches(game, held, hand) {
+        return None;
+    }
+    if let Some(progress) = next.next {
+        let mut output = game.native_recipe_result(transitional)?;
+        output.data_mut().set_other(
+            SEQUENCE_COMPONENT,
+            Some(Tag::Compound(Compound::from([
+                ("id".into(), Tag::String(PRECISION_RECIPE.into())),
+                ("step".into(), Tag::Int(progress.step)),
+                ("progress".into(), Tag::Float(progress.fraction.to_bits())),
+            ]))),
+        );
+        return Some(TransportRecipe::Output(output));
+    }
+    let pool = data["results"]
+        .as_array()?
+        .iter()
+        .map(|entry| {
+            let weight = entry
+                .get("chance")
+                .map_or(Some(1.0), serde_json::Value::as_f64)? as f32;
+            Some((game.native_recipe_result(entry)?, weight))
+        })
+        .collect::<Option<Vec<_>>>()?;
+    Some(TransportRecipe::Weighted(pool))
+}
+
+fn applied_recipe(
+    game: &Game<'_>,
+    input: &ItemStack,
+    hand: &ItemStack,
+) -> Option<(TransportRecipe, bool)> {
+    if let Some(recipe) = sequence_recipe(game, input, hand) {
+        return Some((recipe, false));
+    }
+    for recipe in game.native_recipes_of_type("create:deploying") {
+        let data = &recipe.json;
+        let Some([base, held]) = data["ingredients"].as_array().map(Vec::as_slice) else {
+            continue;
+        };
+        let Some([result]) = data["results"].as_array().map(Vec::as_slice) else {
+            continue;
+        };
+        let keep_held = data["keep_held_item"].as_bool().unwrap_or(false);
+        let gear = matches!(
+            recipe.id.as_str(),
+            "create:deploying/cogwheel" | "create:deploying/large_cogwheel"
+        );
+        let copper = keep_held
+            && recipe.id.starts_with("create:deploying/")
+            && [
+                "_from_adding_wax",
+                "_from_removing_wax",
+                "_from_deoxidising",
+            ]
+            .into_iter()
+            .any(|suffix| recipe.id.ends_with(suffix));
+        if !gear && !copper {
+            continue;
+        }
+        if ingredient_matches(game, base, input) && ingredient_matches(game, held, hand) {
+            return game
+                .native_recipe_result(result)
+                .map(|stack| (TransportRecipe::Output(stack), keep_held));
+        }
+    }
+    None
+}
+
+fn start_transport(game: &mut Game<'_>, pos: Pos, mut state: Stationary) {
+    let Some(aim) = stationary_aim(pos, Direction::Down) else {
+        return;
+    };
+    let ray = aim.reach_probe();
+    state.start(aim.reach(clip(game, ray).map_or(ray.end, |hit| hit.point)));
+    let tick = game.world.game_time as i32;
+    game.native_with_mod_block_entity(pos, |entity| {
+        entity
+            .nbt
+            .insert("State".into(), Tag::String(state.phase.saved_name().into()));
+        entity.nbt.insert("Timer".into(), Tag::Int(state.timer));
+        entity.data = vec![state.reach.to_bits() as i32, tick];
+    });
+    game.native_block_entity_sync(pos);
+}
+
+pub(super) fn process_transport(
+    game: &mut Game<'_>,
+    pos: Pos,
+    item: &mut Transported<ItemStack>,
+    already_held: bool,
+) -> ProcessingUpdate<ItemStack> {
+    let Some(member) = entity(game, pos) else {
+        return ProcessingResult::Pass.into();
+    };
+    let (Some(state), Some(hand)) = (station_state(&member.nbt), consistent_hand(member)) else {
+        return ProcessingResult::Pass.into();
+    };
+    if kinetics::running_speed(game, &member.nbt) == 0.0 {
+        return ProcessingResult::Pass.into();
+    }
+    let input = belt::game_stack(&item.stack);
+    let recipe = hand
+        .as_ref()
+        .and_then(|stack| applied_recipe(game, &input, stack));
+    let may_start = state.phase != Phase::Waiting
+        || read_filter(&member.nbt)
+            .is_some_and(|filter| !filter_rejects_hand(filter.as_ref(), hand.as_ref()));
+    let dimension = game.dim.id().to_owned();
+    let powered = game.native_neighbor_signal(&dimension, pos) != 0;
+    match belt_action(
+        state,
+        already_held,
+        powered,
+        hand.is_some(),
+        recipe.is_some(),
+    ) {
+        BeltAction::Pass => ProcessingResult::Pass.into(),
+        BeltAction::Hold => ProcessingResult::Hold.into(),
+        BeltAction::Start => {
+            if may_start {
+                start_transport(game, pos, state);
+            }
+            ProcessingResult::Hold.into()
+        }
+        BeltAction::Apply => {
+            let (Some(mut hand), Some((recipe, keep_held))) = (hand, recipe) else {
+                return ProcessingResult::Pass.into();
+            };
+            let Some(result) = recipe.apply(game) else {
+                return ProcessingResult::Pass.into();
+            };
+            let mut empty = false;
+            if !keep_held {
+                hand.count -= 1;
+                empty = hand.count == 0;
+                let hand = (!empty).then_some(hand);
+                if game
+                    .native_with_mod_block_entity(pos, |member| {
+                        member.items = vec![hand.clone()];
+                        write_hand(&mut member.nbt, hand);
+                    })
+                    .is_none()
+                {
+                    return ProcessingResult::Pass.into();
+                }
+                game.native_block_entity_sync(pos);
+            }
+            super::create_port_sounds::deployer_apply(game, pos, empty);
+
+            let mut output = item.source_copy();
+            output.angle = belt::angle(game, &result);
+            output.stack = belt::core_stack(game, result);
+            item.clear_fan_processing();
+            let left = (item.stack.count > 1).then(|| {
+                let mut left = item.source_copy();
+                left.stack.count -= 1;
+                left
+            });
+            ProcessingUpdate {
+                decision: ProcessingResult::Hold,
+                conversion: Some(TransportedResult::Convert {
+                    outputs: vec![output],
+                    held: left,
+                }),
+            }
+        }
+    }
+}
+
 pub(super) fn tick_station(
     game: &mut Game<'_>,
     pos: Pos,
@@ -555,9 +830,6 @@ pub(super) fn tick_station(
     ) else {
         return false;
     };
-    if filter.is_some_and(|filter| hand.as_ref().is_some_and(|held| held.item != filter.item)) {
-        return false;
-    }
     let target = aim.clicked;
     let dim = game.dim.id().to_owned();
     let powered = i8::from(game.native_neighbor_signal(&dim, pos) != 0);
@@ -575,7 +847,11 @@ pub(super) fn tick_station(
     cycle.reach = f32::from_bits(entity.data.first().copied().unwrap_or(0) as u32);
     let previous = cycle;
     let action = cycle.tick(rpm, |_| {
-        if !contraption::resident(game, target) {
+        // Java checks the hand filter only on entering the waiting branch.
+        // Until there is an overflow inventory, keep a mismatched hand parked.
+        if filter_rejects_hand(filter.as_ref(), hand.as_ref())
+            || !contraption::resident(game, target)
+        {
             return Waiting::Locked;
         }
         let block = game.native_block(target);
@@ -610,6 +886,10 @@ pub(super) fn tick_station(
         }
     }
     if matches!(action, TickAction::Activate { .. })
+        && !matches!(
+            game.native_block(target).as_str(),
+            "create:belt" | "create:depot"
+        )
         && let Some(mut stack) = hand
         && use_item(game, aim, &stack, Face::Up)
     {
@@ -1093,7 +1373,7 @@ pub(super) fn plant(game: &mut Game<'_>, record: &Record, local: Pos, aim: Aim) 
                     .is_none_or(|filter| item.item == filter.item)
             },
             |game, item| {
-                supported_item(item)
+                supported_moving_item(item)
                     && update_hand(
                         game,
                         key,

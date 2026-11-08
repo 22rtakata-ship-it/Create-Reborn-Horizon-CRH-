@@ -1335,6 +1335,38 @@ pub(super) fn maintenance(game: &mut Game<'_>) {
     }
 }
 
+#[derive(Clone, Copy)]
+pub(super) enum Processor {
+    Press,
+    Deployer,
+}
+
+impl Processor {
+    pub(super) fn at(game: &Game<'_>, pos: Pos) -> Option<Self> {
+        if super::create_port_belt_press::available(game, pos) {
+            Some(Self::Press)
+        } else if super::create_port_deployer::transports(game, pos) {
+            Some(Self::Deployer)
+        } else {
+            None
+        }
+    }
+
+    pub(super) fn process(
+        self,
+        game: &mut Game<'_>,
+        pos: Pos,
+        item: &mut Moving,
+        held: bool,
+    ) -> transport::ProcessingUpdate<ItemStack> {
+        match self {
+            Self::Press if held => super::create_port_belt_press::held(game, pos, item),
+            Self::Press => super::create_port_belt_press::received(game, pos, item),
+            Self::Deployer => super::create_port_deployer::process_transport(game, pos, item, held),
+        }
+    }
+}
+
 struct WorldHooks<'a, 'g> {
     game: &'a mut Game<'g>,
     origin: Pos,
@@ -1363,10 +1395,7 @@ impl WorldHooks<'_, '_> {
 impl Hooks<ItemStack> for WorldHooks<'_, '_> {
     fn processor(&mut self, segment: i32) -> Option<bool> {
         let p = at(self.origin, self.belt.facing, self.belt.slope, segment);
-        Some(super::create_port_belt_press::available(
-            self.game,
-            [p[0], p[1] + 2, p[2]],
-        ))
+        Some(Processor::at(self.game, [p[0], p[1] + 2, p[2]]).is_some())
     }
     fn processing_blocked(&mut self, segment: i32) -> bool {
         let p = at(self.origin, self.belt.facing, self.belt.slope, segment);
@@ -1381,7 +1410,10 @@ impl Hooks<ItemStack> for WorldHooks<'_, '_> {
         segment: i32,
     ) -> transport::ProcessingUpdate<ItemStack> {
         let p = at(self.origin, self.belt.facing, self.belt.slope, segment);
-        super::create_port_belt_press::received(self.game, [p[0], p[1] + 2, p[2]], item)
+        let pos = [p[0], p[1] + 2, p[2]];
+        Processor::at(self.game, pos)
+            .map_or_else(|| transport::ProcessingResult::Pass.into(),
+                         |processor| processor.process(self.game, pos, item, false))
     }
     fn held_update(
         &mut self,
@@ -1389,7 +1421,10 @@ impl Hooks<ItemStack> for WorldHooks<'_, '_> {
         segment: i32,
     ) -> transport::ProcessingUpdate<ItemStack> {
         let p = at(self.origin, self.belt.facing, self.belt.slope, segment);
-        super::create_port_belt_press::held(self.game, [p[0], p[1] + 2, p[2]], item)
+        let pos = [p[0], p[1] + 2, p[2]];
+        Processor::at(self.game, pos)
+            .map_or_else(|| transport::ProcessingResult::Pass.into(),
+                         |processor| processor.process(self.game, pos, item, true))
     }
     fn ending(&mut self, _positive: bool) -> Ending {
         let target = self.target();

@@ -35,7 +35,9 @@ ITEMS = ['iron_sheet', 'golden_sheet', 'copper_sheet', 'andesite_alloy', 'brass_
 ITEMS.append('super_glue')
 SANDPAPERS = ['sand_paper', 'red_sand_paper']
 ITEMS += ['rose_quartz', 'polished_rose_quartz', 'electron_tube', 'brass_hand'] + SANDPAPERS
-ITEMS.extend(['raw_zinc', 'crafter_slot_cover'])
+ITEMS.extend(['raw_zinc', 'crafter_slot_cover', 'incomplete_precision_mechanism',
+              'precision_mechanism', 'crushed_raw_gold'])
+HIDDEN_CREATIVE_ITEMS = {'incomplete_precision_mechanism'}
 PARTS = ['shaft', 'shaft_half', 'cogwheel', 'large_cogwheel', 'creative_motor/block', 'creative_motor/block_vertical', 'mechanical_press/block', 'mechanical_press/head', 'depot/block', 'hand_crank/handle', 'hand_crank/block', 'gauge/dial', 'gauge/speedometer/head', 'gauge/stressometer/head', 'goggles', 'water_wheel/wheel', 'large_water_wheel/block', 'large_water_wheel/block_extension', 'millstone/block', 'millstone/inner', 'encased_fan/block', 'encased_fan/propeller', 'mechanical_drill/block', 'mechanical_drill/head']
 PARTS += ['belt_pulley', 'belt/particle'] + ['belt/' + part for part in
     ['start', 'middle', 'end', 'start_bottom', 'middle_bottom', 'end_bottom',

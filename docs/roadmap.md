@@ -229,10 +229,19 @@ with the systems they depend on.
   with partial transfer and an actual restart.
 - [x] Empty unlinked Mechanical Crafters in source schematics. Rotation and
   mirror cases match Java, with active or occupied entities rejected atomically.
+- [x] Crafter ingredient merge, finished-item turn and two particle events
+  captured in both clients. The small belt scroll remains pending.
 - [ ] Crafter linked inputs, other recipes, Belt output and full presentation.
+- [x] Downward Deployer over a Depot and bare Belt. Match small and large
+  Cogwheel application, item counts, hand changes and native restart.
+- [x] Downward Deployer for vanilla copper waxing, wax removal and oxidation
+  removal. Preserve the marked tool and its existing damage.
+- [x] Precision Mechanism on a Depot. Match all 15 original steps, saved
+  component, Survival transfer and wrong-tool rejection after a restart.
 - [ ] Remaining Mechanical Saw, Deployer, Spout, Item Drain and Sand Paper
   behavior.
-- [ ] Sequenced Assembly, tools/components of incomplete items and random results.
+- [ ] General Sequenced Assembly, client progress bar and networked creative
+  inventory support for incomplete items.
 - [ ] Smart Observer, Stockpile Switch, Packager, packages and factory logistics.
 
 ## 4. Schematics and contraptions

@@ -12,6 +12,19 @@
         "id": "minecraft:andesite"
       }
     },
+    "create/recipe/blasting/gold_ingot_from_crushed.json": {
+      "type": "minecraft:blasting",
+      "category": "misc",
+      "cookingtime": 100,
+      "experience": 0.1,
+      "ingredient": {
+        "item": "create:crushed_raw_gold"
+      },
+      "result": {
+        "count": 1,
+        "id": "minecraft:gold_ingot"
+      }
+    },
     "create/recipe/blasting/zinc_ingot_from_ore.json": {
       "type": "minecraft:blasting",
       "category": "misc",
@@ -1886,6 +1899,1721 @@
         }
       ]
     },
+    "create/recipe/deploying/chiseled_copper_from_deoxidising.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:exposed_chiseled_copper"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:chiseled_copper"
+        }
+      ]
+    },
+    "create/recipe/deploying/chiseled_copper_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_chiseled_copper"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:chiseled_copper"
+        }
+      ]
+    },
+    "create/recipe/deploying/cogwheel.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "create:shaft"
+        },
+        {
+          "tag": "minecraft:planks"
+        }
+      ],
+      "results": [
+        {
+          "id": "create:cogwheel"
+        }
+      ]
+    },
+    "create/recipe/deploying/copper_block_from_deoxidising.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:exposed_copper"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:copper_block"
+        }
+      ]
+    },
+    "create/recipe/deploying/copper_block_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_copper_block"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:copper_block"
+        }
+      ]
+    },
+    "create/recipe/deploying/copper_bulb_from_deoxidising.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:exposed_copper_bulb"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:copper_bulb"
+        }
+      ]
+    },
+    "create/recipe/deploying/copper_bulb_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_copper_bulb"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:copper_bulb"
+        }
+      ]
+    },
+    "create/recipe/deploying/copper_door_from_deoxidising.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:exposed_copper_door"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:copper_door"
+        }
+      ]
+    },
+    "create/recipe/deploying/copper_door_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_copper_door"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:copper_door"
+        }
+      ]
+    },
+    "create/recipe/deploying/copper_grate_from_deoxidising.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:exposed_copper_grate"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:copper_grate"
+        }
+      ]
+    },
+    "create/recipe/deploying/copper_grate_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_copper_grate"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:copper_grate"
+        }
+      ]
+    },
+    "create/recipe/deploying/copper_trapdoor_from_deoxidising.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:exposed_copper_trapdoor"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:copper_trapdoor"
+        }
+      ]
+    },
+    "create/recipe/deploying/copper_trapdoor_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_copper_trapdoor"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:copper_trapdoor"
+        }
+      ]
+    },
+    "create/recipe/deploying/cut_copper_from_deoxidising.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:exposed_cut_copper"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:cut_copper"
+        }
+      ]
+    },
+    "create/recipe/deploying/cut_copper_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_cut_copper"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:cut_copper"
+        }
+      ]
+    },
+    "create/recipe/deploying/cut_copper_slab_from_deoxidising.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:exposed_cut_copper_slab"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:cut_copper_slab"
+        }
+      ]
+    },
+    "create/recipe/deploying/cut_copper_slab_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_cut_copper_slab"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:cut_copper_slab"
+        }
+      ]
+    },
+    "create/recipe/deploying/cut_copper_stairs_from_deoxidising.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:exposed_cut_copper_stairs"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:cut_copper_stairs"
+        }
+      ]
+    },
+    "create/recipe/deploying/cut_copper_stairs_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_cut_copper_stairs"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:cut_copper_stairs"
+        }
+      ]
+    },
+    "create/recipe/deploying/exposed_chiseled_copper_from_deoxidising.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:weathered_chiseled_copper"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:exposed_chiseled_copper"
+        }
+      ]
+    },
+    "create/recipe/deploying/exposed_chiseled_copper_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_exposed_chiseled_copper"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:exposed_chiseled_copper"
+        }
+      ]
+    },
+    "create/recipe/deploying/exposed_copper_bulb_from_deoxidising.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:weathered_copper_bulb"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:exposed_copper_bulb"
+        }
+      ]
+    },
+    "create/recipe/deploying/exposed_copper_bulb_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_exposed_copper_bulb"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:exposed_copper_bulb"
+        }
+      ]
+    },
+    "create/recipe/deploying/exposed_copper_door_from_deoxidising.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:weathered_copper_door"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:exposed_copper_door"
+        }
+      ]
+    },
+    "create/recipe/deploying/exposed_copper_door_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_exposed_copper_door"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:exposed_copper_door"
+        }
+      ]
+    },
+    "create/recipe/deploying/exposed_copper_from_deoxidising.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:weathered_copper"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:exposed_copper"
+        }
+      ]
+    },
+    "create/recipe/deploying/exposed_copper_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_exposed_copper"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:exposed_copper"
+        }
+      ]
+    },
+    "create/recipe/deploying/exposed_copper_grate_from_deoxidising.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:weathered_copper_grate"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:exposed_copper_grate"
+        }
+      ]
+    },
+    "create/recipe/deploying/exposed_copper_grate_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_exposed_copper_grate"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:exposed_copper_grate"
+        }
+      ]
+    },
+    "create/recipe/deploying/exposed_copper_trapdoor_from_deoxidising.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:weathered_copper_trapdoor"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:exposed_copper_trapdoor"
+        }
+      ]
+    },
+    "create/recipe/deploying/exposed_copper_trapdoor_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_exposed_copper_trapdoor"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:exposed_copper_trapdoor"
+        }
+      ]
+    },
+    "create/recipe/deploying/exposed_cut_copper_from_deoxidising.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:weathered_cut_copper"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:exposed_cut_copper"
+        }
+      ]
+    },
+    "create/recipe/deploying/exposed_cut_copper_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_exposed_cut_copper"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:exposed_cut_copper"
+        }
+      ]
+    },
+    "create/recipe/deploying/exposed_cut_copper_slab_from_deoxidising.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:weathered_cut_copper_slab"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:exposed_cut_copper_slab"
+        }
+      ]
+    },
+    "create/recipe/deploying/exposed_cut_copper_slab_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_exposed_cut_copper_slab"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:exposed_cut_copper_slab"
+        }
+      ]
+    },
+    "create/recipe/deploying/exposed_cut_copper_stairs_from_deoxidising.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:weathered_cut_copper_stairs"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:exposed_cut_copper_stairs"
+        }
+      ]
+    },
+    "create/recipe/deploying/exposed_cut_copper_stairs_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_exposed_cut_copper_stairs"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:exposed_cut_copper_stairs"
+        }
+      ]
+    },
+    "create/recipe/deploying/large_cogwheel.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "create:cogwheel"
+        },
+        {
+          "tag": "minecraft:planks"
+        }
+      ],
+      "results": [
+        {
+          "id": "create:large_cogwheel"
+        }
+      ]
+    },
+    "create/recipe/deploying/oxidized_chiseled_copper_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_oxidized_chiseled_copper"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:oxidized_chiseled_copper"
+        }
+      ]
+    },
+    "create/recipe/deploying/oxidized_copper_bulb_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_oxidized_copper_bulb"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:oxidized_copper_bulb"
+        }
+      ]
+    },
+    "create/recipe/deploying/oxidized_copper_door_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_oxidized_copper_door"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:oxidized_copper_door"
+        }
+      ]
+    },
+    "create/recipe/deploying/oxidized_copper_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_oxidized_copper"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:oxidized_copper"
+        }
+      ]
+    },
+    "create/recipe/deploying/oxidized_copper_grate_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_oxidized_copper_grate"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:oxidized_copper_grate"
+        }
+      ]
+    },
+    "create/recipe/deploying/oxidized_copper_trapdoor_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_oxidized_copper_trapdoor"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:oxidized_copper_trapdoor"
+        }
+      ]
+    },
+    "create/recipe/deploying/oxidized_cut_copper_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_oxidized_cut_copper"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:oxidized_cut_copper"
+        }
+      ]
+    },
+    "create/recipe/deploying/oxidized_cut_copper_slab_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_oxidized_cut_copper_slab"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:oxidized_cut_copper_slab"
+        }
+      ]
+    },
+    "create/recipe/deploying/oxidized_cut_copper_stairs_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_oxidized_cut_copper_stairs"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:oxidized_cut_copper_stairs"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_chiseled_copper_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:chiseled_copper"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_chiseled_copper"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_copper_block_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:copper_block"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_copper_block"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_copper_bulb_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:copper_bulb"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_copper_bulb"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_copper_door_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:copper_door"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_copper_door"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_copper_grate_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:copper_grate"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_copper_grate"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_copper_trapdoor_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:copper_trapdoor"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_copper_trapdoor"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_cut_copper_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:cut_copper"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_cut_copper"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_cut_copper_slab_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:cut_copper_slab"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_cut_copper_slab"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_cut_copper_stairs_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:cut_copper_stairs"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_cut_copper_stairs"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_exposed_chiseled_copper_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:exposed_chiseled_copper"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_exposed_chiseled_copper"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_exposed_copper_bulb_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:exposed_copper_bulb"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_exposed_copper_bulb"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_exposed_copper_door_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:exposed_copper_door"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_exposed_copper_door"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_exposed_copper_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:exposed_copper"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_exposed_copper"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_exposed_copper_grate_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:exposed_copper_grate"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_exposed_copper_grate"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_exposed_copper_trapdoor_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:exposed_copper_trapdoor"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_exposed_copper_trapdoor"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_exposed_cut_copper_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:exposed_cut_copper"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_exposed_cut_copper"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_exposed_cut_copper_slab_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:exposed_cut_copper_slab"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_exposed_cut_copper_slab"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_exposed_cut_copper_stairs_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:exposed_cut_copper_stairs"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_exposed_cut_copper_stairs"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_oxidized_chiseled_copper_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:oxidized_chiseled_copper"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_oxidized_chiseled_copper"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_oxidized_copper_bulb_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:oxidized_copper_bulb"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_oxidized_copper_bulb"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_oxidized_copper_door_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:oxidized_copper_door"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_oxidized_copper_door"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_oxidized_copper_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:oxidized_copper"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_oxidized_copper"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_oxidized_copper_grate_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:oxidized_copper_grate"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_oxidized_copper_grate"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_oxidized_copper_trapdoor_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:oxidized_copper_trapdoor"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_oxidized_copper_trapdoor"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_oxidized_cut_copper_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:oxidized_cut_copper"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_oxidized_cut_copper"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_oxidized_cut_copper_slab_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:oxidized_cut_copper_slab"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_oxidized_cut_copper_slab"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_oxidized_cut_copper_stairs_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:oxidized_cut_copper_stairs"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_oxidized_cut_copper_stairs"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_weathered_chiseled_copper_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:weathered_chiseled_copper"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_weathered_chiseled_copper"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_weathered_copper_bulb_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:weathered_copper_bulb"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_weathered_copper_bulb"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_weathered_copper_door_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:weathered_copper_door"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_weathered_copper_door"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_weathered_copper_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:weathered_copper"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_weathered_copper"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_weathered_copper_grate_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:weathered_copper_grate"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_weathered_copper_grate"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_weathered_copper_trapdoor_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:weathered_copper_trapdoor"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_weathered_copper_trapdoor"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_weathered_cut_copper_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:weathered_cut_copper"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_weathered_cut_copper"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_weathered_cut_copper_slab_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:weathered_cut_copper_slab"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_weathered_cut_copper_slab"
+        }
+      ]
+    },
+    "create/recipe/deploying/waxed_weathered_cut_copper_stairs_from_adding_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:weathered_cut_copper_stairs"
+        },
+        {
+          "item": "minecraft:honeycomb_block"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:waxed_weathered_cut_copper_stairs"
+        }
+      ]
+    },
+    "create/recipe/deploying/weathered_chiseled_copper_from_deoxidising.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:oxidized_chiseled_copper"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:weathered_chiseled_copper"
+        }
+      ]
+    },
+    "create/recipe/deploying/weathered_chiseled_copper_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_weathered_chiseled_copper"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:weathered_chiseled_copper"
+        }
+      ]
+    },
+    "create/recipe/deploying/weathered_copper_bulb_from_deoxidising.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:oxidized_copper_bulb"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:weathered_copper_bulb"
+        }
+      ]
+    },
+    "create/recipe/deploying/weathered_copper_bulb_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_weathered_copper_bulb"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:weathered_copper_bulb"
+        }
+      ]
+    },
+    "create/recipe/deploying/weathered_copper_door_from_deoxidising.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:oxidized_copper_door"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:weathered_copper_door"
+        }
+      ]
+    },
+    "create/recipe/deploying/weathered_copper_door_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_weathered_copper_door"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:weathered_copper_door"
+        }
+      ]
+    },
+    "create/recipe/deploying/weathered_copper_from_deoxidising.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:oxidized_copper"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:weathered_copper"
+        }
+      ]
+    },
+    "create/recipe/deploying/weathered_copper_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_weathered_copper"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:weathered_copper"
+        }
+      ]
+    },
+    "create/recipe/deploying/weathered_copper_grate_from_deoxidising.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:oxidized_copper_grate"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:weathered_copper_grate"
+        }
+      ]
+    },
+    "create/recipe/deploying/weathered_copper_grate_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_weathered_copper_grate"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:weathered_copper_grate"
+        }
+      ]
+    },
+    "create/recipe/deploying/weathered_copper_trapdoor_from_deoxidising.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:oxidized_copper_trapdoor"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:weathered_copper_trapdoor"
+        }
+      ]
+    },
+    "create/recipe/deploying/weathered_copper_trapdoor_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_weathered_copper_trapdoor"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:weathered_copper_trapdoor"
+        }
+      ]
+    },
+    "create/recipe/deploying/weathered_cut_copper_from_deoxidising.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:oxidized_cut_copper"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:weathered_cut_copper"
+        }
+      ]
+    },
+    "create/recipe/deploying/weathered_cut_copper_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_weathered_cut_copper"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:weathered_cut_copper"
+        }
+      ]
+    },
+    "create/recipe/deploying/weathered_cut_copper_slab_from_deoxidising.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:oxidized_cut_copper_slab"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:weathered_cut_copper_slab"
+        }
+      ]
+    },
+    "create/recipe/deploying/weathered_cut_copper_slab_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_weathered_cut_copper_slab"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:weathered_cut_copper_slab"
+        }
+      ]
+    },
+    "create/recipe/deploying/weathered_cut_copper_stairs_from_deoxidising.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:oxidized_cut_copper_stairs"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:weathered_cut_copper_stairs"
+        }
+      ]
+    },
+    "create/recipe/deploying/weathered_cut_copper_stairs_from_removing_wax.json": {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "minecraft:waxed_weathered_cut_copper_stairs"
+        },
+        {
+          "tag": "minecraft:axes"
+        }
+      ],
+      "keep_held_item": true,
+      "results": [
+        {
+          "id": "minecraft:weathered_cut_copper_stairs"
+        }
+      ]
+    },
     "create/recipe/diorite_from_stone_types_diorite_stonecutting.json": {
       "type": "minecraft:stonecutting",
       "ingredient": {
@@ -3362,6 +5090,102 @@
         }
       ]
     },
+    "create/recipe/sequenced_assembly/precision_mechanism.json": {
+      "type": "create:sequenced_assembly",
+      "ingredient": {
+        "tag": "c:plates/gold"
+      },
+      "loops": 5,
+      "results": [
+        {
+          "chance": 120.0,
+          "id": "create:precision_mechanism"
+        },
+        {
+          "chance": 8.0,
+          "id": "create:golden_sheet"
+        },
+        {
+          "chance": 8.0,
+          "id": "create:andesite_alloy"
+        },
+        {
+          "chance": 5.0,
+          "id": "create:cogwheel"
+        },
+        {
+          "chance": 3.0,
+          "id": "minecraft:gold_nugget"
+        },
+        {
+          "chance": 2.0,
+          "id": "create:shaft"
+        },
+        {
+          "chance": 2.0,
+          "id": "create:crushed_raw_gold"
+        },
+        {
+          "id": "minecraft:iron_ingot"
+        },
+        {
+          "id": "minecraft:clock"
+        }
+      ],
+      "sequence": [
+        {
+          "type": "create:deploying",
+          "ingredients": [
+            {
+              "item": "create:incomplete_precision_mechanism"
+            },
+            {
+              "item": "create:cogwheel"
+            }
+          ],
+          "results": [
+            {
+              "id": "create:incomplete_precision_mechanism"
+            }
+          ]
+        },
+        {
+          "type": "create:deploying",
+          "ingredients": [
+            {
+              "item": "create:incomplete_precision_mechanism"
+            },
+            {
+              "item": "create:large_cogwheel"
+            }
+          ],
+          "results": [
+            {
+              "id": "create:incomplete_precision_mechanism"
+            }
+          ]
+        },
+        {
+          "type": "create:deploying",
+          "ingredients": [
+            {
+              "item": "create:incomplete_precision_mechanism"
+            },
+            {
+              "tag": "c:nuggets/iron"
+            }
+          ],
+          "results": [
+            {
+              "id": "create:incomplete_precision_mechanism"
+            }
+          ]
+        }
+      ],
+      "transitional_item": {
+        "id": "create:incomplete_precision_mechanism"
+      }
+    },
     "create/recipe/small_andesite_bricks_from_stone_types_andesite_stonecutting.json": {
       "type": "minecraft:stonecutting",
       "ingredient": {
@@ -3405,6 +5229,19 @@
         "id": "minecraft:bread"
       }
     },
+    "create/recipe/smelting/gold_ingot_from_crushed.json": {
+      "type": "minecraft:smelting",
+      "category": "misc",
+      "cookingtime": 200,
+      "experience": 0.1,
+      "ingredient": {
+        "item": "create:crushed_raw_gold"
+      },
+      "result": {
+        "count": 1,
+        "id": "minecraft:gold_ingot"
+      }
+    },
     "create/recipe/smelting/zinc_ingot_from_ore.json": {
       "type": "minecraft:smelting",
       "category": "misc",
@@ -3443,6 +5280,24 @@
         "count": 1,
         "id": "minecraft:bread"
       }
+    },
+    "create/recipe/splashing/crushed_raw_gold.json": {
+      "type": "create:splashing",
+      "ingredients": [
+        {
+          "item": "create:crushed_raw_gold"
+        }
+      ],
+      "results": [
+        {
+          "count": 9,
+          "id": "minecraft:gold_nugget"
+        },
+        {
+          "chance": 0.5,
+          "id": "minecraft:quartz"
+        }
+      ]
     },
     "create/recipe/splashing/gravel.json": {
       "type": "create:splashing",
@@ -5871,6 +7726,16 @@
         "minecraft:andesite"
       ]
     },
+    "c/tags/item/nuggets/iron.json": {
+      "values": [
+        "minecraft:iron_nugget"
+      ]
+    },
+    "c/tags/item/plates/gold.json": {
+      "values": [
+        "create:golden_sheet"
+      ]
+    },
     "c/tags/item/ingots/gold.json": {
       "values": [
         "minecraft:gold_ingot"
@@ -5894,11 +7759,6 @@
     "c/tags/item/nuggets/zinc.json": {
       "values": [
         "create:zinc_nugget"
-      ]
-    },
-    "c/tags/item/nuggets/iron.json": {
-      "values": [
-        "minecraft:iron_nugget"
       ]
     },
     "c/tags/item/stones.json": {
@@ -5995,11 +7855,6 @@
     "c/tags/item/rods/wooden.json": {
       "values": [
         "minecraft:stick"
-      ]
-    },
-    "c/tags/item/plates/gold.json": {
-      "values": [
-        "create:golden_sheet"
       ]
     },
     "c/tags/item/slimeballs.json": {

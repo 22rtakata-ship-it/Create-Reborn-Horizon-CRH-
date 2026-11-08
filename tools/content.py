@@ -5,7 +5,7 @@ Models reference vanilla textures by ID and contain no upstream texture bytes.
 """
 import json
 from common import ROOT, NATIVE
-from catalog import IRON_PALETTE, PALETTE_BLOCKS, STONE_PALETTES, ZINC_BLOCKS
+from catalog import HIDDEN_CREATIVE_ITEMS, IRON_PALETTE, PALETTE_BLOCKS, STONE_PALETTES, ZINC_BLOCKS
 from pulley_content import rope_pulley
 from gantry_content import gantry
 from sail_content import COLORED_SAILS, sails
@@ -768,7 +768,8 @@ def foundation():
                   "rose_quartz": "amethyst_shard", "polished_rose_quartz": "quartz",
                   "sand_paper": "paper", "red_sand_paper": "paper",
                   "electron_tube": "redstone_torch", "brass_hand": "gold_ingot",
-                  "crafter_slot_cover": "gold_nugget"}.get(item, "iron_ingot")
+                  "crafter_slot_cover": "gold_nugget", "incomplete_precision_mechanism": "iron_nugget",
+                  "precision_mechanism": "clock", "crushed_raw_gold": "raw_gold"}.get(item, "iron_ingot")
         write("assets/create/models/item/" + item + ".json", {"parent": "minecraft:item/generated", "textures": {"layer0": "minecraft:item/" + sprite}})
         write("assets/create/items/" + item + ".json", {"model": {"type": "minecraft:model", "model": "create:item/" + item}})
         if item=='goggles':
@@ -837,12 +838,22 @@ def foundation():
         write("data/minecraft/tags/damage_type/" + tag + ".json", {
             "values": ["create:fan_fire", "create:fan_lava"],
         })
-    write("data/create/horizon/creative_tab/kinetics.json", {"title": "itemGroup.create.base", "icon": "create:cogwheel", "items": ["create:" + name for name in all_blocks + ITEMS if name not in PALETTE_BLOCKS]})
+    write("data/create/horizon/creative_tab/kinetics.json", {
+        "title": "itemGroup.create.base",
+        "icon": "create:cogwheel",
+        "items": [
+            "create:" + name for name in all_blocks + ITEMS
+            if name not in PALETTE_BLOCKS and name not in HIDDEN_CREATIVE_ITEMS
+        ],
+    })
     write('data/minecraft/tags/item/enchantable/durability.json', {'values': ['create:super_glue']})
     # These fallback labels are ours; the JAR replaces them with all upstream locales.
     extra_blocks = {"gearbox":"Gearbox","clutch":"Clutch","gearshift":"Gearshift","hand_crank":"Hand Crank","andesite_encased_shaft":"Andesite Encased Shaft","brass_encased_shaft":"Brass Encased Shaft","andesite_casing":"Andesite Casing","brass_casing":"Brass Casing","andesite_alloy_block":"Block of Andesite Alloy","brass_block":"Block of Brass","zinc_block":"Block of Zinc","speedometer":"Speedometer","stressometer":"Stressometer","water_wheel":"Water Wheel","large_water_wheel":"Large Water Wheel","millstone":"Millstone","encased_fan":"Encased Fan","mechanical_drill":"Mechanical Drill"}
     extra_items = {"andesite_alloy":"Andesite Alloy","brass_ingot":"Brass Ingot","brass_nugget":"Brass Nugget","zinc_ingot":"Zinc Ingot","zinc_nugget":"Zinc Nugget","wrench":"Wrench","brass_sheet":"Brass Sheet","vertical_gearbox":"Vertical Gearbox","goggles":"Engineer’s Goggles","propeller":"Propeller","wheat_flour":"Wheat Flour","dough":"Dough"}
-    extra_items['crafter_slot_cover'] = 'Crafter Slot Cover'
+    extra_items.update({'crafter_slot_cover': 'Crafter Slot Cover',
+                        'incomplete_precision_mechanism': 'Incomplete Precision Mechanism',
+                        'precision_mechanism': 'Precision Mechanism',
+                        'crushed_raw_gold': 'Crushed Raw Gold'})
     extra_blocks.update({'basin': 'Basin', 'mechanical_mixer': 'Mechanical Mixer'})
     extra_blocks.update({'blaze_burner': 'Blaze Burner', 'lit_blaze_burner': 'Lit Blaze Burner'})
     extra_blocks['encased_chain_drive'] = 'Encased Chain Drive'
@@ -973,7 +984,10 @@ def foundation():
             lang['block.create.' + BRASS_FUNNEL] = 'Латунный шлюз'
             lang['block.create.' + CRUSHER] = 'Дробильное колесо'
             lang['block.create.' + CRAFTER] = 'Механический сборщик'
-            lang['item.create.crafter_slot_cover'] = 'Заглушка слота сборщика'
+            lang.update({'item.create.crafter_slot_cover': 'Заглушка слота сборщика',
+                         'item.create.incomplete_precision_mechanism': 'Незаконченный механизм точности',
+                         'item.create.precision_mechanism': 'Механизм точности',
+                         'item.create.crushed_raw_gold': 'Дроблёное рудное золото'})
             lang['block.create.' + ITEM_DRAIN] = 'Осушитель предметов'
             lang['block.create.' + STICKER] = 'Блок-липучка'
             lang.update({"block.create.mechanical_piston": "Механический поршень",

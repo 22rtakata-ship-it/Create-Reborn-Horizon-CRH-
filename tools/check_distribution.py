@@ -3,7 +3,10 @@
 import json
 import re
 from common import ROOT, NATIVE, PINS
-from catalog import BLOCKS, EXTRA_MODELS, INTERNAL_BLOCKS, ITEMS, PALETTE_BLOCKS, PARTS, rust_catalog
+from catalog import (
+    BLOCKS, EXTRA_MODELS, HIDDEN_CREATIVE_ITEMS, INTERNAL_BLOCKS, ITEMS,
+    PALETTE_BLOCKS, PARTS, rust_catalog,
+)
 
 
 def main():
@@ -39,7 +42,11 @@ def main():
             for path in (content / "data/create/horizon/creative_tab").glob("*.json")}
     assert set(tabs) == {"kinetics", "palettes"}
     assert tabs["kinetics"]["title"] == "itemGroup.create.base"
-    assert tabs["kinetics"]["items"] == ["create:" + name for name in BLOCKS + ITEMS if name not in PALETTE_BLOCKS]
+    assert HIDDEN_CREATIVE_ITEMS <= set(ITEMS)
+    assert tabs["kinetics"]["items"] == [
+        "create:" + name for name in BLOCKS + ITEMS
+        if name not in PALETTE_BLOCKS and name not in HIDDEN_CREATIVE_ITEMS
+    ]
     assert tabs["palettes"]["title"] == "itemGroup.create.palettes"
     assert tabs["palettes"]["items"] == ["create:" + name for name in PALETTE_BLOCKS]
     assert len(list((content / "data/create/recipe").rglob("*.json"))) == len(reference["recipes"])

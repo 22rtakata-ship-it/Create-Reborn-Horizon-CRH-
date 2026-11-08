@@ -60,6 +60,9 @@ pub mod drilling;
 #[path = "core/saw_processing.rs"]
 pub mod saw_processing;
 
+#[path = "core/sequenced.rs"]
+pub mod sequenced;
+
 #[path = "core/audio.rs"]
 pub mod audio;
 
