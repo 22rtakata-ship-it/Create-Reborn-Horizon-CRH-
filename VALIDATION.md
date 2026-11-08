@@ -64,6 +64,9 @@ developer source build. The three changes are applied in a separate checkout.
   partial insertion into a nearly full slot and retention through a restart.
 - [Belt-to-Chute-to-Belt](tools/belt_chute_checks.py) matches 120 warm,
   cold, release and running samples across plain and Smart Chute lanes.
+  Two Java restarts produced different ticker orders, advancing the first
+  Smart Chute transfer by one tick in one run. The comparison accepts a
+  complete match to either measured Java trace via repeated `--reference`.
   An incomplete native receiver retains the marked cargo in the Chute until
   it is replaced by a complete Belt.
 - [Chute-fed Crushing Wheels](tools/crushing_wheel_checks.py) match 357

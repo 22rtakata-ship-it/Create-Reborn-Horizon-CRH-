@@ -201,14 +201,16 @@ def incomplete_output(session):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    for name in ('game', 'resources', 'ctl', 'reference'):
+    for name in ('game', 'resources', 'ctl'):
         parser.add_argument('--' + name, type=Path)
+    parser.add_argument('--reference', type=Path, action='append',
+                        help='A full Java trace. Repeat for another observed ticker order.')
     args = parser.parse_args()
     if args.game:
         if not all((args.resources, args.ctl, args.reference)):
             parser.error('Horizon requires --game, --resources, --ctl and --reference')
-        reference = json.loads(args.reference.read_text())
-        assert reference['passed'] and reference['create'] == PINS['create_revision']
+        references = [json.loads(path.read_text()) for path in args.reference]
+        assert all(row['passed'] and row['create'] == PINS['create_revision'] for row in references)
         session = NativeCheckSession(args.game, args.resources, args.ctl, None, graphics=False,
                                      name='belt-chute-native', world='BeltChute')
         work = session.scratch
@@ -228,9 +230,17 @@ def main():
     path.write_text(json.dumps(report, indent=2) + '\n')
     verify(phases)
     if args.game:
-        for name, rows in phases.items():
-            for tick, (actual, original) in enumerate(zip(rows, reference['phases'][name], strict=True), 1):
-                assert actual == original, (name, tick, actual, original)
+        matches = [path.parent.name for path, row in zip(args.reference, references, strict=True)
+                   if phases == row['phases']]
+        if not matches:
+            differences = [
+                [(name, tick) for name, rows in phases.items()
+                 for tick, (actual, original) in enumerate(
+                     zip(rows, reference['phases'][name], strict=True), 1) if actual != original]
+                for reference in references
+            ]
+            raise AssertionError(('No full Java trace matched', min(differences, key=len)))
+        report['matching_java'] = matches
     report['passed'] = True
     path.write_text(json.dumps(report, indent=2) + '\n')
     print(path)
