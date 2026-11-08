@@ -134,6 +134,10 @@ color of the full Belt. Dry horizontal Belts carry grounded local players
 across bare segments and segments with Andesite or Brass Casing. Sloped
 Belts and other passenger types remain open.
 
+The original JAR supplies the full scrolling strips for plain and dyed Belts.
+The private import keeps both halves available to the renderer. Without a JAR,
+the simplified Belt surface uses static vanilla textures.
+
 Mechanical Crafters support manual front-slot loading and the original
 5×5 Crushing Wheel recipe in a same-facing array inside one chunk column.
 The finished stack drops at the front of the last Crafter or enters a Depot.

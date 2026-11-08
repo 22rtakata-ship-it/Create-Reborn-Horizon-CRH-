@@ -193,7 +193,9 @@ with the systems they depend on.
   The remaining two phases share a Java source loop on one horizontal lane.
   Replacing a belt preserves the new chain and ejects the old load once.
   [Motion review](reviews/belt-motion.md)
-- [ ] Belts: frame-by-frame scrolling, item shadows, complete lifecycle and IO.
+- [x] Original Belt scroll strips retain their full height. Frame captures on
+  straight and sloped belts keep the stripes visible at every sampled step.
+- [ ] Belts: exact render phase and lighting, item shadows, complete lifecycle and IO.
 - [x] Dry horizontal Belts carry a grounded local player across bare segments
   and segments with Andesite or Brass Casing. Compare both X directions,
   Z movement, steering, crouching, a stop and a wall.

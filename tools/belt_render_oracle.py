@@ -141,7 +141,7 @@ def run(output):
     motor_context = '\n'.join([
         '#[derive(Clone, Copy)] struct Side([i32; 3]);',
         'impl Side {' + function(motor, 'fn axis(') + '}',
-        'struct MotorPlan {facing: Side, side: Side}',
+        'struct MotorPlan {motor_facing: Option<Side>, side: Side}',
         'impl MotorPlan {' + function(motor, 'fn side_active(') + '}',
     ])
     rust = (ROOT / 'tools/rust/belt_render_probe.rs.in').read_text()

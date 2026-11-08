@@ -162,6 +162,34 @@ fn imports_every_locale_byte_for_byte() {
 }
 
 #[test]
+fn belt_scroll_strips_are_copied_verbatim_to_the_uncropped_atlas_path() {
+    let mut strips = BTreeMap::new();
+    let bytes = fixture(|files| {
+        for (path, bytes) in files.iter_mut() {
+            if let Some(name) = path.strip_prefix("assets/create/textures/block/")
+                && (name.starts_with("belt/") || name.starts_with("belt_"))
+                && name.ends_with("_scroll.png")
+            {
+                bytes.extend_from_slice(name.as_bytes());
+                strips.insert(name.to_owned(), bytes.clone());
+            }
+        }
+    });
+    assert_eq!(strips.len(), 2 + 2 * BELT_DYES.len());
+    let files = collect(bytes).unwrap();
+    for (name, bytes) in strips {
+        assert_eq!(
+            files[&format!("assets/create/textures/block/{name}")],
+            bytes
+        );
+        assert_eq!(
+            files[&format!("assets/create/textures/gui/scrolling/{name}")],
+            bytes
+        );
+    }
+}
+
+#[test]
 fn processor_parts_and_ingredients_are_required_without_accepting_java_loaders() {
     let home = Stage::new(&std::env::temp_dir()).unwrap();
     let required = [

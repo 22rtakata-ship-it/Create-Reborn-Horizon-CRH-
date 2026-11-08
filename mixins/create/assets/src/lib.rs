@@ -16,7 +16,7 @@ pub const CREATE_VERSION: &str = "6.0.10+mc1.21.1 (NeoForge)";
 pub const JAR_SHA256: &str = "ef87fe5709f1ba1f5b8bb20a2925b5afb4669e178fd6d8bf10c167759eefe37a";
 // Bump whenever the import catalog changes: the cache key pins the JAR, not
 // BLOCKS/ITEMS/PARTS, so an older valid cache lacks newly required resources.
-const SCHEMA: u32 = 44;
+const SCHEMA: u32 = 45;
 const MAX_JAR: u64 = 128 << 20;
 const MAX_FILE: u64 = 16 << 20;
 const MAX_TOTAL: usize = 64 << 20;
@@ -505,6 +505,18 @@ impl Reader {
         Ok(())
     }
 
+    fn scrolling_block_texture(&mut self, name: &str) -> io::Result<()> {
+        self.texture(&format!("create:block/{name}"))?;
+        let strip = self.files[&format!("assets/create/textures/block/{name}.png")].clone();
+        // The quad API reads the HUD atlas, which crops rectangular block sprites
+        // to a square. A GUI sprite keeps the full strip for manual UV scrolling.
+        self.files.insert(
+            format!("assets/create/textures/gui/scrolling/{name}.png"),
+            strip,
+        );
+        Ok(())
+    }
+
     fn model(&mut self, id: &str) -> io::Result<()> {
         let Some(path) = resource_path(id, "models", "json")? else {
             return Ok(());
@@ -720,11 +732,11 @@ fn collect(bytes: Vec<u8>) -> io::Result<BTreeMap<String, Vec<u8>>> {
     reader.json("assets/create/sounds.json")?;
     reader.texture("create:gui/value_settings")?;
     reader.texture("create:gui/icons")?;
-    reader.texture("create:block/belt_scroll")?;
-    reader.texture("create:block/belt_diagonal_scroll")?;
+    reader.scrolling_block_texture("belt_scroll")?;
+    reader.scrolling_block_texture("belt_diagonal_scroll")?;
     for dye in BELT_DYES {
-        reader.texture(&format!("create:block/belt/{dye}_scroll"))?;
-        reader.texture(&format!("create:block/belt/{dye}_diagonal_scroll"))?;
+        reader.scrolling_block_texture(&format!("belt/{dye}_scroll"))?;
+        reader.scrolling_block_texture(&format!("belt/{dye}_diagonal_scroll"))?;
     }
     reader.texture("create:block/blaze_burner_flame_scroll")?;
     reader.texture("create:block/blaze_burner_flame_superheated_scroll")?;

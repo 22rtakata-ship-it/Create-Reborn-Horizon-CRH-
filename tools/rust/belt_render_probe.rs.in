@@ -71,6 +71,22 @@ fn facing(g: &Game<'_>, _: Pos) -> Direction {
 fn part(g: &Game<'_>, _: Pos) -> Part {
     g.part
 }
+fn cased(_: &Game<'_>, _: Pos) -> bool {
+    false
+}
+fn draw_casing(
+    _: &Game<'_>,
+    _: &mut BlockEntityDraw,
+    _: &ModBlockEntity,
+    _: Direction,
+    _: Slope,
+    _: Part,
+) {
+    unreachable!("the oracle uses bare belts");
+}
+fn dye_name(_: &f32) -> Option<&str> {
+    None
+}
 fn axis(_: &Game<'_>, _: Pos) -> Axis {
     Axis::X
 }
@@ -168,6 +184,7 @@ fn moving_model(
     scroll: f32,
     _: bool,
     moving: bool,
+    _: Option<&str>,
 ) {
     print!(
         "{} {} {}",
@@ -199,7 +216,7 @@ fn main() {
         for (name, facing) in directions {
             for (side_name, side) in directions {
                 let plan = MotorPlan {
-                    facing: Side(facing.vector()),
+                    motor_facing: Some(Side(facing.vector())),
                     side: Side(side.vector()),
                 };
                 println!("{name} {side_name} {}", plan.side_active());

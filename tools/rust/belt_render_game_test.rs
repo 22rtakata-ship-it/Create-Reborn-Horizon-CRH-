@@ -54,6 +54,18 @@ fn belt_render_actual_game_mesh() {
     )
     .unwrap();
     assert!(super::super::create_port::original_assets());
+    for suffix in ["scroll", "diagonal_scroll"] {
+        let names = std::iter::once(format!("belt_{suffix}")).chain(
+            create_assets::BELT_DYES
+                .iter()
+                .map(|dye| format!("belt/{dye}_{suffix}")),
+        );
+        for name in names {
+            let id = format!("create:gui/scrolling/{name}");
+            let sprite = game.gui.atlas.sprites[&id];
+            assert_eq!((sprite.w, sprite.h), (16, 32), "cropped scroll strip {id}");
+        }
+    }
     game.world = World::new(game.res.facts().air, 1);
     game.world
         .chunks
@@ -155,7 +167,26 @@ fn belt_render_actual_game_mesh() {
                         .expect("native vertex disagrees with the original Java pose");
                     matched[index] = true;
                     corner_order[vertex_index] = index;
-                    assert!(vertex.uv.iter().all(|value| value.is_finite()));
+                    let [u, mut v] = face.quad.uv[index];
+                    let sprite = if frame["shifted"].as_bool().unwrap() {
+                        v = v * 0.5 + frame["scroll"].as_f64().unwrap() as f32;
+                        if row["slope"] == "upward" || row["slope"] == "downward" {
+                            "create:gui/scrolling/belt_diagonal_scroll"
+                        } else {
+                            "create:gui/scrolling/belt_scroll"
+                        }
+                    } else {
+                        face.quad.material.sprite.as_str()
+                    };
+                    let rect = game.gui.atlas.sprites[sprite];
+                    let uv = [
+                        rect.u0 + u * (rect.u1 - rect.u0),
+                        rect.v0 + v * (rect.v1 - rect.v0),
+                    ];
+                    assert!(
+                        glam::Vec2::from_array(vertex.uv)
+                            .abs_diff_eq(glam::Vec2::from_array(uv), 1e-6)
+                    );
                     assert_eq!(vertex.light, 0xf0f0);
                 }
                 assert!(
@@ -186,7 +217,7 @@ fn belt_render_actual_game_mesh() {
     let result = serde_json::json!({
         "passed": true, "frames": frames, "vertices": total_vertices,
         "source_model_face_counts": counts, "observed": observed,
-        "scope": "Actual Game imported middle meshes at all20 orientations and0/±32RPM; original Java pose/face-count guards, winding, immutable NBT/revision. No GPU or network-callback claim.",
+        "scope": "Actual Game imported middle meshes at all 20 orientations and 0/±32 RPM; original Java poses and scroll offsets, atlas dimensions, winding, and immutable NBT/revision.",
     });
     std::fs::write(
         work.join("native-mesh.json"),

@@ -31,9 +31,10 @@ lane, the Java controller and first middle segment named each other as their
 source. It stayed at +32 RPM after the Clutch opened and after reversing the
 drive. Horizon stopped and then ran at −32 RPM in that fixture.
 
-The screenshots show both clients' actual belt and item geometry. Continuous
-scroll phase, item shadows and multiplayer are still open. Passenger movement
-remains in the shared contact work.
+Separate frame captures cover the rendered belt strips. After the atlas fix,
+stripes stay visible at each sampled step on level, upward and downward runs.
+Exact render phase, item shadows and multiplayer are still open. Passenger
+movement remains in the shared contact work.
 
 `tools/belt_replacement_checks.py` checks a level belt rebuilt as a slope and
 a level belt rebuilt with identical states before the next server tick. The new

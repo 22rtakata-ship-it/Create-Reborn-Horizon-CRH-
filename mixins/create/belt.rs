@@ -1975,11 +1975,11 @@ fn moving_model(
         let target = match (dye, diagonal) {
             (Some(dye), _) => {
                 let suffix = if diagonal { "diagonal_scroll" } else { "scroll" };
-                variant = format!("create:block/belt/{dye}_{suffix}");
+                variant = format!("create:gui/scrolling/belt/{dye}_{suffix}");
                 variant.as_str()
             }
-            (None, true) => "create:block/belt_diagonal_scroll",
-            (None, false) => "create:block/belt_scroll",
+            (None, true) => "create:gui/scrolling/belt_diagonal_scroll",
+            (None, false) => "create:gui/scrolling/belt_scroll",
         };
         (target, 0xFFFFFF)
     } else {

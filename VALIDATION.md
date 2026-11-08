@@ -379,6 +379,16 @@ forward, stopped and reversed drive. RPM, item step and side offset agreed in
 through a cyclic source reference while Horizon stopped and reversed. Item
 shadows and continuous texture phase remain open.
 
+Ten successive captures on each of four driven lanes checked three middle
+segments per frame. Java showed the stripes in all 120 observations. The
+previous Horizon build showed them in 36. The updated build showed them in
+all 120 and matched the median signed displacement in every lane. The old
+atlas path cropped the 16×32 scrolling strips to 16×16. The importer now
+keeps the full strips in the local resource cache. The
+[native mesh fixture](tools/belt_render_game_checks.py) verifies all 34
+atlas rectangles and the submitted UV coordinates against the original
+renderer calculation.
+
 Two native rebuild checks cover a level belt replaced with an upward belt and
 a full replacement with identical block states. The new load stays on the
 replacement and the old load drops once. The real press, belt, Depot, hopper
