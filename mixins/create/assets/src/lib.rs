@@ -29,8 +29,22 @@ pub const WOODS: &[&str] = &[
     "crimson", "warped", "pale_oak",
 ];
 pub const BELT_DYES: &[&str] = &[
-    "white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray", "light_gray",
-    "cyan", "purple", "blue", "brown", "green", "red", "black",
+    "white",
+    "orange",
+    "magenta",
+    "light_blue",
+    "yellow",
+    "lime",
+    "pink",
+    "gray",
+    "light_gray",
+    "cyan",
+    "purple",
+    "blue",
+    "brown",
+    "green",
+    "red",
+    "black",
 ];
 /// Standalone blade overlays used with imported assets. Built-in models
 /// already include simple blade geometry and need no overlay.
@@ -95,7 +109,10 @@ macro_rules! pipe_faces {
 }
 
 const PIPE_MODELS: [[&str; 6]; 4] = [
-    pipe_faces!("connection"), pipe_faces!("rim_connector"), pipe_faces!("rim"), pipe_faces!("drain"),
+    pipe_faces!("connection"),
+    pipe_faces!("rim_connector"),
+    pipe_faces!("rim"),
+    pipe_faces!("drain"),
 ];
 
 impl PipeAttachment {
@@ -350,12 +367,19 @@ fn valid_cache(target: &Path, hash: &str, format: (i64, i64)) -> Option<usize> {
             .iter()
             .all(|part| files.contains_key(&format!("assets/create/models/block/{part}.json")))
         || !pipe_attachment_models().all(|id| {
-            let path = id.strip_prefix("create:").expect("Create pipe model identifier");
+            let path = id
+                .strip_prefix("create:")
+                .expect("Create pipe model identifier");
             files.contains_key(&format!("assets/create/models/{path}.json"))
         })
-        || !PARTS.iter().filter_map(|part| part.strip_prefix("belt_casing/")).all(|part| {
-            files.contains_key(&format!("assets/create/models/block/belt_casing/andesite_{part}.json"))
-        })
+        || !PARTS
+            .iter()
+            .filter_map(|part| part.strip_prefix("belt_casing/"))
+            .all(|part| {
+                files.contains_key(&format!(
+                    "assets/create/models/block/belt_casing/andesite_{part}.json"
+                ))
+            })
     {
         return None;
     }
@@ -617,16 +641,28 @@ fn collect(bytes: Vec<u8>) -> io::Result<BTreeMap<String, Vec<u8>>> {
             // override keeps the original faces/UVs and registers the target
             // texture in Horizon's terrain array when it bakes the model.
             let model = reader.json(&format!("assets/create/models/block/{part}.json"))?;
-            let textures = model["textures"].as_object().ok_or_else(|| invalid("Belt casing has no textures"))?;
-            let replacements: BTreeMap<_, _> = textures.iter().filter_map(|(key, value)| {
-                let replacement = match value.as_str()? {
-                    "create:block/belt/brass_belt_casing" => "create:block/belt/andesite_belt_casing",
-                    "create:block/brass_casing" if key == "particle" => "create:block/andesite_casing",
-                    _ => return None,
-                };
-                Some((key, replacement))
-            }).collect();
-            if !replacements.values().any(|&value| value == "create:block/belt/andesite_belt_casing") {
+            let textures = model["textures"]
+                .as_object()
+                .ok_or_else(|| invalid("Belt casing has no textures"))?;
+            let replacements: BTreeMap<_, _> = textures
+                .iter()
+                .filter_map(|(key, value)| {
+                    let replacement = match value.as_str()? {
+                        "create:block/belt/brass_belt_casing" => {
+                            "create:block/belt/andesite_belt_casing"
+                        }
+                        "create:block/brass_casing" if key == "particle" => {
+                            "create:block/andesite_casing"
+                        }
+                        _ => return None,
+                    };
+                    Some((key, replacement))
+                })
+                .collect();
+            if !replacements
+                .values()
+                .any(|&value| value == "create:block/belt/andesite_belt_casing")
+            {
                 return Err(invalid("Belt casing lacks the original sprite"));
             }
             for texture in replacements.values() {
@@ -634,7 +670,9 @@ fn collect(bytes: Vec<u8>) -> io::Result<BTreeMap<String, Vec<u8>>> {
             }
             reader.files.insert(
                 format!("assets/create/models/block/belt_casing/andesite_{variant}.json"),
-                serde_json::to_vec(&json!({"parent": format!("create:block/{part}"), "textures": replacements}))?,
+                serde_json::to_vec(
+                    &json!({"parent": format!("create:block/{part}"), "textures": replacements}),
+                )?,
             );
         }
     }

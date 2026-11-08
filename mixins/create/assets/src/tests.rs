@@ -26,14 +26,14 @@ fn fixture(change: impl FnOnce(&mut BTreeMap<String, Vec<u8>>)) -> Vec<u8> {
             model["textures"] = json!({"side": "create:block/belt/brass_belt_casing",
                                        "particle": "create:block/brass_casing"});
         }
-        json_file(
-            format!("assets/create/models/block/{part}.json"),
-            model,
-        );
+        json_file(format!("assets/create/models/block/{part}.json"), model);
     }
     for model in pipe_attachment_models() {
         let path = model.strip_prefix("create:").unwrap();
-        json_file(format!("assets/create/models/{path}.json"), json!({"parent": "create:block/shared"}));
+        json_file(
+            format!("assets/create/models/{path}.json"),
+            json!({"parent": "create:block/shared"}),
+        );
     }
     for model in EXTRA_MODELS {
         json_file(

@@ -133,7 +133,9 @@ impl Resolver for Registry {
                 "pointing" => ["up", "left", "down", "right"].contains(&value.as_str()),
                 "slope" => value == "horizontal",
                 "part" => ["start", "middle", "pulley", "end"].contains(&value.as_str()),
-                "shape" => ["normal", "window", "intersection", "encased"].contains(&value.as_str()),
+                "shape" => {
+                    ["normal", "window", "intersection", "encased"].contains(&value.as_str())
+                }
                 _ => ["false", "true"].contains(&value.as_str()),
             };
             if !valid {
