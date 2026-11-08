@@ -8,6 +8,7 @@ from catalog import BLOCKS, INTERNAL_BLOCKS, IRON_PALETTE, ITEMS, PALETTE_BLOCKS
 from funnel_content import BLOCK as FUNNEL
 from smart_chute_content import BLOCK as SMART_CHUTE
 from crushing_content import WHEEL as CRUSHER
+from crafter_content import CRAFTER
 from sail_content import COLORED_SAILS, SAIL_ITEMS
 from portable_storage_content import PSI
 from chute_content import CHUTE
@@ -185,8 +186,10 @@ def main():
         kind = r.get('type', '')
         if kind == 'create:crushing' and name != base + 'create/recipe/crushing/gravel.json':
             continue
+        if kind == 'create:mechanical_crafting' and name != base + f'create/recipe/mechanical_crafting/{CRUSHER}.json':
+            continue
         palette_cut = kind == 'minecraft:stonecutting' and name in palette_recipes
-        if not palette_cut and kind not in {'minecraft:crafting_shaped', 'minecraft:crafting_shapeless', 'create:pressing', 'create:item_application'} | processing | cooking: continue
+        if not palette_cut and kind not in {'minecraft:crafting_shaped', 'minecraft:crafting_shapeless', 'create:pressing', 'create:item_application', 'create:mechanical_crafting'} | processing | cooking: continue
         if kind == 'create:mixing' and not (dry_mixing(r) or heated_mixing(r)):
             # These two actual source flows are the bounded first native fluid
             # integration. Other fluid/heat/component recipe codecs stay out.
@@ -228,6 +231,8 @@ def main():
     colors = ['white','orange','magenta','light_blue','yellow','lime','pink','gray','light_gray','cyan','purple','blue','brown','green','red','black']
     conventional['c:glass_blocks'] = ['minecraft:glass', 'minecraft:tinted_glass'] + ['minecraft:' + color + '_stained_glass' for color in colors]
     conventional['c:glass_panes'] = ['minecraft:glass_pane'] + ['minecraft:' + color + '_stained_glass_pane' for color in colors]
+    # NeoForge 21.1.227: the Crushing Wheel's six vanilla stones. Its legacy
+    # #forge:stone entry is optional and absent in the pinned reference game.
     conventional['c:stones'] = ['minecraft:' + stone for stone in ['stone', 'granite', 'diorite', 'andesite', 'deepslate', 'tuff']]
     conventional['c:cobblestones'] = ['minecraft:cobblestone', 'minecraft:mossy_cobblestone', 'minecraft:cobbled_deepslate']
     conventional['c:gems/lapis'] = ['minecraft:lapis_lazuli']
@@ -368,6 +373,7 @@ def main():
         f'create/loot_table/blocks/{SMART_CHUTE}.json',
         f'create/loot_table/blocks/{FUNNEL}.json',
         f'create/loot_table/blocks/{CRUSHER}.json',
+        f'create/loot_table/blocks/{CRAFTER}.json',
         f'create/loot_table/blocks/{STICKER}.json',
         'create/loot_table/blocks/zinc_block.json',
         *[f'create/loot_table/blocks/{name}.json' for name in ZINC_BLOCKS],

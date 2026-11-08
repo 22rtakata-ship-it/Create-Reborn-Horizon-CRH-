@@ -37,6 +37,7 @@
     "create:windmill_bearing",
     "create:clockwork_bearing",
     "create:rope_pulley",
+    "create:mechanical_crafter",
     "create:mechanical_piston",
     "create:sticky_mechanical_piston",
     "create:piston_extension_pole",

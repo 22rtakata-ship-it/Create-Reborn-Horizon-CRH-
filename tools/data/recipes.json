@@ -719,6 +719,30 @@
         "id": "create:mechanical_bearing"
       }
     },
+    "create/recipe/crafting/kinetics/mechanical_crafter.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "B": {
+          "item": "create:electron_tube"
+        },
+        "C": {
+          "item": "create:brass_casing"
+        },
+        "R": {
+          "item": "minecraft:crafting_table"
+        }
+      },
+      "pattern": [
+        "B",
+        "C",
+        "R"
+      ],
+      "result": {
+        "count": 3,
+        "id": "create:mechanical_crafter"
+      }
+    },
     "create/recipe/crafting/kinetics/mechanical_drill.json": {
       "type": "minecraft:crafting_shaped",
       "category": "misc",
@@ -2189,6 +2213,34 @@
         "count": 1,
         "id": "create:layered_andesite"
       }
+    },
+    "create/recipe/mechanical_crafting/crushing_wheel.json": {
+      "type": "create:mechanical_crafting",
+      "accept_mirrored": false,
+      "category": "misc",
+      "key": {
+        "A": {
+          "item": "create:andesite_alloy"
+        },
+        "P": {
+          "tag": "minecraft:planks"
+        },
+        "S": {
+          "tag": "c:stones"
+        }
+      },
+      "pattern": [
+        " AAA ",
+        "AAPAA",
+        "APSPA",
+        "AAPAA",
+        " AAA "
+      ],
+      "result": {
+        "count": 2,
+        "id": "create:crushing_wheel"
+      },
+      "show_notification": false
     },
     "create/recipe/milling/allium.json": {
       "type": "create:milling",
@@ -5789,6 +5841,16 @@
         "minecraft:iron_nugget"
       ]
     },
+    "c/tags/item/stones.json": {
+      "values": [
+        "minecraft:stone",
+        "minecraft:granite",
+        "minecraft:diorite",
+        "minecraft:andesite",
+        "minecraft:deepslate",
+        "minecraft:tuff"
+      ]
+    },
     "c/tags/item/stripped_woods.json": {
       "values": [
         "minecraft:stripped_acacia_wood",
@@ -5878,16 +5940,6 @@
     "c/tags/item/plates/gold.json": {
       "values": [
         "create:golden_sheet"
-      ]
-    },
-    "c/tags/item/stones.json": {
-      "values": [
-        "minecraft:stone",
-        "minecraft:granite",
-        "minecraft:diorite",
-        "minecraft:andesite",
-        "minecraft:deepslate",
-        "minecraft:tuff"
       ]
     },
     "c/tags/item/slimeballs.json": {
@@ -6095,6 +6147,7 @@
         "create:andesite_casing",
         "create:brass_casing",
         "create:copper_casing",
+        "create:mechanical_crafter",
         "create:flywheel"
       ]
     },
@@ -6152,6 +6205,7 @@
         "create:andesite_casing",
         "create:brass_casing",
         "create:copper_casing",
+        "create:mechanical_crafter",
         "create:flywheel",
         "create:andesite_funnel",
         "create:zinc_ore",
@@ -6683,6 +6737,27 @@
         }
       ],
       "random_sequence": "create:blocks/crushing_wheel"
+    },
+    "create/loot_table/blocks/mechanical_crafter.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:mechanical_crafter"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/mechanical_crafter"
     },
     "create/loot_table/blocks/sticker.json": {
       "type": "minecraft:block",

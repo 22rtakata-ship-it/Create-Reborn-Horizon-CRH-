@@ -6,6 +6,7 @@ from chute_content import CHUTE
 from smart_chute_content import BLOCK as SMART_CHUTE
 from funnel_content import BLOCK as FUNNEL
 from crushing_content import CONTROLLER as CRUSHER_CONTROLLER, WHEEL as CRUSHER
+from crafter_content import CRAFTER, PARTS as CRAFTER_PARTS
 from sticker_content import STICKER
 
 BASE_BLOCKS = ['creative_motor', 'shaft', 'cogwheel', 'large_cogwheel', 'mechanical_press', 'depot']
@@ -21,7 +22,7 @@ PALETTE_BLOCKS = [name for variants in STONE_PALETTES.values() for name in varia
 ZINC_BLOCKS = ('zinc_ore', 'deepslate_zinc_ore', 'raw_zinc_block')
 INSTRUMENTS = ['speedometer', 'stressometer']
 GENERATORS = ['water_wheel', 'large_water_wheel']
-PROCESSORS = ['millstone', 'encased_fan', 'mechanical_drill', 'basin', 'mechanical_mixer', 'blaze_burner', 'mechanical_bearing', 'windmill_bearing', 'clockwork_bearing', 'rope_pulley']
+PROCESSORS = ['millstone', 'encased_fan', 'mechanical_drill', 'basin', 'mechanical_mixer', 'blaze_burner', 'mechanical_bearing', 'windmill_bearing', 'clockwork_bearing', 'rope_pulley', CRAFTER]
 PISTONS = ['mechanical_piston', 'sticky_mechanical_piston', 'piston_extension_pole']
 GANTRY = ['gantry_shaft', 'gantry_carriage']
 ACTORS = ['mechanical_harvester', 'mechanical_saw', 'mechanical_plough', 'deployer']
@@ -40,6 +41,7 @@ PARTS += ['belt_pulley', 'belt/particle'] + ['belt/' + part for part in
      'diagonal_start', 'diagonal_middle', 'diagonal_end']]
 PARTS += ['basin/block', 'basin/block_directional', 'mechanical_mixer/block',
           'mechanical_mixer/pole', 'mechanical_mixer/head', 'cogwheel_shaftless', 'flywheel/block', f'{CRUSHER}/block']
+PARTS += [f'{CRAFTER}/{part}' for part in CRAFTER_PARTS]
 PARTS += ['bearing/top', 'bearing/top_wooden']
 PARTS += ['rope_pulley/' + name for name in ('rope_coil', 'rope', 'pulley_magnet', 'rope_half', 'rope_half_magnet')]
 PARTS += ['mechanical_harvester/blade'] + [

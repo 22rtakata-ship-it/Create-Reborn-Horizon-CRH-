@@ -52,6 +52,7 @@
     "create:andesite_casing",
     "create:brass_casing",
     "create:copper_casing",
+    "create:mechanical_crafter",
     "create:flywheel",
     "create:andesite_funnel",
     "create:zinc_ore",

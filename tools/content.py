@@ -16,6 +16,7 @@ from chute_content import CHUTE, chute
 from smart_chute_content import BLOCK as SMART_CHUTE, smart_chute
 from funnel_content import BLOCK as FUNNEL, funnel
 from crushing_content import WHEEL as CRUSHER, crushing
+from crafter_content import CRAFTER, crafter
 from sticker_content import STICKER, sticker
 
 CONTENT = ROOT / "content"
@@ -786,6 +787,7 @@ def foundation():
     smart_chute(write, model)
     funnel(write, model)
     crushing(write, model)
+    crafter(write, model)
     sticker(write, model)
     deployer(write, model)
     contraption_actors()
@@ -855,6 +857,7 @@ def foundation():
     extra_blocks[SMART_CHUTE] = 'Smart Chute'
     extra_blocks[FUNNEL] = 'Andesite Funnel'
     extra_blocks[CRUSHER] = 'Crushing Wheel'
+    extra_blocks[CRAFTER] = 'Mechanical Crafter'
     extra_blocks.update({'linear_chassis': 'Linear Chassis',
                          'secondary_linear_chassis': 'Secondary Linear Chassis',
                          'radial_chassis': 'Radial Chassis'})
@@ -943,6 +946,7 @@ def foundation():
             lang['block.create.' + SMART_CHUTE] = 'Умный жёлоб'
             lang['block.create.' + FUNNEL] = 'Андезитовый шлюз'
             lang['block.create.' + CRUSHER] = 'Дробильное колесо'
+            lang['block.create.' + CRAFTER] = 'Механический сборщик'
             lang['block.create.' + STICKER] = 'Блок-липучка'
             lang.update({"block.create.mechanical_piston": "Механический поршень",
                          "block.create.sticky_mechanical_piston": "Липкий механический поршень",
