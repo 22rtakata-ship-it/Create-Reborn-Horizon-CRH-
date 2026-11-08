@@ -49,6 +49,7 @@ import net.minecraft.world.level.levelgen.presets.WorldPresets;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RenderFrameEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -64,6 +65,9 @@ public final class ReferenceBridge {
     private final boolean normalWorld;
     private final Queue<FrameJob> frameJobs = new ConcurrentLinkedQueue<>();
     private final Queue<KeyMapping> release = new ConcurrentLinkedQueue<>();
+    // Short presses belong to the simulation clock, even when a frame stalls.
+    private KeyMapping pendingTap;
+    private KeyMapping activeTap;
     private volatile long frames;
     private volatile double frameMs;
     private long previousFrame;
@@ -111,6 +115,8 @@ public final class ReferenceBridge {
         Files.writeString(root.resolve("ready.json"), JSON.toJson(ready));
         NeoForge.EVENT_BUS.addListener(RenderFrameEvent.Pre.class, event -> beforeFrame(Minecraft.getInstance()));
         NeoForge.EVENT_BUS.addListener(RenderFrameEvent.Post.class, event -> afterFrame(Minecraft.getInstance()));
+        NeoForge.EVENT_BUS.addListener(ClientTickEvent.Pre.class, event -> beginTap());
+        NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, event -> endTap());
         NeoForge.EVENT_BUS.addListener(ServerTickEvent.Post.class, event -> observeServerTick(event.getServer()));
         Runtime.getRuntime().addShutdownHook(new Thread(() -> http.stop(0)));
     }
@@ -530,6 +536,22 @@ public final class ReferenceBridge {
         return await(result);
     }
 
+    private void beginTap() {
+        activeTap = pendingTap;
+        pendingTap = null;
+        if (activeTap != null) {
+            KeyMapping.click(activeTap.getKey());
+            activeTap.setDown(true);
+        }
+    }
+
+    private void endTap() {
+        if (activeTap != null) {
+            activeTap.setDown(false);
+            activeTap = null;
+        }
+    }
+
     private JsonObject input(JsonObject body) {
         Minecraft mc = Minecraft.getInstance();
         String kind = string(body,"kind","key");
@@ -563,7 +585,11 @@ public final class ReferenceBridge {
                 case "jump" -> mc.options.keyJump; case "forward" -> mc.options.keyUp;
                 case "back" -> mc.options.keyDown; default -> throw new IllegalArgumentException("Unknown key " + name);
             };
-            if (body.has("down")) key.setDown(flag(body,"down",false));
+            if (kind.equals("tap")) {
+                if (mc.screen != null || pendingTap != null || activeTap != null)
+                    throw new IllegalStateException("A short press requires an idle game screen");
+                pendingTap = key;
+            } else if (body.has("down")) key.setDown(flag(body,"down",false));
             else {KeyMapping.click(key.getKey()); key.setDown(true); release.add(key);}
         }
         return clientState(mc);

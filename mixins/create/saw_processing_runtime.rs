@@ -1677,6 +1677,9 @@ pub(super) mod crushing {
     fn insert_output(game: &mut Game<'_>, target: Pos, block: &str, stack: &ItemStack) -> u32 {
         match block {
             chute::BLOCK | chute::SMART => chute::insert_from_transport(game, target, stack),
+            chute::funnel::BLOCK | chute::funnel::BRASS => {
+                chute::funnel::insert_from_transport(game, target, block, stack)
+            }
             "create:millstone" => millstone::insert_from_transport(game, target, stack, false),
             "create:depot" | "create:belt" => {
                 let item = Transported::new(
@@ -1787,7 +1790,13 @@ pub(super) mod crushing {
                 let block = game.res.facts().get(state).name.clone();
                 if matches!(
                     block.as_ref(),
-                    "create:depot" | "create:belt" | "create:millstone" | chute::BLOCK | chute::SMART
+                    "create:depot"
+                        | "create:belt"
+                        | millstone::ID
+                        | chute::BLOCK
+                        | chute::SMART
+                        | chute::funnel::BLOCK
+                        | chute::funnel::BRASS
                 ) {
                     let mut changed = false;
                     for slot in &mut entity.items {
@@ -2174,6 +2183,7 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity, r
             let millstone = target_block == "create:millstone";
             if millstone
                 || chute::is_chute(&target_block)
+                || chute::funnel::is_funnel(&target_block)
                 || matches!(target_block.as_str(), "create:depot" | "create:belt")
             {
                 let from = Direction::from_vector(motion).expect("horizontal saw output");
@@ -2192,6 +2202,15 @@ pub(super) fn tick(game: &mut Game<'_>, pos: Pos, entity: &mut ModBlockEntity, r
                         }
                         chute::BLOCK | chute::SMART => {
                             stack.count - chute::insert_from_transport(game, target, stack)
+                        }
+                        chute::funnel::BLOCK | chute::funnel::BRASS => {
+                            stack.count
+                                - chute::funnel::insert_from_transport(
+                                    game,
+                                    target,
+                                    &target_block,
+                                    stack,
+                                )
                         }
                         _ => {
                             let item = Transported::new(

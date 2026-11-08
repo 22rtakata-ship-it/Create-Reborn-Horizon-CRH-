@@ -185,7 +185,11 @@ extraction uses the original eight-tick cooldown, a default limit of 64, and
 the stored Exactly or Up to setting. Tap use over the filter to change its
 sample. Hold use to open the amount board, then release to confirm the
 selection. The same controls use a simpler panel without the optional
-Create JAR. Special filter items and Belt Funnel variants remain open.
+Create JAR. An upward collector accepts direct output from a downward
+Crushing Wheel Controller or an adjacent upward Saw into an ordinary inventory.
+The source retains cargo while the funnel is powered or its filter rejects
+it. Airborne intake, special filter items and Belt Funnel variants remain
+open.
 
 An Item Drain accepts water or lava buckets from a bare horizontal Belt,
 stores 1000 mB and sends the empty bucket to a neighboring Depot or Belt.

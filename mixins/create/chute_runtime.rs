@@ -1402,6 +1402,35 @@ pub(in crate::game) mod funnel {
             && stack.item.as_ref() != "create:mechanical_arm"
     }
 
+    fn insert_into(game: &mut Game<'_>, pos: Pos, block: &str, stack: &ItemStack) -> u32 {
+        if block == BRASS
+            && !filter_entity(game, pos, ENTITY)
+                .is_some_and(|entity| accepts_filter(game, entity, stack))
+        {
+            return 0;
+        }
+        game.chute_insert((pos[0], pos[1] - 1, pos[2]), stack, false)
+            .unwrap_or(0)
+    }
+
+    pub(in crate::game) fn insert_from_transport(
+        game: &mut Game<'_>,
+        pos: Pos,
+        block: &str,
+        stack: &ItemStack,
+    ) -> u32 {
+        // FunnelBlockEntity only exposes direct input on a collecting
+        // Funnel facing up. Check redstone before its own ticker can run.
+        if direction(game, pos) != Some(Direction::Up)
+            || property(game, pos, "extracting")
+            || property(game, pos, "waterlogged")
+            || refresh_power(game, pos)
+        {
+            return 0;
+        }
+        insert_into(game, pos, block, stack)
+    }
+
     enum Use {
         Attach,
         Wrench,
@@ -1482,15 +1511,8 @@ pub(in crate::game) mod funnel {
                 );
             }
             (Use::Collect, Some(stack)) => {
-                if game.native_block(pos) == BRASS
-                    && !filter_entity(game, pos, ENTITY)
-                        .is_some_and(|entity| accepts_filter(game, entity, &stack))
-                {
-                    return true;
-                }
-                let inserted = game
-                    .chute_insert((pos[0], pos[1] - 1, pos[2]), &stack, false)
-                    .unwrap_or(0);
+                let block = game.native_block(pos);
+                let inserted = insert_into(game, pos, &block, &stack);
                 if inserted > 0 {
                     let count = stack.count - inserted;
                     *game.held_mut() = (count > 0).then_some(ItemStack { count, ..stack });

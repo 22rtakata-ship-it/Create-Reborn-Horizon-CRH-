@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Copyright (c) 2026 create-horizon contributors
 # SPDX-License-Identifier: MIT
-"""Compare Crushing Wheel output to a Belt, Chute and Millstone."""
+"""Compare Crushing Wheel output to a Belt, Chute, Millstone, Funnel and Saw."""
 import argparse
 import json
 from pathlib import Path
@@ -18,15 +18,18 @@ from native_check_session import NativeCheckSession
 from reference_java import BASE, CREATE_SHA256
 
 
-BELT_Z, CHUTE_Z, MILL_Z = 1030, 1035, 1041
+BELT_Z, CHUTE_Z, MILL_Z, FUNNEL_Z, SAW_Z = 1030, 1035, 1041, 1046, 1051
 LOAD = '2128 1024 2143 1055'
-REGION = '2131 165 1028 2137 172 1044'
-DROPS = '@e[type=minecraft:item,x=2131,y=165,z=1028,dx=6,dy=7,dz=16]'
+REGION = '2131 165 1028 2137 172 1053'
+DROPS = '@e[type=minecraft:item,x=2131,y=165,z=1028,dx=6,dy=7,dz=25]'
 WHEAT = 'minecraft:wheat'
 DIAMOND = 'minecraft:diamond'
+SIGNAL = (X + 1, Y - 1, FUNNEL_Z)
 POINTS = [(X, Y, BELT_Z), (X - 2, Y - 1, BELT_Z),
           (X, Y, CHUTE_Z), (X, Y - 1, CHUTE_Z),
-          (X, Y, MILL_Z), (X, Y - 1, MILL_Z)]
+          (X, Y, MILL_Z), (X, Y - 1, MILL_Z),
+          (X, Y, FUNNEL_Z), (X, Y - 2, FUNNEL_Z),
+          (X, Y, SAW_Z), (X, Y - 1, SAW_Z)]
 
 
 def stack(item, count, marker):
@@ -52,7 +55,13 @@ def setup(command, advance):
         put(command, (X - 2 + index, Y - 1, BELT_Z),
             f'create:belt[facing=east,slope=horizontal,part={part}]')
     put(command, POINTS[5], 'create:millstone')
-    for z in (BELT_Z, CHUTE_Z, MILL_Z):
+    put(command, POINTS[7], 'minecraft:barrel')
+    put(command, SIGNAL, 'minecraft:redstone_block')
+    put(command, (X, Y - 1, FUNNEL_Z),
+        'create:brass_funnel[facing=up,extracting=false,powered=true,waterlogged=false]'
+        '{Filter:{id:"minecraft:wheat",count:1}}')
+    put(command, POINTS[9], 'create:mechanical_saw[facing=up,axis_along_first=false]')
+    for z in (BELT_Z, CHUTE_Z, MILL_Z, FUNNEL_Z, SAW_Z):
         wheels(command, z)
     advance(28)
     # The crusher's ticker runs before this Chute. A blocked outlet keeps the
@@ -64,11 +73,14 @@ def setup(command, advance):
     seed(command, BELT_Z, [(GRAVEL, 2, 41)])
     seed(command, CHUTE_Z, [(GRAVEL, 3, 42), (DIAMOND, 1, 44)])
     seed(command, MILL_Z, [(WHEAT, 3, 43), (DIAMOND, 1, 45)])
+    seed(command, FUNNEL_Z, [(WHEAT, 3, 46), (DIAMOND, 1, 47)])
+    seed(command, SAW_Z, [(GRAVEL, 2, 48)])
 
 
 def release(command):
     put(command, (X - 2, Y - 1, BELT_Z - 1), 'create:creative_motor[facing=south]{ScrollValue:-32}')
     mill_input(command, 0)
+    put(command, SIGNAL, AIR)
 
 
 def contents(raw, key):
@@ -79,14 +91,17 @@ def contents(raw, key):
 
 def sample(values):
     assert len(values) == len(POINTS), values
-    crusher_belt, belt, crusher_chute, chute, crusher_mill, mill = values
-    assert all(CONTROLLER in raw for raw in (crusher_belt, crusher_chute, crusher_mill)), values
+    crusher_belt, belt, crusher_chute, chute, crusher_mill, mill, crusher_funnel, barrel, crusher_saw, saw = values
+    assert all(CONTROLLER in raw for raw in values[::2]), values
     assert 'create:belt' in belt and 'create:chute' in chute and 'create:millstone' in mill, values
+    assert 'minecraft:barrel' in barrel and 'create:saw' in saw, values
     belt_data = contents(belt, 'Inventory')
     belt_data['entered_from'] = re.findall(r'\bInDirection\s*:\s*(\d+)', field(belt, 'Inventory'))
     return dict(crusher_belt=contents(crusher_belt, 'Inventory'), belt=belt_data,
                 crusher_chute=contents(crusher_chute, 'Inventory'), chute=contents(chute, 'Item'),
-                crusher_mill=contents(crusher_mill, 'Inventory'), mill=contents(mill, 'InputInventory'))
+                crusher_mill=contents(crusher_mill, 'Inventory'), mill=contents(mill, 'InputInventory'),
+                crusher_funnel=contents(crusher_funnel, 'Inventory'), barrel=contents(barrel, 'Items'),
+                crusher_saw=contents(crusher_saw, 'Inventory'), saw=contents(saw, 'Inventory'))
 
 
 def verify(phases):
@@ -100,6 +115,10 @@ def verify(phases):
         assert row['crusher_chute'] == stack_state(DIAMOND, 1, 44), row
         assert row['mill'] == stack_state(WHEAT, 64, 43), row
         assert row['crusher_mill'] == dict(stacks={WHEAT: 2, DIAMOND: 1}, markers=[43, 45]), row
+        assert row['crusher_funnel'] == dict(stacks={WHEAT: 3, DIAMOND: 1}, markers=[46, 47]), row
+        assert not row['barrel']['stacks'], row
+    for row in phases['blocked'] + phases['released']:
+        assert row['crusher_saw'] == stack_state(GRAVEL, 2, 48) and not row['saw']['stacks'], row
     if 'cold' in phases:
         assert phases['cold'][0] == phases['blocked'][-1], phases
     final = phases['released'][-1]
@@ -107,6 +126,8 @@ def verify(phases):
     assert not final['crusher_belt']['stacks'], final
     assert final['mill'] == stack_state(WHEAT, 2, 43), final
     assert final['crusher_mill'] == stack_state(DIAMOND, 1, 45), final
+    assert final['barrel'] == stack_state(WHEAT, 3, 46), final
+    assert final['crusher_funnel'] == stack_state(DIAMOND, 1, 47), final
 
 
 def java_run(work):

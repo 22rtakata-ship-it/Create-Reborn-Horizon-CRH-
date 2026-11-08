@@ -52,11 +52,7 @@ def click(host, work, name, facing, item):
     host.call('capture', {'name': f'{work.name}/{name}-aim.png', 'frames': 8})
     hit = host.call('state', {})['hit']
     assert hit['pos'] == list(CHUTE) and hit['face'] == facing, hit
-    host.call('input', {'key': 'use', 'down': True})
-    try:
-        host.call('capture', {'name': f'{work.name}/{name}-tap.png', 'frames': 4})
-    finally:
-        host.call('input', {'key': 'use', 'down': False})
+    host.call('input', {'kind': 'tap', 'key': 'use'})
     host.call('capture', {'name': f'{work.name}/{name}-after.png', 'frames': 10})
 
 

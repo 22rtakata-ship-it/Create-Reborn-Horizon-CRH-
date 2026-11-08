@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Copyright (c) 2026 create-horizon contributors
 # SPDX-License-Identifier: MIT
-"""Compare direct Saw-to-Chute transfer, filtering and a native restart."""
+"""Compare direct Saw-to-Chute and Saw-to-Funnel transfer and a native restart."""
 
 import argparse
 import json
@@ -17,12 +17,12 @@ from native_check_session import NativeCheckSession
 
 
 X, Y = 2095, 121
-LANES = dict(plain=1300, match=1303, wrong=1306, powered=1309)
-ROOM = '2093 119 1298 2098 127 1310'
-FORCE = '2093 1298 2098 1310'
+LANES = dict(plain=1300, match=1303, wrong=1306, powered=1309, funnel=1312)
+ROOM = '2093 119 1298 2098 127 1313'
+FORCE = '2093 1298 2098 1313'
 MARK = 'saw_chute_probe'
 CARGO = 'minecraft:andesite'
-DROPS = '@e[type=minecraft:item,x=2093,y=119,z=1298,dx=5,dy=8,dz=12]'
+DROPS = '@e[type=minecraft:item,x=2093,y=119,z=1298,dx=5,dy=8,dz=15]'
 
 
 def points(z):
@@ -41,6 +41,10 @@ def configure(command, advance, *, native=False):
         command(f'setblock {xyz(saw)} create:mechanical_saw[facing=up,axis_along_first=false]')
         if name == 'plain':
             command(f'setblock {xyz(chute)} create:chute[facing=down,shape=window]')
+        elif name == 'funnel':
+            command(f'setblock {X+1} {Y} {z+1} minecraft:redstone_block')
+            command(f'setblock {xyz(chute)} create:brass_funnel[facing=up,extracting=false,powered=true]'
+                    f'{{Filter:{{id:"{CARGO}",count:1}}}}')
         else:
             filtered = 'minecraft:granite' if name == 'wrong' else CARGO
             command(f'setblock {xyz(chute)} create:smart_chute[powered={str(name == "powered").lower()}]'
@@ -64,6 +68,7 @@ def release(command):
     z = LANES['wrong']
     command(f'data merge block {xyz(points(z)[1])} {{Filter:{{id:"{CARGO}",count:1}}}}')
     command(f'setblock {X+1} {Y} {LANES["powered"]+1} minecraft:air')
+    command(f'setblock {X+1} {Y} {LANES["funnel"]+1} minecraft:air')
 
 
 def snapshot(raw):
@@ -91,7 +96,11 @@ def verify(warm, cold, resumed):
             assert cold[name]['cargo'] == chest
         else:
             assert all(row[name]['cargo'] == saw for row in warm)
-            assert any(row[name]['cargo'] == chute for row in resumed)
+            if name == 'funnel':
+                assert resumed[0][name]['cargo'] == chest
+                assert all(row[name]['cargo'] != chute for row in resumed)
+            else:
+                assert any(row[name]['cargo'] == chute for row in resumed)
         assert resumed[-1][name]['cargo'] == chest, resumed[-1]
 
 

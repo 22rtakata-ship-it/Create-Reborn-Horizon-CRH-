@@ -44,7 +44,7 @@ def aim(host, work, name):
         hit = call('looking-at')['block']
         assert hit['pos'] == list(FUNNEL) and hit['face'] == 'south', hit
         return
-    host.call('camera', {'position': PLAYER, 'target': AIM})
+    host.call('camera', {'position': PLAYER, 'target': AIM, 'gui_scale': 4})
     host.call('capture', {'name': f'{work.name}/{name}-aim.png', 'frames': 8})
     hit = host.call('state', {})['hit']
     assert hit['pos'] == list(FUNNEL) and hit['face'] == 'south', hit
@@ -65,11 +65,7 @@ def tap_filter(host, work, *, item=marked(7, 3), expected=None, case='filter'):
         ghost = str(work / f'{case}-ghost.png')
         call('screenshot', ghost)
     else:
-        host.call('input', {'key': 'use', 'down': True})
-        try:
-            host.call('capture', {'name': f'{work.name}/{case}-tap.png', 'frames': 4})
-        finally:
-            host.call('input', {'key': 'use', 'down': False})
+        host.call('input', {'kind': 'tap', 'key': 'use'})
         ghost = host.call('capture', {'name': f'{work.name}/{case}-ghost.png', 'frames': 12})['path']
     raw = block(host, FUNNEL)['nbt']
     expected = expected if expected is not None else {STICK: 3}
@@ -82,10 +78,11 @@ def tap_filter(host, work, *, item=marked(7, 3), expected=None, case='filter'):
     return ghost
 
 
-def board(host, work, row, *, pos=FUNNEL, aim_at=aim, maximum=64, value=16, case=''):
+def board(host, work, row, *, pos=FUNNEL, aim_at=aim, maximum=64, value=16, case='', confirm=True):
     name = f'board-{row}{case}'
     aim_at(host, work, name)
-    original_filter = items(block(host, pos)['nbt'], 'Filter')
+    original = block(host, pos)
+    original_filter = items(original['nbt'], 'Filter')
     expected_cursor = 'Any' if row == 0 and value == maximum else f'{"=" if row else "≤"}{max(value, 1)}'
     if isinstance(host, Native):
         call = host.session.call
@@ -115,7 +112,10 @@ def board(host, work, row, *, pos=FUNNEL, aim_at=aim, maximum=64, value=16, case
         hovered = trace()
         assert (hovered['row'], hovered['value'], hovered['cursor']) == (row, value, expected_cursor), hovered
         call('screenshot', work / f'{name}.png')
-        call('click-at', *point, 'right')
+        if confirm:
+            call('click-at', *point, 'right')
+        else:
+            call('key', 'escape', 'tap')
         call('release')
         step(host, 1)
         call('wait', 8)
@@ -140,11 +140,19 @@ def board(host, work, row, *, pos=FUNNEL, aim_at=aim, maximum=64, value=16, case
             hovered = host.call('ui', {})['value_settings']['hovered']
             assert hovered['row'] == row and hovered['value'] == value, hovered
             assert items(block(host, pos)['nbt'], 'Filter') == original_filter
-            host.call('input', {'kind': 'mouse', 'button': 1, 'x': point[0], 'y': point[1], 'down': False})
+            if confirm:
+                host.call('input', {'kind': 'mouse', 'button': 1, 'x': point[0], 'y': point[1], 'down': False})
+            else:
+                host.call('input', {'kind': 'escape'})
         finally:
             host.call('input', {'key': 'use', 'down': False})
         host.call('capture', {'name': f'{work.name}/{name}-done.png', 'frames': 8})
     configured = block(host, pos)
+    if not confirm:
+        for key in ('FilterAmount', 'UpTo'):
+            assert number(configured, key) == number(original, key), configured
+        assert items(configured['nbt'], 'Filter') == original_filter, configured
+        return {'title': 'Extracted Amount', 'cancelled': [row, value]}
     assert number(configured, 'FilterAmount') == max(1, value) and number(configured, 'UpTo') == (1 - row), configured
     assert items(configured['nbt'], 'Filter') == original_filter, configured
     return {'title': 'Extracted Amount', 'selected': [row, value]}
@@ -219,6 +227,7 @@ def exercise(host, work, report, cold_restart=None):
         assert number(restored, 'FilterAmount') == 16 and number(restored, 'UpTo') == 0, restored
         report['cold_restart'] = True
     report['up_to_board'] = board(host, work, 0)
+    report['cancel_board'] = board(host, work, 1, value=32, case='-cancel', confirm=False)
     cmd(f'item replace block {xyz(SOURCE)} container.1 with {marked(31, 7)}')
     put(cmd, SIGNAL, 'minecraft:air')
     [up_to] = samples(host, 1)
@@ -245,7 +254,7 @@ def smart_aim(host, work, name):
         call('wait', 4)
         hit = call('looking-at')['block']
     else:
-        host.call('camera', {'position': feet, 'target': target})
+        host.call('camera', {'position': feet, 'target': target, 'gui_scale': 4})
         host.call('capture', {'name': f'{work.name}/{name}-aim.png', 'frames': 8})
         hit = host.call('state', {})['hit']
     assert hit['pos'] == list(smart.CHUTE) and hit['face'] == 'south', hit
@@ -313,6 +322,7 @@ def run_java(host, work, report):
         host.command(f'kill {DROPS}')
         host.command(f'forceload remove {COLUMN}')
         host.command(f'forceload remove {smart.COLUMN}')
+        host.call('camera', {key: original[key] for key in ('position', 'yaw', 'pitch', 'gui_scale')})
         host.call('tick', {'frozen': original['server']['frozen']})
 
 
@@ -331,7 +341,7 @@ def run_native(session, reference, report):
         host.command('tick freeze')
         exercise(host, session.scratch, report, cold_restart)
         report['smart'] = smart_amounts(host, session.scratch)
-        for field in ('exact_board', 'up_to_board', 'snowball_board', 'exact', 'up_to', 'default', 'smart'):
+        for field in ('exact_board', 'up_to_board', 'cancel_board', 'snowball_board', 'exact', 'up_to', 'default', 'smart'):
             assert report[field] == reference[field], (field, report[field], reference[field])
 
 
@@ -350,7 +360,7 @@ def main():
         session = NativeCheckSession(args.game, args.resources, args.ctl, args.create_jar,
                                      name='brass-funnel-native', world='CreateBrassFunnel')
         work = session.scratch
-        (work / 'options.txt').write_text('lang:en_us\ntutorialStep:none\nchatVisibility:2\n')
+        (work / 'options.txt').write_text('lang:en_us\nguiScale:4\ntutorialStep:none\nchatVisibility:2\n')
         report.update(game=str(args.game.resolve()), reference=str(args.reference.resolve()))
     else:
         host = Original()

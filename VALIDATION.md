@@ -1,5 +1,25 @@
 # Checks and evidence
 
+## Vertical Funnel audit
+
+- [Brass Funnel](tools/brass_funnel_checks.py) checks real short and long
+  presses, the filter preview, Exactly and Up to, the Snowball stack limit,
+  release to confirm, and Escape to keep the previous amount. At GUI scale
+  4 the compared cursor labels and coordinates agree for `=16`, `≤16`,
+  `=32`, and `Any`. The Horizon restart preserves the marked filter and
+  Exactly setting. The Java test bridge holds a short press for one client
+  tick, so screenshot capture cannot turn it into a long press.
+- [Crusher output](tools/crusher_transfer_checks.py) and [Saw output](tools/saw_chute_checks.py)
+  compare direct transfer through upward Brass Funnels into ordinary
+  inventories. A powered funnel keeps cargo in the source. On release it
+  takes matching marked stacks, with rejected stacks staying in the crusher.
+  Both fixtures also check a Horizon restart and the other supported
+  receivers. The Saw below a downward Crusher remains a blocked exit in both
+  games.
+- The [Fluid Valve wrench](tools/fluid_valve_wrench_checks.py) and
+  [Item Drain comparator](tools/item_drain_comparator_checks.py) comparisons
+  also pass against their pinned Java traces.
+
 ## November 8 follow-up
 
 - [Belt surface phase](tools/belt_render_oracle.py) compares 1,600 configurations
