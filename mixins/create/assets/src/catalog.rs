@@ -52,6 +52,9 @@ pub const BLOCKS: &[&str] = &[
     "chute",
     "portable_storage_interface",
     "sticker",
+    "zinc_ore",
+    "deepslate_zinc_ore",
+    "raw_zinc_block",
     "cut_andesite",
     "polished_cut_andesite",
     "cut_andesite_bricks",
@@ -65,6 +68,8 @@ pub const BLOCKS: &[&str] = &[
     "polished_cut_diorite",
     "cut_diorite_bricks",
     "small_diorite_bricks",
+    "industrial_iron_block",
+    "weathered_iron_block",
 ];
 pub const EXTRA_BLOCKSTATES: &[&str] = &[
     "lit_blaze_burner",
@@ -116,6 +121,7 @@ pub const ITEMS: &[&str] = &[
     "brass_hand",
     "sand_paper",
     "red_sand_paper",
+    "raw_zinc",
 ];
 pub const PARTS: &[&str] = &[
     "shaft",

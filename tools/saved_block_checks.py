@@ -141,8 +141,11 @@ def _read_saved_chunk(scratch, pos, world, probe_args):
         raise ValueError('A single private fixture world name is required')
     x, _, z = pos
     chunk_x, chunk_z = x // 16, z // 16
-    region = scratch / 'saves' / world / 'dimensions/minecraft/overworld/region' / (
-        'r.' + str(chunk_x // 32) + '.' + str(chunk_z // 32) + '.mca')
+    save = scratch / 'saves' / world
+    region_dir = save / 'dimensions/minecraft/overworld/region'
+    if not region_dir.is_dir():
+        region_dir = save / 'region'  # Java 1.21.1 overworld layout.
+    region = region_dir / f'r.{chunk_x // 32}.{chunk_z // 32}.mca'
     region.resolve().relative_to(scratch)
     assert not region.is_symlink(), 'Symlinked fixture saves are refused'
     raw, source = _raw_chunk(region, chunk_x, chunk_z)

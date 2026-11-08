@@ -61,6 +61,7 @@ public final class ReferenceBridge {
     private final String token;
     private final String world;
     private final long seed;
+    private final boolean normalWorld;
     private final Queue<FrameJob> frameJobs = new ConcurrentLinkedQueue<>();
     private final Queue<KeyMapping> release = new ConcurrentLinkedQueue<>();
     private volatile long frames;
@@ -95,7 +96,8 @@ public final class ReferenceBridge {
         JsonObject config = JsonParser.parseString(Files.readString(Path.of(configName))).getAsJsonObject();
         root = Path.of(config.get("root").getAsString()).toAbsolutePath().normalize();
         token = config.get("token").getAsString();
-        world = config.get("world").getAsString();
+        normalWorld = Boolean.getBoolean("create.reference.normal_world");
+        world = config.get("world").getAsString() + (normalWorld ? "Normal" : "");
         seed = config.get("seed").getAsLong();
         http = HttpServer.create(new InetSocketAddress("127.0.0.1", config.get("port").getAsInt()), 8);
         http.setExecutor(Executors.newFixedThreadPool(4, r -> {
@@ -221,8 +223,9 @@ public final class ReferenceBridge {
             } else {
                 LevelSettings settings = new LevelSettings(world, GameType.CREATIVE, false, Difficulty.PEACEFUL,
                     true, new GameRules(), WorldDataConfiguration.DEFAULT);
-                mc.createWorldOpenFlows().createFreshLevel(world, settings, new WorldOptions(seed, false, false),
-                    access -> access.registryOrThrow(Registries.WORLD_PRESET).getHolderOrThrow(WorldPresets.FLAT).value().createWorldDimensions(), mc.screen);
+                var preset = normalWorld ? WorldPresets.NORMAL : WorldPresets.FLAT;
+                mc.createWorldOpenFlows().createFreshLevel(world, settings, new WorldOptions(seed, normalWorld, false),
+                    access -> access.registryOrThrow(Registries.WORLD_PRESET).getHolderOrThrow(preset).value().createWorldDimensions(), mc.screen);
             }
         }
     }

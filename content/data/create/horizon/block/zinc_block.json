@@ -1,8 +1,8 @@
 {
-  "template": "minecraft:glass",
+  "template": "minecraft:iron_block",
   "item": true,
   "properties": {
-    "hardness": 1.5,
-    "sounds": "minecraft:andesite"
+    "map_color": 61,
+    "requires_tool": true
   }
 }

@@ -85,6 +85,11 @@ developer source build. The three changes are applied in a separate checkout.
   preserves the lower slab's foot height in both clients. The maximum
   measured player position difference at matched angles was 0.17 blocks.
   Dropped-item carry remains a separate case.
+- [Dry straight stairs](tools/contraption_stair_checks.py) match the 18 landed
+  states across quarter, half and three-quarter turns on all three axes.
+  A sticky piston preserves both states. Dropped items settle on the two
+  tread heights within Java's contact offset of about 0.0001 blocks. The
+  native fixture also covers wet stairs and obstructed landing preflight.
 - [Andesite building blocks](tools/andesite_palette_checks.py) use six
   stonecutting recipes checked against the pinned source. Horizon's real
   Stonecutter makes all five variants and converts them back through the
@@ -106,6 +111,12 @@ developer source build. The three changes are applied in a separate checkout.
   Industrial Iron is reusable. After a Horizon restart, opening the outlet
   transfers the marked stack intact. Java and Horizon used the same
   survival inputs, and Horizon ran with its built-in resources.
+- [Zinc ore](tools/zinc_checks.py) appears in nine new ordinary Overworld
+  columns in each client. The mining checks match the stone and iron tool
+  requirements and Silk Touch results. Fortune drops remain in the source
+  range. Both furnace types yield an ingot from normal ore, deepslate ore
+  and raw zinc. The samples come from Minecraft 1.21.1 and 26.3 terrain
+  independently.
 
 The [offscreen engineering run](tools/engineering_checks.py) used ordinary
 crank clicks on all six facings and measured the rendered base and handle

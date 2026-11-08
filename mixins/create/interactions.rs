@@ -5,6 +5,7 @@
 use super::Game;
 use crate::{containers::BlockEntity, items::ItemStack};
 use create_engine::{kinetics::Axis, placement::Direction};
+use horizon_core::{position::BlockPos, random::RandomSource};
 use horizon_world::nbt::Tag;
 
 fn secondary(game: &Game<'_>) -> bool {
@@ -18,6 +19,16 @@ fn bypass(game: &Game<'_>) -> bool {
             .is_some_and(Option::is_some)
             || game.offhand.is_some())
 }
+
+fn static_wrench_pickup(game: &Game<'_>, block: &str) -> bool {
+    matches!(block, "create:industrial_iron_block" | "create:weathered_iron_block")
+        && game.may_build()
+        && game.native_sneaking()
+        && game
+            .native_block_name_in_tag(block, "create:wrench_pickup")
+            .is_ok_and(|tagged| tagged)
+}
+
 fn manual(game: &Game<'_>, pos: [i32; 3]) -> Option<(String, bool)> {
     let held = game.held()?;
     let block = game.native_block(pos);
@@ -55,7 +66,8 @@ pub(super) fn reacts(game: &Game<'_>, pos: [i32; 3]) -> bool {
     if held == Some("create:wrench")
         && (crate::game::create_port::owns(&block)
             || block == "create:lit_blaze_burner"
-            || create_engine::sail::material(&block).is_some())
+            || create_engine::sail::material(&block).is_some()
+            || static_wrench_pickup(game, &block))
     {
         return true;
     }
@@ -134,6 +146,25 @@ pub(super) fn right_click(game: &mut Game<'_>, pos: [i32; 3], face: [i32; 3]) ->
         .held()
         .is_some_and(|s| s.item.as_ref() == "create:wrench");
     if wrench {
+        if static_wrench_pickup(game, &block) {
+            let drops = if game.creative {
+                Vec::new()
+            } else {
+                let state = game.world.block(pos[0], pos[1], pos[2]);
+                let tool = game.held().cloned();
+                game.block_loot_at(pos, state, tool.as_ref(), None)
+            };
+            let at = BlockPos::new(pos[0], pos[1], pos[2]);
+            if game.with_level(|b, level, ticks| b.destroy_block(level, ticks, at, false)) {
+                let _ = game.process_level_events();
+                for stack in drops {
+                    game.give_or_drop(stack);
+                }
+                let pitch = 0.5 + game.world.random.next_float() * 0.5;
+                super::create_port_sounds::wrench_remove(game, pos, pitch);
+            }
+            return true;
+        }
         if secondary(game)
             && matches!(
                 block.as_str(),

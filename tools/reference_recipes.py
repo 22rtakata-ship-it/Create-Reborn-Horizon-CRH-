@@ -4,7 +4,7 @@ import json
 import math
 import subprocess
 from common import CREATE, PINS, ROOT
-from catalog import BLOCKS, INTERNAL_BLOCKS, ITEMS, PALETTE_BLOCKS, STONE_PALETTES
+from catalog import BLOCKS, INTERNAL_BLOCKS, IRON_PALETTE, ITEMS, PALETTE_BLOCKS, STONE_PALETTES, ZINC_BLOCKS
 from sail_content import COLORED_SAILS, SAIL_ITEMS
 from portable_storage_content import PSI
 from chute_content import CHUTE
@@ -174,6 +174,8 @@ def main():
         for stone, variants in STONE_PALETTES.items()
         for name in [*variants, stone]
     }
+    palette_recipes.update(base + f'create/recipe/{name}_from_ingots_iron_stonecutting.json'
+                           for name in IRON_PALETTE)
     for name in names:
         if not name.startswith(base + 'create/recipe/') or not name.endswith('.json'): continue
         r = read(name)
@@ -301,16 +303,23 @@ def main():
         if dest in required or dest not in tags: continue
         required.add(dest);pending.extend(tag_refs(tags[dest]))
     tags={name:t for name,t in tags.items() if name in required}
-    for tool in ['axe', 'pickaxe']:
-        dest = 'minecraft/tags/block/mineable/' + tool + '.json'
+    zinc_blocks = {f'create:{name}' for name in ('zinc_block', *ZINC_BLOCKS)}
+    for block_tag in ['mineable/axe', 'mineable/pickaxe', 'needs_iron_tool', 'beacon_base_blocks']:
+        dest = f'minecraft/tags/block/{block_tag}.json'
         tag = read(base + dest)
-        tag['values'] = [v for v in tag['values'] if isinstance(v, str) and v in known_blocks]
+        tag['values'] = [v for v in tag['values'] if isinstance(v, str) and v in known_blocks
+                         and (block_tag.startswith('mineable/') or v in zinc_blocks)]
         tags[dest] = tag
     for kind in ['block', 'item']:
         dest = f'create/tags/{kind}/casing.json'
         tag = read(base + dest)
         tag['values'] = [value for value in tag['values'] if value in known_blocks]
         tags[dest] = tag
+    # The static pickup adapter covers the two implemented iron palettes.
+    dest = 'create/tags/block/wrench_pickup.json'
+    tag = read(base + dest)
+    tag['values'] = [value for value in tag['values'] if value in known_blocks]
+    tags[dest] = tag
     # Fan catalyst and permeability tags are MIT behavior data. Unimplemented
     # Create blocks must not become required tag entries in the port.
     for kind, paths in {
@@ -352,10 +361,28 @@ def main():
         f'create/loot_table/blocks/{PSI}.json',
         f'create/loot_table/blocks/{CHUTE}.json',
         f'create/loot_table/blocks/{STICKER}.json',
+        'create/loot_table/blocks/zinc_block.json',
+        *[f'create/loot_table/blocks/{name}.json' for name in ZINC_BLOCKS],
         *[f'create/loot_table/blocks/{name}.json' for name in PALETTE_BLOCKS],
         *[f'create/loot_table/blocks/{name}.json' for name in SAIL_ITEMS + COLORED_SAILS],
     ]}
-    result = {'reference': PINS['create_revision'], 'license': 'MIT recipe/data-map/loot data; original definitions of vanilla convention tags', 'recipes': recipes, 'tags': tags, 'data_maps':maps, 'loot_tables':loot}
+    feature = read(base + 'create/worldgen/configured_feature/zinc_ore.json')
+    # 26.3 puts feature fields at the top level and uses an identifier for a
+    # block state with no properties.
+    ore = dict(type=feature['type'], **feature['config'])
+    for target in ore['targets']:
+        assert set(target['state']) == {'Name'}
+        target['state'] = target['state']['Name']
+    placed = read(base + 'create/worldgen/placed_feature/zinc_ore.json')
+    # The Java config filter is a no-op at the default (generation enabled).
+    # Keep the original count and height modifiers in their original order.
+    assert placed['placement'].pop() == {'type': 'create:config_filter'}
+    zinc_feature = {
+        'create/worldgen/feature/zinc_ore.json': ore,
+        'create/worldgen/placed_feature/zinc_ore.json': placed,
+        'create/neoforge/biome_modifier/zinc_ore.json': read(base + 'create/neoforge/biome_modifier/zinc_ore.json'),
+    }
+    result = {'reference': PINS['create_revision'], 'license': 'MIT recipe/data-map/loot/worldgen data; original definitions of vanilla convention tags', 'recipes': recipes, 'tags': tags, 'data_maps':maps, 'loot_tables':loot, 'worldgen':zinc_feature}
     dest = ROOT / 'tools/data/recipes.json'; dest.parent.mkdir(exist_ok=True); dest.write_text(json.dumps(result, indent=2) + '\n')
     print('Exported', len(recipes), 'recipes,', len(tags), 'tags and',len(maps),'data maps from MIT datapack sources')
 

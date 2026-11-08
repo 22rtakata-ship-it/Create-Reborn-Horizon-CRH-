@@ -80,6 +80,13 @@ Layered andesite uses its ordinary cube model while connected textures are
 pending. The tab uses cut andesite as its icon until the ornate iron window is
 available.
 
+Zinc and Deepslate Zinc Ore use the original `create:zinc_ore` feature
+with eight attempts, vein size 12 and height anchors −63 and 70. The pinned
+Java config defaults to enabled generation. Horizon enables the feature with
+the port and uses 26.3 world generation in new chunks. The original mining
+tool tier, Silk Touch, Fortune and cooking recipes are retained. Raw Zinc
+can be packed into its original storage block.
+
 The four sheet items retain `create:iron_sheet`, `create:golden_sheet` and
 `create:copper_sheet` and `create:brass_sheet`. Kinetic entities retain `Speed` as a float. Depot data
 uses `HeldItem.Item`, `Pos`, `PrevPos`, `Offset`, `PrevOffset`, `InSegment`,

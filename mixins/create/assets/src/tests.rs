@@ -795,7 +795,10 @@ fn generated_distribution_passes_the_native_content_allowlist() {
         "data/create/horizon/block/gantry_shaft.json",
         "data/create/horizon/block/rope_pulley.json",
         "data/create/horizon/block/rope.json",
+        "data/create/worldgen/placed_feature/zinc_ore.json",
+        "data/minecraft/tags/block/beacon_base_blocks.json",
         "data/minecraft/tags/block/climbable.json",
+        "data/minecraft/tags/block/needs_iron_tool.json",
     ] {
         assert!(path.join(name).is_file(), "{name}");
     }

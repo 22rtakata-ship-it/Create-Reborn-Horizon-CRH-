@@ -54,6 +54,9 @@
     "create:chute",
     "create:portable_storage_interface",
     "create:sticker",
+    "create:zinc_ore",
+    "create:deepslate_zinc_ore",
+    "create:raw_zinc_block",
     "create:iron_sheet",
     "create:golden_sheet",
     "create:copper_sheet",
@@ -80,6 +83,7 @@
     "create:electron_tube",
     "create:brass_hand",
     "create:sand_paper",
-    "create:red_sand_paper"
+    "create:red_sand_paper",
+    "create:raw_zinc"
   ]
 }

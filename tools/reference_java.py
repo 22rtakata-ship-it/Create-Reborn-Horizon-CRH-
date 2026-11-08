@@ -239,7 +239,7 @@ def process_alive(base):
         return False
 
 
-def launch(base, wait=True):
+def launch(base, wait=True, normal_world=False):
     if process_alive(base):
         raise RuntimeError('The isolated Java reference process is already running')
     manifest = json.loads((base / 'manifest.json').read_text())
@@ -256,6 +256,7 @@ def launch(base, wait=True):
                '-Dorg.lwjgl.system.SharedLibraryExtractPath=' + str(base / 'natives'),
                '-Djava.library.path=' + str(base / 'natives'),
                '-Dcreate.reference.config=' + str(base / 'bridge-config.json'),
+               '-Dcreate.reference.normal_world=' + str(normal_world).lower(),
                *map(expand, profile['arguments']['jvm']), '--add-modules', 'jdk.httpserver',
                '-cp', os.pathsep.join(manifest['runtime_classpath']), profile['mainClass'],
                '--username', 'CreateReference', '--uuid', 'a84d149a9dd64b17a9244ed14bc23bb8',
@@ -323,6 +324,7 @@ def main():
     stage.add_argument('file', type=Path)
     start = sub.add_parser('launch')
     start.add_argument('--no-wait', action='store_true')
+    start.add_argument('--normal-world', action='store_true')
     invoke = sub.add_parser('call')
     invoke.add_argument('method')
     invoke.add_argument('body', nargs='?', default='{}', help='JSON object; @file reads a JSON file')
@@ -338,7 +340,7 @@ def main():
         elif args.action == 'stage-schematic':
             result = stage_schematic(base, args.file.resolve())
         elif args.action == 'launch':
-            result = launch(base, not args.no_wait)
+            result = launch(base, not args.no_wait, args.normal_world)
         elif args.action == 'call':
             body = Path(args.body[1:]).read_text() if args.body.startswith('@') else args.body
             result = call(base, args.method, json.loads(body))

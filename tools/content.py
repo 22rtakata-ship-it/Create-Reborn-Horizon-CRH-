@@ -5,7 +5,7 @@ Models reference vanilla textures by ID and contain no upstream texture bytes.
 """
 import json
 from common import ROOT, NATIVE
-from catalog import PALETTE_BLOCKS, STONE_PALETTES
+from catalog import IRON_PALETTE, PALETTE_BLOCKS, STONE_PALETTES, ZINC_BLOCKS
 from pulley_content import rope_pulley
 from gantry_content import gantry
 from sail_content import COLORED_SAILS, sails
@@ -657,6 +657,36 @@ def stone_palettes():
             write(f"assets/create/items/{name}.json", {
                 "model": {"type": "minecraft:model", "model": f"create:item/{name}"},
             })
+
+
+def solid_variant(name, template, texture, properties):
+    write(f"data/create/horizon/block/{name}.json", {
+        "template": f"minecraft:{template}", "item": True,
+        "properties": dict(properties, requires_tool=True),
+    })
+    block_model = f"create:block/{name}"
+    write(f"assets/create/blockstates/{name}.json", {"variants": {"": {"model": block_model}}})
+    write(f"assets/create/models/block/{name}.json", {"parent": "minecraft:block/cube_all",
+                                                    "textures": {"all": f"minecraft:block/{texture}"}})
+    write(f"assets/create/models/item/{name}.json", {"parent": block_model})
+    write(f"assets/create/items/{name}.json", {
+        "model": {"type": "minecraft:model", "model": f"create:item/{name}"},
+    })
+
+
+def iron_palettes():
+    for name, texture in zip(IRON_PALETTE, ("iron_block", "netherite_block"), strict=True):
+        solid_variant(name, "gold_block", texture, {"map_color": 21, "sounds": "minecraft:netherite_block"})
+
+
+def zinc_ores():
+    templates = ("gold_ore", "deepslate_gold_ore", "raw_gold_block")
+    textures = ("iron_ore", "deepslate_iron_ore", "raw_iron_block")
+    for name, template, texture, color in zip(ZINC_BLOCKS, templates, textures, (6, 11, 61), strict=True):
+        solid_variant(name, template, texture, {"map_color": color})
+
+
+def palette_tab():
     write("data/create/horizon/creative_tab/palettes.json", {
         "title": "itemGroup.create.palettes", "icon": "create:cut_andesite",
         "items": [f"create:{name}" for name in PALETTE_BLOCKS],
@@ -698,6 +728,9 @@ def foundation():
         if block == "copper_casing":
             declaration = {"template": "minecraft:andesite", "item": True,
                            "properties": {"map_color": 44, "sounds": "minecraft:oak_planks"}}
+        if block == "zinc_block":
+            declaration = {"template": "minecraft:iron_block", "item": True,
+                           "properties": {"map_color": 61, "requires_tool": True}}
         write("data/create/horizon/block/" + block + ".json", declaration)
         texture = "minecraft:block/stripped_spruce_log" if "casing" in block else "minecraft:block/iron_block"
         if block == "copper_casing":
@@ -714,6 +747,8 @@ def foundation():
     for item in ITEMS:
         if item in [name + '_sheet' for name in SHEETS]: continue
         item_decl={"template":"minecraft:iron_ingot","max_stack_size":1 if item in ['wrench','goggles','super_glue', *SANDPAPERS] else 64}
+        if item == 'raw_zinc':
+            item_decl['template'] = 'minecraft:raw_iron'
         if item=='goggles':item_decl['components']={'minecraft:equippable':{'slot':'head','equip_sound':'minecraft:item.armor.equip_generic','dispensable':True,'swappable':True,'damage_on_hurt':False}}
         if item == 'super_glue':
             item_decl['components'] = {'minecraft:max_damage': 99, 'minecraft:damage': 0}
@@ -724,7 +759,7 @@ def foundation():
         if item == 'empty_blaze_burner':
             item_decl['place_block'] = 'create:blaze_burner'
         write("data/create/horizon/item/" + item + ".json", item_decl)
-        sprite = {"wheat_flour": "sugar", "dough": "bread", "super_glue": "slime_ball",
+        sprite = {"raw_zinc": "raw_iron", "wheat_flour": "sugar", "dough": "bread", "super_glue": "slime_ball",
                   "rose_quartz": "amethyst_shard", "polished_rose_quartz": "quartz",
                   "sand_paper": "paper", "red_sand_paper": "paper",
                   "electron_tube": "redstone_torch", "brass_hand": "gold_ingot"}.get(item, "iron_ingot")
@@ -754,9 +789,14 @@ def foundation():
     chain_drives()
     fallback_instruments_and_wheels()
     stone_palettes()
+    iron_palettes()
+    zinc_ores()
+    palette_tab()
     (CONTENT / 'assets/create/models/block/port_hint.json').unlink(missing_ok=True)
     # Only MIT recipe/tag data is distributed; original assets stay in the JAR.
     reference = json.loads((ROOT / "tools/data/recipes.json").read_text())
+    for path, value in reference['worldgen'].items():
+        write('data/' + path, value)
     def current(value):
         if isinstance(value, dict):
             if set(value) == {"item"}: return value["item"]
@@ -810,11 +850,17 @@ def foundation():
                          'secondary_linear_chassis': 'Secondary Linear Chassis',
                          'radial_chassis': 'Radial Chassis'})
     extra_blocks[STICKER] = 'Sticker'
+    extra_blocks.update(zip(IRON_PALETTE, ('Block of Industrial Iron', 'Block of Weathered Iron'), strict=True))
+    extra_blocks.update(zip(ZINC_BLOCKS, ('Zinc Ore', 'Deepslate Zinc Ore', 'Block of Raw Zinc'), strict=True))
+    extra_items['raw_zinc'] = 'Raw Zinc'
     extra_blocks.update({"mechanical_piston": "Mechanical Piston", "sticky_mechanical_piston": "Sticky Mechanical Piston",
                          "mechanical_piston_head": "Mechanical Piston Head", "piston_extension_pole": "Piston Extension Pole"})
     extra_blocks.update({"mechanical_harvester": "Mechanical Harvester",
                          "mechanical_plough": "Mechanical Plough", "mechanical_saw": "Mechanical Saw"})
-    palette_ru = {}
+    palette_ru = {
+        "block.create.industrial_iron_block": "Блок промышленного железа",
+        "block.create.weathered_iron_block": "Состаренный блок промышленного железа",
+    }
     for stone, variants in STONE_PALETTES.items():
         title = stone.title()
         _, _, name, adjective = STONE_APPEARANCE[stone]
@@ -867,6 +913,10 @@ def foundation():
             lang['block.create.adjustable_chain_gearshift'] = 'Регулируемая цепная коробка передач'
             lang['block.create.flywheel'] = 'Маховик'
             lang.update(palette_ru)
+            lang.update({'block.create.zinc_ore': 'Цинковая руда',
+                         'block.create.deepslate_zinc_ore': 'Цинконосный глубинный сланец',
+                         'block.create.raw_zinc_block': 'Блок рудного цинка',
+                         'item.create.raw_zinc': 'Рудный цинк'})
             lang["itemGroup.create.palettes"] = "Create: Строительные блоки"
             lang['block.create.copper_casing'] = 'Медный корпус'
             lang['block.create.mechanical_bearing'] = 'Механический вращатель'

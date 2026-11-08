@@ -1,6 +1,6 @@
 {
   "reference": "ac0c444d9828da3453ae8cc65338e8de063286fb",
-  "license": "MIT recipe/data-map/loot data; original definitions of vanilla convention tags",
+  "license": "MIT recipe/data-map/loot/worldgen data; original definitions of vanilla convention tags",
   "recipes": {
     "create/recipe/andesite_from_stone_types_andesite_stonecutting.json": {
       "type": "minecraft:stonecutting",
@@ -10,6 +10,32 @@
       "result": {
         "count": 1,
         "id": "minecraft:andesite"
+      }
+    },
+    "create/recipe/blasting/zinc_ingot_from_ore.json": {
+      "type": "minecraft:blasting",
+      "category": "misc",
+      "cookingtime": 100,
+      "experience": 1.0,
+      "ingredient": {
+        "tag": "c:ores/zinc"
+      },
+      "result": {
+        "count": 1,
+        "id": "create:zinc_ingot"
+      }
+    },
+    "create/recipe/blasting/zinc_ingot_from_raw_ore.json": {
+      "type": "minecraft:blasting",
+      "category": "misc",
+      "cookingtime": 100,
+      "experience": 0.7,
+      "ingredient": {
+        "tag": "c:raw_materials/zinc"
+      },
+      "result": {
+        "count": 1,
+        "id": "create:zinc_ingot"
       }
     },
     "create/recipe/compacting/andesite_from_flint.json": {
@@ -1459,6 +1485,37 @@
         "id": "create:electron_tube"
       }
     },
+    "create/recipe/crafting/materials/raw_zinc.json": {
+      "type": "minecraft:crafting_shapeless",
+      "category": "misc",
+      "ingredients": [
+        {
+          "item": "create:raw_zinc_block"
+        }
+      ],
+      "result": {
+        "count": 9,
+        "id": "create:raw_zinc"
+      }
+    },
+    "create/recipe/crafting/materials/raw_zinc_block.json": {
+      "type": "minecraft:crafting_shaped",
+      "category": "misc",
+      "key": {
+        "C": {
+          "item": "create:raw_zinc"
+        }
+      },
+      "pattern": [
+        "CCC",
+        "CCC",
+        "CCC"
+      ],
+      "result": {
+        "count": 1,
+        "id": "create:raw_zinc_block"
+      }
+    },
     "create/recipe/crafting/materials/red_sand_paper.json": {
       "type": "minecraft:crafting_shapeless",
       "category": "misc",
@@ -1950,6 +2007,16 @@
           "id": "minecraft:warped_fungus"
         }
       ]
+    },
+    "create/recipe/industrial_iron_block_from_ingots_iron_stonecutting.json": {
+      "type": "minecraft:stonecutting",
+      "ingredient": {
+        "tag": "c:ingots/iron"
+      },
+      "result": {
+        "count": 2,
+        "id": "create:industrial_iron_block"
+      }
     },
     "create/recipe/item_application/andesite_casing_from_log.json": {
       "type": "create:item_application",
@@ -3160,6 +3227,32 @@
         "id": "minecraft:bread"
       }
     },
+    "create/recipe/smelting/zinc_ingot_from_ore.json": {
+      "type": "minecraft:smelting",
+      "category": "misc",
+      "cookingtime": 200,
+      "experience": 1.0,
+      "ingredient": {
+        "tag": "c:ores/zinc"
+      },
+      "result": {
+        "count": 1,
+        "id": "create:zinc_ingot"
+      }
+    },
+    "create/recipe/smelting/zinc_ingot_from_raw_ore.json": {
+      "type": "minecraft:smelting",
+      "category": "misc",
+      "cookingtime": 200,
+      "experience": 0.7,
+      "ingredient": {
+        "tag": "c:raw_materials/zinc"
+      },
+      "result": {
+        "count": 1,
+        "id": "create:zinc_ingot"
+      }
+    },
     "create/recipe/smoking/bread.json": {
       "type": "minecraft:smoking",
       "category": "food",
@@ -3201,6 +3294,19 @@
       "results": [
         {
           "id": "minecraft:packed_ice"
+        }
+      ]
+    },
+    "create/recipe/splashing/industrial_iron_block.json": {
+      "type": "create:splashing",
+      "ingredients": [
+        {
+          "item": "create:industrial_iron_block"
+        }
+      ],
+      "results": [
+        {
+          "id": "create:weathered_iron_block"
         }
       ]
     },
@@ -3320,6 +3426,16 @@
           "id": "minecraft:white_wool"
         }
       ]
+    },
+    "create/recipe/weathered_iron_block_from_ingots_iron_stonecutting.json": {
+      "type": "minecraft:stonecutting",
+      "ingredient": {
+        "tag": "c:ingots/iron"
+      },
+      "result": {
+        "count": 2,
+        "id": "create:weathered_iron_block"
+      }
     },
     "create/recipe/cutting/runtime_generated/compat/minecraft/acacia_log_to_stripped_acacia_log.json": {
       "type": "create:cutting",
@@ -5438,6 +5554,11 @@
     }
   },
   "tags": {
+    "c/tags/item/ingots/iron.json": {
+      "values": [
+        "minecraft:iron_ingot"
+      ]
+    },
     "c/tags/item/flours/wheat.json": {
       "values": [
         "create:wheat_flour"
@@ -5504,6 +5625,17 @@
         "minecraft:black_stained_glass"
       ]
     },
+    "c/tags/item/raw_materials/zinc.json": {
+      "values": [
+        "create:raw_zinc"
+      ]
+    },
+    "c/tags/item/ores/zinc.json": {
+      "values": [
+        "create:zinc_ore",
+        "create:deepslate_zinc_ore"
+      ]
+    },
     "create/tags/item/stone_types/granite.json": {
       "values": [
         "create:cut_granite",
@@ -5559,11 +5691,6 @@
         "create:layered_andesite",
         "create:andesite_pillar",
         "minecraft:andesite"
-      ]
-    },
-    "c/tags/item/ingots/iron.json": {
-      "values": [
-        "minecraft:iron_ingot"
       ]
     },
     "c/tags/item/ingots/gold.json": {
@@ -5958,8 +6085,13 @@
         "create:brass_casing",
         "create:copper_casing",
         "create:flywheel",
+        "create:zinc_ore",
+        "create:deepslate_zinc_ore",
+        "create:raw_zinc_block",
         "create:zinc_block",
         "create:andesite_alloy_block",
+        "create:industrial_iron_block",
+        "create:weathered_iron_block",
         "create:brass_block",
         "create:cut_granite",
         "create:polished_cut_granite",
@@ -5976,6 +6108,19 @@
         "create:layered_andesite"
       ]
     },
+    "minecraft/tags/block/needs_iron_tool.json": {
+      "values": [
+        "create:zinc_ore",
+        "create:deepslate_zinc_ore",
+        "create:raw_zinc_block",
+        "create:zinc_block"
+      ]
+    },
+    "minecraft/tags/block/beacon_base_blocks.json": {
+      "values": [
+        "create:zinc_block"
+      ]
+    },
     "create/tags/block/casing.json": {
       "values": [
         "create:andesite_casing",
@@ -5988,6 +6133,12 @@
         "create:andesite_casing",
         "create:brass_casing",
         "create:copper_casing"
+      ]
+    },
+    "create/tags/block/wrench_pickup.json": {
+      "values": [
+        "create:industrial_iron_block",
+        "create:weathered_iron_block"
       ]
     },
     "create/tags/block/fan_transparent.json": {
@@ -6422,6 +6573,152 @@
       ],
       "random_sequence": "create:blocks/sticker"
     },
+    "create/loot_table/blocks/zinc_block.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:zinc_block"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/zinc_block"
+    },
+    "create/loot_table/blocks/zinc_ore.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "entries": [
+            {
+              "type": "minecraft:alternatives",
+              "children": [
+                {
+                  "type": "minecraft:item",
+                  "conditions": [
+                    {
+                      "type": "minecraft:match_tool",
+                      "predicate": {
+                        "predicates": {
+                          "minecraft:enchantments": [
+                            {
+                              "enchantments": "minecraft:silk_touch",
+                              "levels": {
+                                "min": 1
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "name": "create:zinc_ore"
+                },
+                {
+                  "type": "minecraft:item",
+                  "functions": [
+                    {
+                      "enchantment": "minecraft:fortune",
+                      "formula": "minecraft:ore_drops",
+                      "function": "minecraft:apply_bonus"
+                    },
+                    {
+                      "function": "minecraft:explosion_decay"
+                    }
+                  ],
+                  "name": "create:raw_zinc"
+                }
+              ]
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/zinc_ore"
+    },
+    "create/loot_table/blocks/deepslate_zinc_ore.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "entries": [
+            {
+              "type": "minecraft:alternatives",
+              "children": [
+                {
+                  "type": "minecraft:item",
+                  "conditions": [
+                    {
+                      "type": "minecraft:match_tool",
+                      "predicate": {
+                        "predicates": {
+                          "minecraft:enchantments": [
+                            {
+                              "enchantments": "minecraft:silk_touch",
+                              "levels": {
+                                "min": 1
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "name": "create:deepslate_zinc_ore"
+                },
+                {
+                  "type": "minecraft:item",
+                  "functions": [
+                    {
+                      "enchantment": "minecraft:fortune",
+                      "formula": "minecraft:ore_drops",
+                      "function": "minecraft:apply_bonus"
+                    },
+                    {
+                      "function": "minecraft:explosion_decay"
+                    }
+                  ],
+                  "name": "create:raw_zinc"
+                }
+              ]
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/deepslate_zinc_ore"
+    },
+    "create/loot_table/blocks/raw_zinc_block.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:raw_zinc_block"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/raw_zinc_block"
+    },
     "create/loot_table/blocks/cut_andesite.json": {
       "type": "minecraft:block",
       "pools": [
@@ -6694,6 +6991,48 @@
         }
       ],
       "random_sequence": "create:blocks/small_diorite_bricks"
+    },
+    "create/loot_table/blocks/industrial_iron_block.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:industrial_iron_block"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/industrial_iron_block"
+    },
+    "create/loot_table/blocks/weathered_iron_block.json": {
+      "type": "minecraft:block",
+      "pools": [
+        {
+          "bonus_rolls": 0.0,
+          "conditions": [
+            {
+              "type": "minecraft:survives_explosion"
+            }
+          ],
+          "entries": [
+            {
+              "type": "minecraft:item",
+              "name": "create:weathered_iron_block"
+            }
+          ],
+          "rolls": 1.0
+        }
+      ],
+      "random_sequence": "create:blocks/weathered_iron_block"
     },
     "create/loot_table/blocks/sail_frame.json": {
       "type": "minecraft:block",
@@ -7051,6 +7390,59 @@
         }
       ],
       "random_sequence": "create:blocks/black_sail"
+    }
+  },
+  "worldgen": {
+    "create/worldgen/feature/zinc_ore.json": {
+      "type": "minecraft:ore",
+      "discard_chance_on_air_exposure": 0.0,
+      "size": 12,
+      "targets": [
+        {
+          "state": "create:zinc_ore",
+          "target": {
+            "predicate_type": "minecraft:tag_match",
+            "tag": "minecraft:stone_ore_replaceables"
+          }
+        },
+        {
+          "state": "create:deepslate_zinc_ore",
+          "target": {
+            "predicate_type": "minecraft:tag_match",
+            "tag": "minecraft:deepslate_ore_replaceables"
+          }
+        }
+      ]
+    },
+    "create/worldgen/placed_feature/zinc_ore.json": {
+      "feature": "create:zinc_ore",
+      "placement": [
+        {
+          "type": "minecraft:count",
+          "count": 8
+        },
+        {
+          "type": "minecraft:in_square"
+        },
+        {
+          "type": "minecraft:height_range",
+          "height": {
+            "type": "minecraft:uniform",
+            "max_inclusive": {
+              "absolute": 70
+            },
+            "min_inclusive": {
+              "absolute": -63
+            }
+          }
+        }
+      ]
+    },
+    "create/neoforge/biome_modifier/zinc_ore.json": {
+      "type": "neoforge:add_features",
+      "biomes": "#minecraft:is_overworld",
+      "features": "create:zinc_ore",
+      "step": "underground_ores"
     }
   }
 }

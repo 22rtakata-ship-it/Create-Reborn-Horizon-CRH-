@@ -19,6 +19,10 @@ python3 tools/reference_java.py call capture '{"name":"comparison.png","frames":
 python3 tools/reference_java.py stop
 ```
 
+Use `launch --normal-world` after stopping the reference client for checks
+that need naturally generated terrain. It opens a separate save with the
+ordinary world preset and the same pinned seed.
+
 `prepare` verifies the exact Create JAR checksum and copies only the selected
 official metadata/libraries/assets. Missing hash-addressed Mojang assets may be
 fetched from their official URLs after digest verification. The default root is

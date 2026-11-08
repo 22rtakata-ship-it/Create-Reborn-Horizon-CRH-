@@ -231,6 +231,9 @@ with the systems they depend on.
 - [x] Mechanical Bearing: native assembly, rotation, restart and orphan recovery.
 - [x] Dry oak and smooth stone slabs on bearings, with narrow collision
   shapes, state rotation and native reload. Full item contact timing remains open.
+- [x] Isolated dry straight oak and stone stairs on bearings and pistons.
+  Registry tread geometry and 18 landed states checked in the original.
+- [ ] Stairs that join at corners, waterlogged stairs and stair-specific rider transfer.
 - [x] Windmill Sail Frame and sixteen sail colors. Dye, shear, placement,
   windmill capture, generated speed and restart verified.
 - [ ] Windmill sail placement preview and canvas contact behavior.
@@ -334,6 +337,9 @@ with the systems they depend on.
   drops, local models and a building-blocks tab. Layered connected textures remain open.
 - [x] Industrial and Weathered Iron Blocks, their Stonecutter recipes, Wrench pickup,
   and fan washing with the original output count.
+- [x] Zinc and Deepslate Zinc Ore generate in new Overworld chunks.
+  Raw Zinc, its storage block and the original furnace and blast furnace recipes
+  complete the ordinary zinc supply route.
 - [ ] Pipes/pumps/valves, connectivity and flow direction.
 - [ ] Fluid Tanks, Hose Pulley, Item Drain/Spout, displays and fluid levels.
 - [ ] Trains: tracks, signals, stations, assembly, controls, schedules and persistence.

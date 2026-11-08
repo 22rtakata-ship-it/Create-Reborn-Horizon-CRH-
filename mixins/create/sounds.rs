@@ -37,13 +37,16 @@ pub(super) fn pickup(game: &mut Game<'_>, pos: [i32; 3]) {
 }
 pub(super) fn wrench(game: &mut Game<'_>, pos: [i32; 3], remove: bool) {
     if remove {
-        event(game, pos, "create:wrench_remove", 0.25, 0.75);
-        event(game, pos, "minecraft:block.netherite_block.hit", 0.25, 0.75);
+        wrench_remove(game, pos, 1.0);
     } else {
         event(game, pos, "create:wrench_rotate", 0.25, 1.25);
     }
 }
 
+pub(super) fn wrench_remove(game: &mut Game<'_>, pos: [i32; 3], pitch: f32) {
+    event(game, pos, "create:wrench_remove", 0.25, pitch * 0.75);
+    event(game, pos, "minecraft:block.netherite_block.hit", 0.25, pitch * 0.75);
+}
 
 pub(super) fn casing(game: &mut Game<'_>, pos: [i32; 3]) {
     event(game, pos, "minecraft:block.wood.place", 1.0, 0.8);
