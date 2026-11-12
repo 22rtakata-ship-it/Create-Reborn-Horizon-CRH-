@@ -345,6 +345,25 @@ impl Network {
 fn close(a: f32, b: f32) -> bool {
     (a - b).abs() <= 0.0001 * a.abs().max(b.abs()).max(1.0)
 }
+/// Loaded-world read footprint shared by the solver and event invalidation.
+/// Bounds are checked so edits at an i32 world edge cannot wrap to the other side.
+pub(crate) fn connection_candidates(pos: Pos) -> impl Iterator<Item = Pos> {
+    (-1_i32..=1).flat_map(move |x| {
+        (-1_i32..=1).flat_map(move |y| {
+            (-1_i32..=1).filter_map(move |z| {
+                if !(1..=2).contains(&(x.abs() + y.abs() + z.abs())) {
+                    return None;
+                }
+                Some([
+                    pos[0].checked_add(x)?,
+                    pos[1].checked_add(y)?,
+                    pos[2].checked_add(z)?,
+                ])
+            })
+        })
+    })
+}
+
 pub fn solve(start: Node, read: impl FnMut(Pos) -> Option<Node>) -> Network {
     solve_half(start, 0, read)
 }
@@ -357,41 +376,36 @@ pub fn solve_half(start: Node, half: u8, mut read: impl FnMut(Pos) -> Option<Nod
     let mut queue = VecDeque::from([(first, start)]);
     let mut failure = None;
     while let Some((key, from)) = queue.pop_front() {
-        for x in -1..=1 {
-            for y in -1..=1 {
-                for z in -1..=1 {
-                    let offset: Pos = [x, y, z];
-                    let distance: i32 = offset.iter().map(|n| n.abs()).sum();
-                    if !(1..=2).contains(&distance) || from.half(offset) != key.1 {
-                        continue;
-                    }
-                    let pos = std::array::from_fn(|i| from.pos[i] + offset[i]);
-                    let Some(to) = read(pos) else {
-                        continue;
-                    };
-                    let Some(ratio) = ratio(from, to) else {
-                        continue;
-                    };
-                    let target = (pos, to.half(offset.map(|v| -v)));
-                    let factor = factors[&key] * ratio;
-                    if let Some(old) = factors.get(&target) {
-                        if !close(*old, factor) {
-                            failure = Some(Status::InconsistentCycle);
-                        }
-                    } else {
-                        if nodes.len() >= MAX_NODES {
-                            failure = Some(Status::TooLarge);
-                            queue.clear();
-                            break;
-                        }
-                        nodes.insert(target, to);
-                        factors.insert(target, factor);
-                        queue.push_back((target, to));
-                    }
+        for pos in connection_candidates(from.pos) {
+            let offset: Pos = std::array::from_fn(|i| pos[i] - from.pos[i]);
+            if from.half(offset) != key.1 {
+                continue;
+            }
+            let Some(to) = read(pos) else {
+                continue;
+            };
+            let Some(ratio) = ratio(from, to) else {
+                continue;
+            };
+            let target = (pos, to.half(offset.map(|v| -v)));
+            let factor = factors[&key] * ratio;
+            if let Some(old) = factors.get(&target) {
+                if !close(*old, factor) {
+                    failure = Some(Status::InconsistentCycle);
                 }
+            } else {
+                if nodes.len() >= MAX_NODES {
+                    failure = Some(Status::TooLarge);
+                    queue.clear();
+                    break;
+                }
+                nodes.insert(target, to);
+                factors.insert(target, factor);
+                queue.push_back((target, to));
             }
         }
     }
+
     let mut base = None;
     let mut capacity = 0.0;
     for (key, node) in &nodes {

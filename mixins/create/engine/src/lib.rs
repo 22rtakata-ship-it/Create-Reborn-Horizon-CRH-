@@ -86,3 +86,6 @@ pub mod gantry_transmission;
 
 #[path = "core/particle_random.rs"]
 pub mod particle_random;
+
+#[path = "core/networks.rs"]
+pub mod networks;

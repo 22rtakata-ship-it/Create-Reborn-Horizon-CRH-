@@ -33,7 +33,8 @@ def main():
         run('cargo', 'clippy', '--locked', '--workspace', '--all-targets', '--', '-D', 'warnings')
         run('python3', 'tools/check_distribution.py')
     elif args.action == 'bench':
-        run('cargo', 'run', '--locked', '--release', '-p', 'create-testkit', '--example', 'network_baseline')
+        for example in ['network_baseline', 'network_cache_baseline']:
+            run('cargo', 'run', '--locked', '--release', '-p', 'create-testkit', '--example', example)
     else:
         run('cargo', args.action, '--locked', '--workspace')
 

@@ -18,3 +18,6 @@ pub mod waterwheel;
 
 #[path = "../../../mixins/create/engine/src/core/particle_random.rs"]
 pub mod particle_random;
+
+#[path = "../../../mixins/create/engine/src/core/networks.rs"]
+pub mod networks;
