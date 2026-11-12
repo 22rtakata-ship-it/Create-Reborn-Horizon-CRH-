@@ -30,3 +30,7 @@ Limits: no current-main compatibility claim; no full client link/run claim; no p
 To reproduce commands in this exact session, source `/workspace/work/activate-rust.sh` before entering `/workspace/create-reborn`. For a new machine use an official rustup installation or the preserved tools/bootstrap.py workflow; do not copy compiled caches.
 
 The final windmill integration fixture uses the same Motor source representation as the native windmill adapter. Its three integration tests and testkit Clippy were rerun after that fixture adjustment (evidence/integration-final.log).
+
+## Subsequent Core checkpoint
+
+The event-driven network service, 307-test workspace result and native integration boundaries are recorded in [core-networks.md](core-networks.md). Initial checkpoint results above are historical.

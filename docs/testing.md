@@ -7,3 +7,5 @@ The root facade deliberately has no separate copy of unit tests: upstream tests 
 The native bundle engine can also be tested independently: `cargo test --offline --manifest-path mixins/create/engine/Cargo.toml`. Its lockfile is generated locally because the inherited packaging excludes lockfiles. This validates the self-contained native simulation facade, not the injected Horizon client.
 
 Do not replace the original Java/Horizon gameplay fixtures with mocks. Those tools require isolated reference instances and often private JAR inputs. The absence of those inputs is recorded in reborn/validation.md. No client/server multiplayer test has been run.
+
+Event-driven Core regressions live in crates/create-testkit/tests/network_events.rs. They include an uncached-solver comparison across 160 edits and explicit work counters for 1000 repeated queries. Region fixtures are host-defined groups, not real Horizon chunk tests.

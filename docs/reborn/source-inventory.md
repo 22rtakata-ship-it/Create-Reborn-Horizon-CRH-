@@ -1,6 +1,6 @@
 # Source inventory
 
-Complete static inventory; presence does not establish behavior.
+Updated for the event-driven Core checkpoint. Complete static inventory; presence does not establish in-game behavior.
 
 | File | Lines | Rust tests | SHA256 |
 |---|---:|---:|---|
@@ -131,8 +131,9 @@ Complete static inventory; presence does not establish behavior.
 | `mixins/create/engine/src/core/fan_entities.rs` | 182 | 2 | cef1ac16ad7f7238f7b450bb8bddd56515631ea02ee2e391b343d59d6ad2ba2c |
 | `mixins/create/engine/src/core/fluid_transport.rs` | 164 | 3 | 673f909a95fcd9bb9de006b46d65bd1c11da01ed4e0fc8f176a941026eff4dbe |
 | `mixins/create/engine/src/core/gantry_transmission.rs` | 29 | 0 | 396ebd9faae6a90c729a08ad3971cdcacd09e6a5ec2c4b318c23a4e81dd29bb7 |
-| `mixins/create/engine/src/core/kinetics.rs` | 946 | 21 | 656e7a1182c78b60a9e4357319df6226829a0413698afe8379a63059775f95c4 |
+| `mixins/create/engine/src/core/kinetics.rs` | 960 | 21 | b465126254f0de56f953cbace37ec4bbdda5ca3f14f78bde7ee7ce023e705aef |
 | `mixins/create/engine/src/core/milling.rs` | 134 | 5 | 169f8ddf49fa9314f9807719819b5df5b353978aea380051bff2dfc1c34081ec |
+| `mixins/create/engine/src/core/networks.rs` | 244 | 0 | 3a9546fcd6a2396f1c976e3f8315dfa69385caf6dc935bb6860c7765fc5e262f |
 | `mixins/create/engine/src/core/particle_random.rs` | 13 | 0 | 8bd2be332c00db7e35f95d7e512cf4d431e3e0a39cbe827c920bd4fc68205842 |
 | `mixins/create/engine/src/core/particles.rs` | 585 | 2 | f22501a2b547bfb9c8dc21385fe78fe108cc6b75c46f5a0185f570d7a01442af |
 | `mixins/create/engine/src/core/placement.rs` | 259 | 3 | d7f00dddbe17083aeaac169ee3de8d44478b459e94007073cfc228f7033f1743 |
@@ -145,8 +146,8 @@ Complete static inventory; presence does not establish behavior.
 | `mixins/create/engine/src/core/transport.rs` | 1500 | 14 | 3cb05021432678b3178f901da232d9364d00b8af5c0e9f89ad69c2a8c18e81c0 |
 | `mixins/create/engine/src/core/visual.rs` | 141 | 2 | 2ef0767ea88e984a4e1ecca6b43c03d1411eafc2988695fa17711290dc1df608 |
 | `mixins/create/engine/src/core/waterwheel.rs` | 89 | 1 | d3d3c88166b4db237e5ee1d5d0f82b2a8c8d785b121116c2e0522cca51275475 |
-| `mixins/create/engine/src/lib.rs` | 88 | 0 | 3895a73f4aa53c3419a8ddf7d58be0806fc530b35f3e3fffb4e178bc570f8fc2 |
-| `mixins/create/engine/target/.rustc_info.json` | 1 | 0 | 34cc074e2b220d2177e1f3a9f58ec25afca212ba1449cdca413551de59d39ef6 |
+| `mixins/create/engine/src/lib.rs` | 91 | 0 | 4765cc6fb8f792f59049fe035cedd908ef55c139cd03c502483df20aa17fc10c |
+| `mixins/create/engine/target/.rustc_info.json` | 1 | 0 | 706f8d6b5b486220fd748e7ec5deb01091e9a6009004db5cacf8f4a995baabd0 |
 | `mixins/create/engine/target/debug/.fingerprint/create-engine-9270fcbdb6eb48b2/lib-create_engine.json` | 1 | 0 | 086103b387b50ce5081a832e585be47476a17378bd96c003e9a47aecf63b90f1 |
 | `mixins/create/engine/target/debug/.fingerprint/create-engine-db9880ede989ca94/test-lib-create_engine.json` | 1 | 0 | 46cebbc455ac2cc63486e0d8dd367f213bc521a0277a15331b09466dc25b4caa |
 | `mixins/create/entity.rs` | 6 | 0 | fea82359f43e1d9924703728d8aec729a51094ffb2aa6695b09351ee5a3df690 |

@@ -3,6 +3,8 @@
 | System | Canonical implementation / entry |
 |---|---|
 | Core public modules | crates/create-core/src/lib.rs |
+| Event-driven registry, cache, dimension/region lifecycle | mixins/create/engine/src/core/networks.rs; docs/networks.md |
+| Cache event regression scenarios | crates/create-testkit/tests/network_events.rs |
 | RPM, ratios, stress, graph traversal | mixins/create/engine/src/core/kinetics.rs |
 | Source water sampling | mixins/create/engine/src/core/waterwheel.rs |
 | Placement / directions | mixins/create/engine/src/core/placement.rs |

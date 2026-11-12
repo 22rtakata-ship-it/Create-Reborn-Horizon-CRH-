@@ -1,6 +1,6 @@
 # Create Reborn for Horizon
 
-Incremental modular fork of [Create for Horizon](https://github.com/Delete228/create-horizon), preserving upstream history and native code. This checkpoint separates headless simulation into Core, Mechanics and Contraptions; it is not a certified playable release.
+Incremental modular fork of [Create for Horizon](https://github.com/Delete228/create-horizon), preserving upstream history and native code. This checkpoint separates headless simulation into Core, Mechanics and Contraptions and adds an [event-driven Core network service](docs/networks.md). It is not a certified playable release.
 
 ```sh
 cargo build --locked --workspace

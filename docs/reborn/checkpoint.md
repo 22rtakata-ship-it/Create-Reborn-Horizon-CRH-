@@ -15,3 +15,5 @@ Workspace build, 296 Rust tests, 15 Python tests, format/Clippy, isolated module
 ## Next work
 
 Link and launch an isolated native client, validate the wheel/shaft/cog/press and save/reload scenarios, then implement the dimension-aware persistent topology cache while preserving source-event ordering. Continue adapting the retained Core components rather than rebuilding their tested algorithms. Follow gaps.md before broadening machines/contraptions or independent native packaging.
+
+Subsequent Core development is recorded in [core-networks.md](core-networks.md).

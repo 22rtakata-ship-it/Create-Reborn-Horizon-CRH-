@@ -1,0 +1,4 @@
+nodes,register_us,first_solve_us,cached_queries,cached_queries_us,edit_and_solve_us,solves,status
+100,24,116,1000,38,109,2,Running
+1000,229,1602,1000,26,1623,2,Running
+10000,3628,6255,0,0,5636,2,TooLarge

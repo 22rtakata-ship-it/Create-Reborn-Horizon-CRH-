@@ -4,7 +4,7 @@ Evidence levels: **local unit** means the inherited Rust tests were executed in 
 
 | Desired system | Existing evidence | Reuse decision / remaining acceptance |
 |---|---|---|
-| RPM, stress, ratios, shafts/cogs/gearbox | local unit; kinetics, placement, chain_drive | Reuse; public dimension API, persistent event-only cache (native cache currently includes game_time), 10000-node support and full split/merge/unload scenarios remain |
+| RPM, stress, ratios, shafts/cogs/gearbox | local unit; kinetics, placement, chain_drive | Reuse; Core now has dimension/region lifecycle and a persistent event-only cache tested headlessly; native migration and 10000-node support and full split/merge/unload scenarios remain |
 | Water wheels, crank, motor | local unit; waterwheel, controls; source generators | Reuse values and flow rules; real interaction, survival and visual tests required |
 | Clutch, gearshift, chain drive | local unit; kinetics/chain_drive | Reuse; redstone propagation in actual chunks remains unverified here |
 | Speed controller, gauges, tools | source native adapters, author fixtures | Preserve; check live RPM/stress/UI and source behavior |
