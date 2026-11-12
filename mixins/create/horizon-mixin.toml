@@ -1654,3 +1654,18 @@ helper = "contraption_item_motion_post.rs"
 bindings = [
   { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
 ]
+
+
+[[injection]]
+id = "kinetic-chunk-load"
+hook = "chunk_load"
+hook_version = 1
+kind = "HEAD"
+helper = "kinetic_chunk_changed.rs"
+
+[[injection]]
+id = "kinetic-chunk-unload"
+hook = "chunk_unload"
+hook_version = 1
+kind = "HEAD"
+helper = "kinetic_chunk_changed.rs"

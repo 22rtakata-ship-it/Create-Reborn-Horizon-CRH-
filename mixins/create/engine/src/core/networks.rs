@@ -23,6 +23,12 @@ pub struct NetworkView {
     result: Arc<Network>,
 }
 impl NetworkView {
+    /// Shared legacy solver result for existing native presentation/NBT adapters.
+    /// Mutating this Arc cannot mutate the service's still-shared cached result.
+    /// New consumers should prefer the read-only view methods.
+    pub fn shared_result(&self) -> Arc<Network> {
+        Arc::clone(&self.result)
+    }
     pub fn id(&self) -> NetworkId {
         self.id
     }
@@ -109,6 +115,40 @@ impl Dimension {
     }
 }
 
+/// Native publication guard, independent from topology cache lifetime. It holds
+/// snapshots until the next turn/reset so allocator pointer reuse cannot suppress
+/// a later publication. A source event may clear it within the same turn.
+#[derive(Default)]
+pub struct PublicationTracker {
+    turn: Option<(i64, String)>,
+    published: BTreeMap<usize, Arc<Network>>,
+}
+impl PublicationTracker {
+    pub fn begin_turn(&mut self, tick: i64, dimension: &str) {
+        if self
+            .turn
+            .as_ref()
+            .is_none_or(|(time, dim)| *time != tick || dim != dimension)
+        {
+            self.turn = Some((tick, dimension.to_owned()));
+            self.clear();
+        }
+    }
+    pub fn clear(&mut self) {
+        self.published.clear();
+    }
+    pub fn first(&mut self, network: &Arc<Network>) -> bool {
+        use std::collections::btree_map::Entry;
+        match self.published.entry(Arc::as_ptr(network) as usize) {
+            Entry::Vacant(entry) => {
+                entry.insert(Arc::clone(network));
+                true
+            }
+            Entry::Occupied(_) => false,
+        }
+    }
+}
+
 /// Mutable server-side service. No tick method: unchanged networks remain cached.
 /// All changes to loaded topology, generated RPM and stress must be published
 /// with `upsert`/`remove`/`unload_region`. Views and IDs are never persisted.
@@ -142,6 +182,25 @@ impl Networks {
         self.statistics.invalidated += invalidated.len() as u64;
         Change {
             changed: true,
+            invalidated,
+        }
+    }
+
+    /// Host block-state notification, including an unregistered/previously empty
+    /// connection frontier. Evict stale observations so a later host query reads
+    /// the new node. Unlike `remove`, missing positions still invalidate neighbors.
+    pub fn invalidate_position(&mut self, dimension: &str, pos: Pos) -> Change {
+        let Some(world) = self.dimensions.get_mut(dimension) else {
+            return Change::default();
+        };
+        let removed = world.nodes.remove(&pos);
+        if let Some(old) = removed {
+            world.forget_region_entry(old.region, pos);
+        }
+        let invalidated = world.invalidate_near(pos);
+        self.statistics.invalidated += invalidated.len() as u64;
+        Change {
+            changed: removed.is_some() || !invalidated.is_empty(),
             invalidated,
         }
     }
@@ -213,6 +272,59 @@ impl Networks {
             return Some(view.clone());
         }
         let result = kinetics::solve_half(node, half, |p| world.nodes.get(&p).map(|n| n.node));
+        // TooLarge is deliberately not cached: its traversal is incomplete.
+        Some(self.store_result(dimension, result))
+    }
+
+    /// Lazily resolve an authoritative host view on cache miss, without a global
+    /// world scan or a second solver pass. `start` overrides the host read at its
+    /// position (the engine may have removed its ticking block entity temporarily).
+    /// `read` must return loaded, already-published generator state, never force a
+    /// region load. Publish lifecycle/block/source changes before querying again.
+    pub fn query_with(
+        &mut self,
+        dimension: &str,
+        region_of: impl Fn(Pos) -> RegionId,
+        start: Node,
+        half: u8,
+        mut read: impl FnMut(Pos) -> Option<Node>,
+    ) -> Option<NetworkView> {
+        if half > 1 || half == 1 && !matches!(start.kind, Kind::Clutch { powered: true }) {
+            return None;
+        }
+        self.upsert(dimension, region_of(start.pos), start);
+        let world = self.dimensions.get(dimension)?;
+        if let Some(view) = world
+            .vertices
+            .get(&(start.pos, half))
+            .and_then(|id| world.networks.get(id))
+        {
+            self.statistics.cache_hits += 1;
+            return Some(view.clone());
+        }
+        let mut observed = BTreeMap::new();
+        let result = kinetics::solve_half(start, half, |pos| {
+            if pos == start.pos {
+                return Some(start);
+            }
+            if let Some(known) = observed.get(&pos) {
+                return *known;
+            }
+            let node = read(pos).filter(|node| node.pos == pos);
+            observed.insert(pos, node);
+            node
+        });
+        for (pos, node) in observed {
+            if let Some(node) = node {
+                self.upsert(dimension, region_of(pos), node);
+            } else {
+                self.remove(dimension, pos);
+            }
+        }
+        Some(self.store_result(dimension, result))
+    }
+
+    fn store_result(&mut self, dimension: &str, result: Network) -> NetworkView {
         self.statistics.solves += 1;
         self.next_id = self
             .next_id
@@ -222,15 +334,14 @@ impl Networks {
             id: NetworkId(self.next_id),
             result: Arc::new(result),
         };
-        // A bounded traversal omits vertices: a far-away edit could change its
-        // outcome without touching this partial frontier. Never cache TooLarge.
         if view.status() != Status::TooLarge {
+            let world = self.dimensions.entry(dimension.to_owned()).or_default();
             for vertex in &view.result.vertices {
                 world.vertices.insert(*vertex, view.id);
             }
             world.networks.insert(view.id, view.clone());
         }
-        Some(view)
+        view
     }
 
     /// Check whether a snapshot still belongs to this dimension's active cache.

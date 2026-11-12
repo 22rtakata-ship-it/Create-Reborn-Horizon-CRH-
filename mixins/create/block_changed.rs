@@ -21,7 +21,7 @@ fn create_changed(
     crate::game::create_port_fan::changed(dimension, pos);
     crate::game::create_port_particles::changed(dimension, pos);
     crate::game::create_port_drill::changed(dimension, pos);
-    kinetics::invalidate();
+    kinetics::block_changed(dimension, pos);
     if level.native_state_block(old) == Some("create:shaft")
         && level.native_state_block(new) == Some("minecraft:air")
         && let Some(axis) = [Axis::X, Axis::Y, Axis::Z]

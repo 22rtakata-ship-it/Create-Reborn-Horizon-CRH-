@@ -1,35 +1,36 @@
 // Copyright (c) The Create Team / The Creators of Create
 // Copyright (c) 2026 create-horizon contributors
 // SPDX-License-Identifier: MIT
-// Loaded connected-component equations are cached per tick. Source generation
+// Loaded connected-component equations use the shared event-driven cache. Source generation
 // is published by initialize/updateGeneratedRotation, not by reading a setting.
 // This preserves supported stationary-machine event ordering; it is not a
 // complete RotationPropagator implementation (source ownership/flicker/breakage).
-use super::create_port_block_entity_revision::EntityRevision as _;
 use super::Game;
+use super::create_port_block_entity_revision::EntityRevision as _;
 use crate::containers::{BlockEntity, ModBlockEntity, ModRevision};
 use create_engine::{
     kinetics::{self, Axis, Kind, Network, Node, Pos, Status},
+    networks::{Networks, PublicationTracker, RegionId},
     transport::SessionCache,
 };
 use std::{
     cell::RefCell,
     collections::{BTreeMap, BTreeSet},
-    rc::Rc,
+    sync::Arc,
 };
 #[derive(Default)]
 struct Cache {
-    world: Option<(usize, i64, String)>,
-    components: BTreeMap<(Pos, u8), Rc<Network>>,
-    published: BTreeSet<usize>,
+    world: Option<usize>,
+    networks: Networks,
+    publications: PublicationTracker,
 }
 impl Cache {
     fn invalidate(&mut self) {
-        self.components.clear();
-        self.published.clear();
+        self.networks = Networks::default();
+        self.publications.clear();
     }
-    fn first_publication(&mut self, network: &Network) -> bool {
-        self.published.insert(std::ptr::from_ref(network) as usize)
+    fn first_publication(&mut self, network: &Arc<Network>) -> bool {
+        self.publications.first(network)
     }
 }
 #[derive(Default)]
@@ -105,7 +106,10 @@ fn with_lifetime<R>(
         let world = cache.dimension(std::ptr::from_ref(&game.world) as usize, game.dim.id());
         let state = world.nodes.entry(pos).or_default();
         let owner = entity.revision();
-        if state.owner.is_some_and(|old| !old.is_same_create_entity(owner)) {
+        if state
+            .owner
+            .is_some_and(|old| !old.is_same_create_entity(owner))
+        {
             *state = Lifetime::default();
         }
         state.owner = Some(owner);
@@ -113,13 +117,28 @@ fn with_lifetime<R>(
     })
 }
 pub(super) fn reset() {
-    invalidate();
+    CACHE.with(|cell| *cell.borrow_mut() = Cache::default());
     LIFETIMES.with(|cell| cell.borrow_mut().clear());
     CHANGED.with(|cell| cell.borrow_mut().clear());
 }
 pub(super) fn invalidate() {
     CACHE.with(|c| c.borrow_mut().invalidate());
 }
+/// A real block-state event can introduce a node into an empty cached frontier.
+pub(super) fn block_changed(dimension: &str, pos: Pos) {
+    CACHE.with(|cell| {
+        let mut cache = cell.borrow_mut();
+        if cache.networks.invalidate_position(dimension, pos).changed {
+            cache.publications.clear();
+        }
+    });
+}
+/// Chunk boundaries include previously empty frontiers: conservatively drop all
+/// host observations on load/unload. No unloaded blocks or BEs are read here.
+pub(super) fn chunks_changed() {
+    invalidate();
+}
+
 pub(super) fn theoretical(entity: &ModBlockEntity) -> f32 {
     match entity.nbt.get(&"create_horizon".into()) {
         Some(horizon_world::nbt::Tag::Compound(data)) => {
@@ -237,38 +256,40 @@ pub(super) fn attach(
     });
     (first, true)
 }
-pub(super) fn network(game: &Game<'_>, start: Node, half: u8) -> Rc<Network> {
+pub(super) fn network(game: &Game<'_>, start: Node, half: u8) -> Arc<Network> {
     let start = published_node(game, start);
     CACHE.with(|cell| {
         let mut cache = cell.borrow_mut();
-        let world = (
-            std::ptr::from_ref(&game.world) as usize,
-            game.world.game_time,
-            game.dim.id().to_owned(),
-        );
-        if cache.world.as_ref() != Some(&world) {
-            cache.world = Some(world);
+        let world = std::ptr::from_ref(&game.world) as usize;
+        if cache.world != Some(world) {
             cache.invalidate();
+            cache.world = Some(world);
         }
-        if let Some(network) = cache.components.get(&(start.pos, half)) {
-            return Rc::clone(network);
+        cache
+            .publications
+            .begin_turn(game.world.game_time, game.dim.id());
+        // The pinned native chunk snapshot contract defines chunk coords as >>4.
+        // Preserve published_node and the explicit ticking-entity start override.
+        let before = cache.networks.statistics().invalidated;
+        let view = cache
+            .networks
+            .query_with(
+                game.dim.id(),
+                |pos| RegionId([pos[0] >> 4, pos[2] >> 4]),
+                start,
+                half,
+                |pos| super::create_port::node(game, pos).map(|node| published_node(game, node)),
+            )
+            .expect("native kinetic queries use a valid node and clutch half");
+        if cache.networks.statistics().invalidated != before {
+            cache.publications.clear();
         }
-        let network = Rc::new(kinetics::solve_half(start, half, |pos| {
-            if pos == start.pos {
-                Some(start)
-            } else {
-                super::create_port::node(game, pos).map(|node| published_node(game, node))
-            }
-        }));
-        for key in &network.vertices {
-            cache.components.insert(*key, Rc::clone(&network));
-        }
-        network
+        view.shared_result()
     })
 }
 /// updateGeneratedRotation/attachKinetics publishes to neighbours immediately,
 /// including machines whose behaviour turn already ran in this level pass.
-pub(super) fn publish(game: &mut Game<'_>, network: &Network, current: Pos) {
+pub(super) fn publish(game: &mut Game<'_>, network: &Arc<Network>, current: Pos) {
     // A propagated source already visits every neighbour. Their subsequent
     // first own turns must not repeat that full-component scan (N squared).
     // Each source event invalidates both the solved graph and this guard.
@@ -305,7 +326,9 @@ pub(super) fn publish(game: &mut Game<'_>, network: &Network, current: Pos) {
             super::create_port::apply_network(entity, network, other.as_deref(), pos);
             super::create_port::number(&entity.nbt, "Speed")
         });
-        if matches!(node.kind, Kind::CrushingWheel) && let Some(speed) = speed {
+        if matches!(node.kind, Kind::CrushingWheel)
+            && let Some(speed) = speed
+        {
             super::create_port_saw_processing::crushing::wheel_updated(game, pos, node.axis, speed);
         }
         game.native_block_entity_sync(pos);
@@ -394,7 +417,8 @@ pub(super) fn transmission_detached(game: &Game<'_>, pos: Pos) -> bool {
             .get(&pos)
             .is_some_and(|owner| {
                 // The host takes the currently ticking entity out of the map.
-                transmission_owner(game, pos).is_none_or(|current| owner.is_same_create_entity(current))
+                transmission_owner(game, pos)
+                    .is_none_or(|current| owner.is_same_create_entity(current))
             })
     })
 }
@@ -534,7 +558,8 @@ pub(super) fn begin_transmission_tick(game: &mut Game<'_>) {
         let mut cache = cell.borrow_mut();
         let state = cache.dimension(std::ptr::from_ref(&game.world) as usize, game.dim.id());
         state.maintain(game.world.game_time, |pos, owner| {
-            transmission_owner(game, pos).is_some_and(|current| owner.is_same_create_entity(current))
+            transmission_owner(game, pos)
+                .is_some_and(|current| owner.is_same_create_entity(current))
         });
         std::mem::take(&mut state.reattach)
     });
@@ -544,7 +569,8 @@ pub(super) fn begin_transmission_tick(game: &mut Game<'_>) {
     invalidate();
     for (pos, owner) in pending {
         if transmission_block(&game.native_block(pos))
-            && transmission_owner(game, pos).is_some_and(|current| owner.is_same_create_entity(current))
+            && transmission_owner(game, pos)
+                .is_some_and(|current| owner.is_same_create_entity(current))
         {
             publish_transmission(game, pos);
         }
@@ -564,8 +590,8 @@ mod lifetime_tests {
             ports: BTreeMap::new(),
             vertices: Vec::new(),
         };
-        let first = Rc::new(empty());
-        let second = Rc::new(empty());
+        let first = Arc::new(empty());
+        let second = Arc::new(empty());
         let mut cache = Cache::default();
         assert!(cache.first_publication(&first));
         assert!(!cache.first_publication(&first));
