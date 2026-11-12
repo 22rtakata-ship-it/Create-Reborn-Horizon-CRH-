@@ -4,6 +4,8 @@
 |---|---|
 | Core public modules | crates/create-core/src/lib.rs |
 | Event-driven registry, cache, dimension/region lifecycle | mixins/create/engine/src/core/networks.rs; docs/networks.md |
+| Native lazy query / publication / lifecycle integration | mixins/create/kinetic_runtime.rs; mixins/create/block_changed.rs; mixins/create/kinetic_chunk_changed.rs |
+| Host callback and publication regressions | crates/create-testkit/tests/host_networks.rs |
 | Cache event regression scenarios | crates/create-testkit/tests/network_events.rs |
 | RPM, ratios, stress, graph traversal | mixins/create/engine/src/core/kinetics.rs |
 | Source water sampling | mixins/create/engine/src/core/waterwheel.rs |

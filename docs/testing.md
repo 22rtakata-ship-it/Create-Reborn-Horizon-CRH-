@@ -9,3 +9,5 @@ The native bundle engine can also be tested independently: `cargo test --offline
 Do not replace the original Java/Horizon gameplay fixtures with mocks. Those tools require isolated reference instances and often private JAR inputs. The absence of those inputs is recorded in reborn/validation.md. No client/server multiplayer test has been run.
 
 Event-driven Core regressions live in crates/create-testkit/tests/network_events.rs. They include an uncached-solver comparison across 160 edits and explicit work counters for 1000 repeated queries. Region fixtures are host-defined groups, not real Horizon chunk tests.
+
+Native host-query and publication helpers are exercised in crates/create-testkit/tests/host_networks.rs (seven scenarios). These test the exact Core helpers used by the adapter with controlled read callbacks. They are not a running Game, NBT source oracle or real chunk lifecycle test.

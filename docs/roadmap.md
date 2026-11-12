@@ -12,7 +12,9 @@ Remaining gates: complete behavioral source review, linked native executable, of
 
 Retained existing tested shafts/cogs/gearboxes, source generation and kinetic/stress rules. Added the game-independent event-driven network registry/cache with dimension isolation, indexed unload groups, opaque snapshots and localized invalidation. Eleven new regression scenarios cover cache behavior and compare repeated event sequences with fresh solver results. See networks.md and reborn/core-networks.md.
 
-Next: integrate the service into the pinned native adapter while preserving source event and block-entity tick ordering; validate the wheel/shaft/cog/press chain, rotational rendering and save/reload in an isolated game. Headless tests do not complete Phase 1.
+The native adapter now calls the service and retains its source generation/attachment flow. Added confirmed chunk load/unload callbacks and seven host/publication helper regressions. See reborn/native-networks.md.
+
+Next: validate source timing and the wheel/shaft/cog/press chain, rotational rendering, chunk unload/reload and save/restart in an isolated game; then localize conservative source/chunk invalidation where fixtures support it. Type-checking and helper tests do not complete Phase 1.
 
 ## Phase 2 — reliable Core API
 

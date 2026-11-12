@@ -1,6 +1,6 @@
 # Event-driven Core network service
 
-`create_core::networks::Networks` is a game-independent registry and cache for one world session. It reuses the existing kinetic solver and source/stress equations. The native bundle engine exports the same module from the canonical source; the live Horizon ticker has not switched to this service yet.
+`create_core::networks::Networks` is a game-independent registry and cache for one world session. It reuses the existing kinetic solver and source/stress equations. The native bundle engine exports the same module from the canonical source; the native kinetic_runtime.rs now resolves its networks through this service. Source initialization and publication rules remain in that adapter.
 
 ## Host contract
 
@@ -24,4 +24,12 @@ TooLarge results are not cached: a partial traversal cannot see an edit beyond i
 
 See `crates/create-testkit/tests/network_events.rs` for topology split/merge, remote/dimension isolation, source changes, overload recovery, clutch halves, diagonal cogs, region unload/reload/reassignment, stale-session snapshots, coordinate edges, traversal bounds and repeated edits compared against an uncached solver. A 1000-query assertion checks that an unchanged network is solved once.
 
-The existing native kinetic_runtime.rs still keys its own cache by game_time and retains source initialization/publication ordering. Replacing it requires mapping the pinned engine's real block/chunk callbacks, feeding only published generation values (not raw NBT settings), handling temporarily removed ticking block entities, preserving synchronous source propagation and running native regression fixtures. No new Horizon hook or engine API is introduced here. This checkpoint has no in-game performance or gameplay claim.
+The native kinetic_runtime.rs now uses query_with for lazy authoritative discovery and shares solver snapshots with existing NBT/rendering code. The query start overrides the engine read at its own position, preserving the temporarily removed ticking block entity. Other sources still pass through the existing published_node/generation lifetime logic; raw settings are not newly promoted into generated rotation.
+
+PublicationTracker resets its duplicate-publication guard on a tick or dimension change without discarding topology. It retains each published Arc until reset to prevent allocator address reuse from suppressing publication. Block-state notifications call invalidate_position, which also handles previously empty frontiers. Source/transmission/belt/bulk-operation invalidation paths remain conservative full resets. Both server chunk load and unload trigger a full reset, because a previously empty frontier can gain a connection and unload callbacks can still see departing block entities. No unloaded-world read is performed in these callbacks. Localizing chunk invalidation requires a frontier-dependency index and is future work.
+
+The host contract is now implemented against the fixed Horizon revision, but live source timing, real chunk lifecycle, rendering and save/restart still require actual-client regression fixtures. See reborn/native-networks.md for this increment's execution evidence.
+
+## Lazy host queries and compatibility
+
+query_with accepts a loaded authoritative read callback and a host region mapping. Only a cache miss visits candidates; each candidate is read at most once in that solve. The start is never fetched from the callback. Existing consumers may use shared_result() to obtain an Arc of the legacy Network for NBT/presentation interfaces; the service retains its immutable cached copy. This is a compatibility bridge, not a new save format.

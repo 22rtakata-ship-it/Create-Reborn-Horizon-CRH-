@@ -1,0 +1,14 @@
+{
+  "bridges": 2,
+  "crates": 3,
+  "data": 1,
+  "injections": 106,
+  "modules": 71,
+  "post_build": 0,
+  "seconds": 71.736230232,
+  "stage": "/workspace/work/host-horizon-staged",
+  "stage_changed": true,
+  "states": 0,
+  "status": "ok",
+  "transformation_seconds": 71.736180517
+}

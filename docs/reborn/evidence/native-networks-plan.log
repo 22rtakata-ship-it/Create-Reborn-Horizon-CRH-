@@ -1,0 +1,12 @@
+{
+  "bridges": 2,
+  "crates": 3,
+  "data": 1,
+  "injections": 106,
+  "modules": 71,
+  "plan": "/workspace/work/host-native-plan.json",
+  "post_build": 0,
+  "seconds": 55.112962946,
+  "states": 0,
+  "status": "ok"
+}

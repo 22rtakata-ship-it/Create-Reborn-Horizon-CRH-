@@ -1,6 +1,6 @@
 # Source inventory
 
-Updated for the event-driven Core checkpoint. Complete static inventory; presence does not establish in-game behavior.
+Updated for native event-driven network integration. Complete static inventory; presence does not establish in-game behavior.
 
 | File | Lines | Rust tests | SHA256 |
 |---|---:|---:|---|
@@ -20,7 +20,7 @@ Updated for the event-driven Core checkpoint. Complete static inventory; presenc
 | `mixins/create/belt_components.rs` | 6 | 0 | a044125d4527763a4c104630e19ba8588f8d5bfb7a3fec0bb96f8bf0663520f7 |
 | `mixins/create/belt_flush.rs` | 7 | 0 | e8c96cd45f4fff39bbe9feab1b0d9b56d6fa9152cddc714bf3245e037cbc1154 |
 | `mixins/create/belt_press.rs` | 126 | 0 | 12a870e8effdf21e69812274012608e72ac92db94ff507fba9b1bd2edb6642e4 |
-| `mixins/create/block_changed.rs` | 33 | 0 | 9edf0a4ef904a4bc8bb227f518d5b046e5e95811f95ffb96fbbd10fc5809fa65 |
+| `mixins/create/block_changed.rs` | 33 | 0 | 47f24648243376a795fd98add45b1ab3fd9898b6796cf81432cb052e5f1548e7 |
 | `mixins/create/block_entity_revision.rs` | 15 | 0 | 81dabf50dabf1b81d932502ddccd41d7845057761c22639e10822fac98a75e1c |
 | `mixins/create/burner.rs` | 347 | 0 | 6f83afcf72ca76a6dc5d62186d48cc7714747e143094809a2b39318f56bf85a0 |
 | `mixins/create/burner_animate.rs` | 105 | 0 | 0f7026f6e27ec3b5983098178a742969fe0b9a0c872e6227530cdfe7579233a2 |
@@ -133,7 +133,7 @@ Updated for the event-driven Core checkpoint. Complete static inventory; presenc
 | `mixins/create/engine/src/core/gantry_transmission.rs` | 29 | 0 | 396ebd9faae6a90c729a08ad3971cdcacd09e6a5ec2c4b318c23a4e81dd29bb7 |
 | `mixins/create/engine/src/core/kinetics.rs` | 960 | 21 | b465126254f0de56f953cbace37ec4bbdda5ca3f14f78bde7ee7ce023e705aef |
 | `mixins/create/engine/src/core/milling.rs` | 134 | 5 | 169f8ddf49fa9314f9807719819b5df5b353978aea380051bff2dfc1c34081ec |
-| `mixins/create/engine/src/core/networks.rs` | 244 | 0 | 3a9546fcd6a2396f1c976e3f8315dfa69385caf6dc935bb6860c7765fc5e262f |
+| `mixins/create/engine/src/core/networks.rs` | 355 | 0 | 3dfb4ed20cca5c350d3e77e0cb46625538c6303c6f4129d4016ad80ead0d8983 |
 | `mixins/create/engine/src/core/particle_random.rs` | 13 | 0 | 8bd2be332c00db7e35f95d7e512cf4d431e3e0a39cbe827c920bd4fc68205842 |
 | `mixins/create/engine/src/core/particles.rs` | 585 | 2 | f22501a2b547bfb9c8dc21385fe78fe108cc6b75c46f5a0185f570d7a01442af |
 | `mixins/create/engine/src/core/placement.rs` | 259 | 3 | d7f00dddbe17083aeaac169ee3de8d44478b459e94007073cfc228f7033f1743 |
@@ -162,7 +162,7 @@ Updated for the event-driven Core checkpoint. Complete static inventory; presenc
 | `mixins/create/gauge_has_analog.rs` | 25 | 0 | a46992c3cb00ab0fd415938fdd7b748464ea4b03a7757eaac6475b143b6777d5 |
 | `mixins/create/generators.rs` | 250 | 0 | 32d3cfe15939c6fb52e04cf4d00330fe25f21f0e2abcd8b59f6fba81cc0b0b68 |
 | `mixins/create/goggles.rs` | 657 | 2 | a8ab52b8e5b6287b8de21a794cce1ba6a090325f37d51770f56a6c1967503829 |
-| `mixins/create/horizon-mixin.toml` | 1656 | 0 | 0636c920d6858074ad892d0eaf23fc42f0c73c3bb70a57cb3bbb6fa71bb33e83 |
+| `mixins/create/horizon-mixin.toml` | 1671 | 0 | b677488595a8ef34719ad7df2e530500795521690910b5c9545ef2a97b944a06 |
 | `mixins/create/instruments.rs` | 66 | 0 | 53681743d955c1d80776741b2f9715b50ff8c52d5ab252211e3c8b7eb98bffef |
 | `mixins/create/interactions.rs` | 573 | 0 | d7dfa4b4bf37bfe87c084f67667e4866acfa9b95306435bf9b4a6e092b2bd272 |
 | `mixins/create/inventory.rs` | 82 | 0 | f9ecd37904d64999742fe485412c4536a7c205ee07656af717804a1ab4c7fdc5 |
@@ -171,7 +171,8 @@ Updated for the event-driven Core checkpoint. Complete static inventory; presenc
 | `mixins/create/inventory_packet.rs` | 29 | 0 | 8d875e0416a6eb31348e6e66c10617d7b444eec0f4900511793fc8bd6541e9e8 |
 | `mixins/create/item_after_vertical_collision.rs` | 18 | 0 | 8258025bd78311f3ba2385a18d067bd2a2294644ccb537a2aaefa4b4fc1f33f6 |
 | `mixins/create/item_contact.rs` | 196 | 0 | 70643aa0addb64d17ff14f6594ebe18c83690a6beab56d4491a616d15b6051dc |
-| `mixins/create/kinetic_runtime.rs` | 691 | 4 | d9332dbab6b8e2afd2df569047c2c535fe3f8f24be77083af2450322f34c3360 |
+| `mixins/create/kinetic_chunk_changed.rs` | 6 | 0 | b8cb898c65d65f40c0020523d7a07aeb6fce1098517337c125e65a296ba0b4ca |
+| `mixins/create/kinetic_runtime.rs` | 717 | 4 | 5e9c1da343cc4f47cc52cff58a42a0a4726e2f910d1f0725d7aaf9b47a76523f |
 | `mixins/create/millstone.rs` | 488 | 0 | 3e094e7fb8cac2bea292078dfae8e428386a79501b989eb303935202f3580249 |
 | `mixins/create/mixer.rs` | 447 | 0 | b65ebbf6ead914dc69fa48bb985e86b25888ecd4d4e86f71228da06aa594f9c2 |
 | `mixins/create/models.rs` | 6 | 0 | 15b9e4e3c5e2ea33cc505a6e045f4a6e715aaf7ba0712741a3da22045dcc6f0c |

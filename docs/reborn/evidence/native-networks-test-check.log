@@ -1,0 +1,8 @@
+   Compiling serde_core v1.0.229
+    Checking horizon-items v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-items)
+   Compiling serde v1.0.229
+   Compiling serde_json v1.0.151
+   Compiling horizon-mod-api-gen v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-mod-api-gen)
+   Compiling horizon-client-render v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-client-render)
+    Checking horizon-client-lib v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-client-lib)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 23s

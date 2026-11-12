@@ -34,3 +34,7 @@ The final windmill integration fixture uses the same Motor source representation
 ## Subsequent Core checkpoint
 
 The event-driven network service, 307-test workspace result and native integration boundaries are recorded in [core-networks.md](core-networks.md). Initial checkpoint results above are historical.
+
+## Native Core integration checkpoint
+
+See [native-networks.md](native-networks.md) for the 314-test workspace result and the new complete injected-client type-check. Unlike the previous pure-Core checkpoint, the native ticker now calls the service. Game execution remains unvalidated.

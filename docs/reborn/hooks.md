@@ -1,6 +1,6 @@
 # Native integration inventory
 
-Generated from the exact pinned manifest. Official Mixins plan/apply succeeded for all 104 injections; runtime behavior still needs a client. 61 named-hook injections and 43 source-target injections.
+Exact pinned manifest: 106 injections (63 named-hook, 43 source-target). Official plan/apply and complete client type-check passed at Horizon 4e5296d. This does not establish gameplay behavior.
 
 | ID | Hook / target | Hook version | Kind | Helper |
 |---|---|---|---|---|
@@ -108,3 +108,5 @@ Generated from the exact pinned manifest. Official Mixins plan/apply succeeded f
 | `contraption-item-collision` | `horizon_client::game::ghasts::Game<'_>::item_entity_collisions` | `source-pinned` | `RETURN` | `contraption_collision_hook.rs` |
 | `contraption-item-motion-tick` | `horizon_client::game::Game<'_>::tick_items` | `source-pinned` | `WRAP_OPERATION` | `contraption_item_motion_hook.rs` |
 | `contraption-item-motion-post` | `level_tick_post` | `1` | `HEAD` | `contraption_item_motion_post.rs` |
+| `kinetic-chunk-load` | `chunk_load` | `1` | `HEAD` | `kinetic_chunk_changed.rs` |
+| `kinetic-chunk-unload` | `chunk_unload` | `1` | `HEAD` | `kinetic_chunk_changed.rs` |
