@@ -11,13 +11,6 @@ use crate::{
     source_trig::rotate,
 };
 
-/// Supply the particle's own random, or the level random where explicitly noted.
-/// Keeping these separate preserves the source's draw ordering.
-pub trait ParticleRandom {
-    fn next_float(&mut self) -> f32;
-    fn next_int(&mut self, bound: i32) -> i32;
-}
-
 pub const QUAD_SIZE_MULTIPLIER: f32 = 0.75;
 pub const AIRFLOW_LIFETIME: i32 = 40;
 
@@ -39,9 +32,8 @@ pub fn mix_colors(a: u32, b: u32, amount: f32) -> u32 {
         })
         .fold(0, u32::wrapping_add)
 }
-pub fn offset_randomly(random: &mut impl ParticleRandom, range: f32) -> [f64; 3] {
-    std::array::from_fn(|_| f64::from((random.next_float() - 0.5) * 2.0 * range))
-}
+pub use crate::particle_random::{ParticleRandom, offset_randomly};
+
 /// SuperGlueItem.spawnParticles with fullBlock set, as used on the first click.
 pub fn glue_face(
     pos: Pos,

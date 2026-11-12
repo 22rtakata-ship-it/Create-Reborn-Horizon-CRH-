@@ -63,11 +63,40 @@ dependencies = [
 ]
 
 [[package]]
+name = "create-contraptions"
+version = "0.1.0"
+dependencies = [
+ "create-core",
+]
+
+[[package]]
+name = "create-core"
+version = "0.1.0"
+
+[[package]]
+name = "create-horizon-adapter"
+version = "0.1.0"
+dependencies = [
+ "create-contraptions",
+ "create-core",
+ "create-mechanics",
+]
+
+[[package]]
 name = "create-horizon-core"
 version = "0.9.0"
 dependencies = [
+ "create-horizon-adapter",
  "create-schematics",
  "serde_json",
+]
+
+[[package]]
+name = "create-mechanics"
+version = "0.1.0"
+dependencies = [
+ "create-contraptions",
+ "create-core",
 ]
 
 [[package]]
@@ -75,6 +104,15 @@ name = "create-schematics"
 version = "0.9.0"
 dependencies = [
  "flate2",
+]
+
+[[package]]
+name = "create-testkit"
+version = "0.1.0"
+dependencies = [
+ "create-contraptions",
+ "create-core",
+ "create-mechanics",
 ]
 
 [[package]]

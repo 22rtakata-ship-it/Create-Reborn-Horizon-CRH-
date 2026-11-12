@@ -120,7 +120,8 @@ impl MotionTracker {
         )
     }
 
-    pub(crate) fn sample_with_activation(
+    /// Public extension point for mounted tools with their own activation policy.
+    pub fn sample_with_activation(
         &mut self,
         sample: Sample,
         effective_motion: impl FnOnce([f64; 3]) -> [f64; 3],

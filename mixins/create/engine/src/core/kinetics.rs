@@ -178,7 +178,7 @@ pub fn ratio(from: Node, to: Node) -> Option<f32> {
             },
             Kind::GantryCarriage { facing: mount },
         ) if delta == mount.vector() => {
-            return crate::contraption::gantry::pinion_ratio(rail, mount);
+            return crate::gantry_transmission::pinion_ratio(rail, mount);
         }
         (
             Kind::GantryCarriage { facing: mount },
@@ -187,7 +187,7 @@ pub fn ratio(from: Node, to: Node) -> Option<f32> {
                 powered: true,
             },
         ) if delta == mount.opposite().vector() => {
-            return crate::contraption::gantry::pinion_ratio(rail, mount);
+            return crate::gantry_transmission::pinion_ratio(rail, mount);
         }
         _ => {}
     }

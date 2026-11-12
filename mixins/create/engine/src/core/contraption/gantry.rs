@@ -4,10 +4,7 @@
 
 //! GantryShaftBlock, GantryCarriageBlock and GantryContraptionEntity movement rules.
 
-use crate::{
-    kinetics::{Axis, Pos},
-    placement::Direction,
-};
+use crate::{kinetics::Pos, placement::Direction};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Part {
@@ -90,30 +87,9 @@ impl Shaft {
     }
 }
 
-pub(crate) fn pinion_ratio(shaft: Direction, carriage: Direction) -> Option<f32> {
-    pinion_axis(carriage, shaft)?;
-    let axis = shaft.axis();
-    let sign = shaft.vector()[axis.index()] as f32;
-    let invert = matches!(
-        (axis, carriage),
-        (Axis::X, Direction::Down | Direction::South)
-            | (Axis::Y, Direction::North | Direction::East)
-            | (Axis::Z, Direction::Up | Direction::West)
-    );
-    Some(if invert { -sign } else { sign })
-}
-
-/// The carriage's output axis is perpendicular to its mounting face and rail.
-pub fn pinion_axis(carriage_facing: Direction, shaft_facing: Direction) -> Option<Axis> {
-    let facing = carriage_facing.axis();
-    let rail = shaft_facing.axis();
-    if facing == rail {
-        return None;
-    }
-    [Axis::X, Axis::Y, Axis::Z]
-        .into_iter()
-        .find(|&axis| axis != facing && axis != rail)
-}
+pub use crate::gantry_transmission::{pinion_axis, pinion_ratio};
+#[cfg(test)]
+use crate::kinetics::Axis;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Action {

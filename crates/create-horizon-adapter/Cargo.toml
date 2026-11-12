@@ -1,0 +1,16 @@
+[package]
+name = "create-horizon-adapter"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+[features]
+default = ["mechanics", "contraptions"]
+mechanics = ["dep:create-mechanics"]
+contraptions = ["dep:create-contraptions", "create-mechanics?/contraptions"]
+[dependencies]
+create-core = { path = "../create-core" }
+create-mechanics = { path = "../create-mechanics", optional = true, default-features = false }
+create-contraptions = { path = "../create-contraptions", optional = true }
+[lints.rust]
+unsafe_code = "forbid"

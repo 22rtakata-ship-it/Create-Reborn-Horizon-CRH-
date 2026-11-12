@@ -80,3 +80,9 @@ pub mod burner_visual;
 
 #[path = "core/contraption/mod.rs"]
 pub mod contraption;
+
+#[path = "core/gantry_transmission.rs"]
+pub mod gantry_transmission;
+
+#[path = "core/particle_random.rs"]
+pub mod particle_random;

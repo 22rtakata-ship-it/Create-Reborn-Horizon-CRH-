@@ -7,9 +7,10 @@ publish = false
 description = "Experimental Create foundation: kinetics, pressing and item interactions"
 
 [lib]
-path = "mixins/create/engine/src/lib.rs"
+path = "src/lib.rs"
 
 [dependencies]
+create-horizon-adapter = { path = "crates/create-horizon-adapter" }
 create-schematics = { path = "mixins/create/schematics" }
 
 [dev-dependencies]
@@ -20,7 +21,7 @@ name = "factory"
 path = "examples/factory.rs"
 
 [workspace]
-members = ["mixins/create/assets", "mixins/create/schematics"]
+members = ["crates/create-core", "crates/create-mechanics", "crates/create-contraptions", "crates/create-horizon-adapter", "crates/create-testkit", "mixins/create/assets", "mixins/create/schematics"]
 exclude = ["mixins/create/engine", ".local", ".tools"]
 
 [lints.rust]
