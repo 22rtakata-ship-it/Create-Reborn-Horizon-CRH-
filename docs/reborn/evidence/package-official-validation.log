@@ -1,0 +1,8 @@
+Built ./target/horizon-mod/create.hmod
+{"ok":true,"report":{"api":"native-1/4e5296d1800b3f89f2ae48dfd99d431801df4d46/e8cd0aa38cffef49cb2e088ef716baa107148c02","api_level":null,"capabilities":[],"game":"26.3","id":"create","kind":"native-mod","requires":[],"sha256":"71a09e6d541e31dadf5a6a9118becec734d95ebfc899ab11bd794fce38c254e2","side":null,"signed":false,"size":870467,"version":"0.9.0"}}
+{"ok":true,"report":{"api":"native-1/4e5296d1800b3f89f2ae48dfd99d431801df4d46/e8cd0aa38cffef49cb2e088ef716baa107148c02","api_level":null,"capabilities":[],"game":"26.3","id":"create","kind":"native-mod","requires":[],"sha256":"7be138b4cc4e0ad9cef5eedc763d3fa3807785aefe502fee08ce4c757b5385c1","side":null,"signed":false,"size":1581272,"version":"0.9.0"}}
+{"ok":true,"report":{"api":"0.2","api_level":null,"capabilities":["registries"],"game":null,"id":"create","kind":"mod","requires":[],"sha256":"361acc975b117d62a32ec98d2bd5db212fe0237707205a1edf0393f9653d725b","side":"both","signed":false,"size":713896,"version":"0.9.0"}}
+/workspace/create-reborn/dist/create-0.9.0.hnmod
+/workspace/create-reborn/dist/create-0.9.0.hmod
+Native archives include all public content and pin the accepted upstream Mixins revision; no local tool patch.
+The built-in models work without a JAR. For the original look, place your Create JAR in horizon-mods/create-resources/.

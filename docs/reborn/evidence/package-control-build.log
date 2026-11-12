@@ -1,0 +1,7 @@
+   Compiling serde_core v1.0.229
+   Compiling serde_json v1.0.151
+   Compiling serde v1.0.229
+   Compiling horizon-mod-api-gen v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-mod-api-gen)
+   Compiling horizon-client-render v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-client-render)
+   Compiling horizon-client-lib v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-client-lib)
+    Finished `dev` profile [unoptimized] target(s) in 1m 24s

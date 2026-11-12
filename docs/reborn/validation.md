@@ -38,3 +38,7 @@ The event-driven network service, 307-test workspace result and native integrati
 ## Native Core integration checkpoint
 
 See [native-networks.md](native-networks.md) for the 314-test workspace result and the new complete injected-client type-check. Unlike the previous pure-Core checkpoint, the native ticker now calls the service. Game execution remains unvalidated.
+
+## Executable and packaging checkpoint
+
+See [packaging-checkpoint.md](packaging-checkpoint.md) for the linked Linux binary, officially validated archives, 20 Python tooling tests and the actual missing-resource startup failure. Gameplay acceptance remains blocked, not passed.

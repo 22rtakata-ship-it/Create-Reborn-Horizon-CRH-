@@ -22,7 +22,7 @@ Evidence levels: **local unit** means the inherited Rust tests were executed in 
 | Persistence | local unit snapshot helpers, source codecs, author restart fixtures | Do not claim all machines versioned/migratable; audit every saved format |
 | Multiplayer | source LAN/sync hooks | Unsupported until real server/client tests pass |
 | Rendering | source draw/visual adapters, author captures | Preserve built-in resources/importer; no FPS or presentation parity claim |
-| Packaging | existing source bundle, manifest, official Mixins path | Reuse single bundle; exact local validation in validation.md |
+| Packaging | existing source bundle, manifest, official Mixins path | Reuse single bundle; all three archive variants now pass the official pinned validator and a Linux developer executable links; Launcher installation/gameplay remain unvalidated (packaging-checkpoint.md) |
 | Fluids: pipes, pump, tank, drain | local unit fluid_transport; native fluid codecs/adapters | Preserve current bounded routing/storage; generalized fluid API, advanced devices and native save/reload acceptance remain |
 | Tunnels, arm, hose pulley, vault, spout, elevators | No completed local behavior validation | Audit and implement incrementally; no support inferred from names or catalog entries |
 | Sequenced Gearshift / redstone control | local unit sequenced; native control integration | Preserve; exact motion sequences and world redstone acceptance remain |

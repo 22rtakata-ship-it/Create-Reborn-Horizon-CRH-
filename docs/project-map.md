@@ -23,6 +23,7 @@
 | Local assets importer | mixins/create/assets/ |
 | Schematics | mixins/create/schematics/ |
 | Data and recipes | content/; mixins/create/data/ |
+| Phase-1 acceptance / preflight | tools/core_checks.py; tools/core_validation.py; docs/core-acceptance.md |
 | Packaging | tools/package.py; packaging/README.md |
 | Full inventory and provenance | docs/reborn/source-inventory.md; provenance.json |
 

@@ -1,0 +1,5 @@
+Horizon 0.1.0
+Horizon: Horizon's prepared game files are missing: no horizon-resources.json in /workspace/work/minecraft-resources
+Horizon is started from its launcher: download it at https://playhorizon.dev (Download). It needs your own Minecraft: Java Edition; the launcher signs you in and prepares the game files.
+Developers: horizon-prepare --prepare, or pass --resources <folder>
+Horizon: crash report saved to /workspace/work/launch-probe/home/crash-reports/crash-2026-11-12_19.22.24-client.txt

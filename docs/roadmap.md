@@ -6,7 +6,9 @@ The original requested scope and gameplay acceptance criteria are in reborn/requ
 
 Completed: preserve upstream history; inspect licenses and compatibility pins; inventory source and native hooks; separate headless simulation into five crates; compile/test the workspace; plan/apply the native bundle and type-check the injected client at the fixed Horizon revision. See reborn/checkpoint.md for the first delivery and its evidence.
 
-Remaining gates: complete behavioral source review, linked native executable, official package validation and fresh-world acceptance. Current Horizon main, Windows native builds and multiplayer are not certified.
+Completed in the packaging checkpoint: linked Linux developer executable and official validation of the native, combined and content archives.
+
+Remaining gates: complete behavioral source review, real Launcher installation and fresh-world acceptance. Current Horizon main, Windows native builds and multiplayer are not certified.
 
 ## Phase 1 — Core development (in progress)
 
@@ -14,7 +16,9 @@ Retained existing tested shafts/cogs/gearboxes, source generation and kinetic/st
 
 The native adapter now calls the service and retains its source generation/attachment flow. Added confirmed chunk load/unload callbacks and seven host/publication helper regressions. See reborn/native-networks.md.
 
-Next: validate source timing and the wheel/shaft/cog/press chain, rotational rendering, chunk unload/reload and save/restart in an isolated game; then localize conservative source/chunk invalidation where fixtures support it. Type-checking and helper tests do not complete Phase 1.
+A linked Linux developer client, officially validated packages and an executable --core-only acceptance workflow are prepared. World startup was attempted but blocked by absent prepared Minecraft resources (horizon-resources.json); no gameplay scenario is marked passed. See core-acceptance.md and reborn/packaging-checkpoint.md.
+
+Next: supply prepared resources, then validate source timing and the wheel/shaft/cog/press chain, rotational rendering, chunk unload/reload and save/restart in an isolated game; then localize conservative source/chunk invalidation where fixtures support it. Type-checking and helper tests do not complete Phase 1.
 
 ## Phase 2 — reliable Core API
 

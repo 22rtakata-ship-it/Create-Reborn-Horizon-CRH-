@@ -1,0 +1,8 @@
+{
+  "status": "blocked",
+  "gameplay_attempted": false,
+  "gameplay_passed": false,
+  "blocked": [
+    "Missing prepared Minecraft 26.3 resources (facts.json and horizon-resources.json); supply --resources from your own Minecraft installation"
+  ]
+}

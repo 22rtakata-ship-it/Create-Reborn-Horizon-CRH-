@@ -11,3 +11,5 @@ Do not replace the original Java/Horizon gameplay fixtures with mocks. Those too
 Event-driven Core regressions live in crates/create-testkit/tests/network_events.rs. They include an uncached-solver comparison across 160 edits and explicit work counters for 1000 repeated queries. Region fixtures are host-defined groups, not real Horizon chunk tests.
 
 Native host-query and publication helpers are exercised in crates/create-testkit/tests/host_networks.rs (seven scenarios). These test the exact Core helpers used by the adapter with controlled read callbacks. They are not a running Game, NBT source oracle or real chunk lifecycle test.
+
+The packaging checkpoint adds tools/core_validation.py and smoke.py --core-only. tools/test_core_validation.py tests reporter/preflight guards using synthetic files; these tests cannot establish gameplay. See core-acceptance.md for the actual-client scenarios and prerequisites.

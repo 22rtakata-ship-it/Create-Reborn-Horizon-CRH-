@@ -1,0 +1,280 @@
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.26
+   Compiling cfg-if v1.0.5
+   Compiling log v0.4.34
+   Compiling serde_core v1.0.229
+   Compiling libc v0.2.190
+   Compiling syn v3.0.6
+   Compiling memchr v2.8.3
+   Compiling bitflags v2.13.2
+   Compiling once_cell v1.21.4
+   Compiling find-msvc-tools v0.1.14
+   Compiling shlex v2.0.1
+   Compiling cc v1.6.0
+   Compiling version_check v0.9.5
+   Compiling smallvec v1.16.2
+   Compiling syn v2.0.119
+   Compiling libloading v0.8.9
+   Compiling zmij v1.0.23
+   Compiling thiserror v2.0.21
+   Compiling libm v0.2.16
+   Compiling thiserror-impl v2.0.21
+   Compiling pkg-config v0.3.34
+   Compiling serde_derive v1.0.229
+   Compiling foldhash v0.2.0
+   Compiling itoa v1.0.18
+   Compiling equivalent v1.0.2
+   Compiling cfg_aliases v0.2.2
+   Compiling rustix v1.1.5
+   Compiling hashbrown v0.17.1
+   Compiling wayland-sys v0.31.11
+   Compiling dlib v0.5.3
+   Compiling bytemuck_derive v1.12.1
+   Compiling linux-raw-sys v0.12.1
+   Compiling bytemuck v1.25.2
+   Compiling indexmap v2.14.2
+   Compiling generic-array v0.14.7
+   Compiling simd-adler32 v0.3.10
+   Compiling arrayvec v0.7.8
+   Compiling synstructure v0.14.0
+   Compiling serde v1.0.229
+   Compiling crc32fast v1.5.2
+   Compiling serde_json v1.0.151
+   Compiling typenum v1.20.1
+   Compiling adler2 v2.0.1
+   Compiling zerofrom-derive v0.1.8
+   Compiling zerofrom v0.1.8
+   Compiling miniz_oxide v0.9.1
+   Compiling yoke-derive v0.8.4
+   Compiling wayland-backend v0.3.17
+   Compiling autocfg v1.5.1
+   Compiling zlib-rs v0.6.8
+   Compiling zerocopy v0.8.60
+   Compiling stable_deref_trait v1.2.1
+   Compiling yoke v0.8.3
+   Compiling num-traits v0.2.19
+   Compiling crypto-common v0.1.7
+   Compiling zerocopy-derive v0.8.60
+   Compiling scopeguard v1.2.0
+   Compiling downcast-rs v1.2.1
+   Compiling scoped-tls v1.0.1
+   Compiling flate2 v1.1.10
+   Compiling zerovec-derive v0.11.6
+   Compiling quick-xml v0.41.0
+   Compiling wayland-client v0.31.15
+   Compiling wayland-scanner v0.31.11
+   Compiling zerovec v0.11.8
+   Compiling block-buffer v0.10.4
+   Compiling displaydoc v0.2.7
+   Compiling cpufeatures v0.2.17
+   Compiling digest v0.10.7
+   Compiling rustc-hash v1.1.0
+   Compiling naga-types v30.0.1
+   Compiling naga v30.0.1 (/workspace/work/host-horizon-staged/third_party/naga)
+   Compiling unicode-xid v0.2.6
+   Compiling bit-vec v0.9.1
+   Compiling termcolor v1.4.1
+   Compiling unicode-width v0.2.2
+   Compiling codespan-reporting v0.13.1
+   Compiling bit-set v0.10.0
+   Compiling pp-rs v0.2.1
+   Compiling sha2 v0.10.9
+   Compiling tinystr v0.8.4
+   Compiling half v2.7.1
+   Compiling horizon-core v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-core)
+   Compiling spirv v0.4.0+sdk-1.4.341.0
+   Compiling winnow v1.0.4
+   Compiling writeable v0.6.4
+   Compiling litemap v0.8.3
+   Compiling getrandom v0.3.4
+   Compiling rustversion v1.0.23
+   Compiling parking_lot_core v0.9.12
+   Compiling icu_locale_core v2.3.0
+   Compiling toml_parser v1.1.3+spec-1.1.0
+   Compiling wayland-protocols v0.32.13
+   Compiling zerotrie v0.2.5
+   Compiling potential_utf v0.1.6
+   Compiling toml_datetime v1.1.1+spec-1.1.0
+   Compiling serde_spanned v1.1.2
+   Compiling icu_properties_data v2.3.0
+   Compiling icu_normalizer_data v2.3.0
+   Compiling raw-window-handle v0.6.2
+   Compiling utf8_iter v1.0.4
+   Compiling icu_collections v2.3.0
+   Compiling icu_provider v2.3.1
+   Compiling lock_api v0.4.14
+   Compiling cobs v0.3.0
+   Compiling ring v0.17.14
+   Compiling horizon-world v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-world)
+   Compiling percent-encoding v2.3.2
+   Compiling thiserror v1.0.69
+   Compiling ash v0.38.0+1.3.281
+   Compiling rustix v0.38.44
+   Compiling zeroize v1.9.1
+   Compiling rustls-pki-types v1.15.1
+   Compiling postcard v1.1.3
+   Compiling parking_lot v0.12.5
+   Compiling encoding_rs v0.8.42
+   Compiling thiserror-impl v1.0.69
+   Compiling khronos-egl v6.0.0
+   Compiling static_assertions v1.1.0
+   Compiling lz4_flex v0.14.0
+   Compiling xxhash-rust v0.8.19
+   Compiling linux-raw-sys v0.4.15
+   Compiling getrandom v0.4.3
+   Compiling allocator-api2 v0.2.21
+   Compiling hashbrown v0.16.1
+   Compiling wgpu-types v30.0.1
+   Compiling icu_normalizer v2.3.0
+   Compiling icu_properties v2.3.0
+   Compiling wayland-protocols-wlr v0.3.12
+   Compiling miniz_oxide v0.8.9
+   Compiling fdeflate v0.3.7
+   Compiling polling v3.11.0
+   Compiling wgpu-hal v30.0.1 (/workspace/work/host-horizon-staged/third_party/wgpu-hal)
+   Compiling getrandom v0.2.17
+   Compiling bitflags v1.3.2
+   Compiling multiversion_no_op v1.0.0
+   Compiling presser v0.3.1
+   Compiling slab v0.4.12
+   Compiling bumpalo v3.20.3
+   Compiling simdutf8 v0.1.5
+   Compiling untrusted v0.9.0
+   Compiling foldhash v0.1.5
+   Compiling lazy_static v1.5.1
+   Compiling core_detect v1.0.0
+   Compiling symphonia-core v0.5.5
+   Compiling hashbrown v0.15.5
+   Compiling zopfli v0.8.4
+   Compiling calloop v0.13.0
+   Compiling gpu-allocator v0.28.0
+   Compiling png v0.18.1
+   Compiling idna_adapter v1.2.2
+   Compiling wgpu-naga-bridge v30.0.1
+   Compiling ordered-float v5.5.0
+   Compiling inout v0.1.4
+   Compiling rustls v0.23.46
+   Compiling toml_writer v1.1.3+spec-1.1.0
+   Compiling fixedbitset v0.5.7
+   Compiling profiling v1.0.18
+   Compiling xcursor v0.3.11
+   Compiling glow v0.17.0
+   Compiling heck v0.5.0
+   Compiling xkeysym v0.2.1
+   Compiling typed-path v0.13.0
+   Compiling strict-num v0.1.1
+   Compiling arrayref v0.3.9
+   Compiling cursor-icon v1.2.0
+   Compiling smithay-client-toolkit v0.19.2
+   Compiling ttf-parser v0.25.1
+   Compiling renderdoc-sys v1.1.0
+   Compiling owned_ttf_parser v0.25.1
+   Compiling wayland-csd-frame v0.3.0
+   Compiling tiny-skia-path v0.11.4
+   Compiling zip v9.1.3
+   Compiling horizon-mod-api-gen v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-mod-api-gen)
+   Compiling wayland-cursor v0.31.14
+   Compiling petgraph v0.8.3
+   Compiling toml v1.1.6+spec-1.1.0
+   Compiling cipher v0.4.4
+   Compiling idna v1.1.0
+   Compiling calloop-wayland-source v0.3.0
+   Compiling rustls-webpki v0.103.16
+   Compiling symphonia-metadata v0.5.5
+   Compiling webpki-roots v1.0.10
+   Compiling form_urlencoded v1.2.2
+   Compiling gethostname v1.1.0
+   Compiling wgpu-core v30.0.1
+   Compiling x11-dl v2.21.0
+   Compiling ahash v0.8.12
+   Compiling libmimalloc-sys v0.1.49 (/workspace/work/host-horizon-staged/third_party/libmimalloc-sys)
+   Compiling memmap2 v0.9.11
+   Compiling nom v8.0.0
+   Compiling litrs v1.0.0
+   Compiling x11rb-protocol v0.13.2
+   Compiling subtle v2.6.1
+   Compiling ab_glyph_rasterizer v0.1.10
+   Compiling regex-syntax v0.8.11
+   Compiling as-raw-xcb-connection v1.0.1
+   Compiling x11rb v0.13.2
+   Compiling regex-automata v0.4.18
+   Compiling ab_glyph v0.2.32
+   Compiling document-features v0.2.12
+   Compiling tree_magic_mini v3.2.2
+   Compiling url v2.5.8
+   Compiling webpki-roots v0.26.11
+   Compiling symphonia-utils-xiph v0.5.5
+   Compiling aes v0.8.4
+   Compiling wgpu-core-deps-windows-linux-android v30.0.1
+   Compiling tiny-skia v0.11.4
+   Compiling horizon-client-core v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-client-core)
+   Compiling sha1 v0.10.7
+   Compiling winit v0.30.13
+   Compiling wgpu v30.0.1
+   Compiling os_pipe v1.2.3
+   Compiling socket2 v0.5.10
+   Compiling pin-project-lite v0.2.17
+   Compiling twox-hash v2.1.5
+   Compiling base64 v0.22.1
+   Compiling cty v0.2.2
+   Compiling tracing-core v0.1.36
+   Compiling ureq v2.12.1
+   Compiling tracing v0.1.44
+   Compiling ruzstd v0.9.1
+   Compiling horizon-protocol v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-protocol)
+   Compiling wl-clipboard-rs v0.9.4
+   Compiling sctk-adwaita v0.10.1
+   Compiling regex v1.13.1
+   Compiling xkbcommon-dl v0.4.2
+   Compiling wayland-protocols-plasma v0.3.12
+   Compiling smol_str v0.2.2
+   Compiling dpi v0.1.2
+   Compiling arboard v3.7.0
+   Compiling horizon-telemetry v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-telemetry)
+   Compiling mimalloc v0.1.52
+   Compiling symphonia-codec-vorbis v0.5.5
+   Compiling symphonia-format-ogg v0.5.5
+   Compiling horizon-client-render v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-client-render)
+   Compiling horizon-shader-api v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-shader-api)
+   Compiling byteorder-lite v0.1.0
+   Compiling zune-core v0.4.12
+   Compiling semver v1.0.28
+   Compiling horizon-theme v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-theme)
+   Compiling quick-error v2.0.1
+   Compiling iana-time-zone v0.1.65
+   Compiling glam v0.30.10
+   Compiling chrono v0.4.45
+   Compiling image-webp v0.2.4
+   Compiling horizon-client-input v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-client-input)
+   Compiling wasmparser v0.254.2
+   Compiling horizon-cosmetics v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-cosmetics)
+   Compiling zune-jpeg v0.4.21
+   Compiling winresource v0.1.34
+   Compiling symphonia v0.5.5
+   Compiling horizon-threads v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-threads)
+   Compiling horizon-bench v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-bench)
+   Compiling horizon-hdr v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-hdr)
+   Compiling horizon-optifine v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-optifine)
+   Compiling horizon-polytone v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-polytone)
+   Compiling horizon-command v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-command)
+   Compiling horizon-items v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-items)
+   Compiling horizon-shaders v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-shaders)
+   Compiling horizon-assets v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-assets)
+   Compiling horizon-narrator v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-narrator)
+   Compiling pollster v0.4.0
+   Compiling minisign-verify v0.3.0
+   Compiling unicode-bidi v0.3.18
+   Compiling horizon-mods v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-mods)
+   Compiling horizon-client v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-client)
+   Compiling horizon-server-files v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-server-files)
+   Compiling horizon-chat-filter v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-chat-filter)
+   Compiling horizon-anticheat v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-anticheat)
+   Compiling horizon-mcp v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-mcp)
+   Compiling fs4 v1.1.0
+   Compiling mio v1.2.4
+   Compiling create-assets v0.9.0 (/workspace/work/host-horizon-staged/native-crates/create/assets)
+   Compiling create-schematics v0.9.0 (/workspace/work/host-horizon-staged/native-crates/create/schematics)
+   Compiling create-engine v0.9.0 (/workspace/work/host-horizon-staged/native-crates/create/engine)
+   Compiling horizon-client-lib v0.1.0 (/workspace/work/host-horizon-staged/crates/horizon-client-lib)
+    Finished `dev` profile [unoptimized] target(s) in 5m 19s
