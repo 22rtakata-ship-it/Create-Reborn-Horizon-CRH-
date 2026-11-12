@@ -17,6 +17,7 @@ import milling_checks
 import fan_checks
 import audit05_checks
 import drilling_checks
+import core_checks
 
 
 def main():
@@ -30,6 +31,7 @@ def main():
     parser.add_argument("--engineering-only",action="store_true",help="Run the new engineering scenarios while iterating; full release validation omits this flag")
     parser.add_argument("--processors-only",action="store_true",help="Run the new milling/fan scenarios while iterating")
     parser.add_argument("--fan-only",action="store_true",help="Iterate on native fan scenarios")
+    parser.add_argument("--core-only", action="store_true", help="Run the Phase-1 wheel/gears/press, stress, chunks and restart acceptance scenarios")
     args = parser.parse_args()
     original = args.resources.resolve()
     if not (original / "facts.json").is_file(): raise SystemExit("Not a prepared Horizon resource folder")
@@ -114,6 +116,18 @@ def main():
             call("container", 3, 64, 1, item, count)
         try:
             ready()
+            if args.core_only:
+                fixture=core_checks.run(call,args.offscreen,log_path,scratch)
+                call('quit');process.wait(timeout=30)
+                process=subprocess.Popen(launch,cwd=scratch,env=env,stdout=log,stderr=subprocess.STDOUT)
+                ready();core_checks.reloaded(call,fixture)
+                (scratch/'result.json').write_text(json.dumps({
+                    'passed':True,'scope':'core-only','fixture':fixture,
+                    'renderer_checks':args.offscreen,
+                    'skipped':[] if args.offscreen else ['rotational rendering'],
+                },indent=2)+'\n')
+                print('Core acceptance passed:',scratch/'result.json',flush=True)
+                return
             if args.processors_only or args.fan_only:
                 milling=None if args.fan_only else milling_checks.run(call,args.offscreen,log_path,scratch)
                 fan=fan_checks.run(call,args.offscreen,log_path,scratch)
