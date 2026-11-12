@@ -1,0 +1,37 @@
+{
+  "native_source_commit": "930d0d4ecdf6ee7670e6e716ede27de4d95d2a00",
+  "horizon": "4e5296d1800b3f89f2ae48dfd99d431801df4d46",
+  "mixins": "e8cd0aa38cffef49cb2e088ef716baa107148c02",
+  "rust": "1.99.1",
+  "platform": "x86_64-unknown-linux-gnu",
+  "profile": "dev",
+  "build_settings": {
+    "default_features": false,
+    "debug": 0,
+    "incremental": false,
+    "jobs": 2
+  },
+  "gameplay": "blocked: prepared Minecraft resources missing",
+  "files": [
+    {
+      "file": "create-0.9.0.hnmod",
+      "size": 870467,
+      "sha256": "71a09e6d541e31dadf5a6a9118becec734d95ebfc899ab11bd794fce38c254e2"
+    },
+    {
+      "file": "create-0.9.0.hmod",
+      "size": 1581272,
+      "sha256": "7be138b4cc4e0ad9cef5eedc763d3fa3807785aefe502fee08ce4c757b5385c1"
+    },
+    {
+      "file": "create-content-0.9.0.hmod",
+      "size": 713896,
+      "sha256": "361acc975b117d62a32ec98d2bd5db212fe0237707205a1edf0393f9653d725b"
+    },
+    {
+      "file": "crh-linux-x86_64-dev.tar.gz",
+      "size": 80213824,
+      "sha256": "37312974b32b250bee858d93ff54b64419ad1613b9d5a4addedff63e3eb93beb"
+    }
+  ]
+}
