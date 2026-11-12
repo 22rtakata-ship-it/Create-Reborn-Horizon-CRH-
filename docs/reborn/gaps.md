@@ -1,0 +1,14 @@
+# Technical gaps and acceptance gates
+
+1. **Event-driven topology cache:** native kinetic_runtime.rs `network` keys its cache by `(world pointer, game_time, dimension)` and resolves components again after the tick changes. Pending transmission sets and source callbacks preserve timing but do not supply a persistent topology cache. Introduce component identity and localized invalidation behind the shared API, preserving source ownership, powered clutch halves, overload recovery and tick ordering. Test dimensions, chunk unload/reload and split/merge before replacing the adapter.
+2. **Network size:** MAX_NODES=4096 is enforced. The 10000-node baseline returns TooLarge. Increase/configure only after measuring and retaining bounded traversal and failure semantics.
+3. **Native modular composition:** the archive remains self-contained and uses its original engine crate. Headless Cargo modules are separated; independent native bundles and feature toggles are not yet implemented. Extend packaging with an official validator and clean client regression run first.
+4. **Public API coverage:** the inherited Node/Network types are reused. A stable opaque component/network registration service, notifications and consumption API are still required. Do not expose a fabricated Horizon API to bridge this gap.
+5. **World safety:** retained contraption capture/restoration is bounded to one chunk column. This checkpoint does not certify transactional cross-column movement, unloading or crash recovery.
+6. **Native acceptance:** plan/apply confirms source integration points, not compiled game behavior. The full injected client passed cargo check in the no-default-features configuration. Linking and fresh-world gameplay remain untested; see validation.md. No installed game/JAR, initialized game assets or reference Java instance was supplied.
+7. **Gameplay completeness:** verify the user's 20 first-release criteria in real survival worlds. Static recipes and passing machine algorithms do not establish the full crusher/belt/fan/funnel line or visual fidelity.
+8. **Persistence and multiplayer:** complete the per-system save-format/migration audit; run real server/client tests before claiming multiplayer. Preserve existing codecs and tests during extraction.
+9. **Windows:** headless Cargo is portable by construction but was tested only on Linux here. Native developer tooling contains fcntl/Unix assumptions. Windows installation/build and Launcher behavior remain unvalidated.
+10. **Performance:** the included solver baseline is limited to wall time. Allocation counts, memory, dirty-update costs, 100/1000-machine industrial loads, assembly/disassembly, collision, rendering and frametime are still unmeasured.
+
+The preserved upstream roadmap and compatibility guides contain additional bounded implementation differences. This audit does not erase them.

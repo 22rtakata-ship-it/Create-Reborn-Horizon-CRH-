@@ -1,0 +1,4 @@
+nodes,repetitions,total_microseconds,status
+100,10,1022,Running
+1000,10,25341,Running
+10000,10,93978,TooLarge
