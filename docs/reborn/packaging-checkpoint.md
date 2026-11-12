@@ -14,7 +14,7 @@
 
 Official Horizon 4e5296d1800b3f89f2ae48dfd99d431801df4d46, Mixins e8cd0aa38cffef49cb2e088ef716baa107148c02 and Rust 1.99.1 are unchanged. Used the already verified pristine official Mixins stage. Compiled --locked -p horizon-client --bin horizon-client --no-default-features --jobs 2 with CARGO_PROFILE_DEV_DEBUG=0 and CARGO_INCREMENTAL=0. This is a developer/headless-capable build, not the Launcher's normal performance/full-feature profile. Audio, friends/controllers and Windows binary compatibility are not implied. Native Windows installation has not been tested.
 
-Only our generated check/test compiler caches were removed to reclaim disk space before linking. No source history, user instance/world or prepared game resource was deleted. Source checkouts remain unmodified inputs. The validator/build outputs are under ignored dist/; large executables are not committed as Git blobs.
+Only our generated check/test compiler caches were removed to reclaim disk space before linking. No source history, user instance/world or prepared game resource was deleted. Source checkouts remain unmodified inputs. The validator/build outputs are under ignored dist/; large executables are kept outside main's source history.
 
 ## Observed practical blocker
 
@@ -33,3 +33,11 @@ No facts.json/prepared resource folder or Minecraft installation is present in t
 Compilation/linking: PASS. Package schemas: PASS. CLI startup/help: PASS. Actual world startup: BLOCKED by missing resources. Wheel/shaft/cog/press, stress, chunk lifecycle, cold restart, graphics, survival and multiplayer acceptance: NOT RUN. Phase 1 remains in progress.
 
 Use docs/core-acceptance.md to install into a new development instance or run the prepared isolated-world workflow after supplying resources. The optional offscreen mode checks submitted wheel matrices and captures a frame; a headless-only run cannot validate rendering. The private original asset importer is not exercised without a player-supplied JAR. No registry entry is published by this checkpoint; any GitHub artifact draft is a development candidate for the repository owner to review.
+
+## Artifact delivery
+
+The GitHub draft-release endpoint accepted the candidate, but uploads.github.com rejected asset uploads with HTTP 401 while normal Git/API operations remained available. Artifacts were therefore pushed to the separate artifacts/crh-dev-2026-11-12 branch, commit df0abbb, without merging binaries into main. This branch contains all three archives, the Linux developer bundle, hashes, build manifest and notices.
+
+Download listing: https://github.com/22rtakata-ship-it/Create-Reborn-Horizon-CRH-/tree/artifacts/crh-dev-2026-11-12
+
+The native .hnmod public download was re-downloaded and verified against SHA256SUMS; the Linux archive download endpoint also responds successfully. This delivery is a development candidate, not a mod-registry publication or gameplay certification.

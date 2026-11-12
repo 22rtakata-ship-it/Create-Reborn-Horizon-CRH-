@@ -36,3 +36,5 @@ The packaging checkpoint now links a Linux x86_64 developer client and validates
 The Linux archive preserves native-mods.json, native-data and licensing notices beside the executable. It contains no Minecraft resources or original Create artwork. Its --help and the control binary execute, but world startup is blocked until the player supplies prepared resources. Prefer the source .hnmod/normal Launcher build for Windows. Installation into a real Launcher instance remains unvalidated.
 
 The executable Phase-1 test workflow is documented in ../docs/core-acceptance.md. It creates only a new isolated world and reports missing prerequisites without marking gameplay as passed. The original full smoke suite remains available without --core-only.
+
+Development artifact downloads are kept in the separate [artifacts branch](https://github.com/22rtakata-ship-it/Create-Reborn-Horizon-CRH-/tree/artifacts/crh-dev-2026-11-12). The main branch retains source/tooling/evidence. See SHA256SUMS before installation.
