@@ -39,3 +39,7 @@ Measure industrial/contraption/rendering baselines, profile actual TPS and frame
 ## Phase 11 — expansions
 
 Advanced fluids, arms, trains, elevators, Sequenced Assembly and Ponder remain later work. They must not delay the first playable survival acceptance chain.
+
+## Beta 0.1 and full-port scope
+
+Follow [reborn/beta-0.1.md](reborn/beta-0.1.md) for the pinned stable NeoForge reference, first-playable gates and current parity gaps. The final goal is a one-to-one port; the phase ordering describes implementation order, not permission to substitute different mechanics. No beta tag is justified by compilation or isolated source comparisons alone.

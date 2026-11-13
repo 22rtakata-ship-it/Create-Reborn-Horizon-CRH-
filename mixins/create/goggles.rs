@@ -270,12 +270,10 @@ fn providers(game: &Game<'_>, pos: Pos, block: &str, nbt: &Compound, goggles: bo
                 }
             }
             _ => {
-                let impact = match node.kind {
-                    Kind::Press => 8.0,
-                    Kind::Millstone | Kind::Mixer => 4.0,
-                    Kind::Consumer { impact, .. } => impact,
-                    _ => 0.0,
-                };
+                // KineticBlockEntity.addToGoggleTooltip uses the same applied
+                // stress as its network, including crushers/crafters/actuators.
+                // Zero-impact relays still have no extra tooltip in Create.
+                let impact = node.impact();
                 if impact != 0.0 {
                     add(tr("gui.goggles.kinetic_stats"), 0);
                     add(

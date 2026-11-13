@@ -37,6 +37,7 @@ jobs:
         run: |
           mkdir -p .tools/rust
           ln -s "$(dirname "$(rustup which --toolchain 1.99.1 cargo)")" .tools/rust/bin
+          python3 tools/stress_defaults_oracle.py
           python3 tools/oracle.py
           python3 tools/placement_oracle.py
           python3 tools/rotation_oracle.py
@@ -50,6 +51,7 @@ jobs:
         with:
           name: java-parity-results
           path: |
+            .local/stress-defaults-oracle/result.json
             .local/network-oracle/result.json
             .local/placement-oracle/result.json
             .local/rotation-oracle/result.json

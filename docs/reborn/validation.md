@@ -42,3 +42,11 @@ See [native-networks.md](native-networks.md) for the 314-test workspace result a
 ## Executable and packaging checkpoint
 
 See [packaging-checkpoint.md](packaging-checkpoint.md) for the linked Linux binary, officially validated archives, 20 Python tooling tests and the actual missing-resource startup failure. Gameplay acceptance remains blocked, not passed.
+
+## Pinned Create parity checkpoint — 2026-11-13
+
+See [beta-0.1.md](beta-0.1.md) for the verified stable reference, the successful local Java comparison counts, the Goggles impact correction and the required first-playable acceptance scope. The original private JAR's SHA-512 was checked against Modrinth metadata; neither it nor its assets are committed. Java algorithm comparisons now have local evidence, superseding the initial checkpoint's absence of Java runs. Native gameplay acceptance remains unrun.
+
+Verification of this source correction: `cargo fmt --all --check`, `cargo test --locked --workspace` (314 tests), `cargo clippy --locked --workspace --all-targets -- -D warnings`, `python3 tools/check_distribution.py`, `python3 tools/reborn.py verify`, and `CREATE_SOURCE=/workspace/work/create-reference python3 tools/stress_defaults_oracle.py` all exited 0. The oracle was added to the existing pinned-reference CI job with its JSON report retained as an artifact. Local logs: `/workspace/work/beta-audit/`. Native Mixins apply exited 0 against the pristine pinned engine; only transformed `crates/horizon-client/src/game.rs` changed relative to the previous staging output.
+
+The updated injected client passed `cargo check --locked --offline -p horizon-client --no-default-features -j 2` (exit 0, 2m 07s; `CARGO_PROFILE_DEV_DEBUG=0`, `CARGO_INCREMENTAL=0`, session target `/workspace/work/game-build`). This is a complete client type-check of the correction, not a new linked release, equipment interaction test or game launch.
