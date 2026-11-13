@@ -1,0 +1,27 @@
+{
+  "source_commit": "1daa987803b2a08d348ac5b7139a0117ea824b25",
+  "release_tag": "crh-dev-2026-11-13",
+  "archive_manifest_version": "0.9.0",
+  "kind": "native-source-development-preview",
+  "horizon": "4e5296d1800b3f89f2ae48dfd99d431801df4d46",
+  "mixins": "e8cd0aa38cffef49cb2e088ef716baa107148c02",
+  "validation": "official package validator accepted all three archives; workspace and native client check passed",
+  "gameplay": "not validated; prepared resources missing in build environment",
+  "files": [
+    {
+      "file": "create-0.9.0.hnmod",
+      "size": 870508,
+      "sha256": "1617d0e22487047820ff6ad82899d0919acfacf9524fe8f13220625d607b71ab"
+    },
+    {
+      "file": "create-0.9.0.hmod",
+      "size": 1581313,
+      "sha256": "f9079926ed48c2fdbb94d6991b79868d98f8b364e8ff8e1a44706b900acf92c2"
+    },
+    {
+      "file": "create-content-0.9.0.hmod",
+      "size": 713896,
+      "sha256": "361acc975b117d62a32ec98d2bd5db212fe0237707205a1edf0393f9653d725b"
+    }
+  ]
+}
