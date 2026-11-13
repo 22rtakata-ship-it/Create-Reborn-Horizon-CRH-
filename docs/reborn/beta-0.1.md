@@ -25,6 +25,6 @@ The Goggles provider now uses the shared `Node::impact()` value instead of a par
 
 Known parity gap: the reference RotationPropagator can break blocks for invalid/excessive rotation and opposing sources; the current component solver instead stops networks for TooFast/ConflictingSources. Matching gear ratios alone does not complete source ownership and propagation parity. Reproduce these cases in isolation before changing world mutation behavior.
 
-Status: development preview, not beta. Prepared Horizon resources are absent from this environment; real-world acceptance remains blocked. The public development archives predate this source correction and must not be presented as containing it until rebuilt.
+Status: development preview, not beta. Prepared Horizon resources are absent from this environment; real-world acceptance remains blocked. The `crh-dev-2026-11-13` native source archives contain this correction and passed the official validator. The earlier standalone Linux executable predates it; no updated standalone executable is provided by this source-package release.
 
 Prepared-resource setup and its distinction from the original Create artwork are explained in [game-resources.md](game-resources.md).
